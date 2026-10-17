@@ -67,12 +67,15 @@ class TestPaymentDue:
 
     async def test_paid_off_deleted_and_inactive_loans_are_ignored(self, async_session, test_user):
         async_session.add_all([
-            loan(test_user, due_day=15, balance="0"),
-            loan(test_user, due_day=15, deleted=True),
-            loan(test_user, due_day=15, status=LoanStatus.PAID_OFF),
+            loan(test_user, due_day=17, balance="0", name="zero"),
+            loan(test_user, due_day=17, deleted=True, name="deleted"),
+            loan(test_user, due_day=17, status=LoanStatus.PAID_OFF, name="paid"),
+            loan(test_user, due_day=17, name="live"),  # positive control: same day, passes every filter
         ])
         await async_session.commit()
-        assert await generate_payment_due_reminders(async_session, reference_date=TODAY) == 0
+        assert await generate_payment_due_reminders(async_session, reference_date=TODAY) == 1
+        (n,) = await notes(async_session)
+        assert n.message.startswith("live:")
 
     async def test_running_twice_does_not_duplicate(self, async_session, test_user):
         async_session.add(loan(test_user, due_day=17))

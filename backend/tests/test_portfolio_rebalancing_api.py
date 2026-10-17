@@ -20,7 +20,8 @@ def offline_fx():
     fake = MagicMock()
     fake.get_exchange_rate = AsyncMock(return_value=Decimal("32"))
     fake.get_usd_to_twd_rate = AsyncMock(return_value=Decimal("32"))
-    with patch("app.utils.exchange_rate_service.get_exchange_rate_service", return_value=fake):
+    with patch("app.utils.exchange_rate_service.get_exchange_rate_service", return_value=fake), \
+         patch("app.modules.portfolio.performance_tracker.get_exchange_rate_service", return_value=fake):
         yield fake
 
 
@@ -107,6 +108,7 @@ async def test_unknown_portfolio_id_is_a_404(authenticated_client, seeded):
 async def test_analytics_endpoint(authenticated_client, seeded):
     r = authenticated_client.get(f"{BASE}/analytics")
     assert r.status_code == 200
+    assert r.json()["success"] is True and r.json()["data"]
 
 
 class TestTargetAllocations:
@@ -122,7 +124,7 @@ class TestTargetAllocations:
         ])
         assert r.status_code == 200, r.text
         data = await get(authenticated_client, "/rebalancing/allocation")
-        assert {a["assetSymbol"] for a in data["allocations"]} == {"0050", "CASH"}
+        assert {a["asset_symbol"] for a in data["allocations"]} == {"0050", "CASH"}
 
     async def test_empty_is_400(self, authenticated_client, seeded):
         assert self.put(authenticated_client, []).status_code == 400
