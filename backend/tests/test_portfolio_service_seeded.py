@@ -12,6 +12,7 @@ from app.modules.portfolio.models import (
     CurrencyRate, Dividend, HoldingWalletType, Portfolio, PortfolioHolding,
 )
 from app.modules.portfolio.services import get_analytics_service, get_portfolio_service
+from app.modules.users.models import User, UserRole, UserStatus
 from app.utils.datetime_helpers import business_today
 
 pytestmark = [pytest.mark.asyncio, pytest.mark.database]
@@ -74,7 +75,7 @@ class TestUpdateTotals:
         await async_session.refresh(pf)
         assert pf.total_value == D("3200")
 
-    @pytest.mark.xfail(strict=True, reason="no rate anywhere falls back to 1.0, so 100 USD is stored as NT$100")
+    @pytest.mark.xfail(strict=True, raises=AssertionError, reason="no rate anywhere falls back to 1.0, so 100 USD is stored as NT$100")
     async def test_no_rate_at_all_does_not_treat_usd_as_twd(self, async_session, test_user, pf):
         async_session.add(make_holding(pf, test_user, "VT", value="100", cost="80", currency="USD"))
         await async_session.commit()
@@ -122,10 +123,12 @@ class TestAssetAllocation:
     async def test_other_currency_is_converted_through_its_own_rate(self, async_session, test_user, pf):
         async_session.add(make_holding(pf, test_user, "NK", value="1000", cost="900", currency="JPY"))
         await async_session.commit()
-        fx = MagicMock(get_exchange_rate=AsyncMock(side_effect=lambda f, t: D("40") if f == "USD" else D("0.2")))
+        rates = {("USD", "TWD"): D("40"), ("JPY", "TWD"): D("0.2")}
+        fx = MagicMock(get_exchange_rate=AsyncMock(side_effect=lambda f, t: rates[(f, t)]))
         with patch("app.utils.exchange_rate_service.get_exchange_rate_service", return_value=fx):
             out = await get_analytics_service(async_session).get_asset_allocation(test_user.id)
         assert out["by_type"][0]["value"] == 200.0
+        fx.get_exchange_rate.assert_any_await("JPY", "TWD")
 
     async def test_empty_portfolio_has_no_slices(self, async_session, test_user, pf):
         with patch("app.utils.exchange_rate_service.get_exchange_rate_service", return_value=fake_fx(D("32"))):
@@ -173,3 +176,41 @@ class TestDividends:
     async def test_nothing_to_project_yields_nulls(self, async_session, test_user, pf):
         out = await get_analytics_service(async_session).get_dividend_data(test_user.id)
         assert out["projected_annual"] is None and out["yield_on_cost"] is None
+
+
+class TestUserScoping:
+    @pytest_asyncio.fixture
+    async def other(self, async_session):
+        u = User(id=uuid4(), email="other@example.com", name="Other", hashed_password="x", is_active=True,
+                 is_verified=True, role=UserRole.USER, status=UserStatus.ACTIVE, preferred_currency="USD",
+                 timezone="UTC", experience_points=0, level=1)
+        p = Portfolio(id=uuid4(), user_id=u.id, name="Other", currency="TWD", is_active=True, is_default=True)
+        async_session.add_all([u, p])
+        await async_session.flush()
+        async_session.add_all([
+            make_holding(p, u, "9999", value="777", cost="1", type_="crypto", sector="Other", region="Mars"),
+            Dividend(id=uuid4(), user_id=u.id, symbol="9999", payment_date=business_today(),
+                     amount_per_share=D("1"), shares_owned=D("1"), total_amount=D("12345"), net_amount=D("12345"),
+                     currency="TWD"),
+        ])
+        await async_session.commit()
+        return u, p
+
+    async def test_nothing_of_anothers_leaks(self, async_session, test_user, pf, other):
+        async_session.add(make_holding(pf, test_user, "0050", value="100", cost="50", sector="Broad", region="TW"))
+        await async_session.commit()
+        analytics = get_analytics_service(async_session)
+        with patch("app.utils.exchange_rate_service.get_exchange_rate_service", return_value=fake_fx(D("32"))):
+            alloc = await analytics.get_asset_allocation(test_user.id)
+        assert [r["value"] for r in alloc["by_type"]] == [100.0] and [r["type"] for r in alloc["by_region"]] == ["TW"]
+        divs = await analytics.get_dividend_data(test_user.id)
+        assert divs["payments"] == [] and divs["total_dividends"] is None
+
+    async def test_totals_ignore_the_other_users_portfolio(self, async_session, test_user, pf, other):
+        _, other_pf = other
+        async_session.add(make_holding(pf, test_user, "0050", value="100", cost="50"))
+        await async_session.commit()
+        await get_portfolio_service(async_session)._update_portfolio_totals(pf.id, test_user.id)
+        await async_session.refresh(pf)
+        await async_session.refresh(other_pf)
+        assert pf.total_value == D("100") and other_pf.total_value == D("0")
