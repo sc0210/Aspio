@@ -1,0 +1,557 @@
+{
+  "activityFeed": {
+    "noActivity": "No recent activity",
+    "title": "Recent Activity",
+    "types": {
+      "achievement": "Achievement",
+      "goal": "Goal",
+      "investment": "Investment",
+      "transaction": "Transaction"
+    },
+    "viewAll": "View all"
+  },
+  "allocation": {
+    "title": "Asset Allocation",
+    "subtitle": "Target vs actual • total assets {{total}}",
+    "needsRebalancing": "Needs rebalancing",
+    "editTargets": "Edit targets",
+    "cancel": "Cancel",
+    "save": "Save",
+    "saving": "Saving…",
+    "availableFunds": "Available funds",
+    "fromOverweightSales": "From selling overweight assets",
+    "deviation": "Deviation",
+    "itemCount": "{{count}} items",
+    "overThreshold": "More than 5 percentage points off target",
+    "deviationPct": "{{pct}} pp off target",
+    "deleteAsset": "Delete this asset",
+    "addAsset": "Add asset class",
+    "confirmAdd": "Add",
+    "lastUpdated": "Last updated: {{at}}",
+    "action": {
+      "buy": "Buy",
+      "sell": "Sell",
+      "hold": "Hold"
+    },
+    "column": {
+      "asset": "Asset",
+      "currentValue": "Value",
+      "currentPct": "Current %",
+      "targetPct": "Target %",
+      "delta": "Delta",
+      "action": "Action",
+      "manage": "Manage"
+    },
+    "field": {
+      "symbol": "Symbol *",
+      "name": "Name *",
+      "type": "Type *",
+      "targetPct": "Target weight (%) *"
+    },
+    "placeholder": {
+      "symbol": "e.g. VWRA",
+      "name": "e.g. Global equity ETF"
+    },
+    "assetType": {
+      "stock": "Stocks",
+      "crypto": "Crypto",
+      "cash": "Cash",
+      "bond": "Bonds",
+      "real_estate": "Real estate",
+      "commodity": "Commodities",
+      "other": "Other"
+    },
+    "error": {
+      "mustTotal100": "The weights must add up to 100% (currently {{total}}%)",
+      "demoReadOnly": "Demo mode cannot save changes — sign in to use the full app",
+      "saveFailed": "Could not save. Please try again.",
+      "saveFailedWith": "Could not save: {{message}}",
+      "sessionExpired": "Your session has expired — refresh the page or sign in again",
+      "incompleteAsset": "Please fill in every field",
+      "duplicateSymbol": "That symbol is already in the list"
+    }
+  },
+  "cashFlow": {
+    "netSaved": "Net Saved",
+    "savingsRate": "Savings Rate",
+    "topIncome": "Top Income",
+    "topSpending": "Top Spending"
+  },
+  "chart": {
+    "balance": "Balance",
+    "balanceDesc": "Accumulated income-expense balance",
+    "balanceFormula": "Income - Expenses",
+    "currentMetric": "Showing",
+    "dateRangeDesc": {
+      "1y": "Last 365 days from today",
+      "30d": "Last 30 days from today",
+      "7d": "Last 7 days from today",
+      "90d": "Last 90 days from today"
+    },
+    "dateRanges": {
+      "1year": "1 Year",
+      "30days": "30 Days",
+      "7days": "7 Days",
+      "90days": "90 Days",
+      "thisMonth": "This Month"
+    },
+    "expenses": "Expenses",
+    "expensesDesc": "Daily expense amount",
+    "forPeriod": "for",
+    "formula": "Balance = Starting Balance + Income - Expenses (cumulative over period)",
+    "income": "Income",
+    "incomeDesc": "Daily income amount",
+    "netChange": "Net Change",
+    "netWorth": "Net Worth",
+    "netWorthDesc": "Cash balance + Portfolio value",
+    "netWorthFormula": "Cash + Investments",
+    "noData": {
+      "description": "Start adding transactions to see your financial trends",
+      "title": "No financial data yet"
+    },
+    "periodChange": "Period Change",
+    "placeholder": {
+      "description": "Interactive financial trend analysis coming soon",
+      "detailsNote": "Currently you can view detailed transaction records and statistics on the 'Transactions' page",
+      "title": "Financial Trend Chart"
+    },
+    "stats": {
+      "change": "Change",
+      "current": "Current",
+      "dataPoints": "Data Points",
+      "percentage": "% Change"
+    },
+    "title": "Financial Trend Chart",
+    "totalExpenses": "Total Expenses",
+    "totalIncome": "Total Income",
+    "trend": "Trend"
+  },
+  "explore": {
+    "title": "Explore",
+    "subtitle": "Growth forecast · portfolio and cash-flow heatmaps"
+  },
+  "fx": {
+    "accumulated": "Accumulated so far",
+    "accumulating": "Still accumulating…",
+    "approxUsd": "≈ ${{amount}} USD",
+    "convertNow": "Convert now",
+    "convertWhenReady": "Convertible once the threshold is reached",
+    "convertibleUsd": "Convertible USD",
+    "currentRate": "Current rate",
+    "estimatedFee": "Estimated fee",
+    "lastUpdated": "Last updated: {{at}}",
+    "liveRate": "Live rate",
+    "notice": "What accumulates here is the TWD from selling overweight assets. At {{threshold}} you will be prompted to convert it to USD for buying VT / BNDW and other US-listed ETFs.",
+    "noticeLabel": "Tip:",
+    "progress": "Accumulation progress",
+    "ready": "Ready to convert",
+    "stillNeeded": "{{amount}} to go",
+    "subtitle": "Accumulate TWD to the threshold, then convert to USD",
+    "threshold": "Target threshold",
+    "title": "FX Conversion Tracker"
+  },
+  "goals": {
+    "title": "FIRE Goals Progress"
+  },
+  "goalsProgress": {
+    "addNewGoal": "Add New Goal",
+    "ahead": "Ahead of schedule",
+    "behindSchedule": "Behind schedule",
+    "createFirst": "Set your first financial goal",
+    "createGoal": "Create Goal",
+    "daysLeft": "{{days}} days left",
+    "goalAchieved": "Congratulations! Goal achieved! 🎉",
+    "noGoals": "No goals set yet",
+    "onTrack": "On track",
+    "progress": "Progress",
+    "progressAmount": "{{current}} of {{target}}",
+    "title": "Financial Goals",
+    "viewAll": "View all"
+  },
+  "greeting": {
+    "afternoon": "Good afternoon",
+    "evening": "Good evening",
+    "morning": "Good morning"
+  },
+  "growthForecast": {
+    "1yr": "1yr",
+    "3yr": "3yr",
+    "6mo": "6mo",
+    "actual": "Actual",
+    "actualAmount": "actual: {{amount}}",
+    "affordableNow": "affordable now",
+    "annualReturn": "Annual return",
+    "beyondPlan": "40y+",
+    "debtFree": "none",
+    "debtInterest": "Debt interest",
+    "disclaimer": "Estimate only. Assumes steady saving and a constant return — real markets vary.",
+    "disclaimerHistory": "The estimate replays your assumptions over the past 3 months so you can see how well it tracks reality. Future markets vary.",
+    "estimate": "Estimate",
+    "expensesShort": "exp",
+    "expensesSubtotal": "Total expenses / mo",
+    "expensesTitle": "Monthly expenses — {{months}}-month average (tap to edit)",
+    "fromCagr": "from your portfolio (CAGR)",
+    "fromInvesting": "of which {{amount}} from investment return",
+    "fromReturn": "from returns",
+    "fromSaving": "from saving",
+    "group_food": "Food",
+    "group_housing": "Housing",
+    "group_other": "Other",
+    "group_transport": "Transport",
+    "in1yr": "In 1 year",
+    "in3yr": "In 3 years",
+    "in6mo": "In 6 months",
+    "income": "Income",
+    "incomeHint": "recurring earned avg — salary, freelance",
+    "incomeManual": "manually set",
+    "investedHint": "rest stays as cash",
+    "monthlyIncome": "Monthly income",
+    "monthlySavings": "Net savings / mo",
+    "months": "mo",
+    "now": "Now",
+    "onTrack": "on track",
+    "oneOff": "one-off",
+    "percentInvested": "% of savings invested",
+    "projected": "Projected",
+    "realSavings": "your real income − expense",
+    "reset": "Reset",
+    "returnHint": "expected yearly growth",
+    "savingsOnly": "Savings only",
+    "shortBy": "short {{amount}}/mo",
+    "stageDebt": "Debt",
+    "stageFarGoals": "Far goals",
+    "stageFoundation": "Safety net",
+    "stageNearGoals": "Near goals",
+    "stage_debt": "Debt",
+    "stage_farGoals": "Far goals",
+    "stage_foundation": "Safety net",
+    "stage_nearGoals": "Near goals",
+    "title": "Net Worth Forecast"
+  },
+  "metrics": {
+    "monthlyBudget": "Monthly Budget",
+    "monthlyExpenses": "Monthly Expenses",
+    "monthlyExpensesDesc": "This month",
+    "monthlyIncome": "Monthly Income",
+    "monthlyIncomeDesc": "This month",
+    "netWorth": "Net Worth",
+    "netWorthDesc": "Assets minus liabilities",
+    "portfolioValue": "Portfolio",
+    "portfolioValueDesc": "Investment value",
+    "savingsRate": "Savings Rate",
+    "savingsRateDesc": "Income saved",
+    "totalBalance": "Total Balance",
+    "totalBalanceDesc": "Across all accounts"
+  },
+  "metricsCards": {
+    "accumulating": "Accumulating",
+    "availableFunds": "Available Funds",
+    "availableFundsDesc": "From selling over-allocated assets",
+    "convertible": "Convertible ✓",
+    "days": "Days",
+    "daysSinceRebalance": "Days since rebalancing",
+    "fxAccumulation": "FX Accumulation",
+    "rebalancingRequired": "Rebalancing required ⚠️"
+  },
+  "mobile": {
+    "fullMonthlySummary": "Trend charts & the full table",
+    "summary": {
+      "savedRate": "Kept {{pct}}% of income"
+    },
+    "fullRebalancing": "Edit targets, FX tracker & What-If",
+    "rebalance": {
+      "noTargets": "No target allocation yet. Set your targets on a tablet or desktop.",
+      "offTarget": "{{count}} off target",
+      "toMove": "To move",
+      "legend": "Bar = now · Line = target",
+      "points": "pp",
+      "barLabel": "Now {{current}}%, target {{target}}%",
+      "target": "Target {{pct}}%",
+      "trades": "Suggested trades"
+    },
+    "bigScreenHint": "Want full control? Open Aspiro on a tablet or desktop for detailed tables & editing.",
+    "cashFlow": "Cash flow this month",
+    "dismissHint": "Dismiss",
+    "expense": "Spent",
+    "fullAchievements": "Every badge, scores, search & filters",
+    "fullDashboard": "Full dashboard — heatmaps, forecasts, detailed history",
+    "fullGoals": "Milestones, contributions & achievements",
+    "fullHousing": "Buy-vs-rent simulator, loan terms & car impact",
+    "fullLifecycle": "Leverage history, glidepath, spread & loan picker",
+    "fullLoans": "Edit, delete & paid-off history",
+    "fullPortfolio": "Performance charts, IRR & rebalancing",
+    "fullReview": "Income sources, wealth moves & goals",
+    "fullTransactions": "Filters, search, heatmap & bulk import",
+    "highlights": "Today's highlights",
+    "income": "Income",
+    "netThisMonth": "net this month",
+    "noGoal": "Set a goal",
+    "noGoalHint": "Create a savings goal to track progress here.",
+    "onLargerScreen": "on tablet / desktop",
+    "portfolioPnl": "Portfolio gain / loss",
+    "swipe": "Swipe ›",
+    "thisMonth": "this month",
+    "today": "Today",
+    "totalReturn": "total return",
+    "yesterday": "Yesterday"
+  },
+  "onboarding": {
+    "steps": {
+      "addInvestments": {
+        "cta": "Add holding",
+        "desc": "Track stocks, ETFs, and crypto",
+        "title": "Add investments"
+      },
+      "recordIncome": {
+        "cta": "Add income",
+        "desc": "Add your salary or income sources",
+        "title": "Record income"
+      },
+      "setGoal": {
+        "cta": "Create goal",
+        "desc": "Save toward retirement or a purchase",
+        "title": "Set a goal"
+      },
+      "trackExpenses": {
+        "cta": "Add expense",
+        "desc": "Log your spending to see savings rate",
+        "title": "Track expenses"
+      }
+    },
+    "subtitle": "Complete these steps to get started:",
+    "title": "Welcome to Aspiro"
+  },
+  "periods": {
+    "14d": "Last 14 Days",
+    "1y": "Last Year",
+    "30d": "Last 30 Days",
+    "6m": "Last 6 Months",
+    "7d": "Last 7 Days",
+    "90d": "Last 90 Days",
+    "month": "This Month",
+    "ytd": "Year to Date"
+  },
+  "portfolioOverview": {
+    "addFirst": "Start building your investment portfolio",
+    "addInvestment": "Add Investment",
+    "allocation": "Allocation",
+    "allocationTab": "Allocation",
+    "bySector": "By Sector",
+    "hideValues": "Hide values",
+    "noInvestments": "No investments yet",
+    "notEnoughForPeriod": "Not enough data for this range yet",
+    "performanceNotAvailable": "Portfolio performance data not available",
+    "performanceTab": "Performance",
+    "return": "Return",
+    "showValues": "Show values",
+    "title": "Investment Portfolio",
+    "todaysChange": "Today's Change",
+    "topHoldings": "Top Holdings",
+    "totalGainLoss": "Total Gain/Loss",
+    "totalReturn": "Total Return",
+    "totalValue": "Total Value",
+    "tryLongerRange": "Pick a longer period above, or view the full trend.",
+    "viewDetails": "View details"
+  },
+  "quickActions": {
+    "addInvestment": {
+      "description": "Add new investment holding",
+      "title": "Add Investment"
+    },
+    "addTransaction": {
+      "description": "Record income or expense",
+      "title": "Add Transaction"
+    },
+    "portfolio": {
+      "description": "Manage investment portfolio",
+      "title": "Portfolio"
+    },
+    "shortcuts": "Keyboard shortcuts available",
+    "title": "Quick Actions",
+    "viewTransactions": {
+      "description": "View all transaction records",
+      "title": "View Transactions"
+    },
+    "review": {
+      "title": "Month in Review",
+      "description": "Read this month as a story"
+    }
+  },
+  "rebalancing": {
+    "advisoryNote": "Advisory: This analysis is for reference only. Investment involves risks. Asset prices are subject to market fluctuations. Please assess your risk tolerance and consult with financial professionals before making investment decisions.",
+    "availableFunds": "Available Funds",
+    "balanced": {
+      "description": "Your portfolio is currently within target allocation ranges and does not require rebalancing.",
+      "title": "Portfolio is Balanced"
+    },
+    "buyTransactions": "Buy Transactions (Use Funds)",
+    "cashAfterRebalance": "Cash position after rebalancing",
+    "cashDifference": "Difference",
+    "estimatedFees": "Estimated Fees",
+    "executeLater": "Execute later",
+    "fees": "Fees",
+    "fromSales": "From selling assets",
+    "hideDetails": "Hide details",
+    "page": {
+      "about": "ℹ️ About this dashboard",
+      "back": "Go back",
+      "fxComingSoon": "FX conversion is coming in a later release",
+      "help": {
+        "allocation1": "Current allocation against target, live",
+        "allocation2": "Flags any holding more than 5 percentage points off target",
+        "allocation3": "Works out the funds available from overweight assets",
+        "plan1": "Generates buy and sell suggestions",
+        "plan2": "Orders the trades by priority",
+        "plan3": "Estimates brokerage and FX costs",
+        "fx1": "Accumulates TWD towards the threshold (NT$80,000)",
+        "fx2": "Tells you when it is worth converting",
+        "fx3": "Live rate, with an estimate of the fee",
+        "whatIf1": "Shows how a trade would change the allocation",
+        "whatIf2": "Flags deviations as you go",
+        "whatIf3": "Touches nothing in your real data"
+      },
+      "loadFailed": "Could not load your rebalancing data",
+      "noData": "No Rebalancing Data",
+      "signInToView": "Sign in to see your rebalancing data",
+      "subtitle": "Track your allocation, work a rebalancing plan, and simulate the effect of a trade",
+      "title": "Rebalancing Dashboard",
+      "tryAgain": "Please try again later"
+    },
+    "plan": {
+      "buyActions": "Buy actions ({{count}})",
+      "buyAsset": "Buy {{asset}}",
+      "clearSelection": "Clear selection",
+      "executeSelected": "Execute selected",
+      "executeWarning": "⚠️ Check the trades before executing — the price you get may differ from the estimate.",
+      "feeAmount": "Fee {{amount}}",
+      "feeBreakdown": "Brokerage + FX",
+      "fundsShort": "Short of funds — allocating proportionally",
+      "fundsSufficient": "Funds sufficient",
+      "priority": {
+        "high": "High",
+        "medium": "Medium",
+        "low": "Low"
+      },
+      "selectedCount": "{{count}} trades selected",
+      "selectedTotal": "Total: {{amount}}",
+      "sellActions": "Sell actions ({{count}})",
+      "sellAsset": "Sell {{asset}}",
+      "shareEstimate": "≈{{shares}} shares @ {{price}}",
+      "subtitle": "Suggested trades • {{count}} actions",
+      "title": "Rebalancing Execution Plan",
+      "totalBuy": "Total Buy",
+      "totalSell": "Total Sell",
+      "tradeCount": "{{count}} trades"
+    },
+    "recommendedBuys": "Recommended Buys",
+    "recommendedSells": "Recommended Sells",
+    "sellTransactions": "Sell Transactions (Generate Funds)",
+    "showDetails": "Show details",
+    "subtitle": "Trading recommendations based on target allocation",
+    "tab": {
+      "allocation": "Asset Allocation",
+      "plan": "Execution Plan",
+      "fx": "FX Tracker"
+    },
+    "targetCash": "Target cash",
+    "title": "Rebalancing Recommendations",
+    "totalFees": "Total Fees",
+    "viewExecutionPlan": "View execution plan"
+  },
+  "recentTransactions": {
+    "addFirst": "Start tracking your finances",
+    "addTransaction": "Add Transaction",
+    "noTransactions": "No transactions yet",
+    "title": "Recent Transactions",
+    "viewAll": "View all"
+  },
+  "sections": {
+    "cashFlow": "Cash Flow",
+    "financialGoals": "Financial Goals",
+    "recentActivity": "Recent Activity",
+    "walletOverview": "Wallet Overview"
+  },
+  "sidebar": {
+    "addInvestment": "Add Investment",
+    "addTransaction": "Add Transaction",
+    "goalProgress": "Goal Progress",
+    "newGoal": "New Goal",
+    "quickActions": "Quick Actions",
+    "recentActivity": "Recent Activity",
+    "scanReceipt": "Scan Receipt",
+    "streak": "7-Day Streak!",
+    "streakDesc": "Keep logging transactions daily",
+    "topCategories": "Top Spending"
+  },
+  "stats": {
+    "activeGoals": "Active Goals",
+    "completedGoals": "Completed Goals",
+    "monthlyExpenses": "Monthly Expenses",
+    "monthlyIncome": "Monthly Income",
+    "portfolioValue": "Portfolio Value",
+    "savingsRate": "Savings Rate",
+    "totalBalance": "Total Balance",
+    "totalGoals": "Goals"
+  },
+  "title": "Dashboard",
+  "todayStrip": {
+    "details": "Details",
+    "portfolio": "Portfolio",
+    "portfolioChangeHint": "Change in portfolio value over this period. Includes money you put in or took out, not just market movement — see the portfolio page for return on cost.",
+    "saved": "Saved",
+    "savingsRate": "{{rate}}% savings rate",
+    "totalAssets": "Total Assets"
+  },
+  "view": {
+    "compact": "Compact",
+    "compactBadge": "Compact view",
+    "full": "Full",
+    "label": "Dashboard view",
+    "switchToFull": "Switch to the full dashboard — heatmaps, forecasts, detailed history"
+  },
+  "wallet": {
+    "allocation": "Allocation",
+    "assets": "Assets",
+    "debt": "Debt",
+    "ofAssets": "of assets",
+    "debtBalance": "Debt Balance",
+    "emergencyFund": "Emergency Fund",
+    "emergencyRunway": "Emergency Runway",
+    "liabilities": "Liabilities",
+    "lifeWallet": "Life Wallet",
+    "months": "mo",
+    "netWorth": "Net Worth",
+    "noTrendData": "No trend data",
+    "portfolioWallet": "Portfolio",
+    "savingsRate": "Savings Rate",
+    "totalAsset": "Total Asset"
+  },
+  "welcome": {
+    "subtitle": "Here's your financial overview for today.",
+    "title": "{{greeting}}, {{name}}! 👋"
+  },
+  "whatIf": {
+    "adjustAmounts": "Adjust amounts",
+    "amount": "Amount:",
+    "change": "Change:",
+    "deviation": "{{pct}} pp off target",
+    "hideDetails": "Hide details",
+    "howToUse": "How to use:",
+    "originalAmount": "Was:",
+    "originalShare": "Was:",
+    "originalTotal": "Total assets now",
+    "reset": "Reset",
+    "share": "Share:",
+    "sliderLabel": "Simulated amount for {{asset}}",
+    "showDetails": "Show details",
+    "simulatedTotal": "Total assets simulated",
+    "subtitle": "See how a trade would change the allocation",
+    "targetIs": "(target: {{pct}})",
+    "tip1": "Drag the slider or use the quick buttons to change an amount",
+    "tip2": "The new allocation percentages update as you go",
+    "tip3": "Orange marks a holding more than 5 percentage points (pp) off its target",
+    "tip4": "This is a simulation — nothing here touches your real assets",
+    "title": "What-If Simulator",
+    "totalChange": "Total change"
+  }
+}

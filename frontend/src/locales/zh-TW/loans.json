@@ -1,0 +1,161 @@
+{
+  "accountTypes": {
+    "auto_loan": "汽車貸款",
+    "credit_card": "信用卡",
+    "mortgage": "房屋貸款",
+    "other": "其他",
+    "personal_loan": "個人貸款",
+    "student_loan": "學生貸款"
+  },
+  "addFirstLoan": "新增第一筆貸款",
+  "addLoan": "新增貸款",
+  "addModal": {
+    "add": "新增貸款",
+    "cancel": "取消",
+    "creating": "建立中…",
+    "currentBalance": "目前餘額 (TWD)",
+    "currentBalancePlaceholder": "預設為原始金額",
+    "dueDay": "還款日 *",
+    "interestRate": "年利率 (%) *",
+    "lender": "貸款機構",
+    "lenderPlaceholder": "例：中信銀行",
+    "loanName": "貸款名稱",
+    "loanNamePlaceholder": "例：房屋貸款",
+    "loanNameRequired": "貸款名稱 *",
+    "minPayment": "每月最低還款 (TWD) *",
+    "notes": "備註",
+    "notesPlaceholder": "選填備註",
+    "principalAmount": "原始金額 (TWD) *",
+    "startDate": "起始日期 *",
+    "termMonths": "貸款期限（月）",
+    "title": "新增貸款",
+    "type": "類型",
+    "typeRequired": "類型 *"
+  },
+  "card": {
+    "delete": "刪除",
+    "deleteLoan": "刪除貸款",
+    "edit": "編輯",
+    "editLoan": "編輯貸款",
+    "goal": "目標：{{amount}}",
+    "interestLeft": "剩餘利息：{{amount}}",
+    "minPayment": "最低還款",
+    "monthsLeft": "剩餘月數",
+    "next": "下次：{{date}}",
+    "paidOff": "已還清",
+    "payoffEstimate": "以目前月付金試算 ≈{{count}} 期",
+    "payoffEstimateHint": "依你輸入的最低還款金額試算，還清期數與合約期數不同。請核對月付金或利率是否與帳單相符。",
+    "rate": "利率",
+    "recordPayment": "記錄還款",
+    "remaining": "剩餘 {{amount}}",
+    "repaid": "已還清 {{progress}}%",
+    "started": "原始金額：{{amount}}"
+  },
+  "common": {
+    "close": "關閉"
+  },
+  "deleteModal": {
+    "cancel": "取消",
+    "confirmPrefix": "這將移除",
+    "confirmSuffix": "與此貸款相關的還款紀錄將保留在您的交易中。",
+    "message": "此操作將刪除 <strong>{{name}}</strong>。與此貸款相關的還款記錄將保留在交易紀錄中。",
+    "remove": "確認刪除",
+    "removing": "刪除中…",
+    "title": "刪除貸款？"
+  },
+  "editModal": {
+    "save": "儲存變更",
+    "saving": "儲存中…",
+    "status": "狀態",
+    "title": "編輯貸款"
+  },
+  "emptyState": {
+    "description": "追蹤房貸、個人貸款和信用卡負債，以了解您的真實淨資產。",
+    "title": "尚無貸款記錄"
+  },
+  "paymentModal": {
+    "balanceAfter": "還款後餘額",
+    "cancel": "取消",
+    "currentBalance": "目前餘額",
+    "error": {
+      "exceedsBalance": "不能超過目前餘額 ({{amount}})",
+      "splitMismatch": "本金加利息必須等於總額"
+    },
+    "interestPortion": "利息部分 (TWD)",
+    "paymentDate": "還款日期 *",
+    "principalPortion": "本金部分 (TWD) *",
+    "record": "確認還款",
+    "recording": "記錄中…",
+    "title": "記錄還款",
+    "totalPayment": "總還款金額 (TWD) *"
+  },
+  "sections": {
+    "active": "進行中 ({{count}})",
+    "loan": "筆",
+    "loans": "筆",
+    "paidOff": "已還清 ({{count}})"
+  },
+  "status": {
+    "active": "進行中",
+    "paid_off": "已還清",
+    "paused": "暫停"
+  },
+  "subtitle": "追蹤您的貸款帳戶和每月還款",
+  "summary": {
+    "activeLoans": "進行中貸款",
+    "nextPayment": "下次還款",
+    "on": "{{date}} 到期",
+    "totalDebt": "總負債",
+    "totalLoans": "共 {{count}} 筆貸款"
+  },
+  "title": "貸款管理",
+  "walletImpact": {
+    "creation": "新增貸款會增加您的總負債。請另外在生活錢包中記錄收到的貸款金額。",
+    "payment": "每次還款將減少您的生活錢包餘額和總負債。"
+  },
+  "planner": {
+    "mobileNever": "照目前還款無法還清——在大螢幕的還款規劃可看原因",
+    "mobileDebtFree": "照目前還款，{{date}} 還清",
+    "savesCapped": "50 年內少付 {{amount}} 利息——仍未還清",
+    "noPayment": "有貸款未設定最低還款，沒有任何款項在還它。請設定最低還款，或每月多還一些。",
+    "title": "還款規劃",
+    "subtitle": "何時能還清，以及每月多還一點會改變什麼。這裡的設定不會存進你的貸款。",
+    "strategy": "策略",
+    "avalanche": "雪崩法",
+    "snowball": "雪球法",
+    "avalancheHint": "多出來的錢先還利率最高的貸款——整體利息最少。",
+    "snowballHint": "多出來的錢先還餘額最小的貸款——最快少掉一筆。",
+    "extra": "每月額外還款（{{currency}}）",
+    "debtFree": "還清日期",
+    "in": "還需 {{span}}",
+    "never": "此預算無法還清",
+    "interest": "尚需支付利息",
+    "interestCapped": "已計算 50 年，仍未還清",
+    "vsMinimums": "相較只繳最低",
+    "sooner": "提早 {{span}}",
+    "saves": "省下 {{amount}} 利息",
+    "sameAsMinimums": "與只繳最低相同",
+    "minimumsNever": "只繳最低永遠還不完——這個計畫可以",
+    "stalled": "至少有一筆最低還款低於每月產生的利息，此預算永遠還不清。每月多還一些才會有還清日期。",
+    "chartLabel": "總負債隨時間變化：此計畫與只繳最低的比較",
+    "plan": "此計畫",
+    "minimums": "只繳最低",
+    "order": "還清順序",
+    "excluded_one": "有 {{count}} 筆其他幣別的貸款未計入——此計畫只計算 {{currency}}。",
+    "excluded_other": "有 {{count}} 筆其他幣別的貸款未計入——此計畫只計算 {{currency}}。",
+    "years_one": "{{count}} 年",
+    "years_other": "{{count}} 年",
+    "months_one": "{{count}} 個月",
+    "months_other": "{{count}} 個月"
+  },
+  "upcoming": {
+    "mixedCurrencies": "多種幣別，不合計",
+    "title": "未來 {{count}} 天到期",
+    "none": "未來 {{count}} 天沒有到期的還款。",
+    "today": "今天",
+    "inDays_one": "{{count}} 天後",
+    "inDays_other": "{{count}} 天後",
+    "overdue_one": "逾期 {{count}} 天",
+    "overdue_other": "逾期 {{count}} 天"
+  }
+}

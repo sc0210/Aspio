@@ -1,0 +1,557 @@
+{
+  "activityFeed": {
+    "noActivity": "沒有最近的活動",
+    "title": "最近活動",
+    "types": {
+      "achievement": "成就",
+      "goal": "目標",
+      "investment": "投資",
+      "transaction": "交易"
+    },
+    "viewAll": "查看全部"
+  },
+  "allocation": {
+    "title": "資產配置狀態",
+    "subtitle": "目標 vs 實際配置 • 總資產 {{total}}",
+    "needsRebalancing": "需要再平衡",
+    "editTargets": "編輯目標",
+    "cancel": "取消",
+    "save": "保存",
+    "saving": "保存中...",
+    "availableFunds": "可動用資金",
+    "fromOverweightSales": "來自超配資產賣出",
+    "deviation": "偏離程度",
+    "itemCount": "{{count}} 項",
+    "overThreshold": "偏離目標超過 5 個百分點",
+    "deviationPct": "偏離 {{pct}} 個百分點",
+    "deleteAsset": "刪除此資產",
+    "addAsset": "新增資產類別",
+    "confirmAdd": "確認新增",
+    "lastUpdated": "最後更新：{{at}}",
+    "action": {
+      "buy": "買入",
+      "sell": "賣出",
+      "hold": "持有"
+    },
+    "column": {
+      "asset": "資產",
+      "currentValue": "現值",
+      "currentPct": "目前%",
+      "targetPct": "目標%",
+      "delta": "差額",
+      "action": "動作",
+      "manage": "操作"
+    },
+    "field": {
+      "symbol": "資產代號 *",
+      "name": "資產名稱 *",
+      "type": "資產類型 *",
+      "targetPct": "目標比例 (%) *"
+    },
+    "placeholder": {
+      "symbol": "例如: VWRA",
+      "name": "例如: 全球股票ETF"
+    },
+    "assetType": {
+      "stock": "股票",
+      "crypto": "加密貨幣",
+      "cash": "現金",
+      "bond": "債券",
+      "real_estate": "房地產",
+      "commodity": "商品",
+      "other": "其他"
+    },
+    "error": {
+      "mustTotal100": "總和必須為 100%（目前: {{total}}%）",
+      "demoReadOnly": "示範模式無法保存變更，請登入以使用完整功能",
+      "saveFailed": "保存失敗，請稍後再試",
+      "saveFailedWith": "保存失敗: {{message}}",
+      "sessionExpired": "您的登入狀態已過期，請重新整理頁面或重新登入",
+      "incompleteAsset": "請填寫完整的資產資訊",
+      "duplicateSymbol": "該資產代號已存在"
+    }
+  },
+  "cashFlow": {
+    "netSaved": "淨儲蓄",
+    "savingsRate": "儲蓄率",
+    "topIncome": "主要收入",
+    "topSpending": "主要支出"
+  },
+  "chart": {
+    "balance": "餘額",
+    "balanceDesc": "累積收支結餘",
+    "balanceFormula": "收入 - 支出",
+    "currentMetric": "顯示",
+    "dateRangeDesc": {
+      "1y": "從今天起回溯 365 天",
+      "30d": "從今天起回溯 30 天",
+      "7d": "從今天起回溯 7 天",
+      "90d": "從今天起回溯 90 天"
+    },
+    "dateRanges": {
+      "1year": "1 年",
+      "30days": "30 天",
+      "7days": "7 天",
+      "90days": "90 天",
+      "thisMonth": "本月"
+    },
+    "expenses": "支出",
+    "expensesDesc": "每日支出金額",
+    "forPeriod": "的",
+    "formula": "餘額 = 期初餘額 + 累計收入 - 累計支出（期間累計）",
+    "income": "收入",
+    "incomeDesc": "每日收入金額",
+    "netChange": "淨變化",
+    "netWorth": "淨資產",
+    "netWorthDesc": "現金結餘 + 投資組合價值",
+    "netWorthFormula": "現金 + 投資",
+    "noData": {
+      "description": "開始新增交易來查看您的財務趨勢",
+      "title": "尚無財務資料"
+    },
+    "periodChange": "期間變化",
+    "placeholder": {
+      "description": "互動式財務趨勢分析即將推出",
+      "detailsNote": "目前您可以在「交易」頁面查看詳細的交易記錄和統計",
+      "title": "財務趨勢圖表"
+    },
+    "stats": {
+      "change": "變動",
+      "current": "目前",
+      "dataPoints": "資料點",
+      "percentage": "變動率"
+    },
+    "title": "財務趨勢圖表",
+    "totalExpenses": "總支出",
+    "totalIncome": "總收入",
+    "trend": "趨勢"
+  },
+  "explore": {
+    "title": "深入探索",
+    "subtitle": "成長預測 · 投資組合與現金流熱力圖"
+  },
+  "fx": {
+    "accumulated": "目前累積",
+    "accumulating": "持續累積中...",
+    "approxUsd": "約 ${{amount}} USD",
+    "convertNow": "立即執行換匯",
+    "convertWhenReady": "達到門檻後可執行換匯",
+    "convertibleUsd": "可兌換 USD",
+    "currentRate": "當前匯率",
+    "estimatedFee": "預估手續費",
+    "lastUpdated": "最後更新：{{at}}",
+    "liveRate": "即時匯率",
+    "notice": "累積金額來自超配資產賣出後的 TWD，當達到 {{threshold}} 門檻時，系統會提示您執行換匯，將 TWD 轉換為 USD 用於購買 VT/BNDW 等美股 ETF。",
+    "noticeLabel": "提示：",
+    "progress": "累積進度",
+    "ready": "可轉換",
+    "stillNeeded": "還需 {{amount}}",
+    "subtitle": "累積 TWD 至門檻後轉換為 USD",
+    "threshold": "目標門檻",
+    "title": "外幣轉換追蹤"
+  },
+  "goals": {
+    "title": "FIRE 目標進度"
+  },
+  "goalsProgress": {
+    "addNewGoal": "新增目標",
+    "ahead": "進度超前",
+    "behindSchedule": "進度落後",
+    "createFirst": "設定您的第一個理財目標",
+    "createGoal": "建立目標",
+    "daysLeft": "剩餘 {{days}} 天",
+    "goalAchieved": "恭喜！目標達成！🎉",
+    "noGoals": "尚未設定目標",
+    "onTrack": "進度良好",
+    "progress": "進度",
+    "progressAmount": "{{current}} / {{target}}",
+    "title": "理財目標",
+    "viewAll": "查看全部"
+  },
+  "greeting": {
+    "afternoon": "午安",
+    "evening": "晚安",
+    "morning": "早安"
+  },
+  "growthForecast": {
+    "1yr": "1年",
+    "3yr": "3年",
+    "6mo": "6個月",
+    "actual": "實際",
+    "actualAmount": "實際：{{amount}}",
+    "affordableNow": "現在可負擔",
+    "annualReturn": "年化報酬率",
+    "beyondPlan": "40年以上",
+    "debtFree": "無負債",
+    "debtInterest": "債務利息",
+    "disclaimer": "僅為估算。假設穩定儲蓄與固定報酬率，實際市場會有波動。",
+    "disclaimerHistory": "預估線會用你目前的假設回放過去 3 個月，讓你看出它與實際的貼合程度。未來市場仍會波動。",
+    "estimate": "預估",
+    "expensesShort": "支出",
+    "expensesSubtotal": "每月支出小計",
+    "expensesTitle": "每月支出 — 近 {{months}} 個月平均（點數字可編輯）",
+    "fromCagr": "依你的投資組合年化報酬 (CAGR)",
+    "fromInvesting": "其中 {{amount}} 來自投資報酬",
+    "fromReturn": "來自投資報酬",
+    "fromSaving": "來自儲蓄",
+    "group_food": "飲食",
+    "group_housing": "住房",
+    "group_other": "其他",
+    "group_transport": "交通",
+    "in1yr": "1 年後",
+    "in3yr": "3 年後",
+    "in6mo": "6 個月後",
+    "income": "收入",
+    "incomeHint": "固定收入平均 — 薪資、接案",
+    "incomeManual": "手動設定",
+    "investedHint": "其餘留作現金",
+    "monthlyIncome": "每月收入",
+    "monthlySavings": "每月淨儲蓄",
+    "months": "個月",
+    "now": "現在",
+    "onTrack": "進度正常",
+    "oneOff": "一次性",
+    "percentInvested": "儲蓄投入投資比例",
+    "projected": "預估",
+    "realSavings": "你的實際收入 − 支出",
+    "reset": "重設",
+    "returnHint": "預期年成長",
+    "savingsOnly": "僅靠儲蓄",
+    "shortBy": "每月缺 {{amount}}",
+    "stageDebt": "負債",
+    "stageFarGoals": "長期目標",
+    "stageFoundation": "安全網",
+    "stageNearGoals": "近期目標",
+    "stage_debt": "負債",
+    "stage_farGoals": "長期目標",
+    "stage_foundation": "安全網",
+    "stage_nearGoals": "近期目標",
+    "title": "淨資產成長預估"
+  },
+  "metrics": {
+    "monthlyBudget": "每月預算",
+    "monthlyExpenses": "月支出",
+    "monthlyExpensesDesc": "本月",
+    "monthlyIncome": "月收入",
+    "monthlyIncomeDesc": "本月",
+    "netWorth": "淨資產",
+    "netWorthDesc": "資產減去負債",
+    "portfolioValue": "投資組合",
+    "portfolioValueDesc": "投資價值",
+    "savingsRate": "儲蓄率",
+    "savingsRateDesc": "收入儲蓄比例",
+    "totalBalance": "總餘額",
+    "totalBalanceDesc": "所有帳戶總和"
+  },
+  "metricsCards": {
+    "accumulating": "累積中",
+    "availableFunds": "可用資金",
+    "availableFundsDesc": "來自賣出超配資產",
+    "convertible": "可轉換 ✓",
+    "days": "天數",
+    "daysSinceRebalance": "距上次再平衡",
+    "fxAccumulation": "FX 累積",
+    "rebalancingRequired": "需要再平衡 ⚠️"
+  },
+  "mobile": {
+    "fullMonthlySummary": "收支趨勢圖與完整明細表",
+    "summary": {
+      "savedRate": "留下收入的 {{pct}}%"
+    },
+    "fullRebalancing": "編輯目標、外匯追蹤與 What-If",
+    "rebalance": {
+      "noTargets": "尚未設定目標配置，請在平板或電腦上設定。",
+      "offTarget": "{{count}} 項偏離目標",
+      "toMove": "需調整金額",
+      "legend": "長條 = 現況 · 直線 = 目標",
+      "points": "個百分點",
+      "barLabel": "現況 {{current}}%，目標 {{target}}%",
+      "target": "目標 {{pct}}%",
+      "trades": "建議交易"
+    },
+    "bigScreenHint": "想要完整控制？用平板或電腦開啟，明細與編輯體驗更佳。",
+    "cashFlow": "本月現金流",
+    "dismissHint": "關閉",
+    "expense": "支出",
+    "fullAchievements": "全部徽章、分數、搜尋與篩選",
+    "fullDashboard": "完整儀表板 — 熱力圖、資產預測、詳細紀錄",
+    "fullGoals": "里程碑、貢獻紀錄與成就",
+    "fullHousing": "買租模擬器、貸款條件與購車影響",
+    "fullLifecycle": "槓桿歷史、滑翔路徑、利差與貸款選擇",
+    "fullLoans": "編輯、刪除與已還清紀錄",
+    "fullPortfolio": "績效圖表、IRR 與再平衡",
+    "fullReview": "收入來源、資產變動與目標",
+    "fullTransactions": "篩選、搜尋、熱力圖與批次匯入",
+    "highlights": "今日重點",
+    "income": "收入",
+    "netThisMonth": "本月淨額",
+    "noGoal": "設定目標",
+    "noGoalHint": "建立儲蓄目標，在此追蹤進度。",
+    "onLargerScreen": "平板 / 電腦",
+    "portfolioPnl": "投資組合損益",
+    "swipe": "左右滑動 ›",
+    "thisMonth": "本月",
+    "today": "今天",
+    "totalReturn": "總報酬",
+    "yesterday": "昨天"
+  },
+  "onboarding": {
+    "steps": {
+      "addInvestments": {
+        "cta": "新增持倉",
+        "desc": "追蹤股票、ETF 及加密貨幣",
+        "title": "新增投資"
+      },
+      "recordIncome": {
+        "cta": "新增收入",
+        "desc": "新增您的薪資或收入來源",
+        "title": "記錄收入"
+      },
+      "setGoal": {
+        "cta": "建立目標",
+        "desc": "為退休或特定目標儲蓄",
+        "title": "設定目標"
+      },
+      "trackExpenses": {
+        "cta": "新增支出",
+        "desc": "記錄消費以查看儲蓄率",
+        "title": "追蹤支出"
+      }
+    },
+    "subtitle": "完成以下步驟開始使用：",
+    "title": "歡迎使用 Aspiro"
+  },
+  "periods": {
+    "14d": "最近 14 天",
+    "1y": "最近一年",
+    "30d": "最近 30 天",
+    "6m": "最近 6 個月",
+    "7d": "最近 7 天",
+    "90d": "最近 90 天",
+    "month": "本月",
+    "ytd": "今年至今"
+  },
+  "portfolioOverview": {
+    "addFirst": "開始建立您的投資組合",
+    "addInvestment": "新增投資",
+    "allocation": "配置",
+    "allocationTab": "配置",
+    "bySector": "依產業",
+    "hideValues": "隱藏金額",
+    "noInvestments": "尚未投資",
+    "notEnoughForPeriod": "此區間資料尚不足",
+    "performanceNotAvailable": "投資組合績效資料暫無",
+    "performanceTab": "績效",
+    "return": "報酬率",
+    "showValues": "顯示金額",
+    "title": "投資組合",
+    "todaysChange": "今日變動",
+    "topHoldings": "主要持股",
+    "totalGainLoss": "總損益",
+    "totalReturn": "總報酬",
+    "totalValue": "總價值",
+    "tryLongerRange": "請於上方選擇較長區間，或查看完整走勢。",
+    "viewDetails": "查看詳情"
+  },
+  "quickActions": {
+    "addInvestment": {
+      "description": "新增投資持倉",
+      "title": "新增投資"
+    },
+    "addTransaction": {
+      "description": "記錄收入或支出",
+      "title": "新增交易"
+    },
+    "portfolio": {
+      "description": "管理投資組合",
+      "title": "投資組合"
+    },
+    "shortcuts": "可使用鍵盤快捷鍵",
+    "title": "快速操作",
+    "viewTransactions": {
+      "description": "查看所有交易紀錄",
+      "title": "查看交易"
+    },
+    "review": {
+      "title": "本月回顧",
+      "description": "一次看懂這個月"
+    }
+  },
+  "rebalancing": {
+    "advisoryNote": "投資警語：本分析僅供參考，投資有風險，資產價格可能隨市場波動而變動，請評估自身風險承受能力，並諮詢專業財務顧問後再做投資決策。",
+    "availableFunds": "可用資金",
+    "balanced": {
+      "description": "您的投資組合目前在目標配置範圍內，無需再平衡操作。",
+      "title": "投資組合已平衡"
+    },
+    "buyTransactions": "買入交易 (使用資金)",
+    "cashAfterRebalance": "再平衡後現金部位",
+    "cashDifference": "差異",
+    "estimatedFees": "預估手續費",
+    "executeLater": "稍後執行",
+    "fees": "手續費",
+    "fromSales": "來自賣出資產",
+    "hideDetails": "隱藏詳細資訊",
+    "page": {
+      "about": "ℹ️ 關於再平衡儀表板",
+      "back": "返回上一頁",
+      "fxComingSoon": "FX 換匯功能將在後續版本中實作",
+      "help": {
+        "allocation1": "即時顯示當前配置 vs 目標配置",
+        "allocation2": "標示偏離目標超過 5 個百分點的資產",
+        "allocation3": "計算可動用資金（來自超配資產）",
+        "plan1": "自動產生買入/賣出建議",
+        "plan2": "依優先順序排序交易動作",
+        "plan3": "預估手續費與匯費成本",
+        "fx1": "累積 TWD 至門檻 (NT$80,000)",
+        "fx2": "達標後提示換匯時機",
+        "fx3": "即時匯率與手續費估算",
+        "whatIf1": "模擬交易後的配置變化",
+        "whatIf2": "即時顯示偏離警示",
+        "whatIf3": "不影響實際資產數據"
+      },
+      "loadFailed": "無法載入再平衡資料",
+      "noData": "沒有再平衡資料",
+      "signInToView": "請登入以查看您的再平衡資料",
+      "subtitle": "追蹤資產配置、執行再平衡計畫並模擬交易影響",
+      "title": "投資再平衡儀表板",
+      "tryAgain": "請稍後再試"
+    },
+    "plan": {
+      "buyActions": "買入動作 ({{count}})",
+      "buyAsset": "買入 {{asset}}",
+      "clearSelection": "取消選擇",
+      "executeSelected": "執行選定交易",
+      "executeWarning": "⚠️ 執行前請確認交易內容，實際成交價格可能與預估不同",
+      "feeAmount": "手續費 {{amount}}",
+      "feeBreakdown": "手續費 + 匯費",
+      "fundsShort": "資金不足，按比例配置",
+      "fundsSufficient": "資金充足",
+      "priority": {
+        "high": "高優先",
+        "medium": "中優先",
+        "low": "低優先"
+      },
+      "selectedCount": "已選擇 {{count}} 項交易",
+      "selectedTotal": "總金額：{{amount}}",
+      "sellActions": "賣出動作 ({{count}})",
+      "sellAsset": "賣出 {{asset}}",
+      "shareEstimate": "約 {{shares}} 股 @ {{price}}",
+      "subtitle": "建議交易清單 • {{count}} 項動作",
+      "title": "再平衡執行計畫",
+      "totalBuy": "買入總額",
+      "totalSell": "賣出總額",
+      "tradeCount": "{{count}} 筆交易"
+    },
+    "recommendedBuys": "建議買入",
+    "recommendedSells": "建議賣出",
+    "sellTransactions": "賣出交易 (產生資金)",
+    "showDetails": "顯示詳細資訊",
+    "subtitle": "根據目標配置生成的交易建議",
+    "tab": {
+      "allocation": "資產配置",
+      "plan": "執行計畫",
+      "fx": "外匯追蹤"
+    },
+    "targetCash": "目標現金",
+    "title": "再平衡建議方案",
+    "totalFees": "總費用",
+    "viewExecutionPlan": "查看執行計畫"
+  },
+  "recentTransactions": {
+    "addFirst": "開始追蹤您的財務",
+    "addTransaction": "新增交易",
+    "noTransactions": "尚無交易記錄",
+    "title": "最近交易",
+    "viewAll": "查看全部"
+  },
+  "sections": {
+    "cashFlow": "現金流",
+    "financialGoals": "財務目標",
+    "recentActivity": "最近動態",
+    "walletOverview": "錢包總覽"
+  },
+  "sidebar": {
+    "addInvestment": "新增投資",
+    "addTransaction": "新增交易",
+    "goalProgress": "目標進度",
+    "newGoal": "新增目標",
+    "quickActions": "快速操作",
+    "recentActivity": "最近活動",
+    "scanReceipt": "掃描收據",
+    "streak": "7 天連續記帳！",
+    "streakDesc": "持續每日記帳",
+    "topCategories": "消費排行"
+  },
+  "stats": {
+    "activeGoals": "進行中目標",
+    "completedGoals": "已完成目標",
+    "monthlyExpenses": "月支出",
+    "monthlyIncome": "月收入",
+    "portfolioValue": "投資組合價值",
+    "savingsRate": "儲蓄率",
+    "totalBalance": "總餘額",
+    "totalGoals": "理財目標"
+  },
+  "title": "儀表板",
+  "todayStrip": {
+    "details": "詳情",
+    "portfolio": "投資組合",
+    "portfolioChangeHint": "本期投資組合價值的變化。包含你期間內的買進與賣出，不只是市場漲跌 — 想看成本報酬率請到投資組合頁。",
+    "saved": "已儲蓄",
+    "savingsRate": "儲蓄率 {{rate}}%",
+    "totalAssets": "總資產"
+  },
+  "view": {
+    "compact": "精簡",
+    "compactBadge": "精簡檢視",
+    "full": "完整",
+    "label": "儀表板檢視",
+    "switchToFull": "切換至完整儀表板 — 熱力圖、資產預測與詳細紀錄"
+  },
+  "wallet": {
+    "allocation": "配置比例",
+    "assets": "資產",
+    "debt": "負債",
+    "ofAssets": "佔總資產",
+    "debtBalance": "負債餘額",
+    "emergencyFund": "緊急資金",
+    "emergencyRunway": "緊急儲備",
+    "liabilities": "負債",
+    "lifeWallet": "生活錢包",
+    "months": "個月",
+    "netWorth": "淨資產",
+    "noTrendData": "沒有趨勢數據",
+    "portfolioWallet": "投資組合",
+    "savingsRate": "月儲蓄率",
+    "totalAsset": "總資產"
+  },
+  "welcome": {
+    "subtitle": "這是您今日的財務概覽。",
+    "title": "{{greeting}}，{{name}}！ 👋"
+  },
+  "whatIf": {
+    "adjustAmounts": "調整資產金額",
+    "amount": "金額：",
+    "change": "變化:",
+    "deviation": "偏離 {{pct}} 個百分點",
+    "hideDetails": "隱藏詳細資訊",
+    "howToUse": "使用說明：",
+    "originalAmount": "原始金額:",
+    "originalShare": "原始佔比:",
+    "originalTotal": "原始總資產",
+    "reset": "重置",
+    "share": "佔比：",
+    "sliderLabel": "{{asset}} 的模擬金額",
+    "showDetails": "顯示詳細資訊",
+    "simulatedTotal": "模擬後總資產",
+    "subtitle": "模擬交易後的資產配置變化",
+    "targetIs": "(目標: {{pct}})",
+    "tip1": "使用滑桿或快速按鈕調整各資產金額",
+    "tip2": "系統會即時計算新的資產配置比例",
+    "tip3": "橘色標示表示偏離目標超過 5 個百分點",
+    "tip4": "此為模擬工具，不會影響實際資產",
+    "title": "What-If 模擬器",
+    "totalChange": "總變化"
+  }
+}

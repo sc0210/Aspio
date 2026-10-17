@@ -1,0 +1,57 @@
+# docker-compose.caddy.yml
+# ---------------------------------------------------------------------------
+# Serves Aspiro over a real HTTPS domain via a Caddy reverse proxy, so Google
+# OAuth works (Google rejects raw private IPs). Use INSTEAD of the lan override.
+#
+# Compose with the base file (secrets come from caddy/cf.vars, Pi-only):
+#   docker compose --env-file .env --env-file caddy/cf.vars \
+#     -f docker-compose.yml -f docker-compose.caddy.yml \
+#     up -d --build postgres backend frontend pgadmin caddy
+#
+# caddy/cf.vars (git-ignored, lives only on the Pi):
+#   APP_DOMAIN=home.aspiro.dev
+#   CF_API_TOKEN=<cloudflare Zone:DNS:Edit token>
+#
+# Requires a Cloudflare DNS A record: home.aspiro.dev -> 192.168.0.176 (DNS only).
+# Google Console redirect URI: https://home.aspiro.dev/api/auth/callback/google
+# ---------------------------------------------------------------------------
+
+services:
+  caddy:
+    build:
+      context: ./caddy
+      dockerfile: Dockerfile
+    container_name: aspiro-caddy
+    restart: unless-stopped
+    ports:
+      - "80:80"
+      - "443:443"
+    environment:
+      - APP_DOMAIN=${APP_DOMAIN:-home.aspiro.dev}
+      - CF_API_TOKEN=${CF_API_TOKEN}
+    volumes:
+      - ./caddy/Caddyfile:/etc/caddy/Caddyfile:ro
+      - caddy_data:/data
+      - caddy_config:/config
+    depends_on:
+      - frontend
+      - backend
+    networks:
+      - aspiro-network
+
+  # Point the browser-facing URLs at the https domain (routed through Caddy).
+  backend:
+    environment:
+      - CORS_ORIGINS=["https://${APP_DOMAIN:-home.aspiro.dev}"]
+      - FRONTEND_URL=https://${APP_DOMAIN:-home.aspiro.dev}
+      - GOOGLE_REDIRECT_URI=https://${APP_DOMAIN:-home.aspiro.dev}/api/auth/callback/google
+
+  frontend:
+    environment:
+      - NEXT_PUBLIC_API_URL=https://${APP_DOMAIN:-home.aspiro.dev}/api/v1
+      - NEXTAUTH_URL=https://${APP_DOMAIN:-home.aspiro.dev}
+      # INTERNAL_API_URL (base file) stays http://backend:8000 — container-internal.
+
+volumes:
+  caddy_data:
+  caddy_config:

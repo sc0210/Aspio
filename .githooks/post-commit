@@ -1,0 +1,26 @@
+#!/usr/bin/env bash
+# Review the commit that was just created.
+#
+# Detached on purpose: the shell prompt comes back immediately and the finished
+# review arrives as a desktop notification plus a report under logs/commit-reviews/.
+# Blocking the terminal for a model call after every commit is not worth it —
+# the pre-push hook is the synchronous gate.
+#
+# Skip once:  ASPIRO_SKIP_REVIEW=1 git commit …
+set -u
+
+[ "${ASPIRO_SKIP_REVIEW:-0}" = "1" ] && exit 0
+command -v uv >/dev/null 2>&1 || exit 0
+
+REPO="$(git rev-parse --show-toplevel)"
+REVIEWER="$REPO/scripts/commit_review.py"
+
+[ -f "$REVIEWER" ] || exit 0
+
+LOG_DIR="$REPO/logs/commit-reviews"
+mkdir -p "$LOG_DIR"
+
+nohup uv run "$REVIEWER" --mode commit --notify \
+  >>"$LOG_DIR/post-commit.log" 2>&1 &
+
+exit 0

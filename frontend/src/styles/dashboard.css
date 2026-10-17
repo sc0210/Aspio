@@ -1,0 +1,205 @@
+/* Global animations and utilities for dashboard components */
+
+/* Card base styles */
+.card-base {
+  @apply rounded-2xl border border-gray-200 dark:border-gray-700 shadow-card-base bg-white dark:bg-gray-800 transition-all duration-300;
+}
+
+.card-hover {
+  @apply hover:shadow-card-hover hover:-translate-y-1 cursor-pointer;
+}
+
+/* Metric card animations */
+.metric-card-enter {
+  @apply animate-metric-enter;
+}
+
+.metric-card-hover {
+  @apply hover:shadow-card-hover hover:-translate-y-1 transition-all duration-300;
+}
+
+.metric-card-hover:hover {
+  @apply shadow-card-hover -translate-y-1;
+}
+
+/* Icon animations */
+.icon-hover {
+  @apply transition-transform duration-300;
+}
+
+.metric-card-hover .icon-hover:hover {
+  @apply scale-110;
+}
+
+.icon-base {
+  @apply transition-transform duration-300;
+}
+
+/* Decorative elements */
+.decorative-circle {
+  @apply absolute rounded-full transition-transform duration-500;
+}
+
+.metric-card-hover .decorative-circle {
+  @apply transition-transform duration-500;
+}
+
+.metric-card-hover:hover .decorative-circle {
+  @apply scale-150;
+}
+
+/* Spacing utilities */
+.space-between-metric {
+  @apply flex items-center justify-between gap-3;
+}
+
+/* Text animations on data change */
+@keyframes slideInValue {
+  from {
+    opacity: 0;
+    transform: translateX(-8px);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(0);
+  }
+}
+
+.value-change {
+  animation: slideInValue 0.3s ease-out;
+}
+
+/* Responsive grid utilities */
+.grid-metrics-hero {
+  @apply grid-cols-1 md:grid-cols-2 gap-6;
+}
+
+.grid-metrics-primary {
+  @apply grid-cols-1 md:grid-cols-3 gap-6;
+}
+
+.grid-metrics-responsive {
+  @apply grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4 sm:gap-6;
+}
+
+/* Loading states */
+.skeleton-card {
+  @apply animate-pulse rounded-2xl border border-gray-200 dark:border-gray-700 bg-gray-100 dark:bg-gray-700;
+}
+
+.skeleton-line {
+  @apply h-3 bg-gray-200 dark:bg-gray-700 rounded animate-pulse;
+}
+
+.skeleton-title {
+  @apply h-4 bg-gray-300 dark:bg-gray-600 rounded animate-pulse w-24;
+}
+
+.skeleton-value {
+  @apply h-8 bg-gray-300 dark:bg-gray-600 rounded animate-pulse w-32;
+}
+
+/* Trend badge styling */
+.trend-badge-up {
+  @apply inline-flex items-center gap-1 px-2 py-1 rounded-full text-xs font-semibold;
+  @apply bg-prosperity-100 dark:bg-prosperity-900/30 text-prosperity-700 dark:text-prosperity-300;
+}
+
+.trend-badge-down {
+  @apply inline-flex items-center gap-1 px-2 py-1 rounded-full text-xs font-semibold;
+  @apply bg-orange-100 dark:bg-orange-900/30 text-orange-700 dark:text-orange-300;
+}
+
+/* Shimmer effect for loading */
+.shimmer-effect {
+  @apply relative overflow-hidden;
+}
+
+.shimmer-effect::after {
+  content: '';
+  @apply absolute inset-0 bg-gradient-to-r from-transparent via-white/30 to-transparent dark:via-gray-700/30;
+  animation: shimmer 2s infinite;
+}
+
+/* Focus states for accessibility */
+.card-focus {
+  @apply focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-500 focus-visible:ring-offset-2 dark:focus-visible:ring-offset-gray-900;
+}
+
+/* Reduced motion preferences */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    @apply !animate-none !transition-none;
+  }
+}
+
+/* Spacing and typography utilities */
+.px-card {
+  @apply px-4 sm:px-6 md:px-8;
+}
+
+.py-card {
+  @apply py-4 sm:py-6 md:py-8;
+}
+
+.gap-card {
+  @apply gap-4 sm:gap-6 md:gap-8;
+}
+
+/* Typography utilities */
+.text-metric-label {
+  @apply text-xs font-semibold uppercase tracking-wide;
+}
+
+.text-metric-value-hero {
+  @apply text-4xl font-bold;
+}
+
+.text-metric-value-primary {
+  @apply text-2xl font-bold;
+}
+
+.text-metric-value-secondary {
+  @apply text-xl font-bold;
+}
+
+/* Transition utilities */
+.transition-smooth {
+  @apply transition-all duration-300 ease-out;
+}
+
+.transition-fast {
+  @apply transition-all duration-150 ease-out;
+}
+
+.transition-slow {
+  @apply transition-all duration-500 ease-out;
+}
+
+/* Transform utilities */
+.hover-lift-sm {
+  @apply hover:-translate-y-1 transition-transform duration-300;
+}
+
+.hover-lift-md {
+  @apply hover:-translate-y-2 transition-transform duration-300;
+}
+
+.hover-lift-lg {
+  @apply hover:-translate-y-4 transition-transform duration-300;
+}
+
+/* Shadow utilities */
+.shadow-card-sm {
+  @apply shadow-card-base;
+}
+
+.shadow-card-md {
+  @apply shadow-card-elevated;
+}
+
+.shadow-card-lg {
+  @apply shadow-card-hover;
+}

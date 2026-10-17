@@ -1,0 +1,536 @@
+#!/usr/bin/env bash
+# aspiro — set up, update, back up and inspect a self-hosted Aspiro.
+#
+#   aspiro setup  [--domain D] [--google-client-id ID] [--google-client-secret S]
+#                 [--tunnel-token T] [--non-interactive] [--force [--rotate-secrets]]
+#                 --force updates an existing .env in place, keeping every value not
+#                 given; --rotate-secrets also regenerates SECRET_KEY/NEXTAUTH_SECRET
+#   aspiro update [--ref REF] [--init]
+#                 pulls the checkout (or checks out REF: a tag, branch or commit),
+#                 builds the images here, migrates, restarts, and rolls back on failure;
+#                 --init lets migrations build an empty database: a first install
+#                 only, never inferred (a lost volume must fail, not start empty)
+#   aspiro backup [--dir DIR] [--keep N]
+#   aspiro status
+#
+# Runs from the git checkout that holds docker-compose.pi.yml. Nothing is published
+# to pull: every image is built on this machine. See docs/SELF_HOSTING.md.
+# Tested by scripts/aspiro_test.sh with docker stubbed.
+#
+# Environment (all optional):
+#   ASPIRO_DIR             install directory            (the directory above scripts/)
+#   ASPIRO_COMPOSE_FILE    compose file, relative to it (docker-compose.pi.yml)
+#   ASPIRO_HEALTH_TIMEOUT  seconds to wait for /health after an update (180)
+#   ASPIRO_BACKUP_DIR / ASPIRO_BACKUP_KEEP / ASPIRO_BACKUP_AGE_RECIPIENT /
+#   ASPIRO_BACKUP_GPG_RECIPIENT / ASPIRO_BACKUP_S3_URI / ASPIRO_BACKUP_S3_ENDPOINT
+#                          see `aspiro backup` below
+set -euo pipefail
+
+ASPIRO_VERSION_CLI=2
+ASPIRO_DIR="${ASPIRO_DIR:-$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)}"
+ASPIRO_COMPOSE_FILE="${ASPIRO_COMPOSE_FILE:-docker-compose.pi.yml}"
+ASPIRO_HEALTH_TIMEOUT="${ASPIRO_HEALTH_TIMEOUT:-180}"
+ASPIRO_HEALTH_INTERVAL="${ASPIRO_HEALTH_INTERVAL:-5}"
+# The app services; docker-compose.pi.yml builds them as aspiro-<svc>:latest.
+ASPIRO_APPS=(backend frontend)
+
+log()  { printf '==> %s\n' "$*"; }
+warn() { printf 'WARNING: %s\n' "$*" >&2; }
+die()  { printf 'ERROR: %s\n' "$*" >&2; exit 1; }
+
+usage() {
+  sed -n '2,14p' "${BASH_SOURCE[0]}" | sed 's/^# \{0,1\}//'
+}
+
+# --- pure helpers (unit-tested) ------------------------------------------------------
+
+# 64 hex characters. Hex, not base64: these land in DATABASE_URL and in a compose
+# .env, where '/', '+' and '$' each need escaping somewhere.
+aspiro_gen_secret() {
+  openssl rand -hex "${1:-32}"
+}
+
+# aspiro_env_get <file> <key>  → value of the last KEY= line ('' when absent)
+aspiro_env_get() {
+  [ -f "$1" ] || return 0
+  awk -v k="$2" 'index($0, k "=") == 1 { v = substr($0, length(k) + 2) } END { printf "%s", v }' "$1"
+}
+
+# aspiro_env_set <file> <key> <value>  → replace KEY=… in place, or append it.
+# The value is passed through the environment, not -v, so awk does not interpret
+# backslashes in it.
+aspiro_env_set() {
+  local file=$1 key=$2 tmp
+  tmp=$(mktemp "${file}.XXXXXX")
+  ASPIRO_V="$3" awk -v k="$key" '
+    index($0, k "=") == 1 { if (!done) print k "=" ENVIRON["ASPIRO_V"]; done = 1; next }
+    { print }
+    END { if (!done) print k "=" ENVIRON["ASPIRO_V"] }
+  ' "$file" > "$tmp"
+  cat "$tmp" > "$file"
+  rm -f "$tmp"
+}
+
+# --- docker helpers ------------------------------------------------------------------
+
+compose() {
+  local args=(--project-directory "$ASPIRO_DIR" --env-file "$ASPIRO_DIR/.env")
+  [ -f "$ASPIRO_DIR/caddy/cf.vars" ] && args+=(--env-file "$ASPIRO_DIR/caddy/cf.vars")
+  docker compose "${args[@]}" -f "$ASPIRO_DIR/$ASPIRO_COMPOSE_FILE" "$@"
+}
+
+# Compose reads COMPOSE_PROFILES from the shell; make the .env's setting count too.
+aspiro_load_profiles() {
+  local p
+  p=$(aspiro_env_get "$ASPIRO_DIR/.env" COMPOSE_PROFILES)
+  if [ -n "$p" ] && [ -z "${COMPOSE_PROFILES:-}" ]; then
+    export COMPOSE_PROFILES="$p"
+  fi
+}
+
+aspiro_require_env() {
+  [ -f "$ASPIRO_DIR/.env" ] || die "$ASPIRO_DIR/.env not found — run 'aspiro setup' first"
+  [ -f "$ASPIRO_DIR/$ASPIRO_COMPOSE_FILE" ] || die "$ASPIRO_DIR/$ASPIRO_COMPOSE_FILE not found"
+  command -v docker >/dev/null 2>&1 || die "docker is not installed"
+  aspiro_load_profiles
+}
+
+aspiro_health() {  # prints /health's body, fails when the backend does not answer
+  compose exec -T backend curl -fsS --max-time 5 http://localhost:8000/health
+}
+
+# /health never touches the database, so it alone does not prove the DB is reachable
+# or the schema current. `alembic current` prints "<rev> (head)" only when both hold.
+aspiro_schema_at_head() {
+  local out
+  out=$(compose exec -T backend alembic current 2>/dev/null) || return 1
+  [[ "$out" == *"(head)"* ]]
+}
+
+# The frontend has no healthcheck of its own. NextAuth's providers route fails when
+# NEXTAUTH_SECRET or NEXTAUTH_URL is wrong, which is how a bad frontend release
+# usually breaks, so it proves more than the landing page would.
+# HOSTNAME is the address Next binds to (the image sets 0.0.0.0; without that, Docker's
+# own HOSTNAME, the container's name), so the probe reaches it either way.
+aspiro_frontend_healthy() {
+  compose exec -T frontend node -e \
+    "fetch('http://'+(process.env.HOSTNAME||'localhost')+':3000/api/auth/providers').then(r=>process.exit(r.ok?0:1),()=>process.exit(1))" \
+    >/dev/null 2>&1
+}
+
+aspiro_body_healthy() {  # the exact "status":"healthy" token, so "unhealthy" fails
+  local compact=${1//[[:space:]]/}
+  [[ "$compact" == *'"status":"healthy"'* ]]
+}
+
+aspiro_wait_healthy() {  # aspiro_wait_healthy [--no-schema] — backend, frontend and (by default) schema
+  local deadline=$((SECONDS + ASPIRO_HEALTH_TIMEOUT)) body schema=1
+  [ "${1:-}" = --no-schema ] && schema=0
+  while :; do
+    if body=$(aspiro_health 2>/dev/null) && aspiro_body_healthy "$body" \
+      && aspiro_frontend_healthy; then
+      if [ "$schema" -eq 0 ]; then
+        log "backend and frontend healthy: $body"
+        return 0
+      fi
+      if aspiro_schema_at_head; then
+        log "backend and frontend healthy, database at head: $body"
+        return 0
+      fi
+    fi
+    [ "$SECONDS" -ge "$deadline" ] && return 1
+    sleep "$ASPIRO_HEALTH_INTERVAL"
+  done
+}
+
+# --- setup ---------------------------------------------------------------------------
+
+aspiro_ask() {  # aspiro_ask <var> <prompt> [secret]
+  local __var=$1 prompt=$2 secret=${3:-} current reply
+  current=${!__var:-}
+  if [ "$secret" = secret ]; then
+    read -r -s -p "$prompt${current:+ [keep current]}: " reply; echo >&2
+  else
+    read -r -p "$prompt${current:+ [$current]}: " reply
+  fi
+  [ -n "$reply" ] && printf -v "$__var" '%s' "$reply"
+  return 0
+}
+
+cmd_setup() {
+  local force=0 interactive=1 rotate=0
+  local domain="${ASPIRO_DOMAIN:-}" gid="${GOOGLE_CLIENT_ID:-}" gsecret="${GOOGLE_CLIENT_SECRET:-}"
+  local tunnel="${CF_TUNNEL_TOKEN:-}"
+  [ -t 0 ] || interactive=0
+  while [ $# -gt 0 ]; do
+    case "$1" in
+      --domain) domain=${2:?--domain needs a value}; shift 2 ;;
+      --google-client-id) gid=${2:?}; shift 2 ;;
+      --google-client-secret) gsecret=${2:?}; shift 2 ;;
+      --tunnel-token) tunnel=${2:?}; shift 2 ;;
+      --non-interactive|-y) interactive=0; shift ;;
+      --force) force=1; shift ;;
+      --rotate-secrets) rotate=1; shift ;;
+      -h|--help) usage; return 0 ;;
+      *) die "setup: unknown option '$1'" ;;
+    esac
+  done
+
+  local env="$ASPIRO_DIR/.env" example="$ASPIRO_DIR/production.env.sample" existing=0
+  if [ -f "$env" ]; then
+    [ "$force" -eq 1 ] || die "$env already exists — refusing to overwrite it (pass --force to update it in place)"
+    existing=1
+    # --force edits the existing file: every key and value in it (secrets, LINE,
+    # SMTP, profiles, ...) is kept unless a new value is given. Rotating the session
+    # secrets logs everyone out, so it takes --rotate-secrets. POSTGRES_PASSWORD is
+    # never changed: Postgres only reads it when the data volume is first created.
+    [ -n "$domain" ] || domain=$(aspiro_env_get "$env" APP_DOMAIN)
+    [ -n "$gid" ] || gid=$(aspiro_env_get "$env" GOOGLE_CLIENT_ID)
+    [ -n "$gsecret" ] || gsecret=$(aspiro_env_get "$env" GOOGLE_CLIENT_SECRET)
+    [ -n "$tunnel" ] || tunnel=$(aspiro_env_get "$env" CF_TUNNEL_TOKEN)
+    cp -p "$env" "$env.bak.$(date +%Y%m%d%H%M%S)"
+    log "backed up the existing .env; existing values are kept unless replaced"
+    [ "$rotate" -eq 0 ] || log "rotating SECRET_KEY and NEXTAUTH_SECRET (signs everyone out); POSTGRES_PASSWORD is kept"
+  fi
+  command -v openssl >/dev/null 2>&1 || die "openssl is required to generate secrets"
+
+  if [ "$interactive" -eq 1 ]; then
+    aspiro_ask domain "Public hostname (e.g. aspiro.example.com)"
+    aspiro_ask gid "Google OAuth client ID (blank to skip Google sign-in)"
+    aspiro_ask gsecret "Google OAuth client secret" secret
+    aspiro_ask tunnel "Cloudflare Tunnel token (blank if you run cloudflared yourself)" secret
+  fi
+  domain=${domain#https://}; domain=${domain#http://}; domain=${domain%%/*}
+  [ -n "$domain" ] || die "a hostname is required (--domain or ASPIRO_DOMAIN)"
+  [[ "$domain" =~ ^[A-Za-z0-9.-]+$ ]] || die "'$domain' is not a hostname"
+
+  local tmp
+  tmp=$(mktemp "$ASPIRO_DIR/.env.new.XXXXXX")
+  chmod 600 "$tmp"
+  if [ "$existing" -eq 1 ]; then
+    cat "$env" > "$tmp"
+  elif [ -f "$example" ]; then
+    cat "$example" > "$tmp"
+  else
+    warn "no production.env.sample — writing a minimal .env"
+  fi
+
+  aspiro_env_set "$tmp" APP_DOMAIN "$domain"
+  # Fresh file: always generate (the template's values are placeholders). Existing
+  # file: keep each secret, generating only an empty one, or the session secrets on
+  # --rotate-secrets.
+  local key
+  for key in SECRET_KEY NEXTAUTH_SECRET; do
+    if [ "$existing" -eq 0 ] || [ "$rotate" -eq 1 ] || [ -z "$(aspiro_env_get "$tmp" "$key")" ]; then
+      aspiro_env_set "$tmp" "$key" "$(aspiro_gen_secret 32)"
+    fi
+  done
+  if [ "$existing" -eq 0 ] || [ -z "$(aspiro_env_get "$tmp" POSTGRES_PASSWORD)" ]; then
+    aspiro_env_set "$tmp" POSTGRES_PASSWORD "$(aspiro_gen_secret 24)"
+  fi
+  aspiro_env_set "$tmp" GOOGLE_CLIENT_ID "$gid"
+  aspiro_env_set "$tmp" GOOGLE_CLIENT_SECRET "$gsecret"
+  aspiro_env_set "$tmp" CF_TUNNEL_TOKEN "$tunnel"
+  if [ -n "$tunnel" ]; then
+    # Add 'tunnel' to the profiles, keeping any others already listed.
+    local profiles
+    profiles=$(aspiro_env_get "$tmp" COMPOSE_PROFILES)
+    case ",$profiles," in
+      *,tunnel,*) ;;
+      ,,) aspiro_env_set "$tmp" COMPOSE_PROFILES tunnel ;;
+      *) aspiro_env_set "$tmp" COMPOSE_PROFILES "$profiles,tunnel" ;;
+    esac
+  fi
+  mv -f "$tmp" "$env"
+  chmod 600 "$env"
+
+  log "wrote $env (mode 600)"
+  [ -n "$gid" ] || warn "no Google OAuth client — Google sign-in will not work until GOOGLE_CLIENT_ID/SECRET are set"
+  [ -n "$tunnel" ] || warn "no tunnel token — point your own cloudflared (or proxy) at http://localhost:80"
+  if [ -n "$gid" ]; then
+    log "Google OAuth redirect URI to register: https://$domain/api/auth/callback/google"
+  fi
+  if [ "$existing" -eq 0 ]; then
+    log "next: aspiro update --init   (--init on this first install only)"
+  else
+    # An existing install: never suggest --init, which would rebuild an empty database.
+    log "next: aspiro update   (or 'docker compose up -d' if only settings changed)"
+  fi
+}
+
+# --- update --------------------------------------------------------------------------
+
+aspiro_has_migrate_service() {
+  compose --profile migrate config --services 2>/dev/null | grep -qx migrate
+}
+
+aspiro_restore_previous() {  # put aspiro-<svc>:previous back and recreate onto it
+  local svc restored=0
+  for svc in "${ASPIRO_APPS[@]}"; do
+    if docker image inspect "aspiro-$svc:previous" >/dev/null 2>&1; then
+      docker tag "aspiro-$svc:previous" "aspiro-$svc:latest"
+      restored=1
+    fi
+  done
+  [ -f "$1/previous" ] && cp "$1/previous" "$1/current"
+  return $((1 - restored))
+}
+
+aspiro_git() { git -C "$ASPIRO_DIR" "$@"; }
+
+# Put the checkout back where it was before this update.
+aspiro_restore_checkout() {  # aspiro_restore_checkout <branch or ''> <sha>
+  if [ -n "$1" ]; then
+    aspiro_git checkout -q "$1" && aspiro_git reset -q --keep "$2"
+  else
+    aspiro_git checkout -q --detach "$2"
+  fi
+}
+
+cmd_update() {
+  local ref="" init=0
+  while [ $# -gt 0 ]; do
+    case "$1" in
+      --ref) ref=${2:?--ref needs a tag, branch or commit}; shift 2 ;;
+      --init) init=1; shift ;;
+      -h|--help) usage; return 0 ;;
+      *) die "update: unknown option '$1'" ;;
+    esac
+  done
+  aspiro_require_env
+
+  # Checks that change nothing, so a refusal leaves the install as it was.
+  command -v git >/dev/null 2>&1 || die "git is not installed"
+  aspiro_git rev-parse --git-dir >/dev/null 2>&1 \
+    || die "$ASPIRO_DIR is not a git checkout — clone the repository (see docs/SELF_HOSTING.md)"
+  [ -z "$(aspiro_git status --porcelain --untracked-files=no)" ] \
+    || die "the checkout has local changes — commit or discard them first (nothing changed)"
+  aspiro_has_migrate_service \
+    || die "$ASPIRO_COMPOSE_FILE has no 'migrate' service (profile 'migrate') — cannot migrate the database (nothing changed)"
+
+  local state="$ASPIRO_DIR/.aspiro-state"
+  mkdir -p "$state"
+  # --init is never inferred (not even from a missing state file): a host that has
+  # data but lost .aspiro-state, or lost its database volume, must fail the migration
+  # loudly rather than come up as a fresh, empty, healthy-looking app.
+
+  # 1. Move the checkout to the commit being deployed.
+  local branch prev target
+  branch=$(aspiro_git symbolic-ref -q --short HEAD || true)
+  prev=$(aspiro_git rev-parse HEAD)
+  log "fetching"
+  aspiro_git fetch -q --tags origin || die "git fetch failed (nothing changed)"
+  if [ -n "$ref" ]; then
+    target=$(aspiro_git rev-parse -q --verify "origin/$ref^{commit}" 2>/dev/null \
+      || aspiro_git rev-parse -q --verify "$ref^{commit}" 2>/dev/null) \
+      || die "no such tag, branch or commit: $ref (nothing changed)"
+    aspiro_git checkout -q --detach "$target"
+  else
+    [ -n "$branch" ] || die "the checkout is not on a branch — pass --ref (nothing changed)"
+    aspiro_git merge -q --ff-only '@{upstream}' \
+      || die "cannot fast-forward $branch to its upstream (nothing changed)"
+    target=$(aspiro_git rev-parse HEAD)
+  fi
+  log "deploying $(aspiro_git log -1 --format='%h %s' "$target")"
+
+  # 2. Record what is running now, so a failed update can put it back.
+  local svc
+  {
+    for svc in "${ASPIRO_APPS[@]}"; do
+      printf '%s=%s\n' "$svc" "$(docker image inspect --format '{{.Id}}' "aspiro-$svc:latest" 2>/dev/null || echo none)"
+    done
+  } > "$state/previous.ids"
+  [ -f "$state/current" ] && cp "$state/current" "$state/previous"
+  for svc in "${ASPIRO_APPS[@]}"; do
+    if docker image inspect "aspiro-$svc:latest" >/dev/null 2>&1; then
+      docker tag "aspiro-$svc:latest" "aspiro-$svc:previous"
+    fi
+  done
+
+  # 3. Build the app images here, by name: a blanket build would also recompile Caddy.
+  log "building ${ASPIRO_APPS[*]}"
+  if ! GIT_SHA="$target" compose build "${ASPIRO_APPS[@]}"; then
+    aspiro_restore_previous "$state" || true
+    aspiro_restore_checkout "$branch" "$prev"
+    die "build failed — checkout and images put back, containers were not recreated"
+  fi
+
+  # 4. Migrate with the NEW backend image, before it serves.
+  local migrate_cmd=()
+  if [ "$init" -eq 1 ]; then
+    log "running database migrations (--init: an empty database is initialised)"
+    migrate_cmd=(bash scripts/migrate.sh --init)
+  else
+    log "running database migrations"
+  fi
+  if ! compose --profile migrate run --rm migrate ${migrate_cmd[@]+"${migrate_cmd[@]}"}; then
+    aspiro_restore_previous "$state" || true
+    aspiro_restore_checkout "$branch" "$prev"
+    die "migration failed — checkout and images put back, containers were not recreated"
+  fi
+
+  # 5. Recreate, then prove both apps answer. A failed `up` (port taken, a required
+  # variable missing) must reach the rollback below too.
+  if compose up -d --remove-orphans && aspiro_wait_healthy; then
+    printf 'commit=%s\nupdated=%s\n' "$target" "$(date -u +%Y-%m-%dT%H:%M:%SZ)" > "$state/current"
+    log "updated to $(aspiro_git rev-parse --short "$target")"
+    return 0
+  fi
+
+  warn "the new build did not start, or was not healthy with the database at head within ${ASPIRO_HEALTH_TIMEOUT}s — rolling back"
+  compose logs --tail 50 backend frontend >&2 || true
+  aspiro_restore_checkout "$branch" "$prev"
+  if aspiro_restore_previous "$state"; then
+    # Health only, no schema check: an older backend need not recognise a newer revision.
+    if compose up -d --remove-orphans && aspiro_wait_healthy --no-schema; then
+      warn "rolled back to the previous images (migrations already applied stay applied)"
+    else
+      warn "the previous images are not healthy either — needs attention"
+    fi
+  else
+    warn "no previous images to roll back to"
+  fi
+  exit 1
+}
+
+# --- backup --------------------------------------------------------------------------
+
+# Encrypt (when a recipient is set) and upload (when a bucket is set) one finished
+# backup file. Not called through $( ):
+# die must end the script, not a subshell.
+aspiro_backup_seal() {  # aspiro_backup_seal <file>
+  # The plaintext is deleted only after encryption succeeded; on any failure the
+  # partial ciphertext goes and the plaintext stays (mode 600), never uploaded.
+  local file=$1 enc="" tool="" ok=0
+  if [ -n "${ASPIRO_BACKUP_AGE_RECIPIENT:-}" ]; then
+    enc="$file.age"; tool=age
+    if command -v age >/dev/null 2>&1 \
+      && age -r "$ASPIRO_BACKUP_AGE_RECIPIENT" -o "$enc" "$file"; then ok=1; fi
+  elif [ -n "${ASPIRO_BACKUP_GPG_RECIPIENT:-}" ]; then
+    enc="$file.gpg"; tool=gpg
+    if command -v gpg >/dev/null 2>&1 \
+      && gpg --batch --yes --encrypt --recipient "$ASPIRO_BACKUP_GPG_RECIPIENT" -o "$enc" "$file"; then ok=1; fi
+  fi
+  if [ -n "$enc" ]; then
+    if [ "$ok" -ne 1 ] || [ ! -s "$enc" ]; then
+      rm -f "$enc"
+      die "$tool encryption failed; unencrypted copy kept at $file (mode 600), not uploaded"
+    fi
+    rm -f "$file"
+    file=$enc
+    chmod 600 "$file"
+  fi
+  log "backup ok: $file ($(wc -c < "$file" | tr -d ' ') bytes)"
+
+  # S3-compatible upload (Cloudflare R2: endpoint https://<account>.r2.cloudflarestorage.com,
+  # credentials in AWS_ACCESS_KEY_ID / AWS_SECRET_ACCESS_KEY).
+  if [ -n "${ASPIRO_BACKUP_S3_URI:-}" ]; then
+    command -v aws >/dev/null 2>&1 || die "ASPIRO_BACKUP_S3_URI is set but the aws CLI is not installed"
+    local s3_args=()
+    [ -n "${ASPIRO_BACKUP_S3_ENDPOINT:-}" ] && s3_args+=(--endpoint-url "$ASPIRO_BACKUP_S3_ENDPOINT")
+    aws s3 cp ${s3_args[@]+"${s3_args[@]}"} --only-show-errors "$file" "${ASPIRO_BACKUP_S3_URI%/}/$(basename "$file")" \
+      || die "offsite upload failed (the local copy is kept: $file)"
+    log "uploaded to ${ASPIRO_BACKUP_S3_URI%/}/"
+  fi
+}
+
+cmd_backup() {
+  local dir="${ASPIRO_BACKUP_DIR:-$ASPIRO_DIR/backups/db}" keep="${ASPIRO_BACKUP_KEEP:-14}"
+  while [ $# -gt 0 ]; do
+    case "$1" in
+      --dir) dir=${2:?}; shift 2 ;;
+      --keep) keep=${2:?}; shift 2 ;;
+      -h|--help) usage; return 0 ;;
+      *) die "backup: unknown option '$1'" ;;
+    esac
+  done
+  if ! [[ "$keep" =~ ^[0-9]+$ ]] || [ "$keep" -lt 1 ]; then
+    die "--keep must be a positive integer"
+  fi
+  aspiro_require_env
+  mkdir -p "$dir"
+  chmod 700 "$dir"
+
+  local file stamp
+  stamp=$(date +%Y%m%d_%H%M%S)
+  file="$dir/aspiro_$stamp.sql.gz"
+  log "dumping the database to $file"
+  # shellcheck disable=SC2016  # expanded inside the container, where they are set
+  compose exec -T postgres sh -c \
+    'pg_dump -U "$POSTGRES_USER" -d "$POSTGRES_DB" --no-owner --no-privileges' \
+    | gzip > "$file.partial" || { rm -f "$file.partial"; die "pg_dump failed"; }
+  gzip -t "$file.partial" || { rm -f "$file.partial"; die "dump is not a valid gzip"; }
+  [ "$(wc -c < "$file.partial")" -gt 100 ] || { rm -f "$file.partial"; die "dump is suspiciously small"; }
+  mv "$file.partial" "$file"
+  chmod 600 "$file"
+
+  # Receipt attachments live on the backend_uploads volume, and the database only
+  # points at them: a restore from the dump alone left every attachment a 404.
+  local uploads="$dir/aspiro_$stamp.uploads.tar.gz"
+  log "archiving uploaded attachments to $uploads"
+  compose exec -T backend tar -C /app/uploads -czf - . > "$uploads.partial" \
+    || { rm -f "$uploads.partial"; die "archiving /app/uploads failed; nothing was encrypted or uploaded (local dump: $file)"; }
+  gzip -t "$uploads.partial" \
+    || { rm -f "$uploads.partial"; die "uploads archive is not a valid gzip; nothing was encrypted or uploaded (local dump: $file)"; }
+  mv "$uploads.partial" "$uploads"
+  chmod 600 "$uploads"
+
+  # Both files exist locally before either is encrypted or sent offsite, so a run
+  # never stores a dump offsite without its matching attachments.
+  aspiro_backup_seal "$file"
+  aspiro_backup_seal "$uploads"
+
+  # Keep the newest N of each kind.
+  local old pattern
+  for pattern in 'aspiro_*.sql.gz*' 'aspiro_*.uploads.tar.gz*'; do
+    # shellcheck disable=SC2012,SC2086  # our own fixed-format names; the glob is meant to expand
+    ls -1t "$dir"/$pattern 2>/dev/null | tail -n +"$((keep + 1))" | while IFS= read -r old; do
+      rm -f -- "$old"
+    done
+  done
+}
+
+# --- status --------------------------------------------------------------------------
+
+cmd_status() {
+  aspiro_require_env
+  local state="$ASPIRO_DIR/.aspiro-state" svc
+  if [ -f "$state/current" ]; then
+    log "last update:"
+    sed 's/^/    /' "$state/current"
+  else
+    log "no update recorded yet ($state/current)"
+  fi
+  log "containers:"
+  compose ps --format '    {{.Service}}: {{.Image}} — {{.Status}}' || compose ps
+  for svc in "${ASPIRO_APPS[@]}"; do
+    printf '    aspiro-%s:latest  %s\n' "$svc" \
+      "$(docker image inspect --format '{{.Id}}' "aspiro-$svc:latest" 2>/dev/null || echo 'not present')"
+  done
+  local body
+  if body=$(aspiro_health 2>/dev/null); then
+    log "health: $body"
+  else
+    log "health: backend not answering"
+    return 1
+  fi
+}
+
+main() {
+  local cmd=${1:-}
+  [ $# -gt 0 ] && shift
+  case "$cmd" in
+    setup) cmd_setup "$@" ;;
+    update) cmd_update "$@" ;;
+    backup) cmd_backup "$@" ;;
+    status) cmd_status "$@" ;;
+    version|--version) echo "aspiro CLI $ASPIRO_VERSION_CLI" ;;
+    ""|-h|--help|help) usage ;;
+    *) usage >&2; die "unknown command '$cmd'" ;;
+  esac
+}
+
+# Sourcing (the test does) defines the functions without running anything.
+if [ "${BASH_SOURCE[0]}" = "$0" ]; then
+  main "$@"
+fi

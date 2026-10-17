@@ -1,0 +1,270 @@
+{
+  "achievements": {
+    "allCaughtUp": "目前沒有新的成就。",
+    "allStreaksEarned": "已獲得所有連續紀錄徽章 🎉",
+    "almostThere": "就快達成",
+    "checkFailed": "無法檢查成就，請重試。",
+    "checkForNew": "檢查新成就",
+    "checking": "檢查中…",
+    "earnedOn": "✓ 已獲得 {{when}}",
+    "fallbackName": "成就",
+    "filterCategory": "依分類篩選",
+    "filterStatus": "依狀態篩選",
+    "financialScores": "財務評分",
+    "last7Days": "最近 7 天",
+    "level": "等級",
+    "newAchievements_one": "🎉 解鎖 {{count}} 項新成就！",
+    "newAchievements_other": "🎉 解鎖 {{count}} 項新成就！",
+    "relative": {
+      "daysAgo": "{{count}} 天前",
+      "monthsAgo": "{{count}} 個月前",
+      "today": "今天",
+      "yesterday": "昨天"
+    },
+    "scores": {
+      "communityEngagement": "社群參與度",
+      "digitalAdoption": "數位使用度",
+      "investmentKnowledge": "投資知識",
+      "savingsDiscipline": "儲蓄紀律"
+    },
+    "searchLabel": "搜尋成就",
+    "searchPlaceholder": "搜尋成就…",
+    "sortDefault": "預設順序",
+    "sortLabel": "排序成就",
+    "sortName": "名稱 (A–Z)",
+    "sortProgress": "進度最多",
+    "sortRarity": "稀有度",
+    "streakBadgeToast": "🎉 已解鎖連續紀錄徽章：{{name}}！",
+    "subtitle": "追蹤您的里程碑並贏得獎勵",
+    "tabs": {
+      "all": "全部",
+      "locked": "未解鎖",
+      "unlocked": "已解鎖"
+    },
+    "title": "成就",
+    "unlocked": "已解鎖"
+  },
+  "card": {
+    "aria": {
+      "cancelDelete": "取消刪除",
+      "confirmDelete": "刪除目標：{{title}}",
+      "contribute": "向「{{title}}」提撥",
+      "delete": "刪除「{{title}}」",
+      "edit": "編輯「{{title}}」",
+      "progress": "「{{title}}」進度"
+    },
+    "atRisk": "進度落後",
+    "complete": "✓ 已完成",
+    "contribute": "提撥",
+    "date": {
+      "days": "剩 {{days}} 天",
+      "months": "剩 {{months}} 個月",
+      "oneDay": "剩 1 天",
+      "overdue": "已逾期",
+      "today": "今天",
+      "years": "剩 {{years}} 年"
+    },
+    "deleteConfirm": "確定刪除此目標？",
+    "done": "✓ 完成",
+    "editTitle": "編輯目標詳情",
+    "left": "尚差 {{amount}}",
+    "perMonth": "~{{amount}}/月"
+  },
+  "categories": {
+    "car_purchase": "購車基金",
+    "debt_payoff": "債務償還",
+    "education": "教育基金",
+    "emergency_fund": "緊急備用金",
+    "house_down_payment": "買房頭期款",
+    "investment": "投資基金",
+    "other": "其他",
+    "retirement": "退休準備",
+    "savings": "儲蓄",
+    "vacation": "旅遊基金"
+  },
+  "complete": "標記為完成",
+  "contribute": "新增貢獻",
+  "contributions": {
+    "add": "新增貢獻",
+    "average": "每月平均：{{amount}}",
+    "delete": "刪除貢獻",
+    "edit": "編輯貢獻",
+    "fields": {
+      "amount": "金額",
+      "date": "日期",
+      "note": "備註"
+    },
+    "history": "貢獻歷史",
+    "notePlaceholder": "為這筆貢獻加上備註…",
+    "title": "貢獻記錄",
+    "total": "總貢獻：{{amount}}"
+  },
+  "create": "建立目標",
+  "createFirst": "建立您的第一個目標",
+  "createNew": "建立新目標",
+  "delete": "刪除目標",
+  "deleteConfirmation": "確定要刪除這個目標嗎？此操作無法復原。",
+  "edit": "編輯目標",
+  "empty": {
+    "button": "建立目標",
+    "subtitle": "設定您的第一個理財目標，開始財務自由之旅",
+    "title": "尚未設定目標"
+  },
+  "fields": {
+    "category": "分類",
+    "currentAmount": "目前金額",
+    "description": "說明",
+    "priority": "優先級",
+    "status": "狀態",
+    "targetAmount": "目標金額",
+    "targetDate": "目標日期",
+    "title": "目標標題"
+  },
+  "filters": {
+    "active": "進行中",
+    "all": "所有目標",
+    "allCategories": "所有分類",
+    "allStatuses": "所有狀態",
+    "byCategory": "按分類",
+    "byPriority": "按優先級",
+    "categoryLabel": "依分類篩選",
+    "completed": "已完成",
+    "paused": "已暫停",
+    "statusLabel": "依狀態篩選"
+  },
+  "gamification": {
+    "achievement": "成就解鎖：{{name}}",
+    "levelUp": "升級！您現在是 {{level}} 級",
+    "milestone": "里程碑達成！🏆",
+    "streak": "{{days}} 天連續貢獻！🔥"
+  },
+  "hideGoalValues": "隱藏目標金額",
+  "hideValues": "隱藏金額",
+  "insights": {
+    "adjustTarget": "以目前的進度將在 {{months}} 個月內達成目標。考慮調整目標日期或金額。",
+    "atRisk": {
+      "desc": "{{days}} 天內到期且進度低於預期",
+      "title": "進度落後的目標"
+    },
+    "completedMessage": "恭喜完成目標！考慮設定新的挑戰。",
+    "coverage": {
+      "desc": "目前資產對進行中目標金額",
+      "title": "進行中目標覆蓋率"
+    },
+    "increaseContribution": "考慮將每月貢獻增加 {{amount}}，可提前 {{months}} 個月達成目標。",
+    "monthly": {
+      "desc": "維持進行中目標的進度",
+      "title": "預估每月提撥"
+    },
+    "onTrackMessage": "進展良好！您有望在 {{date}} 達成目標。",
+    "suggestions": "建議",
+    "title": "目標洞察"
+  },
+  "milestones": {
+    "add": "新增里程碑",
+    "complete": "標記完成",
+    "completed": "於 {{date}} 完成",
+    "delete": "刪除里程碑",
+    "edit": "編輯里程碑",
+    "fields": {
+      "amount": "金額",
+      "description": "說明",
+      "reward": "獎勵",
+      "targetDate": "目標日期",
+      "title": "里程碑標題"
+    },
+    "title": "里程碑",
+    "upcoming": "即將到達的里程碑"
+  },
+  "modes": {
+    "demo": "體驗模式：這些是範例目標資料"
+  },
+  "overview": {
+    "active": "進行中",
+    "addOne": "立即新增 →",
+    "completed": "已完成",
+    "moreGoals": "還有 {{count}} 個目標 →",
+    "noGoalsDesc": "開始追蹤您的財務目標，保持前進的動力",
+    "noGoalsTitle": "尚未設定財務目標",
+    "noRetirementGoal": "尚未設定退休目標",
+    "overallProgress": "整體進度",
+    "portfolioLinked": "投資組合連結",
+    "retirement": "財務目標",
+    "title": "目標",
+    "viewAll": "查看全部 →"
+  },
+  "pause": "暫停目標",
+  "priorities": {
+    "high": "高",
+    "low": "低",
+    "medium": "中"
+  },
+  "progress": {
+    "aheadOfSchedule": "進度超前",
+    "behindSchedule": "進度落後",
+    "completed": "目標完成！🎉",
+    "current": "目前：{{amount}}",
+    "daysLeft": "剩餘 {{days}} 天",
+    "onTrack": "進度良好",
+    "percentage": "完成 {{percent}}%",
+    "remaining": "剩餘：{{amount}}",
+    "target": "目標：{{amount}}",
+    "title": "進度"
+  },
+  "resume": "恢復目標",
+  "saveChanges": "儲存變更",
+  "saving": "儲存中...",
+  "sections": {
+    "activeGoals": "進行中的目標",
+    "completedGoals": "已完成的目標",
+    "filters": "篩選",
+    "otherGoals": "其他目標",
+    "yourGoals": "您的目標"
+  },
+  "showGoalValues": "顯示目標金額",
+  "showValues": "顯示金額",
+  "simulation": {
+    "calculate": "計算",
+    "monthlyContribution": "每月貢獻",
+    "results": {
+      "finalAmount": "最終金額：{{amount}}",
+      "monthlyRequired": "每月所需金額：{{amount}}",
+      "timeToGoal": "達成目標時間：{{time}}",
+      "totalInterest": "預估利息收入：{{amount}}"
+    },
+    "title": "目標模擬"
+  },
+  "stats": {
+    "goal": "個目標",
+    "goals": "個目標"
+  },
+  "status": {
+    "active": "進行中",
+    "cancelled": "已取消",
+    "completed": "已完成",
+    "paused": "已暫停"
+  },
+  "subtitle": "追蹤進度，實現財務夢想",
+  "title": "財務目標",
+  "toast": {
+    "contributionAdded": "投入金額已成功新增！",
+    "contributionFailed": "新增投入金額失敗",
+    "createFailed": "建立目標失敗，請檢查您的輸入後再試。",
+    "created": "目標已成功建立！",
+    "deleteFailed": "刪除目標失敗",
+    "deleted": "目標已成功刪除！",
+    "updateFailed": "更新目標失敗",
+    "updated": "目標已成功更新！"
+  },
+  "tracker": {
+    "emptyDesc": "設定退休目標，即可在投資組合頁解鎖專屬的成長階段追蹤。",
+    "pinnedNote": "🔒 此目標已釘選、無法刪除 — 它驅動您投資組合頁的成長階段追蹤。",
+    "portfolioShort": "投資組合",
+    "progressAria": "退休目標進度：{{percent}}%",
+    "setGoal": "設定退休目標",
+    "target": "目標 <b>{{amount}}</b>",
+    "targetBy": "目標 <b>{{amount}}</b>，於 <b>{{year}}</b> 年達成",
+    "title": "成長階段追蹤",
+    "viewInPortfolio": "在投資組合中查看"
+  }
+}

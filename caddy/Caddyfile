@@ -1,0 +1,67 @@
+{
+	# Whose X-Forwarded-For to believe.
+	#
+	# The backend reads the client's address from the end of that header
+	# (TRUSTED_PROXY_COUNT), which is only safe if the header cannot be written by
+	# the client. Caddy still listens on the LAN, so without this any device on the
+	# home WiFi could connect directly and present a forged two-hop chain, and the
+	# rate limiter would bucket a login brute-force under whatever address it was
+	# handed. Docker's own ranges cover cloudflared, the only hop that legitimately
+	# sits in front; 192.168.x LAN clients are deliberately not trusted.
+	servers {
+		trusted_proxies static 172.16.0.0/12
+	}
+}
+
+# Single HTTPS entrypoint for Aspiro on the Pi.
+# APP_DOMAIN + CF_API_TOKEN are injected from the environment
+# (see docker-compose.caddy.yml + caddy/cf.vars).
+#
+# LAN access (direct, fast): home.aspiro.dev → this Caddy over real HTTPS.
+{$APP_DOMAIN:home.aspiro.dev} {
+	# Automatic HTTPS via Let's Encrypt, DNS-01 challenge through Cloudflare.
+	tls {
+		dns cloudflare {env.CF_API_TOKEN}
+	}
+
+	# Backend API (FastAPI) lives under /api/v1
+	handle /api/v1/* {
+		reverse_proxy backend:8000
+	}
+
+	# Everything else — including NextAuth's /api/auth/* — goes to the Next.js app
+	handle {
+		reverse_proxy frontend:3000
+	}
+}
+
+# Public access via Cloudflare Tunnel (for LINE webhook + remote reach).
+# Cloudflare terminates TLS at its edge and forwards over the tunnel, so we serve
+# plain HTTP here — no cert, no https redirect (which would loop through Cloudflare).
+# Point the tunnel's Public Hostname (app.aspiro.dev) at → HTTP localhost:80.
+# Cloudflare Tunnel origin.
+#
+# The edge terminates TLS and cloudflared reaches this over the Docker network, so
+# this block is plain HTTP. It must be declared explicitly: without it Caddy adds
+# its automatic HTTP→HTTPS redirect for this hostname, and a request arriving from
+# the tunnel would be bounced back to https://<domain> — through the edge, into the
+# tunnel, and round again.
+#
+# The HTTPS block above still serves the LAN directly, so both paths work.
+http://{$APP_DOMAIN:home.aspiro.dev} {
+	handle /api/v1/* {
+		reverse_proxy backend:8000
+	}
+	handle {
+		reverse_proxy frontend:3000
+	}
+}
+
+http://{$PUBLIC_DOMAIN:app.aspiro.dev} {
+	handle /api/v1/* {
+		reverse_proxy backend:8000
+	}
+	handle {
+		reverse_proxy frontend:3000
+	}
+}

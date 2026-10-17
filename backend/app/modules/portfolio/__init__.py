@@ -1,0 +1,1 @@
+"""Portfolio module for Aspiro FastAPI backend"""

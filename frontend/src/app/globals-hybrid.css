@@ -1,0 +1,495 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* Base styles without complex @apply directives */
+html {
+  scroll-behavior: smooth;
+}
+
+body {
+  color: rgb(17 24 39);
+  background-color: rgb(249 250 251);
+  transition: background-color 200ms, color 200ms;
+}
+
+/* Proper dark mode support with CSS variables */
+:root {
+  color-scheme: light;
+  --toast-bg: #363636;
+  --toast-color: #ffffff;
+}
+
+.dark {
+  color-scheme: dark;
+  --toast-bg: rgb(31 41 55);
+  --toast-color: rgb(243 244 246);
+}
+
+.dark body {
+  color: rgb(243 244 246);
+  background-color: rgb(17 24 39);
+}
+
+@layer components {
+  /* Essential component styles using standard CSS */
+  .card {
+    background-color: white;
+    border-radius: 0.75rem;
+    box-shadow: 0 1px 2px 0 rgb(0 0 0 / 0.05);
+    border: 1px solid rgb(229 231 235);
+    padding: 1.5rem;
+    transition: all 200ms;
+  }
+
+  .dark .card {
+    background-color: rgb(31 41 55);
+    border-color: rgb(55 65 81);
+  }
+
+  .card-hover {
+    background-color: white;
+    border-radius: 0.75rem;
+    box-shadow: 0 1px 2px 0 rgb(0 0 0 / 0.05);
+    border: 1px solid rgb(229 231 235);
+    padding: 1.5rem;
+    transition: all 200ms;
+  }
+
+  .card-hover:hover {
+    box-shadow: 0 4px 6px -1px rgb(0 0 0 / 0.1), 0 2px 4px -2px rgb(0 0 0 / 0.1);
+    transform: translateY(-2px);
+  }
+
+  .dark .card-hover {
+    background-color: rgb(31 41 55);
+    border-color: rgb(55 65 81);
+  }
+
+  .dark .card-hover:hover {
+    background-color: rgb(55 65 81);
+    box-shadow: 0 10px 15px -3px rgb(0 0 0 / 0.1), 0 4px 6px -4px rgb(0 0 0 / 0.1);
+  }
+
+  /* Button styles */
+  .btn {
+    padding: 0.5rem 1rem;
+    border-radius: 0.5rem;
+    font-weight: 500;
+    transition: all 200ms;
+    outline: none;
+    min-height: 44px;
+    min-width: 44px;
+  }
+
+  .btn:focus {
+    outline: 2px solid transparent;
+    outline-offset: 2px;
+    box-shadow: 0 0 0 2px rgb(59 130 246);
+  }
+
+  .btn-primary {
+    background-color: rgb(37 99 235);
+    color: white;
+  }
+
+  .btn-primary:hover {
+    background-color: rgb(29 78 216);
+  }
+
+  .btn-secondary {
+    background-color: rgb(229 231 235);
+    color: rgb(17 24 39);
+  }
+
+  .btn-secondary:hover {
+    background-color: rgb(209 213 219);
+  }
+
+  .dark .btn-secondary {
+    background-color: rgb(55 65 81);
+    color: rgb(243 244 246);
+  }
+
+  .dark .btn-secondary:hover {
+    background-color: rgb(75 85 99);
+  }
+
+  /* Financial data styling */
+  .financial-positive {
+    background-color: rgb(236 253 245);
+    color: rgb(21 128 61);
+  }
+
+  .dark .financial-positive {
+    background-color: rgba(6, 78, 59, 0.2);
+    color: rgb(74 222 128);
+  }
+
+  .financial-negative {
+    background-color: rgb(254 242 242);
+    color: rgb(185 28 28);
+  }
+
+  .dark .financial-negative {
+    background-color: rgba(127, 29, 29, 0.2);
+    color: rgb(248 113 113);
+  }
+
+  .financial-neutral {
+    background-color: rgb(249 250 251);
+    color: rgb(55 65 81);
+  }
+
+  .dark .financial-neutral {
+    background-color: rgb(31 41 55);
+    color: rgb(209 213 219);
+  }
+
+  /* Navigation styling */
+  .nav-bg {
+    background-color: rgba(255, 255, 255, 0.95);
+    backdrop-filter: blur(8px);
+    border-color: rgb(229 231 235);
+  }
+
+  .dark .nav-bg {
+    background-color: rgba(17, 24, 39, 0.95);
+    border-color: rgb(55 65 81);
+  }
+
+  /* Form inputs */
+  .input {
+    display: block;
+    width: 100%;
+    padding: 0.75rem;
+    border: 1px solid rgb(209 213 219);
+    border-radius: 0.5rem;
+    background-color: white;
+    transition: all 200ms;
+  }
+
+  .input:focus {
+    outline: none;
+    border-color: transparent;
+    box-shadow: 0 0 0 2px rgb(14 165 233); /* primary-500 */
+  }
+
+  /* Keyboard-only focus uses offset ring to ensure visibility on all backgrounds */
+  .input:focus-visible {
+    outline: 2px solid rgb(14 165 233);
+    outline-offset: 2px;
+    box-shadow: none;
+  }
+
+  .dark .input {
+    border-color: rgb(75 85 99);
+    background-color: rgb(31 41 55);
+    color: rgb(243 244 246);
+  }
+
+  .dark .input:focus {
+    box-shadow: 0 0 0 2px rgb(56 189 248); /* primary-400 – brighter in dark mode */
+  }
+
+  /* WCAG AA: placeholder must be at least 4.5:1 on background */
+  .input::placeholder {
+    color: rgb(107 114 128); /* gray-500: 4.6:1 on white */
+  }
+
+  .dark .input::placeholder {
+    color: rgb(156 163 175); /* gray-400: 4.7:1 on gray-800 */
+  }
+
+  /* Recharts fixes */
+  .recharts-wrapper {
+    width: 100%;
+    height: 100%;
+  }
+
+  .recharts-wrapper svg {
+    width: 100%;
+    height: 100%;
+  }
+
+  .recharts-surface {
+    overflow: visible;
+  }
+
+  .recharts-layer {
+    overflow: visible;
+  }
+
+  .chart-container {
+    width: 100%;
+    height: 100%;
+    min-height: 0;
+  }
+
+  .chart-container > div {
+    width: 100%;
+    height: 100%;
+  }
+
+  /* Tooltip styling */
+  .recharts-tooltip-content {
+    background-color: white;
+    border: 1px solid rgb(229 231 235);
+    box-shadow: 0 10px 15px -3px rgb(0 0 0 / 0.1);
+    border-radius: 0.5rem;
+    padding: 0.75rem;
+    font-size: 0.875rem;
+    transition: all 200ms;
+  }
+
+  .dark .recharts-tooltip-content {
+    background-color: rgb(31 41 55);
+    border-color: rgb(55 65 81);
+    color: rgb(229 231 235);
+  }
+
+  /* Loading skeleton */
+  .skeleton {
+    animation: pulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+    background-color: rgb(229 231 235);
+    border-radius: 0.25rem;
+  }
+
+  .dark .skeleton {
+    background-color: rgb(55 65 81);
+  }
+
+  @keyframes pulse {
+    0%, 100% {
+      opacity: 1;
+    }
+    50% {
+      opacity: 0.5;
+    }
+  }
+
+  /* Shimmer animation for loading states */
+  .shimmer {
+    background: linear-gradient(90deg, #f0f0f0 25%, #e0e0e0 50%, #f0f0f0 75%);
+    background-size: 200px 100%;
+    animation: shimmer 1.5s infinite;
+  }
+
+  .dark .shimmer {
+    background: linear-gradient(90deg, #374151 25%, #4b5563 50%, #374151 75%);
+  }
+
+  @keyframes shimmer {
+    0% {
+      background-position: -200px 0;
+    }
+    100% {
+      background-position: calc(200px + 100%) 0;
+    }
+  }
+
+  /* Fade in animation */
+  @keyframes fade-in {
+    from {
+      opacity: 0;
+      transform: translateY(10px);
+    }
+    to {
+      opacity: 1;
+      transform: translateY(0);
+    }
+  }
+
+  .animate-fade-in {
+    animation: fade-in 0.3s ease-out;
+  }
+
+  /* Slow bounce animation for empty states */
+  @keyframes bounce-slow {
+    0%, 100% {
+      transform: translateY(0);
+    }
+    50% {
+      transform: translateY(-10px);
+    }
+  }
+
+  .animate-bounce-slow {
+    animation: bounce-slow 2s ease-in-out infinite;
+  }
+}
+
+/* Enhanced Mobile optimizations for Asian markets */
+@media (max-width: 640px) {
+  .card {
+    padding: 1rem;
+    border-radius: 0.5rem;
+    /* Enhanced shadow for depth perception preferred in Asian UX */
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+  }
+
+  .btn {
+    font-size: 0.875rem;
+    padding: 0.625rem 1rem; /* Increased padding for better thumb access */
+    min-height: 48px;
+    min-width: 48px;
+  }
+
+  .input {
+    font-size: 1rem; /* Prevent zoom on iOS */
+    min-height: 48px;
+    padding: 0.75rem 1rem; /* Better touch area */
+  }
+
+  .chart-container {
+    height: 14rem; /* Reduced for mobile screens */
+  }
+
+  /* Mobile-first typography */
+  h1 {
+    font-size: 1.5rem;
+    line-height: 1.3;
+  }
+
+  h2 {
+    font-size: 1.25rem;
+    line-height: 1.4;
+  }
+
+  h3 {
+    font-size: 1.125rem;
+    line-height: 1.4;
+  }
+
+  /* Enhanced touch targets for financial interactions */
+  .financial-action {
+    min-height: 56px;
+    min-width: 56px;
+    padding: 1rem;
+  }
+
+  /* Better spacing for dense financial data */
+  .financial-list-item {
+    padding: 1rem 0.75rem;
+    margin-bottom: 0.5rem;
+  }
+
+  /* Optimized form elements for mobile */
+  select {
+    font-size: 1rem;
+    min-height: 48px;
+    padding: 0.75rem 1rem;
+  }
+
+  textarea {
+    font-size: 1rem;
+    min-height: 100px;
+  }
+}
+
+/* Enhanced High contrast mode for accessibility */
+@media (prefers-contrast: high) {
+  .card {
+    border-width: 2px;
+    border-color: rgb(75 85 99);
+  }
+
+  .dark .card {
+    border-color: rgb(156 163 175);
+  }
+
+  .financial-positive {
+    background-color: rgb(220 252 231);
+    color: rgb(5 150 105);
+    border: 2px solid rgb(5 150 105);
+  }
+
+  .dark .financial-positive {
+    background-color: rgb(6 78 59);
+    color: rgb(167 243 208);
+    border: 2px solid rgb(167 243 208);
+  }
+
+  .financial-negative {
+    background-color: rgb(254 226 226);
+    color: rgb(220 38 38);
+    border: 2px solid rgb(220 38 38);
+  }
+
+  .dark .financial-negative {
+    background-color: rgb(127 29 29);
+    color: rgb(254 202 202);
+    border: 2px solid rgb(254 202 202);
+  }
+
+  /* Enhanced button contrast */
+  .btn-primary {
+    border: 2px solid white;
+  }
+
+  .btn-secondary {
+    border: 2px solid rgb(17 24 39);
+  }
+
+  .dark .btn-secondary {
+    border: 2px solid rgb(243 244 246);
+  }
+}
+
+/* Enhanced Reduced motion support */
+@media (prefers-reduced-motion: reduce) {
+  .card-hover:hover {
+    transform: none;
+  }
+
+  * {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+
+  /* Maintain focus indicators for accessibility */
+  .btn:focus,
+  .input:focus {
+    outline: 3px solid rgb(59 130 246);
+    outline-offset: 2px;
+  }
+}
+
+/* Asian market specific optimizations */
+@media (max-width: 768px) {
+  /* Larger touch targets for Asian thumb patterns */
+  .asian-touch-target {
+    min-height: 56px;
+    min-width: 56px;
+  }
+
+  /* Trust indicators always visible on mobile */
+  .trust-indicator {
+    position: sticky;
+    top: 0;
+    z-index: 10;
+  }
+
+  /* Enhanced readability for financial data */
+  .financial-amount {
+    font-size: 1.25rem;
+    font-weight: 600;
+    letter-spacing: 0.025em;
+  }
+}
+
+/* Landscape mobile optimizations */
+@media (max-width: 896px) and (orientation: landscape) {
+  .mobile-landscape-optimize {
+    padding: 0.5rem;
+  }
+
+  .chart-container {
+    height: 12rem;
+  }
+
+  .card {
+    padding: 0.75rem;
+  }
+}

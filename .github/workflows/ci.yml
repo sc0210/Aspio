@@ -1,0 +1,374 @@
+name: CI
+
+# Validates every PR and every push to main. CI deploys nothing: whoever runs an
+# instance (this project's own server included) pulls the repo and builds it
+# themselves — see docs/SELF_HOSTING.md.
+#
+# Each job runs only when its part of the tree changed (the `changes` job), which
+# keeps billed minutes down while the repo is private: running all five jobs on
+# every push spent ~3,000 minutes in the first half of October 2026. A skipped job
+# counts as passed for branch protection, so path-scoping is safe ONLY as
+# job-level `if:` — a workflow-level `paths:` filter would leave the required
+# check missing. If `changes` itself fails, everything runs.
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+
+# One in-flight run per PR or branch: a newer push cancels the older run.
+concurrency:
+  group: ci-${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+jobs:
+  # Which areas this push touches. No checkout and no `uses:`, so it is a few
+  # seconds of one billed minute: the compare API lists the files.
+  changes:
+    name: Changed paths
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    permissions:
+      contents: read
+      actions: read         # the last-green-run lookup on main
+      pull-requests: read   # which PR a main commit merged
+    outputs:
+      frontend: ${{ steps.f.outputs.frontend }}
+      backend: ${{ steps.f.outputs.backend }}
+      images: ${{ steps.f.outputs.images }}
+      scripts: ${{ steps.f.outputs.scripts }}
+    steps:
+      - id: f
+        env:
+          GH_TOKEN: ${{ github.token }}
+          BASE: ${{ github.event_name == 'pull_request' && github.event.pull_request.base.sha || github.event.before }}
+          BEFORE: ${{ github.event.before }}
+          HEAD: ${{ github.event_name == 'pull_request' && github.event.pull_request.head.sha || github.sha }}
+        run: |
+          set -uo pipefail
+          all() {
+            for k in frontend backend images scripts; do echo "$k=true" >> "$GITHUB_OUTPUT"; done
+            echo "running every job: $1"; exit 0
+          }
+          # On main, diff against the last commit whose CI went green, not just this
+          # push: otherwise a red backend commit followed by a frontend-only one would
+          # skip the backend jobs and turn main green with the backend still broken.
+          if [ "$GITHUB_EVENT_NAME" = push ]; then
+            BASE=$(gh api "repos/$GITHUB_REPOSITORY/actions/workflows/ci.yml/runs?branch=main&event=push&status=success&per_page=1" \
+              --jq '.workflow_runs[0].head_sha // empty') || all "could not find the last green run on main"
+          fi
+          case "$BASE" in ""|0000000000000000000000000000000000000000) all "no base commit to compare with" ;; esac
+
+          # A merge to main re-tests what its PR run already tested. Skip every job
+          # when that is provably the same code: main was green just before (so no
+          # red commit is being carried along), the merged tree is byte-identical to
+          # the PR head's, and that PR head has a successful CI run. Identical trees
+          # also mean the PR's merge-ref test covered this exact content.
+          if [ "$GITHUB_EVENT_NAME" = push ] && [ "$BASE" = "$BEFORE" ]; then
+            pr_head=$(gh api "repos/$GITHUB_REPOSITORY/commits/$HEAD/pulls" \
+              --jq '[.[] | select(.merged_at != null)][0].head.sha // empty' 2>/dev/null || true)
+            if [ -n "$pr_head" ]; then
+              tree_of() { gh api "repos/$GITHUB_REPOSITORY/commits/$1" --jq .commit.tree.sha 2>/dev/null; }
+              green=$(gh api "repos/$GITHUB_REPOSITORY/actions/workflows/ci.yml/runs?head_sha=$pr_head&event=pull_request&status=success&per_page=1" \
+                --jq '.total_count' 2>/dev/null || echo 0)
+              if [ "${green:-0}" -gt 0 ] && [ "$(tree_of "$HEAD")" = "$(tree_of "$pr_head")" ] && [ -n "$(tree_of "$HEAD")" ]; then
+                for k in frontend backend images scripts; do echo "$k=false" >> "$GITHUB_OUTPUT"; done
+                echo "same tree as $pr_head, whose PR run passed, on a green main — nothing to re-run"
+                exit 0
+              fi
+            fi
+          fi
+          # On main, "ahead" = the green commit is an ancestor. Anything else (a later
+          # commit's run went green first) and the diff would not cover this commit,
+          # so run it all. Not for PRs: a PR is "diverged" from its base as soon as
+          # main moves on, and the three-dot compare below already diffs from the
+          # merge base.
+          if [ "$GITHUB_EVENT_NAME" = push ]; then
+            rel=$(gh api "repos/$GITHUB_REPOSITORY/compare/$BASE...$HEAD" --jq .status) || all "the compare API failed"
+            case "$rel" in ahead|identical) ;; *) all "this commit is $rel of $BASE" ;; esac
+          fi
+          # A move or rename counts under its old path too: its old area's importers
+          # still need re-testing.
+          files=$(gh api "repos/$GITHUB_REPOSITORY/compare/$BASE...$HEAD" \
+            --jq '.files[] | .filename, (.previous_filename // empty)') || all "the compare API failed"
+          n=$(printf '%s\n' "$files" | grep -c . || true)
+          [ "$n" -ge 300 ] && all "$n files changed (the compare API lists at most 300)"
+          printf '%s\n' "$files" | grep -qxF .github/workflows/ci.yml && all "this workflow changed"
+          hit() { printf '%s\n' "$files" | grep -qE "$1" && echo true || echo false; }
+          {
+            echo "frontend=$(hit '^frontend/')"
+            echo "backend=$(hit '^backend/')"
+            # The smoke test boots the built images, so: any backend change (startup,
+            # migrations, seed data) and the frontend's build inputs — not its source,
+            # which the frontend job already builds.
+            echo "images=$(hit '^backend/|^frontend/(Dockerfile|\.dockerignore|package(-lock)?\.json|next\.config\.[a-z]+)$|^scripts/ci/')"
+            echo "scripts=$(hit '^scripts/|^cloudflare/|^caddy/|^docker-compose|^backend/scripts/migrate\.sh$')"
+          } | tee -a "$GITHUB_OUTPUT"
+          echo "$n changed files"
+
+  frontend:
+    name: Frontend · lint · type-check · tests · build
+    needs: changes
+    if: ${{ !cancelled() && (needs.changes.result != 'success' || needs.changes.outputs.frontend == 'true') }}
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: frontend
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
+        with:
+          node-version: "22"
+          cache: npm
+          cache-dependency-path: frontend/package-lock.json
+      - run: npm ci
+      - run: npm run lint
+      - run: npm run type-check
+
+      # The app config excludes every test path so `next build` does not
+      # typecheck test code. That left tests never typechecked at all — babel
+      # strips their types without checking them, so a test could assign a
+      # string to a number and stay green. This gates the suite too.
+      - run: npm run type-check:tests
+
+      # Jest is a merge gate: a failing assertion fails the build. The suite was
+      # at 100 failures across 21 suites and tolerated with `|| true`; it is now
+      # 77 suites / 970 tests green, so the tolerance is gone. Anything that goes
+      # red here is a regression introduced by the PR, not pre-existing debt.
+      #
+      # Two gates run, and they catch different things. Jest's own exit code
+      # covers failing assertions. check-dead-test-suites covers the failure that
+      # a green exit code cannot see: a suite that throws while loading runs zero
+      # assertions, so it looks like coverage and provides none. Three such
+      # suites each sat on top of a real bug, including one that hid account
+      # registration being broken end to end — keep both.
+      #
+      # `continue-on-error` lets the dead-suite check still run and report when
+      # assertions fail, instead of the job stopping at the first red step; the
+      # outcome is re-asserted afterwards so the build still fails.
+      # --maxWorkers=2 matches the runner and keeps peak memory predictable.
+      #
+      # Every suite now runs. reports/page.test.tsx used to be excluded outright
+      # because its worker OOMed hard enough to take the whole jest process down
+      # before a report could be written — the cause was a mocked hook handing
+      # back fresh function identities each render, which made two effects in the
+      # page ping-pong setState forever. Fixed at the mock; it runs in ~1s.
+      - name: Run Jest
+        id: jest
+        continue-on-error: true
+        run: >-
+          npx jest --silent --maxWorkers=2
+          --json --outputFile=jest-results.json
+      - name: Fail on test suites that run zero tests
+        run: node scripts/check-dead-test-suites.mjs jest-results.json
+      - name: Fail the build if any Jest assertion failed
+        if: steps.jest.outcome == 'failure'
+        run: |
+          echo "Jest reported failing tests — see the 'Run Jest' step above."
+          exit 1
+
+      - run: npm run build
+        env:
+          NEXT_PUBLIC_API_URL: "http://localhost:8000/api/v1"
+          NEXT_TELEMETRY_DISABLED: "1"
+
+  backend:
+    name: Backend · tests
+    needs: changes
+    if: ${{ !cancelled() && (needs.changes.result != 'success' || needs.changes.outputs.backend == 'true') }}
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: backend
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-python@v7
+        with:
+          python-version: "3.11"
+          cache: pip
+          cache-dependency-path: |
+            backend/requirements.txt
+            backend/requirements-dev.txt
+      - run: pip install -r requirements.txt -r requirements-dev.txt
+      # Runs on an in-memory SQLite DB (see tests/conftest.py) — no external
+      # services needed.
+      #
+      # `-m "not integration"` is the whole suite minus tests that genuinely
+      # need a real Postgres or live market-data APIs (currently just
+      # test_historical_fetch). This selector was `-m unit`, which collected
+      # 3 of 976 tests — a green check that validated ~0.3% of the backend.
+      #
+      # addopts is cleared to drop the repo-wide 35% coverage gate; re-enabling
+      # it is a separate decision from running the tests at all.
+      # `python -m pytest` (not the bare `pytest` console script) so the
+      # backend/ working dir lands on sys.path — conftest.py imports `app`.
+      - run: python -m pytest -m "not integration" -o "addopts=" -p no:cacheprovider -q
+        env:
+          DATABASE_URL: "sqlite+aiosqlite:///:memory:"
+          SECRET_KEY: "ci-test-secret-key-0123456789abcdef0123456789"
+          RATE_LIMIT_ENABLED: "false"
+          ENVIRONMENT: "development"
+
+      # A second Alembic head is invisible until it blocks a deploy: `alembic
+      # upgrade head` is singular and errors out the moment there are two, which
+      # has stalled production here before (three heads, fixed by a merge
+      # migration). Two branches each adding a migration off the same parent is
+      # all it takes, and neither PR looks wrong on its own — only their
+      # combination on main is broken, which is precisely what CI should catch.
+      #
+      # Reads the versions directory through ScriptDirectory only: no database,
+      # no env.py, no services, so it needs none of the env above and runs in
+      # milliseconds.
+      - name: Fail on multiple Alembic heads
+        run: |
+          python - <<'PY'
+          from alembic.config import Config
+          from alembic.script import ScriptDirectory
+
+          heads = ScriptDirectory.from_config(Config("alembic.ini")).get_heads()
+          if len(heads) != 1:
+              raise SystemExit(
+                  f"expected exactly 1 Alembic head, found {len(heads)}: {heads}\n"
+                  "Merge them: alembic merge -m 'merge heads' " + " ".join(heads)
+              )
+          print(f"single Alembic head: {heads[0]}")
+          PY
+
+  # A new install is `scripts/migrate.sh --init` against an empty Postgres. That path builds
+  # the schema from the models and seeds reference data (alembic/env.py), because the
+  # historical revision chain cannot build a database from nothing. This job proves
+  # it keeps working: upgrade an empty database, confirm it lands on head with seed
+  # data, confirm a second run is a no-op, and that `alembic check` finds no
+  # difference between the result and the models (a model change that Alembic cannot
+  # represent fails here). It does NOT replay the chain; changes to existing
+  # databases still ship as a revision plus prod_sql, as CLAUDE.md describes.
+  migrations:
+    name: Backend · migrate empty Postgres
+    needs: changes
+    if: ${{ !cancelled() && (needs.changes.result != 'success' || needs.changes.outputs.backend == 'true') }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    defaults:
+      run:
+        working-directory: backend
+    services:
+      postgres:
+        image: postgres:15-alpine
+        env:
+          POSTGRES_USER: aspiro
+          POSTGRES_PASSWORD: aspiro
+          POSTGRES_DB: aspiro
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U aspiro -d aspiro"
+          --health-interval 5s --health-timeout 5s --health-retries 10
+    env:
+      DATABASE_URL: postgresql+asyncpg://aspiro:aspiro@localhost:5432/aspiro
+      SECRET_KEY: "ci-test-secret-key-0123456789abcdef0123456789"
+      ENVIRONMENT: "development"
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-python@v7
+        with:
+          python-version: "3.11"
+          cache: pip
+          cache-dependency-path: backend/requirements.txt
+      - run: pip install -r requirements.txt
+      - name: Without --init, an empty database is refused
+        run: |
+          if bash scripts/migrate.sh; then echo "empty DB was bootstrapped without --init"; exit 1; fi
+          n=$(PGPASSWORD=aspiro psql -h localhost -U aspiro -d aspiro -Atc "select count(*) from information_schema.tables where table_schema='public' and table_name <> 'alembic_version'")
+          [ "$n" = 0 ] || { echo "refused run left $n tables behind"; exit 1; }
+      - name: Upgrade an empty database (--init)
+        run: bash scripts/migrate.sh --init
+      - name: Second run is a no-op
+        run: |
+          out=$(bash scripts/migrate.sh 2>&1)
+          echo "$out"
+          echo "$out" | grep -q "empty database" && { echo "second run re-bootstrapped"; exit 1; }
+          echo "$out" | grep -q "migrate: done"
+      - name: Schema matches the models
+        run: alembic check
+      - name: Reference data is seeded
+        run: |
+          psql() { PGPASSWORD=aspiro command psql -h localhost -U aspiro -d aspiro -Atc "$1"; }
+          [ "$(psql "select count(*) from currencies where code in ('TWD','USD')")" = 2 ]
+          [ "$(psql "select count(*) from transaction_categories")" -ge 1 ]
+
+  # Starts the production images against a real Postgres and drives them: register,
+  # log in, record and list a transaction, the dashboard, then the Next server's
+  # pages. Everything above runs code in a test harness; this is the first place the
+  # built artefacts run at all, and it is where a fresh database first met Alembic
+  # (wrong default driver, too-narrow version table) and an empty currencies table.
+  # Native x64 builds with a layer cache; nothing is pushed — operators build their
+  # own images from the same Dockerfiles.
+  smoke:
+    name: Images · smoke test
+    needs: changes
+    if: ${{ !cancelled() && (needs.changes.result != 'success' || needs.changes.outputs.images == 'true') }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v7
+      - uses: docker/setup-buildx-action@v4
+      - name: Build backend image
+        uses: docker/build-push-action@v7
+        with:
+          context: ./backend
+          load: true
+          tags: smoke-backend
+          build-args: GIT_SHA=${{ github.sha }}
+          cache-from: type=gha,scope=smoke-backend
+          cache-to: type=gha,scope=smoke-backend,mode=max
+      - name: Build frontend image
+        uses: docker/build-push-action@v7
+        with:
+          context: ./frontend
+          load: true
+          tags: smoke-frontend
+          build-args: NEXT_PUBLIC_API_URL=http://localhost:18000/api/v1
+          cache-from: type=gha,scope=smoke-frontend
+          cache-to: type=gha,scope=smoke-frontend,mode=max
+      - name: Smoke test
+        run: bash scripts/ci/smoke_images.sh smoke-backend smoke-frontend
+
+  # The Pi deploy scripts decide what gets rebuilt on four ARM cores and have taken
+  # production down before (a cloudflared crash loop, and a Caddy recompile on every
+  # unrelated deploy). Their tests need no services and no deps, so there is no
+  # reason for them to be hand-run only — that is how they rot.
+  deploy-scripts:
+    name: Pi deploy scripts
+    needs: changes
+    if: ${{ !cancelled() && (needs.changes.result != 'success' || needs.changes.outputs.scripts == 'true') }}
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      - name: Tunnel token detection
+        run: bash scripts/pi/tunnel_token_test.sh
+      - name: Rebuild scope
+        run: bash scripts/pi/rebuild_scope_test.sh
+      - name: Caddy config handling
+        run: bash scripts/pi/caddy_config_test.sh
+      - name: Deploy plan (run on the Pi)
+        run: bash scripts/pi/deploy_local_plan_test.sh
+      - name: Deploy plan (manual ssh path)
+        run: bash scripts/pi/deploy_remote_plan_test.sh
+      - name: SSD migration (PARTUUID rewrite)
+        run: bash scripts/pi/migrate_to_usb_ssd_test.sh
+      - name: aspiro CLI (self-host updates)
+        run: bash scripts/aspiro_test.sh
+      - name: Maintenance page Worker
+        run: node --test cloudflare/maintenance/worker.test.mjs
+      - name: Shell syntax
+        run: |
+          for f in scripts/pi/*.sh scripts/ci/*.sh scripts/aspiro backend/scripts/migrate.sh; do bash -n "$f" || exit 1; done
+          echo "all scripts/pi, scripts/ci, aspiro and migrate.sh parse"
+      # Self-hosters run these on their own servers, so hold them to shellcheck too.
+      # (shellcheck ships on ubuntu-latest; -S warning so a runner-image upgrade that
+      # adds info-level notes cannot turn CI red.)
+      - name: shellcheck (aspiro CLI, migrate.sh)
+        run: shellcheck -S warning scripts/aspiro scripts/aspiro_test.sh backend/scripts/migrate.sh
