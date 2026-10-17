@@ -104,9 +104,10 @@ async def test_unknown_portfolio_id_is_a_404(authenticated_client, seeded, path)
     assert r.status_code == (200 if path == "fx-accumulation" else 404)
 
 
-async def test_fx_outage_is_a_503_not_a_wrong_total(authenticated_client, seeded, offline_fx):
+@pytest.mark.parametrize("path", ["allocation", "plan", "alerts", "dashboard"])
+async def test_fx_outage_is_a_503_not_a_wrong_total(authenticated_client, seeded, offline_fx, path):
     offline_fx.get_exchange_rate.return_value = None
-    r = authenticated_client.get(f"{BASE}/rebalancing/allocation")
+    r = authenticated_client.get(f"{BASE}/rebalancing/{path}")
     assert r.status_code == 503
 
 

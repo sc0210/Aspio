@@ -191,7 +191,7 @@ class RebalancingService:
             # Safely get holding value, handle NaN/Infinity
             value = safe_decimal(holding.total_value, Decimal("0"))
             currency = (getattr(holding, "currency", None) or "TWD").upper()
-            if currency != "TWD":
+            if currency != "TWD" and value:  # a zero holding needs no rate
                 if currency not in fx_rates:
                     fx_rates[currency] = await self._twd_rate(currency)
                 value = value * fx_rates[currency]

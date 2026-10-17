@@ -159,6 +159,14 @@ class TestAllocation:
         assert by["VT"].current_value == D("320.00")
         fake.get_exchange_rate.assert_awaited_once_with("USD", "TWD")  # one lookup per currency
 
+    async def test_zero_value_foreign_holding_needs_no_rate(self):
+        svc = make_service([holding("0050", D("800"), "etf"), holding("VT", D("0"), "etf", currency="USD")])
+        fake = MagicMock(get_exchange_rate=AsyncMock(side_effect=RuntimeError("down")))
+        with patch("app.utils.exchange_rate_service.get_exchange_rate_service", return_value=fake):
+            summary = await svc.get_current_allocation(USER)
+        assert summary.total_portfolio_value == D("800.00")
+        fake.get_exchange_rate.assert_not_awaited()
+
     @pytest.mark.parametrize("failure", [
         {"return_value": None}, {"return_value": D("0")}, {"side_effect": RuntimeError("down")}])
     async def test_unavailable_rate_refuses_instead_of_guessing(self, failure):
