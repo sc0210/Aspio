@@ -1263,9 +1263,12 @@ async def upload_transaction_attachment(
             is_receipt=is_receipt,
         )
         return attachment
+    except HTTPException:
+        raise
     except ValueError as e:
         raise HTTPException(status_code=400, detail=str(e))
     except Exception as e:
+        logger.error("Attachment upload failed: %s", e, exc_info=True)
         raise HTTPException(status_code=500, detail="Failed to upload attachment")
 
 
@@ -1283,7 +1286,10 @@ async def get_transaction_attachments(
             transaction_id, current_user.id
         )
         return attachments
+    except HTTPException:
+        raise
     except Exception as e:
+        logger.error("Attachment listing failed: %s", e, exc_info=True)
         raise HTTPException(status_code=500, detail="Failed to retrieve attachments")
 
 

@@ -64,7 +64,8 @@ class AttachmentService:
         # Generate unique filename
         file_ext = Path(file.filename or '').suffix
         unique_filename = f"{uuid.uuid4()}{file_ext}"
-        file_path = self.upload_path / user_id / unique_filename
+        # str(): callers pass the user's UUID, and Path / UUID is a TypeError.
+        file_path = self.upload_path / str(user_id) / unique_filename
         
         # Ensure user directory exists
         file_path.parent.mkdir(parents=True, exist_ok=True)
@@ -74,7 +75,7 @@ class AttachmentService:
         
         # Create attachment record
         attachment_data = {
-            'transaction_id': transaction_id,
+            'transaction_id': transaction.id,
             'filename': unique_filename,
             'original_filename': file.filename or 'unknown',
             'file_size': file.size or 0,
@@ -112,7 +113,7 @@ class AttachmentService:
         # Query attachments
         from sqlalchemy import select
         stmt = select(TransactionAttachment).where(
-            TransactionAttachment.transaction_id == transaction_id
+            TransactionAttachment.transaction_id == transaction.id
         ).order_by(TransactionAttachment.created_at.desc(), TransactionAttachment.id.desc())
         
         result = await self.db.execute(stmt)
@@ -125,9 +126,13 @@ class AttachmentService:
         
         # Get attachment
         from sqlalchemy import select, and_
+        try:
+            attachment_uuid = uuid.UUID(str(attachment_id))
+        except ValueError:
+            return False
         stmt = select(TransactionAttachment).where(
             and_(
-                TransactionAttachment.id == attachment_id,
+                TransactionAttachment.id == attachment_uuid,
                 TransactionAttachment.uploaded_by == user_id
             )
         )
