@@ -1,20 +1,18 @@
 # docker-compose.pi.yml
 # ---------------------------------------------------------------------------
-# PRODUCTION self-host stack for the Raspberry Pi. Replaces the dev-mode setup
-# (docker-compose.yml + caddy.yml) with a precompiled Next.js production build,
-# so there are no multi-second on-demand route compilations — consistently fast
-# responses at much lower idle CPU. HTTPS via Caddy, same as the caddy overlay.
+# PRODUCTION self-host stack, for any amd64/arm64 host (the name is historical).
+# Unlike the dev stack (docker-compose.yml) it serves a precompiled Next.js
+# production build, so there are no multi-second on-demand route compilations.
+# `scripts/aspiro` drives it; see docs/SELF_HOSTING.md.
 #
 # Run STANDALONE (not layered on the base file):
-#   docker compose --env-file .env --env-file caddy/cf.vars \
-#     -f docker-compose.pi.yml build backend frontend
-#   docker compose --env-file .env --env-file caddy/cf.vars \
-#     -f docker-compose.pi.yml up -d --remove-orphans
+#   docker compose --env-file .env -f docker-compose.pi.yml build backend frontend
+#   docker compose --env-file .env -f docker-compose.pi.yml up -d --remove-orphans
 #
 # Build the app images by name rather than passing --build: a blanket --build also
-# recompiles Caddy from Go source, ~10 minutes on this Pi, for an image nothing
-# outside caddy/Dockerfile can change (see the caddy service below). `up` still
-# builds anything whose image is missing, so a fresh Pi needs no extra step.
+# recompiles Caddy from Go source (~10 minutes on a small ARM board) for an image
+# nothing outside caddy/Dockerfile can change (see the caddy service below). `up`
+# still builds anything whose image is missing, so a fresh host needs no extra step.
 #
 # Reuses the existing `postgres_data` volume (project "aspiro"), so the cloned DB
 # is preserved. quickchart (amd64-only) and pgAdmin are intentionally omitted — not
@@ -64,7 +62,7 @@ x-backend-environment: &backend-environment
   - ALGORITHM=HS256
   - ACCESS_TOKEN_EXPIRE_MINUTES=30
   - REFRESH_TOKEN_EXPIRE_DAYS=7
-  - CORS_ORIGINS=["https://${APP_DOMAIN:-home.aspiro.dev}"]
+  - CORS_ORIGINS=["https://${APP_DOMAIN:?APP_DOMAIN is required - the public hostname (see production.env.sample)}"]
   # cloudflared → caddy → backend once the tunnel fronts this, so the client IP
   # sits two entries from the end of X-Forwarded-For. Without this the rate
   # limiter buckets every visitor under the proxy's address and one busy user
@@ -72,10 +70,10 @@ x-backend-environment: &backend-environment
   - TRUSTED_PROXY_COUNT=${TRUSTED_PROXY_COUNT:-2}
   - GOOGLE_CLIENT_ID=${GOOGLE_CLIENT_ID:-}
   - GOOGLE_CLIENT_SECRET=${GOOGLE_CLIENT_SECRET:-}
-  - GOOGLE_REDIRECT_URI=https://${APP_DOMAIN:-home.aspiro.dev}/api/auth/callback/google
+  - GOOGLE_REDIRECT_URI=https://${APP_DOMAIN:?APP_DOMAIN is required - the public hostname (see production.env.sample)}/api/auth/callback/google
   - LINE_CHANNEL_SECRET=${LINE_CHANNEL_SECRET:-}
   - LINE_CHANNEL_ACCESS_TOKEN=${LINE_CHANNEL_ACCESS_TOKEN:-}
-  - FRONTEND_URL=https://${APP_DOMAIN:-home.aspiro.dev}
+  - FRONTEND_URL=https://${APP_DOMAIN:?APP_DOMAIN is required - the public hostname (see production.env.sample)}
   # The self-hosted quickchart container is omitted here (its image is amd64-only,
   # and a Pi cannot run it under emulation at a useful speed). This is therefore the
   # PUBLIC QuickChart SaaS, and LINE chart payloads leave the network — unlike the
@@ -203,7 +201,7 @@ services:
     environment:
       - NODE_ENV=production
       - INTERNAL_API_URL=http://backend:8000/api/v1
-      - NEXTAUTH_URL=https://${APP_DOMAIN:-home.aspiro.dev}
+      - NEXTAUTH_URL=https://${APP_DOMAIN:?APP_DOMAIN is required - the public hostname (see production.env.sample)}
       - NEXTAUTH_SECRET=${NEXTAUTH_SECRET:?NEXTAUTH_SECRET is required - generate with openssl rand -base64 32 (see production.env.sample)}
       - GOOGLE_CLIENT_ID=${GOOGLE_CLIENT_ID:-}
       - GOOGLE_CLIENT_SECRET=${GOOGLE_CLIENT_SECRET:-}
@@ -252,7 +250,7 @@ services:
       - "${CADDY_BIND:-0.0.0.0}:80:80"
       - "${CADDY_BIND:-0.0.0.0}:443:443"
     environment:
-      - APP_DOMAIN=${APP_DOMAIN:-home.aspiro.dev}
+      - APP_DOMAIN=${APP_DOMAIN:?APP_DOMAIN is required - the public hostname (see production.env.sample)}
       - CF_API_TOKEN=${CF_API_TOKEN:-}
     volumes:
       # A SINGLE-FILE bind mount, which is pinned to the file's inode. `git pull` and
@@ -269,13 +267,12 @@ services:
       - aspiro-network
 
   # Public ingress. cloudflared dials OUT to Cloudflare and holds the connection
-  # open, so the internet reaches this Pi without a single inbound port, and
-  # home.aspiro.dev stops having to be an A record pointing at 192.168.0.176 —
-  # which published the LAN address to anyone who looked it up.
+  # open, so the internet reaches this host without a single inbound port, and
+  # APP_DOMAIN never has to be a DNS record pointing at your LAN address.
   #
-  # The tunnel is remotely managed: its ingress rule (home.aspiro.dev →
+  # The tunnel is remotely managed: its ingress rule (<APP_DOMAIN> →
   # http://caddy:80) lives in the Cloudflare dashboard, and the token below is all
-  # this side needs. Caddy still serves the LAN over HTTPS on 443 as before.
+  # this side needs.
   cloudflared:
     image: cloudflare/cloudflared:latest
     container_name: aspiro-cloudflared

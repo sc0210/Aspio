@@ -13,12 +13,12 @@
 	}
 }
 
-# Single HTTPS entrypoint for Aspiro on the Pi.
-# APP_DOMAIN + CF_API_TOKEN are injected from the environment
-# (see docker-compose.caddy.yml + caddy/cf.vars).
+# HTTPS entrypoint for the custom Caddy build (CADDY_IMAGE unset). APP_DOMAIN and
+# CF_API_TOKEN come from the environment (docker-compose.pi.yml requires APP_DOMAIN).
+# Tunnel-only hosts use Caddyfile.http instead.
 #
-# LAN access (direct, fast): home.aspiro.dev → this Caddy over real HTTPS.
-{$APP_DOMAIN:home.aspiro.dev} {
+# LAN access (direct, fast): <APP_DOMAIN> → this Caddy over real HTTPS.
+{$APP_DOMAIN} {
 	# Automatic HTTPS via Let's Encrypt, DNS-01 challenge through Cloudflare.
 	tls {
 		dns cloudflare {env.CF_API_TOKEN}
@@ -35,11 +35,7 @@
 	}
 }
 
-# Public access via Cloudflare Tunnel (for LINE webhook + remote reach).
-# Cloudflare terminates TLS at its edge and forwards over the tunnel, so we serve
-# plain HTTP here — no cert, no https redirect (which would loop through Cloudflare).
-# Point the tunnel's Public Hostname (app.aspiro.dev) at → HTTP localhost:80.
-# Cloudflare Tunnel origin.
+# Cloudflare Tunnel origin (for LINE webhook + remote reach).
 #
 # The edge terminates TLS and cloudflared reaches this over the Docker network, so
 # this block is plain HTTP. It must be declared explicitly: without it Caddy adds
@@ -48,16 +44,7 @@
 # tunnel, and round again.
 #
 # The HTTPS block above still serves the LAN directly, so both paths work.
-http://{$APP_DOMAIN:home.aspiro.dev} {
-	handle /api/v1/* {
-		reverse_proxy backend:8000
-	}
-	handle {
-		reverse_proxy frontend:3000
-	}
-}
-
-http://{$PUBLIC_DOMAIN:app.aspiro.dev} {
+http://{$APP_DOMAIN} {
 	handle /api/v1/* {
 		reverse_proxy backend:8000
 	}
