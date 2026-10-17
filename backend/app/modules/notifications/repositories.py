@@ -102,6 +102,9 @@ class NotificationRepository(BaseRepository[Notification]):
         obj.status = NotificationStatus.READ
         obj.read_at = datetime.now(timezone.utc)
         await self.db.flush()
+        # updated_at's onupdate is SQL-side, so the flush expires it; reading it
+        # later (response serialisation) would lazy-load outside the greenlet.
+        await self.db.refresh(obj)
         return obj
 
     async def mark_all_read_for_user(self, user_id) -> int:

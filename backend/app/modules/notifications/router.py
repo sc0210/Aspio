@@ -99,59 +99,6 @@ async def get_notifications(
     )
 
 
-@router.get("/{notification_id}", response_model=ApiResponse[NotificationResponse])
-async def get_notification(
-    notification_id: UUID,
-    db: AsyncSession = Depends(get_db),
-    current_user: Optional[object] = Depends(get_optional_current_user),
-):
-    """Get specific notification by ID"""
-    if not current_user:
-        raise HTTPException(
-            status_code=status.HTTP_401_UNAUTHORIZED, detail="Authentication required"
-        )
-
-    svc = get_notifications_service(db)
-    obj = await svc.get_notification(notification_id, current_user.id)
-    if not obj:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND, detail="Notification not found"
-        )
-
-    return ApiResponse.success_response(data=obj, message="Notification retrieved")
-
-
-@router.patch("/{notification_id}", response_model=ApiResponse[NotificationResponse])
-async def update_notification(
-    notification_id: UUID,
-    update_data: NotificationUpdateRequest,
-    db: AsyncSession = Depends(get_db),
-    current_user: Optional[object] = Depends(get_optional_current_user),
-):
-    """Update notification status (mark as read, dismissed, etc.)"""
-    if not current_user:
-        raise HTTPException(
-            status_code=status.HTTP_401_UNAUTHORIZED, detail="Authentication required"
-        )
-
-    svc = get_notifications_service(db)
-    # Only support marking as read via this endpoint for now.
-    # Compare against the enum directly: `update_data.status.__class__.READ`
-    # raised AttributeError whenever status was omitted, since None.__class__
-    # is NoneType — so a body carrying only read_at 500'd instead of marking read.
-    if update_data.status == NotificationStatus.READ or update_data.read_at:
-        obj = await svc.mark_notification_read(notification_id, current_user.id)
-        if not obj:
-            raise HTTPException(
-                status_code=status.HTTP_404_NOT_FOUND, detail="Notification not found"
-            )
-        return ApiResponse.success_response(data=obj, message="Notification updated")
-
-    raise HTTPException(
-        status_code=status.HTTP_400_BAD_REQUEST, detail="Unsupported update"
-    )
-
-
 @router.post("/bulk-action", response_model=ApiResponse[dict])
 async def bulk_notification_action(
     action_data: BulkNotificationActionRequest,
@@ -194,9 +141,13 @@ async def get_notification_stats(
     from .models import Notification, NotificationStatus, NotificationType, NotificationPriority
     from datetime import datetime, timezone
 
-    user_filter = (
-        Notification.user_id == current_user.id if current_user else True
-    )
+    # Without this an anonymous caller got every user's counts and recent notifications.
+    if not current_user:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED, detail="Authentication required"
+        )
+
+    user_filter = Notification.user_id == current_user.id
 
     # Single query: count by status
     status_rows = await db.execute(
@@ -373,3 +324,61 @@ async def create_notification_template(
     )
     tpl = await svc.create_template(data)
     return ApiResponse.success_response(data=tpl, message="Template created")
+
+
+# ===== Single notification =====
+# Declared last: "/{notification_id}" would otherwise capture /preferences and
+# /templates and answer them with a 422 for not being a UUID.
+
+
+@router.get("/{notification_id}", response_model=ApiResponse[NotificationResponse])
+async def get_notification(
+    notification_id: UUID,
+    db: AsyncSession = Depends(get_db),
+    current_user: Optional[object] = Depends(get_optional_current_user),
+):
+    """Get specific notification by ID"""
+    if not current_user:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED, detail="Authentication required"
+        )
+
+    svc = get_notifications_service(db)
+    obj = await svc.get_notification(notification_id, current_user.id)
+    if not obj:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND, detail="Notification not found"
+        )
+
+    return ApiResponse.success_response(data=obj, message="Notification retrieved")
+
+
+@router.patch("/{notification_id}", response_model=ApiResponse[NotificationResponse])
+async def update_notification(
+    notification_id: UUID,
+    update_data: NotificationUpdateRequest,
+    db: AsyncSession = Depends(get_db),
+    current_user: Optional[object] = Depends(get_optional_current_user),
+):
+    """Update notification status (mark as read, dismissed, etc.)"""
+    if not current_user:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED, detail="Authentication required"
+        )
+
+    svc = get_notifications_service(db)
+    # Only support marking as read via this endpoint for now.
+    # Compare against the enum directly: `update_data.status.__class__.READ`
+    # raised AttributeError whenever status was omitted, since None.__class__
+    # is NoneType — so a body carrying only read_at 500'd instead of marking read.
+    if update_data.status == NotificationStatus.READ or update_data.read_at:
+        obj = await svc.mark_notification_read(notification_id, current_user.id)
+        if not obj:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND, detail="Notification not found"
+            )
+        return ApiResponse.success_response(data=obj, message="Notification updated")
+
+    raise HTTPException(
+        status_code=status.HTTP_400_BAD_REQUEST, detail="Unsupported update"
+    )
