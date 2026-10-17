@@ -754,6 +754,9 @@ class TransactionRepository:
         trends, the peer comparison) share it, so a pending, failed or cancelled
         transaction can never move one figure while leaving another alone.
         """
+        if isinstance(user_id, str):
+            # The column is a UUID; Postgres tolerates the string, SQLite does not.
+            user_id = uuid_module.UUID(user_id)
         return [Transaction.user_id == user_id, *TransactionRepository.countable_conditions()]
 
     async def signed_amount_twd(self, conditions, rates: Optional[Dict[str, Decimal]] = None):
