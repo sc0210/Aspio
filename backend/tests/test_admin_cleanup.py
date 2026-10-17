@@ -82,6 +82,8 @@ async def world(async_session, test_category):
         note(real, NotificationStatus.READ, datetime.now(timezone.utc)),   # too recent
         note(real, NotificationStatus.PENDING, OLD),                       # unread: keep
         note(demo, NotificationStatus.READ, OLD),                          # demo: keep
+        note(real, NotificationStatus.READ, datetime.now(timezone.utc) - timedelta(days=29)),   # inside the window: keep
+        note(real, NotificationStatus.READ, datetime.now(timezone.utc) - timedelta(days=31)),   # just outside: delete
     ])
     await async_session.commit()
     return real, demo
@@ -90,15 +92,21 @@ async def world(async_session, test_category):
 async def test_preview_counts_only_what_cleanup_would_remove(async_session, world):
     out = await AdminMonitoringService(PgStub(async_session)).run_cleanup_preview()
     assert out["soft_deleted_transactions"] == 1 and out["soft_deleted_loans"] == 1
-    assert out["old_notifications"] == 2 and out["stale_currency_rates"] == 3
+    assert out["old_notifications"] == 3 and out["stale_currency_rates"] == 3
     assert out["demo_user_protected"] == DEMO_EMAIL and out["notification_cutoff_days"] == 30
     assert await count(async_session, Transaction) == 3  # a preview deletes nothing
 
 
 async def test_cleanup_deletes_stale_rows_and_spares_everything_else(async_session, world):
+    from app.modules.line_bot.service import _profile_cache
+    from app.modules.portfolio.router import _price_cache
+
+    _price_cache.set("k", "v", 60)
+    _profile_cache["k"] = ("v", 1)
     stub = PgStub(async_session)
     out = await AdminMonitoringService(stub).run_cleanup()
-    assert (out["soft_deleted_transactions"], out["soft_deleted_loans"], out["old_notifications"]) == (1, 1, 2)
+    assert _price_cache.get("k") is None and len(_profile_cache) == 0
+    assert (out["soft_deleted_transactions"], out["soft_deleted_loans"], out["old_notifications"]) == (1, 1, 3)
     assert out["stale_currency_rates"] == 3 and stub.stale_sql == ["DELETE"]
     assert out["price_cache_cleared"] is True and out["line_profile_cache_cleared"] is True
 
@@ -107,7 +115,7 @@ async def test_cleanup_deletes_stale_rows_and_spares_everything_else(async_sessi
     assert sorted((d, u == demo.id) for d, u in live) == [(False, False), (True, True)]  # real's live row + demo's deleted row
     assert await count(async_session, DebtAccount) == 2
     kept = (await async_session.execute(select(Notification.status))).scalars().all()
-    assert sorted(s.value for s in kept) == sorted(["read", "pending", "read"])
+    assert sorted(s.value for s in kept) == sorted(["read", "pending", "read", "read"])
 
 
 async def test_cleanup_is_idempotent(async_session, world):
