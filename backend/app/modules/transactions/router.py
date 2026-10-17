@@ -30,6 +30,8 @@ from app.modules.users.dependencies import (
     get_optional_current_user,
 )
 from app.modules.users.models import User
+from app.modules.admin.dependencies import get_current_admin
+from app.modules.admin.models import AdminUser
 from .dependencies import (
     get_transaction_service,
     get_categorization_service,
@@ -999,7 +1001,8 @@ async def auto_categorize_transaction(
 async def create_category(
     category_data: TransactionCategoryCreate,
     category_repo: CategoryRepoDepends,
-    current_user: User = Depends(get_current_user),
+    # Categories are shared by every user, so only an admin may change them.
+    current_admin: AdminUser = Depends(get_current_admin),
 ):
     """Create a new transaction category"""
     try:
@@ -1076,7 +1079,8 @@ async def get_category(
 @router.put("/categories/{category_id}", response_model=TransactionCategoryResponse)
 async def update_category(
     category_repo: CategoryRepoDepends,
-    current_user: User = Depends(get_current_user),
+    # Categories are shared by every user, so only an admin may change them.
+    current_admin: AdminUser = Depends(get_current_admin),
     category_id: str = Path(..., description="Category ID"),
     category_data: TransactionCategoryUpdate = Body(...),
 ):
@@ -1101,7 +1105,8 @@ async def update_category(
 @router.delete("/categories/{category_id}", status_code=status.HTTP_204_NO_CONTENT)
 async def delete_category(
     category_repo: CategoryRepoDepends,
-    current_user: User = Depends(get_current_user),
+    # Categories are shared by every user, so only an admin may change them.
+    current_admin: AdminUser = Depends(get_current_admin),
     category_id: str = Path(..., description="Category ID"),
 ):
     """Delete a transaction category (soft delete)"""
