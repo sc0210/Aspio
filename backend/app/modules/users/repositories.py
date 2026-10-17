@@ -113,7 +113,7 @@ class UserRepository:
             return result.scalar_one_or_none()
             
         except Exception as e:
-            logger.error(f"Error getting user by email {email}: {str(e)}")
+            logger.error(f"Error getting user by email: {str(e)}")
             return None
     
     async def get_user_by_referral_code(self, referral_code: str) -> Optional[User]:

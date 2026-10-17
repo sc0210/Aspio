@@ -28,7 +28,7 @@ export class MockDataGenerator {
   }
 
   private generateId(): string {
-    return `test-${Date.now()}-${++this.testCounter}-${Math.random().toString(36).substr(2, 9)}`;
+    return `test-${Date.now()}-${++this.testCounter}-${globalThis.crypto.randomUUID().slice(0, 8)}`;
   }
 
   private randomAmount(min = 10, max = 5000): number {

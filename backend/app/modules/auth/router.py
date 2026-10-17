@@ -5,6 +5,8 @@ This module contains authentication-specific endpoints that are separate
 from user management, focusing purely on token validation and security.
 """
 
+from urllib.parse import urlencode
+
 from fastapi import APIRouter, Depends, HTTPException, status, Request
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -175,14 +177,20 @@ async def google_oauth_callback_get(
 
     frontend_url = (_get_settings().FRONTEND_URL or "http://localhost:3000").rstrip("/")
 
+    # The target is always our own frontend; the query values come from the caller,
+    # so they are encoded — a raw `&` in one would smuggle in extra parameters.
     if error:
         return RedirectResponse(
-            url=f"{frontend_url}/auth/error?error={error}", status_code=302
+            url=f"{frontend_url}/auth/error?{urlencode({'error': error})}",
+            status_code=302,
         )
 
     if code:
+        params = {"code": code}
+        if state is not None:
+            params["state"] = state
         return RedirectResponse(
-            url=f"{frontend_url}/api/auth/callback/google?code={code}&state={state}",
+            url=f"{frontend_url}/api/auth/callback/google?{urlencode(params)}",
             status_code=302,
         )
 

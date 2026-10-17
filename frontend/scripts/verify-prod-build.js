@@ -11,7 +11,7 @@
 
 const fs = require('fs');
 const path = require('path');
-const { execSync } = require('child_process');
+const { execFileSync } = require('child_process');
 
 const NEXT_BUILD_DIR = path.join(__dirname, '..', '.next');
 const COLORS = {
@@ -55,9 +55,19 @@ function searchForConsoleLogs() {
 
     searchPatterns.forEach(({ pattern, severity, label }) => {
         try {
-            // Search in .next directory, excluding source maps
-            const grepCmd = `grep -r "${pattern}" ${NEXT_BUILD_DIR} --include="*.js" --exclude="*.map" 2>/dev/null || true`;
-            const output = execSync(grepCmd, { encoding: 'utf-8', maxBuffer: 10 * 1024 * 1024 });
+            // Search in .next directory, excluding source maps. Arguments go to grep
+            // directly, not through a shell, so the path is never parsed as a command.
+            let output = '';
+            try {
+                output = execFileSync(
+                    'grep',
+                    ['-r', '-F', pattern, NEXT_BUILD_DIR, '--include=*.js', '--exclude=*.map'],
+                    { encoding: 'utf-8', maxBuffer: 10 * 1024 * 1024, stdio: ['ignore', 'pipe', 'ignore'] },
+                );
+            } catch (e) {
+                // grep exits 1 when nothing matches; anything else is a real failure.
+                if (e.status !== 1) throw e;
+            }
 
             const matches = output.split('\n').filter(line => line.trim());
 

@@ -138,7 +138,12 @@ export function getOrCreateSessionId(): string {
     let sessionId = sessionStorage.getItem(sessionKey);
 
     if (!sessionId) {
-        sessionId = `session_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+        // getRandomValues, not randomUUID: the latter needs a secure context, and a
+        // self-hosted instance may be opened over plain http on the LAN.
+        const random = Array.from(crypto.getRandomValues(new Uint8Array(8)), (b) =>
+            b.toString(16).padStart(2, '0'),
+        ).join('');
+        sessionId = `session_${Date.now()}_${random}`;
         sessionStorage.setItem(sessionKey, sessionId);
     }
 
