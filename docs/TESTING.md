@@ -129,8 +129,12 @@ and the app hangs on a spinner, which looks like a test failure but is an origin
   three demo-mode pages. The only check that runs the built artefacts; run it locally with the
   commands in the script's header.
   Its schema is built from the models (`create_all`), not from production's history, so it
-  cannot catch a column that production lacks — the deploy's schema gate covers the
-  migration side.
+  cannot catch a column that production lacks — `aspiro update`'s schema-at-head check covers
+  the migration side.
+- **Backend · migrate empty Postgres** — `scripts/migrate.sh --init` on an empty database,
+  then `alembic check` against the models.
+- **Self-host scripts** — `scripts/aspiro_test.sh`, `bash -n` on every script, shellcheck on
+  the `aspiro` CLI and `migrate.sh`.
 
 The backend selector matters. It used to be `-m unit`, which collected 3 of 976 tests — a green
 check validating ~0.3% of the backend. `not integration`

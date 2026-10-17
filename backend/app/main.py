@@ -295,7 +295,8 @@ def create_app() -> FastAPI:
         except Exception as e:
             logger.warning(f"Database health check failed: {e}")
             db_health = False
-            pool_info = {"error": str(e)}
+            # /health is public: the driver's message can name hosts and DSN parts.
+            pool_info = {"error": "database unavailable"}
 
         # Get scheduler status
         scheduler_status = get_scheduler_status()

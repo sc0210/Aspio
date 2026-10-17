@@ -367,6 +367,21 @@ class Settings(BaseSettings):
             return ""
 
     @property
+    def database_port(self) -> Optional[int]:
+        """Explicit port in DATABASE_URL (None if absent or unparseable)."""
+        try:
+            return urlsplit(self.DATABASE_URL).port
+        except ValueError:
+            return None
+
+    @property
+    def _database_host_is_supabase_pooler(self) -> bool:
+        # Matched on the parsed host, not a substring of the URL: a substring would
+        # also match a password, path or query that happens to contain the name.
+        host = self.database_host
+        return host == "pooler.supabase.com" or host.endswith(".pooler.supabase.com")
+
+    @property
     def database_is_local(self) -> bool:
         """Whether DATABASE_URL points at a loopback or in-compose database.
 
@@ -446,8 +461,7 @@ class Settings(BaseSettings):
         Covers both the transaction pooler (:6543) and the session pooler
         (pooler host on :5432). Used to enable pre-ping + a short recycle window,
         since the pooler reaps idle connections."""
-        url = self.DATABASE_URL
-        return "pooler.supabase.com" in url or ":6543/" in url or ":6543?" in url
+        return self._database_host_is_supabase_pooler or self.database_port == 6543
 
     @property
     def database_session_mode_pooler(self) -> bool:
@@ -457,8 +471,7 @@ class Settings(BaseSettings):
         SQLAlchemy pool (pool_size + max_overflow), times the replica count, plus any
         migration/admin connections, must stay well under that cap. The transaction
         pooler (:6543) does not have this limit and is the recommended runtime endpoint."""
-        url = self.DATABASE_URL
-        return "pooler.supabase.com" in url and (":5432/" in url or ":5432?" in url)
+        return self._database_host_is_supabase_pooler and self.database_port == 5432
 
     @property
     def database_use_nullpool(self) -> bool:

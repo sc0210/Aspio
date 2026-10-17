@@ -1,9 +1,7 @@
 # Self-hosting Aspiro
 
 Run your own Aspiro from this repository. Nothing is published for you to pull: you clone
-the code and build it on your machine, with Docker (recommended) or without. This
-project's own server is set up the same way; its box-specific notes are in
-[RASPBERRY_PI_DEPLOYMENT.md](RASPBERRY_PI_DEPLOYMENT.md).
+the code and build it on your machine, with Docker (recommended) or without.
 
 The Docker stack is `docker-compose.pi.yml`: Postgres, the backend, the frontend and Caddy,
 plus an optional `cloudflared`. A Cloudflare Tunnel dials out, so no inbound port has to be

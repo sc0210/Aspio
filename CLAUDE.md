@@ -9,9 +9,9 @@ Aspiro is a full-stack personal finance app targeting Asian markets. Users track
 **Tech stack:**
 - Frontend: Next.js 16 (App Router), React 19, TypeScript, TailwindCSS 3, TanStack Query v5, NextAuth.js v4, Recharts 2
 - Backend: FastAPI, SQLAlchemy 2.0 async, Pydantic v2, Alembic
-- Database: PostgreSQL 15 — Docker locally and on the Pi (loopback-bound); Supabase only for the cold-standby cloud copy
+- Database: PostgreSQL 15 — Docker locally and in the production stack (loopback-bound)
 - Auth: NextAuth.js (frontend) + JWT / Google OAuth (backend)
-- Deployment: a self-hosted Raspberry Pi is **the whole of production** — frontend, backend and database. Nothing deploys automatically: CI only validates, and the Pi is updated by hand from a git clone (`git pull && bash scripts/pi/deploy-local.sh`), building its own images. Other self-hosters do the same with `scripts/aspiro update` (`docs/SELF_HOSTING.md`). The internet reaches it through a Cloudflare Tunnel (`cloudflared` as a host systemd service, origin `http://localhost:80`), so no router port is open. Keep Cloudflare **Bot Fight Mode off**: it blocks the LINE webhook and the uptime probe. Tailscale is for SSH. Railway, Vercel and Supabase are a disconnected cold standby that serves nothing.
+- Deployment: self-hosted. Nothing deploys automatically and nothing is published: CI only validates, and each instance clones the repo and builds its own images with `scripts/aspiro setup` / `scripts/aspiro update` (`docs/SELF_HOSTING.md`). The internet reaches an instance through a Cloudflare Tunnel, so no router port is open. Keep Cloudflare **Bot Fight Mode off**: it blocks the LINE webhook.
 
 **Docs:** `docs/README.md` is the index. The ones worth loading before editing: `docs/ARCHITECTURE.md`, `docs/FINANCIAL_TERMINOLOGY.md` (money invariants), `docs/UI_CONVENTIONS.md`, `docs/TESTING.md`, `docs/SECURITY.md`. The API reference is generated at `/docs` on a running backend — never write it down. Docs that go stale get deleted, not archived; if you find one wrong, fix or delete it in the same change.
 
@@ -23,7 +23,7 @@ Aspiro is a full-stack personal finance app targeting Asian markets. Users track
 ```
 Services: frontend :3000 · backend :8000 · Swagger :8000/docs · pgAdmin :5050
 
-**Raspberry Pi (production):** `docker-compose.pi.yml` runs Postgres, backend, the production frontend build and Caddy (`cloudflared` sits behind a profile there; on the Pi it is a host service). See `docs/RASPBERRY_PI_DEPLOYMENT.md`.
+**Production stack:** `docker-compose.pi.yml` (the name is historical; it runs on any amd64/arm64 host) runs Postgres, backend, the production frontend build and Caddy, with `cloudflared` behind the `tunnel` profile. See `docs/SELF_HOSTING.md`.
 
 ### Backend only
 ```bash
@@ -135,7 +135,7 @@ Shared app-level infrastructure lives outside `modules/`: `app/common/` (base re
 - Data access goes through repositories (`repositories.py`, extending `BaseRepository`); keep raw queries out of routers/services where a repository method fits.
 - All routers return `ApiResponse[T]` using `ApiResponse.success_response(data=...)`.
 - `CurrentUser` dependency (`users/dependencies.py`) validates JWT and returns the user model.
-- `SKIP_DB_SCHEMA_INIT=True` in production — the app never creates tables. Alembic migrations are NOT auto-applied on deploy: schema changes ship as an Alembic migration (local/dev) plus an idempotent SQL script in `backend/scripts/prod_sql/`, applied manually against the target DB followed by `alembic stamp head`. The Pi deploy enforces the order: it refuses to start backend code whose migration head the DB's `alembic_version` hasn't reached, leaving the old containers serving (`scripts/pi/release_checks.sh`) — so merge, apply the SQL, then re-run the deploy.
+- `SKIP_DB_SCHEMA_INIT=True` in production — the app never creates tables. Alembic migrations are NOT auto-applied on deploy: schema changes ship as an Alembic migration (local/dev) plus an idempotent SQL script in `backend/scripts/prod_sql/`, applied manually against the target DB followed by `alembic stamp head`. `aspiro update` runs the migration itself and rolls back if the schema doesn't reach head.
 - PgBouncer transaction mode in production: `statement_cache_size=0` is required in asyncpg connect args.
 
 ### Frontend

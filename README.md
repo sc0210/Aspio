@@ -62,6 +62,12 @@ Docker): see [docs/SELF_HOSTING.md](docs/SELF_HOSTING.md).
 
 Start at [docs/README.md](docs/README.md).
 
+## Contributing
+
+Issues and pull requests are welcome. [CONTRIBUTING.md](CONTRIBUTING.md) covers setup, the checks
+CI runs, and how to send a change. Report security problems privately through
+[GitHub's advisory form](https://github.com/sc0210/Aspio/security/advisories/new), not in an issue.
+
 ## License
 
-All rights reserved.
+[Apache License 2.0](LICENSE).

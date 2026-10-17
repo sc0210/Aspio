@@ -12,6 +12,7 @@ token requirement, `POST /dev/db-sync/pull` was an unauthenticated,
 internet-reachable "replace this database" button.
 """
 
+import logging
 import ssl
 from typing import AsyncGenerator
 
@@ -24,6 +25,19 @@ from app.core.dev_tools import require_dev_tools_token
 
 # Router-wide dependency: every route below requires the dev-tools secret.
 router = APIRouter(dependencies=[Depends(require_dev_tools_token)])
+
+logger = logging.getLogger(__name__)
+
+_NOT_CONFIGURED = (
+    "Database URL not configured — set SUPABASE_DB_URL / PEER_DB_URL in backend/.env"
+)
+
+
+def _error_line(context: str, exc: Exception) -> str:
+    """The streamed failure line. The exception text (which can carry hostnames,
+    DSN fragments and driver internals) goes to the backend log, not the response."""
+    logger.warning("dev db-sync: %s", context, exc_info=exc)
+    return f"✗ {context} ({type(exc).__name__}) — details in the backend log\n[exit 1]\n"
 
 
 def _local_dsn() -> str:
@@ -81,14 +95,14 @@ async def _status_gen_for(
     try:
         a = await asyncpg.connect(dsn_a, ssl=_ssl_for(dsn_a))
     except Exception as exc:
-        yield f"✗ Cannot connect to {label_a}: {exc}\n[exit 1]\n"
+        yield _error_line(f"Cannot connect to {label_a}", exc)
         return
 
     try:
         b = await asyncpg.connect(dsn_b, ssl=_ssl_for(dsn_b))
     except Exception as exc:
         await a.close()
-        yield f"✗ Cannot connect to {label_b}: {exc}\n[exit 1]\n"
+        yield _error_line(f"Cannot connect to {label_b}", exc)
         return
 
     col_a, col_b = label_a[:8], label_b[:8]
@@ -115,7 +129,7 @@ async def _status_gen_for(
                 yield f"{table:<32} {str(a_n):>8} {str(b_n):>8} {'?':>6}\n"
         yield "\n[exit 0]\n"
     except Exception as exc:
-        yield f"\n✗ {exc}\n[exit 1]\n"
+        yield "\n" + _error_line("Status check failed", exc)
     finally:
         await a.close()
         await b.close()
@@ -126,7 +140,7 @@ async def _status_gen() -> AsyncGenerator[str, None]:
         local_dsn = _local_dsn()
         remote_dsn = _remote_dsn()
     except ValueError as exc:
-        yield f"✗ {exc}\n[exit 1]\n"
+        yield _error_line(_NOT_CONFIGURED, exc)
         return
     async for line in _status_gen_for("Local", local_dsn, "Remote", remote_dsn):
         yield line
@@ -137,7 +151,7 @@ async def _peer_status_gen() -> AsyncGenerator[str, None]:
         local_dsn = _local_dsn()
         peer_dsn = _peer_dsn()
     except ValueError as exc:
-        yield f"✗ {exc}\n[exit 1]\n"
+        yield _error_line(_NOT_CONFIGURED, exc)
         return
     async for line in _status_gen_for("Local", local_dsn, _peer_label(), peer_dsn):
         yield line
@@ -149,7 +163,7 @@ async def _sync_gen(source_dsn: str, target_dsn: str) -> AsyncGenerator[str, Non
         source = await asyncpg.connect(source_dsn, ssl=_ssl_for(source_dsn))
         yield "✓ Connected to source\n"
     except Exception as exc:
-        yield f"✗ Cannot connect to source: {exc}\n[exit 1]\n"
+        yield _error_line("Cannot connect to source", exc)
         return
 
     try:
@@ -157,7 +171,7 @@ async def _sync_gen(source_dsn: str, target_dsn: str) -> AsyncGenerator[str, Non
         yield "✓ Connected to target\n"
     except Exception as exc:
         await source.close()
-        yield f"✗ Cannot connect to target: {exc}\n[exit 1]\n"
+        yield _error_line("Cannot connect to target", exc)
         return
 
     try:
@@ -204,7 +218,7 @@ async def _sync_gen(source_dsn: str, target_dsn: str) -> AsyncGenerator[str, Non
 
     except Exception as exc:
         # The transaction above already rolled back — target left unchanged.
-        yield f"\n✗ Error (rolled back, target unchanged): {exc}\n[exit 1]\n"
+        yield "\n" + _error_line("Error (rolled back, target unchanged)", exc)
 
     finally:
         await source.close()
@@ -257,7 +271,7 @@ async def _peer_sync_gen(direction: str) -> AsyncGenerator[str, None]:
         local_dsn = _local_dsn()
         peer_dsn = _peer_dsn()
     except ValueError as exc:
-        yield f"✗ {exc}\n[exit 1]\n"
+        yield _error_line(_NOT_CONFIGURED, exc)
         return
     source, target = (local_dsn, peer_dsn) if direction == "push" else (peer_dsn, local_dsn)
     async for line in _sync_gen(source, target):

@@ -6,7 +6,7 @@ What is actually enforced, and the rules that exist because something went wrong
 
 **Never gate anything security-relevant on `ENVIRONMENT`, `DEBUG`, or `is_development`.**
 
-The self-hosted Pi is internet-facing production and reports `ENVIRONMENT=development`. `DEBUG`
+A self-hosted instance can be internet-facing and still report `ENVIRONMENT=development`. `DEBUG`
 is true on every stack built from the base compose file, including internet-reachable ones. Any
 check of the form "if we're in dev, open this up" is therefore open in production.
 
@@ -82,8 +82,8 @@ quota.
 - `.env*` files are gitignored and must stay that way. Real secrets live in the deployment's own
   secret store.
 - `.env.sample` / `backend/.env.sample` carry placeholder values only.
-- Rotate `SECRET_KEY` and `NEXTAUTH_SECRET` independently per deployment target — local, Pi and
-  cloud must not share a signing key.
+- Rotate `SECRET_KEY` and `NEXTAUTH_SECRET` independently per deployment target — local and
+  each self-hosted instance must not share a signing key.
 - A committed secret stays in history, which a public repo serves. Rotate it; deleting the file
   is not enough. `gitleaks git --redact .` scans every commit.
 
