@@ -14,7 +14,7 @@ mypy==2.4.0
 pre-commit==4.6.2
 
 # Load testing
-locust==2.46.6
+locust==2.46.7
 
 # Type stubs
 types-passlib==1.7.7.20260211
