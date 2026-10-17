@@ -206,11 +206,8 @@ class TestUserScoping:
         divs = await analytics.get_dividend_data(test_user.id)
         assert divs["payments"] == [] and divs["total_dividends"] is None
 
-    async def test_totals_ignore_the_other_users_portfolio(self, async_session, test_user, pf, other):
-        _, other_pf = other
-        async_session.add(make_holding(pf, test_user, "0050", value="100", cost="50"))
-        await async_session.commit()
-        await get_portfolio_service(async_session)._update_portfolio_totals(pf.id, test_user.id)
-        await async_session.refresh(pf)
+    async def test_totals_will_not_touch_another_users_portfolio(self, async_session, test_user, pf, other):
+        _, other_pf = other  # holds a 777 holding that belongs to someone else
+        await get_portfolio_service(async_session)._update_portfolio_totals(other_pf.id, test_user.id)
         await async_session.refresh(other_pf)
-        assert pf.total_value == D("100") and other_pf.total_value == D("0")
+        assert other_pf.total_value == D("0")
