@@ -241,9 +241,7 @@ async def get_holding(
 
     try:
         holding_service = get_holding_repository(session)
-        holding = await holding_service.get_holding(
-            holding_id=holding_id, user_id=current_user.id
-        )
+        holding = await holding_service.get_by_id(holding_id, current_user.id)
 
         if not holding:
             raise HTTPException(
@@ -904,7 +902,8 @@ async def calculate_portfolio_irr(
     try:
         # Get user's default portfolio
         portfolio_repo = get_portfolio_repository(session)
-        portfolios = await portfolio_repo.get_user_portfolios(current_user.id)
+        # Returns (portfolios, total); the bare tuple was always truthy.
+        portfolios, _ = await portfolio_repo.get_user_portfolios(current_user.id)
 
         if not portfolios:
             raise HTTPException(
