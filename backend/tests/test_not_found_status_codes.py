@@ -22,7 +22,7 @@ async def test_updating_a_missing_row_is_404(authenticated_client, path, body):
 
 
 async def test_unknown_export_format_is_400(authenticated_client):
-    r = authenticated_client.get("/api/v1/portfolio/export", params={"format": "docx"})
+    r = authenticated_client.get("/api/v1/portfolio/export", params={"format": "pdf"})  # was routed to a method that never existed
     assert r.status_code == 400, r.text[:200]
 
 

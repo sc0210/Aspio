@@ -193,7 +193,7 @@ async def import_template(
 
 @router.get("/export")
 async def export_portfolio(
-    format: str = Query("xlsx", description="Export format (xlsx, csv, pdf)"),
+    format: str = Query("xlsx", description="Export format (xlsx, csv)"),
     date_from: Optional[str] = Query(None, description="Filter by purchase date start (YYYY-MM-DD)"),
     date_to: Optional[str] = Query(None, description="Filter by purchase date end (YYYY-MM-DD)"),
     current_user: CurrentUser = None,
@@ -240,17 +240,10 @@ async def export_portfolio(
                 media_type="text/csv",
                 headers={"Content-Disposition": f"attachment; filename={filename}"},
             )
-        elif format.lower() == "pdf":
-            pdf_data = await portfolio_service.export_portfolio_pdf(current_user.id)
-            return StreamingResponse(
-                iter([pdf_data]),
-                media_type="application/pdf",
-                headers={"Content-Disposition": "attachment; filename=portfolio.pdf"},
-            )
         else:
             raise HTTPException(
                 status_code=status.HTTP_400_BAD_REQUEST,
-                detail="Unsupported export format. Use 'xlsx', 'csv', or 'pdf'",
+                detail="Unsupported export format. Use 'xlsx' or 'csv'",
             )
 
     except HTTPException:
