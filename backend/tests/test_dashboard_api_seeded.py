@@ -1,6 +1,5 @@
 """Dashboard endpoints against a user with real income, spending, a holding and a loan."""
 
-import json
 from datetime import datetime, time, timedelta, timezone
 from decimal import Decimal
 from uuid import uuid4
@@ -103,7 +102,7 @@ async def test_spending_by_category_force_refresh(authenticated_client, world):
 
 async def test_income_by_category(authenticated_client, world):
     data = get(authenticated_client, "/income-by-category", period="30d")
-    assert [(c["name"], c["amount"]) for c in data["categories"]][0] == ("Salary", 55000.0)
+    assert [(c["name"], c["amount"]) for c in data["categories"]] == [("Salary", 55000.0)]
 
 
 async def test_recent_activity(authenticated_client, world):
