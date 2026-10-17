@@ -8,7 +8,7 @@ from uuid import uuid4
 import pytest
 import pytest_asyncio
 
-from app.modules.portfolio.models import HoldingWalletType, Portfolio, PortfolioHolding
+from app.modules.portfolio.models import HoldingWalletType, Portfolio, PortfolioHolding, PortfolioTransaction
 
 pytestmark = [pytest.mark.asyncio, pytest.mark.database]
 
@@ -69,8 +69,6 @@ async def test_rebalancing_allocation_flags_overweight_0050(authenticated_client
     assert data["requires_rebalancing"] is True
 
 
-@pytest.mark.xfail(strict=True, reason="rebalancing sums holding.total_value in native currency: "
-                   "the USD holding (100 USD) is counted as 100 TWD, not 3,200")
 async def test_rebalancing_total_converts_usd_holdings(authenticated_client, seeded):
     data = await get(authenticated_client, "/rebalancing/allocation")
     assert float(data["total_portfolio_value"]) == 8000 + 100 * 32 + 500
@@ -99,7 +97,6 @@ async def test_dashboard_bundle(authenticated_client, seeded):
     assert data["rebalancing_plan"] is not None
 
 
-@pytest.mark.xfail(strict=True, reason="router's blanket except turns NotFoundException into a 500")
 async def test_unknown_portfolio_id_is_a_404(authenticated_client, seeded):
     r = authenticated_client.get(f"{BASE}/rebalancing/allocation", params={"portfolio_id": str(uuid4())})
     assert r.status_code == 404
@@ -115,8 +112,6 @@ class TestTargetAllocations:
     def put(self, client, targets):
         return client.put(f"{BASE}/rebalancing/target-allocations", json={"targets": targets})
 
-    @pytest.mark.xfail(strict=True, reason="Portfolio.metadata is SQLAlchemy's declarative MetaData, not a "
-                       "column (the column is item_metadata): saving targets raises TypeError -> 500")
     async def test_saved_targets_drive_the_next_allocation(self, authenticated_client, seeded):
         r = self.put(authenticated_client, [
             {"asset": "0050", "targetPct": 0.8, "assetName": "Taiwan 50", "assetType": "etf"},
@@ -136,3 +131,14 @@ class TestTargetAllocations:
     async def test_no_portfolio_is_404(self, authenticated_client, test_user):
         r = self.put(authenticated_client, [{"asset": "0050", "targetPct": 1.0}])
         assert r.status_code == 404
+
+
+async def test_holding_transaction_history_serialises_metadata(authenticated_client, seeded, async_session, test_user):
+    async_session.add(PortfolioTransaction(
+        id=uuid4(), portfolio_id=seeded.id, user_id=test_user.id, type="buy", symbol="0050",
+        quantity=Decimal("1"), price=Decimal("100"), total_amount=Decimal("100"), fees=Decimal("0"),
+        taxes=Decimal("0"), currency="TWD", transaction_date=datetime(2026, 1, 2, tzinfo=timezone.utc),
+        item_metadata={"source": "test"}))
+    await async_session.commit()
+    (txn,) = await get(authenticated_client, "/holdings/symbol/0050/transactions")
+    assert txn["symbol"] == "0050" and txn["metadata"] == {"source": "test"}

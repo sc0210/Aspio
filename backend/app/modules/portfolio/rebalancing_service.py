@@ -180,12 +180,21 @@ class RebalancingService:
         total_value = Decimal("0")
         holdings_by_type: Dict[str, Decimal] = {}
 
+        # total_value is in the holding's own currency; the buckets and the
+        # target percentages are TWD, so convert before summing.
+        fx_rates: Dict[str, Decimal] = {}
+
         for holding in holdings:
             if not holding.is_active:
                 continue
 
             # Safely get holding value, handle NaN/Infinity
             value = safe_decimal(holding.total_value, Decimal("0"))
+            currency = (getattr(holding, "currency", None) or "TWD").upper()
+            if currency != "TWD":
+                if currency not in fx_rates:
+                    fx_rates[currency] = await self._twd_rate(currency)
+                value = value * fx_rates[currency]
             total_value += value
 
             # Group by asset category
@@ -270,6 +279,17 @@ class RebalancingService:
             currency="TWD",
             last_updated=datetime.now(timezone.utc)
         )
+
+    async def _twd_rate(self, currency: str) -> Decimal:
+        """Rate to TWD; 1 when unavailable, so a failed lookup degrades to the old behaviour."""
+        from app.utils.exchange_rate_service import get_exchange_rate_service
+
+        try:
+            rate = await get_exchange_rate_service(self.session).get_exchange_rate(currency, "TWD")
+        except Exception as e:
+            logger.warning(f"FX lookup {currency}->TWD failed: {e}")
+            return Decimal("1")
+        return safe_decimal(rate, Decimal("1")) or Decimal("1")
 
     async def calculate_rebalancing_plan(
         self,
@@ -552,8 +572,9 @@ class RebalancingService:
         Supports custom assets added by user.
         """
         # Check if user has customized target allocations in portfolio metadata
-        if portfolio.metadata and "target_allocations" in portfolio.metadata:
-            saved_targets = portfolio.metadata["target_allocations"]
+        meta = portfolio.item_metadata
+        if meta and "target_allocations" in meta:
+            saved_targets = meta["target_allocations"]
             logger.info(f"Using user-customized target allocations from portfolio {portfolio.id}")
 
             # Convert saved targets back to the format expected by the rest of the code

@@ -36,8 +36,6 @@ def test_amount_formatting():
 
 
 class TestPaymentDue:
-    @pytest.mark.xfail(strict=True, reason="_next_payment_date treats a payment due today as next month's, "
-                      "so the days_until == 0 'today' reminder can never fire")
     async def test_due_today_is_high_priority(self, async_session, test_user):
         async_session.add(loan(test_user, due_day=15))
         await async_session.commit()

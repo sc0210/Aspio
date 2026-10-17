@@ -25,16 +25,16 @@ D = Decimal
 USER = uuid4()
 
 
-def holding(symbol, value, type_="stock", active=True, metadata=None):
+def holding(symbol, value, type_="stock", active=True, metadata=None, currency="TWD"):
     return SimpleNamespace(
-        symbol=symbol, type=type_, total_value=value, is_active=active,
+        symbol=symbol, type=type_, total_value=value, is_active=active, currency=currency,
         item_metadata=metadata if metadata is not None else {},
     )
 
 
 def portfolio(meta=None, last_rebalance=None):
     return SimpleNamespace(
-        id=uuid4(), metadata=meta, last_rebalance_at=last_rebalance,
+        id=uuid4(), item_metadata=meta, last_rebalance_at=last_rebalance,
         total_value=D("1000"), total_gain_loss_percentage=D("4.5"),
     )
 

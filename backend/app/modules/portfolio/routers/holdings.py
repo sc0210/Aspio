@@ -865,7 +865,7 @@ async def get_holding_transactions(
                     txn.transaction_date.isoformat() if txn.transaction_date else None
                 ),
                 "notes": txn.notes,
-                "metadata": txn.metadata,
+                "metadata": txn.item_metadata,
                 "createdAt": txn.created_at.isoformat(),
                 "updatedAt": txn.updated_at.isoformat(),
             }
@@ -875,12 +875,7 @@ async def get_holding_transactions(
         return ApiResponse.success_response(
             data=transactions_data,
             message=f"Found {len(transactions_data)} transaction(s) for {symbol}",
-            meta={
-                "total": total,
-                "skip": skip,
-                "limit": limit,
-                "symbol": symbol.upper(),
-            },
+            meta=PaginationMeta.create(page=skip // limit + 1, limit=limit, total=total),
         )
 
     except Exception as e:
