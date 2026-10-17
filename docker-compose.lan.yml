@@ -1,0 +1,58 @@
+# docker-compose.lan.yml
+# ---------------------------------------------------------------------------
+# LAN access override — makes Aspiro reachable by ANY device on the same
+# WiFi/LAN (phones, tablets, other laptops), not just the host machine.
+#
+# It overrides the browser-facing URLs *and* republishes the app ports on
+# 0.0.0.0 — the base file binds them to 127.0.0.1 so that a plain
+# `docker compose up` is not reachable from the network. (Note for anyone
+# reading old comments here: the base file used to publish on 0.0.0.0 and this
+# overlay changed URLs only. That changed, because it meant every local stack
+# served the API to the whole WiFi.)
+#
+# Usage (set LAN_HOST to this machine's LAN IP — NOT localhost/127.0.0.1):
+#
+#   # find the IP:
+#   #   Raspberry Pi / Linux : hostname -I
+#   #   macOS                : ipconfig getifaddr en0
+#
+#   LAN_HOST=192.168.1.50 \
+#     docker compose -f docker-compose.yml -f docker-compose.lan.yml up -d
+#
+# Or add `LAN_HOST=192.168.1.50` to the root .env and just run:
+#
+#   docker compose -f docker-compose.yml -f docker-compose.lan.yml up -d
+#
+# Then browse from any LAN device to:  http://<LAN_HOST>:3000
+#
+# Notes / gotchas:
+#   * A DHCP reservation for LAN_HOST keeps the address stable across reboots.
+#   * Google sign-in will NOT work over a LAN IP (Google rejects private-IP
+#     redirect URIs). Email/password + demo mode work fine.
+#   * Service workers / PWA install require https or localhost, so they stay
+#     disabled on http://<IP>. The app itself works normally.
+#   * INTERNAL_API_URL is intentionally left untouched — it's the
+#     container-to-container address (http://backend:8000) and must stay so.
+# ---------------------------------------------------------------------------
+
+services:
+  backend:
+    # The base file binds host ports to 127.0.0.1; LAN access needs them on all
+    # interfaces. This override is what makes the app reachable off-host, so it
+    # also re-exposes anything gated only by reachability — keep DEV_LOGIN_*
+    # unset when using this overlay.
+    ports:
+      - "0.0.0.0:8000:8000"
+    environment:
+      - CORS_ORIGINS=["http://${LAN_HOST}:3000"]
+      - FRONTEND_URL=http://${LAN_HOST}:3000
+      # Harmless over LAN (Google won't accept a private IP), kept consistent.
+      - GOOGLE_REDIRECT_URI=http://${LAN_HOST}:3000/api/auth/callback/google
+
+  frontend:
+    ports:
+      - "0.0.0.0:3000:3000"
+    environment:
+      # The browser calls this one — must be the LAN IP, not localhost.
+      - NEXT_PUBLIC_API_URL=http://${LAN_HOST}:8000/api/v1
+      - NEXTAUTH_URL=http://${LAN_HOST}:3000

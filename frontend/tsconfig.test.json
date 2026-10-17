@@ -1,0 +1,24 @@
+{
+  // Type-checks the test suite, which tsconfig.json deliberately excludes.
+  //
+  // The main config skips every *.test.* / __tests__ path so `next build` does
+  // not typecheck test code. The side effect was that test files were never
+  // typechecked AT ALL: a test could assign a string to a number and both
+  // `tsc --noEmit` and CI stayed green, because the compiler never saw the
+  // file. Jest transpiles with babel, which strips types without checking
+  // them, so nothing else caught it either.
+  //
+  // This config is the same compiler settings as the app, with the test paths
+  // put back. `types` is deliberately NOT narrowed here — the base config
+  // leaves it unset so every @types/* package is ambient, and pinning a list
+  // would drop the ones production files rely on (gtag on Window, the
+  // next-auth module augmentation) and invent errors that do not exist.
+  // Jest's own globals arrive through @types/jest the same way.
+  //
+  // Run via `npm run type-check:tests`.
+  "extends": "./tsconfig.json",
+  // Playwright specs (tests/, playwright/, e2e/) stay excluded: they run in a
+  // different environment with their own globals, and type-checking them is a
+  // separate job from the Jest suite this config is for.
+  "exclude": ["node_modules", ".next", "tests", "playwright", "e2e"]
+}

@@ -1,0 +1,1 @@
+"""Notifications module for Aspiro FastAPI backend"""

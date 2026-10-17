@@ -1,0 +1,206 @@
+services:
+  # PostgreSQL Database
+  postgres:
+    image: postgres:15-alpine
+    container_name: aspiro-postgres
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:-aspiro_user}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-aspiro_password}
+      POSTGRES_DB: ${POSTGRES_DB:-aspiro_db}
+    ports:
+      # Loopback-only, same rule as the backend and frontend ports below. A bare
+      # "5433:5432" publishes the database to every device on the network with a
+      # password that falls back to "aspiro_password". The backend reaches it over
+      # the compose network (postgres:5432), so no host exposure is needed —
+      # host-side psql and db_sync.sh both go through loopback.
+      - "127.0.0.1:5433:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-aspiro_user} -d ${POSTGRES_DB:-aspiro_db}"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+    restart: unless-stopped
+    networks:
+      - aspiro-network
+
+  # FastAPI Backend
+  backend:
+    build:
+      context: ./backend
+      # Dockerfile.dev, not Dockerfile: it includes requirements-dev.txt so
+      # pytest survives `--force-recreate`. Production (the Pi) builds
+      # ./backend/Dockerfile, which stays free of test tooling.
+      dockerfile: Dockerfile.dev
+    container_name: aspiro-backend
+    ports:
+      # Loopback-only by default. docker-compose.lan.yml republishes this on
+      # 0.0.0.0 for LAN/Pi access; Caddy reaches it over the compose network
+      # (backend:8000) and needs no host port at all.
+      - "127.0.0.1:8000:8000"
+    environment:
+      - ENVIRONMENT=development
+      - DEBUG=true
+      # Developer-only routes: password-less sign-in (/auth/dev-login) and DB
+      # sync (/dev/db-sync/*). DEV_TOOLS_TOKEN gates BOTH and must be presented
+      # as X-Dev-Tools-Token; with it unset neither is even mounted.
+      # NOTE: ENVIRONMENT above is `development` for every deployment that uses
+      # this file — including the self-hosted Pi behind Caddy — so the token, not
+      # the environment, is what keeps these shut. Leave unset unless you are
+      # actively developing.
+      - DEV_LOGIN_ENABLED=${DEV_LOGIN_ENABLED:-false}
+      - DEV_TOOLS_TOKEN=${DEV_TOOLS_TOKEN:-}
+      # Swagger/ReDoc at :8000/docs, and looser auth rate limits so React strict
+      # mode's double-invoked effects don't trip the 5/min login limit. Both are
+      # explicit here rather than inferred from DEBUG, so that a deployment
+      # reusing this file (Pi, LAN) can turn them off without touching DEBUG.
+      - ENABLE_API_DOCS=${ENABLE_API_DOCS:-true}
+      - RATE_LIMIT_DEV_MULTIPLIER=${RATE_LIMIT_DEV_MULTIPLIER:-10}
+      # Trust *.ngrok.io / *.ngrok-free.app origins. Off by default — turn on
+      # only while tunnelling, or list the exact URL in EXTRA_CORS_ORIGINS.
+      - CORS_ALLOW_NGROK=${CORS_ALLOW_NGROK:-false}
+      - LOG_LEVEL=${LOG_LEVEL:-INFO}
+      - DATABASE_URL=postgresql+asyncpg://${POSTGRES_USER:-aspiro_user}:${POSTGRES_PASSWORD:-aspiro_password}@postgres:5432/${POSTGRES_DB:-aspiro_db}
+      - DATABASE_POOL_SIZE=10
+      - DATABASE_MAX_OVERFLOW=20
+      - SECRET_KEY=${SECRET_KEY:-dev-only-key-do-not-use-in-production-abc123xyz}
+      # Local dev only: lets the backend start on the placeholder defaults above, which its startup check otherwise refuses. Never set in production.
+      - ALLOW_INSECURE_DEFAULTS=${ALLOW_INSECURE_DEFAULTS:-true}
+      - ALGORITHM=HS256
+      - ACCESS_TOKEN_EXPIRE_MINUTES=30
+      - REFRESH_TOKEN_EXPIRE_DAYS=7
+      - CORS_ORIGINS=["http://localhost:3000"]
+      - GOOGLE_CLIENT_ID=${GOOGLE_CLIENT_ID}
+      - GOOGLE_CLIENT_SECRET=${GOOGLE_CLIENT_SECRET}
+      - GOOGLE_REDIRECT_URI=${GOOGLE_REDIRECT_URI:-http://localhost:3000/api/auth/callback/google}
+      # LINE Bot — pass credentials from backend/.env or shell environment
+      - LINE_CHANNEL_SECRET=${LINE_CHANNEL_SECRET}
+      - LINE_CHANNEL_ACCESS_TOKEN=${LINE_CHANNEL_ACCESS_TOKEN}
+      # FRONTEND_URL is embedded in /link URLs sent to LINE users.
+      # For local testing on the same machine: http://localhost:3000
+      # For mobile testing: set to your cloudflared frontend URL or production Vercel URL.
+      - FRONTEND_URL=${FRONTEND_URL:-http://localhost:3000}
+      - QUICKCHART_URL=http://quickchart:3400/chart
+    depends_on:
+      postgres:
+        condition: service_healthy
+    volumes:
+      - ./backend:/app
+      - backend_logs:/app/logs
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+      start_period: 40s
+    restart: unless-stopped
+    networks:
+      - aspiro-network
+    command: python -m uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload
+
+  # QuickChart — self-hosted chart renderer so financial data never leaves the network
+  quickchart:
+    image: ianw/quickchart:latest
+    container_name: aspiro-quickchart
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD-SHELL", "wget -qO- http://localhost:3400/ || exit 1"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+    networks:
+      - aspiro-network
+
+  # Cloudflare Tunnel — exposes the backend webhook to LINE's platform.
+  # LINE requires a public HTTPS URL; this creates a free temporary *.trycloudflare.com tunnel.
+  #
+  # After starting: docker logs aspiro-cloudflared 2>&1 | grep trycloudflare
+  # Copy the URL and set it in LINE Developers Console:
+  #   Messaging API → Webhook URL → https://<id>.trycloudflare.com/api/v1/line-bot/webhook
+  cloudflared:
+    image: cloudflare/cloudflared:latest
+    container_name: aspiro-cloudflared
+    restart: unless-stopped
+    command: tunnel --no-autoupdate --url http://backend:8000
+    depends_on:
+      backend:
+        condition: service_healthy
+    networks:
+      - aspiro-network
+
+  # Frontend (Optional - for full-stack development)
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile.dev
+    container_name: aspiro-frontend
+    ports:
+      # Loopback-only by default — see the backend port note above.
+      - "127.0.0.1:3000:3000"
+    environment:
+      - NODE_ENV=development
+      - NEXT_PUBLIC_API_URL=http://localhost:8000/api/v1
+      - INTERNAL_API_URL=http://backend:8000/api/v1
+      - NEXTAUTH_URL=http://localhost:3000
+      - NEXTAUTH_SECRET=${NEXTAUTH_SECRET:-change-me-in-production}
+      - GOOGLE_CLIENT_ID=${GOOGLE_CLIENT_ID}
+      - GOOGLE_CLIENT_SECRET=${GOOGLE_CLIENT_SECRET}
+      # Dev sign-in: the first enables the NextAuth `dev` provider, the second
+      # renders the panel on /auth/signin. DEV_TOOLS_TOKEN is read server-side
+      # only (inside authorize()) and is never sent to the browser — that is why
+      # there is no NEXT_PUBLIC_ variant of it.
+      - DEV_LOGIN_ENABLED=${DEV_LOGIN_ENABLED:-false}
+      - NEXT_PUBLIC_DEV_LOGIN_ENABLED=${DEV_LOGIN_ENABLED:-false}
+      - DEV_TOOLS_TOKEN=${DEV_TOOLS_TOKEN:-}
+      - WATCHPACK_POLLING=true
+      - CHOKIDAR_USEPOLLING=true
+    depends_on:
+      backend:
+        condition: service_healthy
+    volumes:
+      - ./frontend:/app
+      - frontend_node_modules:/app/node_modules
+      # Bind-mount .next so `rm -rf frontend/.next` clears both local and Docker.
+      # Named volume caused stale chunks to survive config changes (next.config.js
+      # edits wouldn't take effect until the volume was manually removed).
+      - ./frontend/.next:/app/.next
+    restart: unless-stopped
+    networks:
+      - aspiro-network
+
+  # pgAdmin (Database Management UI)
+  pgadmin:
+    image: dpage/pgadmin4:latest
+    container_name: aspiro-pgadmin
+    environment:
+      PGADMIN_DEFAULT_EMAIL: ${PGADMIN_EMAIL:-admin@aspiro.dev}
+      PGADMIN_DEFAULT_PASSWORD: ${PGADMIN_PASSWORD:-admin123}
+      PGADMIN_CONFIG_SERVER_MODE: "False"
+    ports:
+      # Loopback-only: SERVER_MODE=False means no login prompt, so publishing this
+      # on 0.0.0.0 hands anyone on the network an authenticated admin console over
+      # the database.
+      - "127.0.0.1:5050:80"
+    volumes:
+      - pgadmin_data:/var/lib/pgadmin
+    depends_on:
+      postgres:
+        condition: service_healthy
+    restart: unless-stopped
+    networks:
+      - aspiro-network
+
+volumes:
+  postgres_data:
+    driver: local
+  pgadmin_data:
+    driver: local
+  frontend_node_modules:
+    driver: local
+  backend_logs:
+    driver: local
+
+networks:
+  aspiro-network:
+    driver: bridge

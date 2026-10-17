@@ -1,0 +1,311 @@
+# docker-compose.pi.yml
+# ---------------------------------------------------------------------------
+# PRODUCTION self-host stack for the Raspberry Pi. Replaces the dev-mode setup
+# (docker-compose.yml + caddy.yml) with a precompiled Next.js production build,
+# so there are no multi-second on-demand route compilations — consistently fast
+# responses at much lower idle CPU. HTTPS via Caddy, same as the caddy overlay.
+#
+# Run STANDALONE (not layered on the base file):
+#   docker compose --env-file .env --env-file caddy/cf.vars \
+#     -f docker-compose.pi.yml build backend frontend
+#   docker compose --env-file .env --env-file caddy/cf.vars \
+#     -f docker-compose.pi.yml up -d --remove-orphans
+#
+# Build the app images by name rather than passing --build: a blanket --build also
+# recompiles Caddy from Go source, ~10 minutes on this Pi, for an image nothing
+# outside caddy/Dockerfile can change (see the caddy service below). `up` still
+# builds anything whose image is missing, so a fresh Pi needs no extra step.
+#
+# Reuses the existing `postgres_data` volume (project "aspiro"), so the cloned DB
+# is preserved. quickchart (amd64-only) and pgAdmin are intentionally omitted — not
+# needed on a headless Pi. Because quickchart is omitted, the backend's QUICKCHART_URL
+# falls back to the public SaaS (see the explicit env var below). `cloudflared` IS here:
+# it is the public ingress, and without it the stack is reachable only from the home
+# network. --remove-orphans clears the old dev containers (pgadmin, etc.) from the
+# previous compose.
+#
+# NOTE: NEXT_PUBLIC_API_URL is baked into the frontend at BUILD time. It now
+# defaults to EMPTY, which the frontend treats as same-origin `/api/v1` — Caddy
+# routes /api/v1/* on the same host to the backend — so the image no longer names a
+# domain and APP_DOMAIN can change without a frontend rebuild. Set it only to point
+# the browser at an API on a different origin, then rebuild the frontend.
+#
+# SECRETS ARE REQUIRED. POSTGRES_PASSWORD, SECRET_KEY and NEXTAUTH_SECRET have no
+# fallback: compose refuses to render (so `up`, `build`, `stop` all fail) until they
+# are set in .env. They used to fall back to published placeholder strings, which
+# meant a missing line in .env silently ran production on a public password and
+# signing key. See production.env.sample for every variable this file reads and how to
+# generate each secret. POSTGRES_PASSWORD only takes effect when the data volume is
+# first initialised; on an existing volume it must equal the password the database
+# already has, or the backend cannot connect.
+#
+# Optional pieces, each off by default so the running Pi is unchanged:
+#   --profile tunnel     cloudflared in a container (the Pi runs it under systemd)
+#                        (COMPOSE_PROFILES=tunnel in .env does the same)
+#   --profile migrate    one-shot `alembic upgrade heads` (see the migrate service);
+#                        `docker compose --profile migrate run --rm migrate`
+#   CADDY_IMAGE=caddy:2-alpine + CADDYFILE=Caddyfile.http in .env
+#                        stock Caddy serving plain HTTP :80 only, for hosts reached
+#                        solely through a Cloudflare Tunnel (no LAN HTTPS, no
+#                        Cloudflare API token, no 10-minute xcaddy build)
+# ---------------------------------------------------------------------------
+
+# Shared by the backend and the one-shot services that run its image, so the
+# migrate job sees exactly the settings the app does (alembic's env.py loads them).
+x-backend-environment: &backend-environment
+  - ENVIRONMENT=production
+  - SKIP_DB_SCHEMA_INIT=true   # schema already exists (cloned); use alembic for changes
+  - DEBUG=false
+  - LOG_LEVEL=${LOG_LEVEL:-INFO}
+  - DATABASE_URL=postgresql+asyncpg://${POSTGRES_USER:-aspiro_user}:${POSTGRES_PASSWORD:?POSTGRES_PASSWORD is required - see production.env.sample}@postgres:5432/${POSTGRES_DB:-aspiro_db}
+  - DATABASE_POOL_SIZE=10
+  - DATABASE_MAX_OVERFLOW=20
+  - SECRET_KEY=${SECRET_KEY:?SECRET_KEY is required - generate with openssl rand -hex 32 (see production.env.sample)}
+  - ALGORITHM=HS256
+  - ACCESS_TOKEN_EXPIRE_MINUTES=30
+  - REFRESH_TOKEN_EXPIRE_DAYS=7
+  - CORS_ORIGINS=["https://${APP_DOMAIN:-home.aspiro.dev}"]
+  # cloudflared → caddy → backend once the tunnel fronts this, so the client IP
+  # sits two entries from the end of X-Forwarded-For. Without this the rate
+  # limiter buckets every visitor under the proxy's address and one busy user
+  # throttles everyone.
+  - TRUSTED_PROXY_COUNT=${TRUSTED_PROXY_COUNT:-2}
+  - GOOGLE_CLIENT_ID=${GOOGLE_CLIENT_ID:-}
+  - GOOGLE_CLIENT_SECRET=${GOOGLE_CLIENT_SECRET:-}
+  - GOOGLE_REDIRECT_URI=https://${APP_DOMAIN:-home.aspiro.dev}/api/auth/callback/google
+  - LINE_CHANNEL_SECRET=${LINE_CHANNEL_SECRET:-}
+  - LINE_CHANNEL_ACCESS_TOKEN=${LINE_CHANNEL_ACCESS_TOKEN:-}
+  - FRONTEND_URL=https://${APP_DOMAIN:-home.aspiro.dev}
+  # The self-hosted quickchart container is omitted here (its image is amd64-only,
+  # and a Pi cannot run it under emulation at a useful speed). This is therefore the
+  # PUBLIC QuickChart SaaS, and LINE chart payloads leave the network — unlike the
+  # local/prod stacks, which set this to http://quickchart:3400/chart. Set it
+  # explicitly (rather than relying on the config default) so the trade-off is visible.
+  - QUICKCHART_URL=https://quickchart.io/chart
+  # Receipt attachments. On the backend_uploads named volume (mounted at /app/uploads
+  # below), so they survive container recreation — before this they lived in the
+  # container's writable layer and every deploy, which recreates the container,
+  # discarded them. Set explicitly so it holds whatever the code's default is.
+  - UPLOAD_PATH=/app/uploads/transactions
+  # Deliberately NO ALLOW_INSECURE_DEFAULTS here. The backend refuses to start on a
+  # placeholder SECRET_KEY or on the database password `aspiro_password`; that check
+  # and the required ${VAR:?} secrets above are what keep this stack off published
+  # defaults. The opt-out belongs to local dev (docker-compose.yml) only.
+
+services:
+  postgres:
+    image: postgres:15-alpine
+    container_name: aspiro-postgres
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:-aspiro_user}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?POSTGRES_PASSWORD is required - see production.env.sample}
+      POSTGRES_DB: ${POSTGRES_DB:-aspiro_db}
+    ports:
+      # Loopback-only. This is the PRODUCTION database on a machine that sits on
+      # the home WiFi, and a bare "5433:5432" publishes it to every device on the
+      # LAN. Nothing needs the LAN to reach it: the backend connects
+      # over the aspiro-network bridge as postgres:5432 (see DATABASE_URL below),
+      # and psql from the Pi's own shell still works through loopback.
+      - "127.0.0.1:5433:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-aspiro_user} -d ${POSTGRES_DB:-aspiro_db}"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+    restart: unless-stopped
+    networks:
+      - aspiro-network
+
+  backend:
+    # Pinned, because scripts/aspiro and scripts/pi/deploy-local.sh tag the running
+    # image :previous by this exact name to roll back to (project "aspiro").
+    image: aspiro-backend:latest
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+      args:
+        # Exported by scripts/aspiro and scripts/pi/deploy-local.sh; reported by /health.
+        - GIT_SHA=${GIT_SHA:-unknown}
+    container_name: aspiro-backend
+    environment: *backend-environment
+    depends_on:
+      postgres:
+        condition: service_healthy
+    volumes:
+      - backend_logs:/app/logs
+      - backend_uploads:/app/uploads
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+      start_period: 40s
+    restart: unless-stopped
+    networks:
+      - aspiro-network
+    # No --reload. 3 workers on the Pi 4's 4 cores: handlers are CPU-bound
+    # Python (~13ms each, of which only ~5ms is the database), so a single
+    # worker tops out near 60-100 req/s and concurrent dashboard loads queue
+    # behind one event loop. The 4th core is left for Postgres, the Next.js
+    # server and Caddy, which share this box.
+    #
+    # Safe only because the scheduler is now elected via a Postgres advisory
+    # lock (app/core/scheduler.py). Every worker runs the lifespan startup, so
+    # before that each one started its own APScheduler and fired all seven
+    # cron jobs — at 2 workers the FinLab refresh was already burning double
+    # its 500MB/day quota. Do not raise this without that election in place.
+    command: python -m uvicorn app.main:app --host 0.0.0.0 --port 8000 --workers 3
+
+  # One-shot `alembic upgrade heads` (backend/scripts/migrate.sh), OPT-IN. The
+  # `aspiro` CLI runs exactly `docker compose --profile migrate run --rm migrate`, so
+  # keep the service name, profile name and image.
+  #
+  # Behind the `migrate` profile, so a plain `up` never starts it and production
+  # behaviour is unchanged: the Pi still takes schema changes as hand-applied SQL in
+  # backend/scripts/prod_sql/ + `alembic stamp head`, and scripts/pi/release_checks.sh
+  # still refuses to deploy code ahead of the database. Run it by hand with
+  #   docker compose ... -f docker-compose.pi.yml --profile migrate run --rm migrate
+  #
+  # To make deploys migrate automatically — a deliberate decision that retires the
+  # schema gate, not a side effect — remove `profiles:` below and add to the backend:
+  #     depends_on:
+  #       migrate:
+  #         condition: service_completed_successfully
+  # Then `up` runs the migration first and the backend never starts against a schema
+  # that is behind it (a failed migration leaves the old backend container serving).
+  # Also drop aspiro_schema_gate from scripts/pi/deploy-local.sh at the same time,
+  # since it runs before `up` and would refuse the very deploy that migrates.
+  migrate:
+    image: aspiro-backend:latest
+    pull_policy: never
+    profiles: ["migrate"]
+    command: ["bash", "scripts/migrate.sh"]   # bash, not sh: in this image sh is dash, which has no [[ ]]
+    environment: *backend-environment
+    depends_on:
+      postgres:
+        condition: service_healthy
+    healthcheck:
+      disable: true
+    restart: "no"
+    networks:
+      - aspiro-network
+
+  frontend:
+    image: aspiro-frontend:latest   # pinned for the :previous rollback tag, as above
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile          # production standalone build (not Dockerfile.dev)
+      args:
+        # Empty = same-origin /api/v1 (see the header).
+        - NEXT_PUBLIC_API_URL=${NEXT_PUBLIC_API_URL:-}
+        - GIT_SHA=${GIT_SHA:-unknown}
+    container_name: aspiro-frontend
+    environment:
+      - NODE_ENV=production
+      - INTERNAL_API_URL=http://backend:8000/api/v1
+      - NEXTAUTH_URL=https://${APP_DOMAIN:-home.aspiro.dev}
+      - NEXTAUTH_SECRET=${NEXTAUTH_SECRET:?NEXTAUTH_SECRET is required - generate with openssl rand -base64 32 (see production.env.sample)}
+      - GOOGLE_CLIENT_ID=${GOOGLE_CLIENT_ID:-}
+      - GOOGLE_CLIENT_SECRET=${GOOGLE_CLIENT_SECRET:-}
+    depends_on:
+      backend:
+        condition: service_healthy
+    restart: unless-stopped
+    networks:
+      - aspiro-network
+
+  caddy:
+    # Named explicitly so the built image is reusable rather than anonymous.
+    # `xcaddy build` compiles Caddy from Go source: 9.7 minutes on this Pi's four
+    # ARM cores, for an image whose content depends only on caddy/Dockerfile and
+    # the upstream caddy:2 bases — it copies nothing from its build context. It
+    # was nevertheless recompiling on unrelated deploys, because the deploy passed
+    # a blanket --build and the end-of-deploy `builder prune --max-used-space`
+    # had evicted the Go layer to make room for the frontend's churn. Images
+    # survive that prune; build cache does not. So the deploy scripts now build
+    # this service only when caddy/Dockerfile itself changes, and `build:` stays
+    # here so a Pi with no image yet still builds one on first `up`.
+    #
+    # TUNNEL-ONLY HOSTS: the plugin is only for LAN HTTPS (the DNS-01 certificate
+    # for the :443 block). A host reached solely through a Cloudflare Tunnel needs
+    # neither, and releases ship no Caddy image. Put these two lines in .env:
+    #     CADDY_IMAGE=caddy:2-alpine
+    #     CADDYFILE=Caddyfile.http
+    # and Caddy becomes the stock image serving plain HTTP :80 (caddy/Caddyfile.http)
+    # — no xcaddy build, no CF_API_TOKEN. Both unset = the Pi's setup, unchanged.
+    #
+    # pull_policy: missing makes that work without a build: an image that is not
+    # present is PULLED first, so caddy:2-alpine comes from Docker Hub, while
+    # aspiro-caddy (which exists on no registry) fails the pull and falls back to
+    # this build: stanza, as before. Verified both ways. Never `compose build caddy`
+    # with CADDY_IMAGE set: it would compile xcaddy and tag it caddy:2-alpine.
+    # Not for the Pi: scripts/pi/deploy-local.sh validates and restarts Caddy against
+    # caddy/Caddyfile and aspiro-caddy, so it assumes both are unset.
+    image: ${CADDY_IMAGE:-aspiro-caddy:latest}
+    pull_policy: missing
+    build:
+      context: ./caddy
+      dockerfile: Dockerfile
+    container_name: aspiro-caddy
+    restart: unless-stopped
+    ports:
+      # Tunnel-only hosts set CADDY_BIND=127.0.0.1 (production.env.sample does), so
+      # the plain-HTTP origin is reachable only by the local cloudflared, never the LAN.
+      - "${CADDY_BIND:-0.0.0.0}:80:80"
+      - "${CADDY_BIND:-0.0.0.0}:443:443"
+    environment:
+      - APP_DOMAIN=${APP_DOMAIN:-home.aspiro.dev}
+      - CF_API_TOKEN=${CF_API_TOKEN:-}
+    volumes:
+      # A SINGLE-FILE bind mount, which is pinned to the file's inode. rsync (as the
+      # deploy uses it) replaces this file by rename, giving it a new inode that the
+      # running container cannot see — so `caddy reload` re-reads the OLD content and
+      # exits 0. Editing this file therefore needs `docker restart aspiro-caddy`;
+      # deploy-local.sh does that, after validating the new file.
+      - ./caddy/${CADDYFILE:-Caddyfile}:/etc/caddy/Caddyfile:ro
+      - caddy_data:/data
+      - caddy_config:/config
+    depends_on:
+      - frontend
+      - backend
+    networks:
+      - aspiro-network
+
+  # Public ingress. cloudflared dials OUT to Cloudflare and holds the connection
+  # open, so the internet reaches this Pi without a single inbound port, and
+  # home.aspiro.dev stops having to be an A record pointing at 192.168.0.176 —
+  # which published the LAN address to anyone who looked it up.
+  #
+  # The tunnel is remotely managed: its ingress rule (home.aspiro.dev →
+  # http://caddy:80) lives in the Cloudflare dashboard, and the token below is all
+  # this side needs. Caddy still serves the LAN over HTTPS on 443 as before.
+  cloudflared:
+    image: cloudflare/cloudflared:latest
+    container_name: aspiro-cloudflared
+    # Opt-in, because it cannot start without a token: `tunnel run` with an empty
+    # TUNNEL_TOKEN exits immediately ("requires the ID or name of the tunnel"), and
+    # `restart: unless-stopped` turns that into a crash loop on a box whose other
+    # containers are healthy. Enable it once the token exists, either with
+    # `--profile tunnel` or COMPOSE_PROFILES=tunnel in the Pi's .env.
+    profiles: ["tunnel"]
+    restart: unless-stopped
+    command: tunnel --no-autoupdate run
+    environment:
+      - TUNNEL_TOKEN=${CF_TUNNEL_TOKEN:-}
+    depends_on:
+      - caddy
+    networks:
+      - aspiro-network
+
+volumes:
+  postgres_data:
+  backend_logs:
+  backend_uploads:
+  caddy_data:
+  caddy_config:
+
+networks:
+  aspiro-network:
+    driver: bridge

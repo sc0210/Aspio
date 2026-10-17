@@ -1,0 +1,52 @@
+# Development image for the backend.
+#
+# Why this exists separately from ./Dockerfile: the production image must not
+# contain test tooling, and production (CI's image build for the Pi, and the
+# cold-standby Railway service) builds `Dockerfile`'s *last* stage with no
+# explicit target, so appending a dev stage there would ship pytest to production.
+#
+# It also fixes a recurring annoyance: requirements-dev.txt was never installed
+# by any image, so pytest only existed if someone had pip-installed it into a
+# running container — and every `docker compose up --force-recreate` silently
+# removed it again.
+#
+# Single-stage on purpose. The lean two-stage split in ./Dockerfile matters for
+# the 512MB production host; locally, keeping the build toolchain around means
+# `pip install` works inside the container.
+#
+# Keep the runtime env vars here in sync with ./Dockerfile.
+
+FROM python:3.11-slim
+
+WORKDIR /app
+
+ENV PYTHONDONTWRITEBYTECODE=1 \
+    PYTHONUNBUFFERED=1 \
+    PYTHONPATH=/app \
+    PATH="/opt/venv/bin:$PATH"
+
+# Mirrors the runtime image's OCR toolchain (see Dockerfile) so receipt
+# scanning behaves the same locally as in production — an OCR bug that only
+# appears on the deployed host is the kind this project has been bitten by.
+RUN apt-get update \
+    && apt-get install -y --no-install-recommends \
+        build-essential libpq-dev libpq5 curl \
+        tesseract-ocr tesseract-ocr-eng tesseract-ocr-chi-tra \
+        poppler-utils \
+    && rm -rf /var/lib/apt/lists/*
+
+RUN python -m venv /opt/venv
+
+COPY requirements.txt requirements-dev.txt ./
+RUN pip install --no-cache-dir --upgrade pip \
+    && pip install --no-cache-dir -r requirements.txt -r requirements-dev.txt
+
+COPY . .
+
+EXPOSE 8000
+
+HEALTHCHECK --interval=30s --timeout=30s --start-period=5s --retries=3 \
+    CMD curl -f http://localhost:${PORT:-8000}/health || exit 1
+
+# Compose overrides this with --reload; kept so the image runs standalone.
+CMD ["sh", "-c", "exec python -m uvicorn app.main:app --host 0.0.0.0 --port ${PORT:-8000}"]

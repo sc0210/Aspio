@@ -1,0 +1,270 @@
+{
+  "achievements": {
+    "allCaughtUp": "All caught up — no new achievements yet.",
+    "allStreaksEarned": "All streak badges earned 🎉",
+    "almostThere": "Almost there",
+    "checkFailed": "Could not check achievements. Try again.",
+    "checkForNew": "Check for new",
+    "checking": "Checking…",
+    "earnedOn": "✓ Earned {{when}}",
+    "fallbackName": "Achievement",
+    "filterCategory": "Filter by category",
+    "filterStatus": "Filter by status",
+    "financialScores": "Financial Scores",
+    "last7Days": "Last 7 days",
+    "level": "Level",
+    "newAchievements_one": "🎉 {{count}} new achievement unlocked!",
+    "newAchievements_other": "🎉 {{count}} new achievements unlocked!",
+    "relative": {
+      "daysAgo": "{{count}}d ago",
+      "monthsAgo": "{{count}}mo ago",
+      "today": "today",
+      "yesterday": "yesterday"
+    },
+    "scores": {
+      "communityEngagement": "Community Engagement",
+      "digitalAdoption": "Digital Adoption",
+      "investmentKnowledge": "Investment Knowledge",
+      "savingsDiscipline": "Savings Discipline"
+    },
+    "searchLabel": "Search achievements",
+    "searchPlaceholder": "Search achievements…",
+    "sortDefault": "Default order",
+    "sortLabel": "Sort achievements",
+    "sortName": "Name (A–Z)",
+    "sortProgress": "Most progress",
+    "sortRarity": "Rarity",
+    "streakBadgeToast": "🎉 Streak badge unlocked: {{name}}!",
+    "subtitle": "Track your milestones and earn rewards",
+    "tabs": {
+      "all": "All",
+      "locked": "Locked",
+      "unlocked": "Unlocked"
+    },
+    "title": "Achievements",
+    "unlocked": "unlocked"
+  },
+  "card": {
+    "aria": {
+      "cancelDelete": "Cancel delete",
+      "confirmDelete": "Delete goal: {{title}}",
+      "contribute": "Contribute to {{title}}",
+      "delete": "Delete {{title}}",
+      "edit": "Edit {{title}}",
+      "progress": "{{title}} progress"
+    },
+    "atRisk": "At Risk",
+    "complete": "✓ Complete",
+    "contribute": "Contribute",
+    "date": {
+      "days": "{{days}} days left",
+      "months": "{{months}} months left",
+      "oneDay": "1 day left",
+      "overdue": "Overdue",
+      "today": "Today",
+      "years": "{{years}} years left"
+    },
+    "deleteConfirm": "Delete this goal?",
+    "done": "✓ Done",
+    "editTitle": "Edit goal details",
+    "left": "{{amount}} left",
+    "perMonth": "~{{amount}}/mo"
+  },
+  "categories": {
+    "car_purchase": "Car Purchase",
+    "debt_payoff": "Debt Payoff",
+    "education": "Education",
+    "emergency_fund": "Emergency Fund",
+    "house_down_payment": "House Down Payment",
+    "investment": "Investment",
+    "other": "Other",
+    "retirement": "Retirement",
+    "savings": "Savings",
+    "vacation": "Vacation"
+  },
+  "complete": "Mark as Complete",
+  "contribute": "Add Contribution",
+  "contributions": {
+    "add": "Add Contribution",
+    "average": "Average per month: {{amount}}",
+    "delete": "Delete Contribution",
+    "edit": "Edit Contribution",
+    "fields": {
+      "amount": "Amount",
+      "date": "Date",
+      "note": "Note"
+    },
+    "history": "Contribution History",
+    "notePlaceholder": "Add a note about this contribution...",
+    "title": "Contributions",
+    "total": "Total Contributed: {{amount}}"
+  },
+  "create": "Create Goal",
+  "createFirst": "Create Your First Goal",
+  "createNew": "Create New Goal",
+  "delete": "Delete Goal",
+  "deleteConfirmation": "Are you sure you want to delete this goal? This action cannot be undone.",
+  "edit": "Edit Goal",
+  "empty": {
+    "button": "Create Goal",
+    "subtitle": "Set your first financial goal and start your journey to financial freedom",
+    "title": "No goals yet"
+  },
+  "fields": {
+    "category": "Category",
+    "currentAmount": "Current Amount",
+    "description": "Description",
+    "priority": "Priority",
+    "status": "Status",
+    "targetAmount": "Target Amount",
+    "targetDate": "Target Date",
+    "title": "Goal Title"
+  },
+  "filters": {
+    "active": "Active",
+    "all": "All Goals",
+    "allCategories": "All Categories",
+    "allStatuses": "All Statuses",
+    "byCategory": "By Category",
+    "byPriority": "By Priority",
+    "categoryLabel": "Filter by category",
+    "completed": "Completed",
+    "paused": "Paused",
+    "statusLabel": "Filter by status"
+  },
+  "gamification": {
+    "achievement": "Achievement unlocked: {{name}}",
+    "levelUp": "Level up! You're now level {{level}}",
+    "milestone": "Milestone reached! 🏆",
+    "streak": "{{days}} day contribution streak! 🔥"
+  },
+  "hideGoalValues": "Hide goal values",
+  "hideValues": "Hide values",
+  "insights": {
+    "adjustTarget": "Your current pace will reach the goal in {{months}} months. Consider adjusting the target date or amount.",
+    "atRisk": {
+      "desc": "Due in {{days}} days and below expected pace",
+      "title": "At-Risk Goals"
+    },
+    "completedMessage": "Congratulations on completing your goal! Consider setting a new challenge.",
+    "coverage": {
+      "desc": "Current assets vs active target amounts",
+      "title": "Active Goal Coverage"
+    },
+    "increaseContribution": "Consider increasing your monthly contribution by {{amount}} to reach your goal {{months}} months earlier.",
+    "monthly": {
+      "desc": "To keep active goals on schedule",
+      "title": "Estimated Monthly Contribution"
+    },
+    "onTrackMessage": "Great progress! You're on track to reach your goal by {{date}}.",
+    "suggestions": "Suggestions",
+    "title": "Goal Insights"
+  },
+  "milestones": {
+    "add": "Add Milestone",
+    "complete": "Mark Complete",
+    "completed": "Completed on {{date}}",
+    "delete": "Delete Milestone",
+    "edit": "Edit Milestone",
+    "fields": {
+      "amount": "Amount",
+      "description": "Description",
+      "reward": "Reward",
+      "targetDate": "Target Date",
+      "title": "Milestone Title"
+    },
+    "title": "Milestones",
+    "upcoming": "Upcoming milestone"
+  },
+  "modes": {
+    "demo": "Demo Mode: These are sample goal data"
+  },
+  "overview": {
+    "active": "active",
+    "addOne": "Add one →",
+    "completed": "completed",
+    "moreGoals": "+{{count}} more goals →",
+    "noGoalsDesc": "Start tracking your financial goals to stay motivated",
+    "noGoalsTitle": "No Financial Goals Yet",
+    "noRetirementGoal": "No retirement goal yet",
+    "overallProgress": "Overall Progress",
+    "portfolioLinked": "Portfolio Linked",
+    "retirement": "Financial Goal",
+    "title": "Goals",
+    "viewAll": "View All →"
+  },
+  "pause": "Pause Goal",
+  "priorities": {
+    "high": "High",
+    "low": "Low",
+    "medium": "Medium"
+  },
+  "progress": {
+    "aheadOfSchedule": "Ahead of schedule",
+    "behindSchedule": "Behind schedule",
+    "completed": "Goal completed! 🎉",
+    "current": "Current: {{amount}}",
+    "daysLeft": "{{days}} days left",
+    "onTrack": "On track",
+    "percentage": "{{percent}}% Complete",
+    "remaining": "Remaining: {{amount}}",
+    "target": "Target: {{amount}}",
+    "title": "Progress"
+  },
+  "resume": "Resume Goal",
+  "saveChanges": "Save Changes",
+  "saving": "Saving...",
+  "sections": {
+    "activeGoals": "Active Goals",
+    "completedGoals": "Completed Goals",
+    "filters": "Filters",
+    "otherGoals": "Other Goals",
+    "yourGoals": "Your Goals"
+  },
+  "showGoalValues": "Show goal values",
+  "showValues": "Show values",
+  "simulation": {
+    "calculate": "Calculate",
+    "monthlyContribution": "Monthly Contribution",
+    "results": {
+      "finalAmount": "Final amount: {{amount}}",
+      "monthlyRequired": "Monthly amount needed: {{amount}}",
+      "timeToGoal": "Time to reach goal: {{time}}",
+      "totalInterest": "Estimated interest earned: {{amount}}"
+    },
+    "title": "Goal Simulation"
+  },
+  "stats": {
+    "goal": "goal",
+    "goals": "goals"
+  },
+  "status": {
+    "active": "Active",
+    "cancelled": "Cancelled",
+    "completed": "Completed",
+    "paused": "Paused"
+  },
+  "subtitle": "Track progress and achieve your financial dreams",
+  "title": "Financial Goals",
+  "toast": {
+    "contributionAdded": "Contribution added successfully!",
+    "contributionFailed": "Failed to add contribution",
+    "createFailed": "Failed to create goal. Please check your input and try again.",
+    "created": "Goal created successfully!",
+    "deleteFailed": "Failed to delete goal",
+    "deleted": "Goal deleted successfully!",
+    "updateFailed": "Failed to update goal",
+    "updated": "Goal updated successfully!"
+  },
+  "tracker": {
+    "emptyDesc": "Set a retirement target to unlock your personalised Growth Phase tracker on the Portfolio page.",
+    "pinnedNote": "🔒 This goal is pinned and cannot be deleted — it powers your Portfolio Growth Phase tracker.",
+    "portfolioShort": "Portfolio",
+    "progressAria": "Retirement goal progress: {{percent}}%",
+    "setGoal": "Set Retirement Goal",
+    "target": "Target <b>{{amount}}</b>",
+    "targetBy": "Target <b>{{amount}}</b> by <b>{{year}}</b>",
+    "title": "Growth Phase Tracker",
+    "viewInPortfolio": "View in Portfolio"
+  }
+}

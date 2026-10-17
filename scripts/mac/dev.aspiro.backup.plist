@@ -1,0 +1,40 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+    <key>Label</key>
+    <string>dev.aspiro.backup</string>
+
+    <key>ProgramArguments</key>
+    <array>
+        <string>/bin/bash</string>
+        <string>-lc</string>
+        <!-- Replace YOUR-UUID with your own healthchecks.io ping token; the real
+             token lives only in the installed ~/Library/LaunchAgents copy, not here. -->
+        <string>BACKUP_DIR="$HOME/aspiro-backups/mac-db" KEEP_DAYS=30 RCLONE_REMOTE=r2:aspiro-backups/mac PING_URL=https://hc-ping.com/YOUR-UUID "$HOME/aspiro-backups/backup_db.sh"</string>
+    </array>
+
+    <key>EnvironmentVariables</key>
+    <dict>
+        <key>PATH</key>
+        <string>/usr/local/bin:/opt/homebrew/bin:/usr/bin:/bin:/usr/sbin:/sbin</string>
+    </dict>
+
+    <!-- Daily at 12:00. If the Mac is asleep/off then, launchd runs it once on wake. -->
+    <key>StartCalendarInterval</key>
+    <dict>
+        <key>Hour</key>
+        <integer>12</integer>
+        <key>Minute</key>
+        <integer>0</integer>
+    </dict>
+
+    <key>StandardOutPath</key>
+    <string>/Users/samchen/aspiro-backups/mac-backup.log</string>
+    <key>StandardErrorPath</key>
+    <string>/Users/samchen/aspiro-backups/mac-backup.log</string>
+
+    <key>RunAtLoad</key>
+    <false/>
+</dict>
+</plist>

@@ -1,0 +1,62 @@
+# FastAPI and ASGI server
+fastapi==0.143.0
+uvicorn[standard]==0.54.0
+
+# Database
+sqlalchemy[asyncio]==2.1.2
+asyncpg==0.31.0
+alembic==1.20.0
+psycopg2-binary==2.9.13
+
+# Authentication and security
+passlib[bcrypt]==1.7.4
+bcrypt==3.2.2
+python-multipart==0.0.32
+authlib==1.8.0
+httpx==0.28.1
+PyJWT==2.15.0
+
+# Validation and serialization
+pydantic[email]==2.14.0
+pydantic-settings==2.15.0
+
+# Rate limiting
+slowapi==0.1.10
+
+# Development and debugging
+python-dotenv==1.2.4
+
+# Async utilities
+aiofiles==23.2.1
+
+# Email and notifications
+emails==1.1.3
+jinja2==3.1.6
+
+# Data formatting
+python-dateutil==2.9.0.post0
+
+# Excel export
+openpyxl>=3.1.5
+
+# Background tasks and scheduling
+apscheduler==3.11.3
+
+# Monitoring and logging
+structlog==26.1.0
+
+# Currency and localization
+babel==2.18.0
+pytz==2026.5
+
+# Market Data APIs
+yfinance==0.2.66
+finlab==2.2.1
+
+# Receipt OCR — runs locally against the tesseract binaries installed in the
+# image (see Dockerfile). Deliberately not a cloud OCR service: the Pi that
+# hosts this has the headroom, and receipts are financial documents that need
+# not leave the host to be read.
+pytesseract==0.3.13
+pillow==12.3.0
+pdf2image==1.17.0

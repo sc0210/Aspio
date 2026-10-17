@@ -1,0 +1,161 @@
+{
+  "accountTypes": {
+    "auto_loan": "Auto Loan",
+    "credit_card": "Credit Card",
+    "mortgage": "Mortgage",
+    "other": "Other",
+    "personal_loan": "Personal Loan",
+    "student_loan": "Student Loan"
+  },
+  "addFirstLoan": "Add Your First Loan",
+  "addLoan": "Add Loan",
+  "addModal": {
+    "add": "Add Loan",
+    "cancel": "Cancel",
+    "creating": "Creating…",
+    "currentBalance": "Current Balance (TWD)",
+    "currentBalancePlaceholder": "Defaults to principal",
+    "dueDay": "Due Day *",
+    "interestRate": "Annual Interest Rate (%) *",
+    "lender": "Lender",
+    "lenderPlaceholder": "e.g. CTBC Bank",
+    "loanName": "Loan Name",
+    "loanNamePlaceholder": "e.g. Home Mortgage",
+    "loanNameRequired": "Loan Name *",
+    "minPayment": "Monthly Min Payment (TWD) *",
+    "notes": "Notes",
+    "notesPlaceholder": "Optional notes",
+    "principalAmount": "Principal Amount (TWD) *",
+    "startDate": "Start Date *",
+    "termMonths": "Term (months)",
+    "title": "Add Loan",
+    "type": "Type",
+    "typeRequired": "Type *"
+  },
+  "card": {
+    "delete": "Delete",
+    "deleteLoan": "Delete loan",
+    "edit": "Edit",
+    "editLoan": "Edit loan",
+    "goal": "Goal: {{amount}}",
+    "interestLeft": "Interest left: {{amount}}",
+    "minPayment": "Min Payment",
+    "monthsLeft": "Months Left",
+    "next": "Next: {{date}}",
+    "paidOff": "Paid Off",
+    "payoffEstimate": "≈{{count}} at current payment",
+    "payoffEstimateHint": "At the minimum payment you entered, this loan clears in a different number of months than the contract term. Check the payment amount or the rate against your statement.",
+    "rate": "Rate",
+    "recordPayment": "Record Payment",
+    "remaining": "{{amount}} remaining",
+    "repaid": "{{progress}}% repaid",
+    "started": "Started: {{amount}}"
+  },
+  "common": {
+    "close": "Close"
+  },
+  "deleteModal": {
+    "cancel": "Cancel",
+    "confirmPrefix": "This will remove",
+    "confirmSuffix": "Payment history linked to this loan will be preserved in your transactions.",
+    "message": "This will remove <strong>{{name}}</strong>. Payment history linked to this loan will be preserved in your transactions.",
+    "remove": "Remove",
+    "removing": "Removing…",
+    "title": "Remove Loan?"
+  },
+  "editModal": {
+    "save": "Save Changes",
+    "saving": "Saving…",
+    "status": "Status",
+    "title": "Edit Loan"
+  },
+  "emptyState": {
+    "description": "Track mortgages, personal loans, and credit card debt to see your true net worth.",
+    "title": "No loans recorded"
+  },
+  "paymentModal": {
+    "balanceAfter": "Balance after payment",
+    "cancel": "Cancel",
+    "currentBalance": "Current balance",
+    "error": {
+      "exceedsBalance": "Cannot exceed current balance ({{amount}})",
+      "splitMismatch": "Principal + interest must equal total"
+    },
+    "interestPortion": "Interest Portion (TWD)",
+    "paymentDate": "Payment Date *",
+    "principalPortion": "Principal Portion (TWD) *",
+    "record": "Record Payment",
+    "recording": "Recording…",
+    "title": "Record Payment",
+    "totalPayment": "Total Payment (TWD) *"
+  },
+  "sections": {
+    "active": "Active ({{count}})",
+    "loan": "loan",
+    "loans": "loans",
+    "paidOff": "Paid Off ({{count}})"
+  },
+  "status": {
+    "active": "Active",
+    "paid_off": "Paid Off",
+    "paused": "Paused"
+  },
+  "subtitle": "Track your debt accounts and monthly repayments",
+  "summary": {
+    "activeLoans": "Active Loans",
+    "nextPayment": "Next Payment",
+    "on": "on {{date}}",
+    "totalDebt": "Total Debt",
+    "totalLoans": "{{count}} total loans"
+  },
+  "title": "Loans & Debt",
+  "walletImpact": {
+    "creation": "Creating a loan increases your total debt. Record the loan proceeds separately as a Life Wallet income.",
+    "payment": "Each payment reduces your Life Wallet balance and your total debt."
+  },
+  "planner": {
+    "mobileNever": "Not cleared at today's payments — the planner on a larger screen shows why",
+    "mobileDebtFree": "Debt free by {{date}} at today's payments",
+    "savesCapped": "{{amount}} less interest over 50 years — still not cleared",
+    "noPayment": "A loan has no minimum payment set, so nothing pays it down. Set its minimum, or add extra each month.",
+    "title": "Payoff planner",
+    "subtitle": "When you're debt free, and what extra money each month would change. Nothing here is saved to your loans.",
+    "strategy": "Strategy",
+    "avalanche": "Avalanche",
+    "snowball": "Snowball",
+    "avalancheHint": "Leftover money goes to the highest interest rate first — the least interest overall.",
+    "snowballHint": "Leftover money goes to the smallest balance first — the quickest loan off the list.",
+    "extra": "Extra each month ({{currency}})",
+    "debtFree": "Debt free",
+    "in": "in {{span}}",
+    "never": "Not on this budget",
+    "interest": "Interest still to pay",
+    "interestCapped": "Over the next 50 years, and still not done",
+    "vsMinimums": "vs. minimums only",
+    "sooner": "{{span}} sooner",
+    "saves": "saves {{amount}} in interest",
+    "sameAsMinimums": "Same as paying the minimums",
+    "minimumsNever": "Minimums alone never clear this debt — this plan does",
+    "stalled": "At least one minimum payment is below the interest it accrues, so this budget never clears the debt. Add extra each month to get a date.",
+    "chartLabel": "Total debt over time: this plan against minimums only",
+    "plan": "This plan",
+    "minimums": "Minimums only",
+    "order": "Payoff order",
+    "excluded_one": "{{count}} loan in another currency is left out — the plan uses {{currency}} only.",
+    "excluded_other": "{{count}} loans in other currencies are left out — the plan uses {{currency}} only.",
+    "years_one": "{{count}} yr",
+    "years_other": "{{count}} yrs",
+    "months_one": "{{count}} mo",
+    "months_other": "{{count}} mo"
+  },
+  "upcoming": {
+    "mixedCurrencies": "Mixed currencies — no single total",
+    "title": "Due in the next {{count}} days",
+    "none": "Nothing due in the next {{count}} days.",
+    "today": "Today",
+    "inDays_one": "in {{count}} day",
+    "inDays_other": "in {{count}} days",
+    "overdue_one": "{{count}} day overdue",
+    "overdue_other": "{{count}} days overdue"
+  }
+}

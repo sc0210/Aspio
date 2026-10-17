@@ -1,0 +1,24 @@
+#!/usr/bin/env bash
+# Review everything about to leave this machine, before it leaves.
+#
+# This is the moment that matters: a push to `main` auto-deploys to the Pi, so
+# this is the last point where a look at the whole outgoing range is still cheap.
+# Synchronous, but ADVISORY — it always exits 0 and never stops a push.
+#
+# git feeds `<local_ref> <local_sha> <remote_ref> <remote_sha>` on stdin; the
+# review script needs that to know the real range, so pass it straight through.
+#
+# Skip once:  ASPIRO_SKIP_REVIEW=1 git push     (or git push --no-verify)
+set -u
+
+[ "${ASPIRO_SKIP_REVIEW:-0}" = "1" ] && exit 0
+if ! command -v uv >/dev/null 2>&1; then exit 0; fi
+
+REPO="$(git rev-parse --show-toplevel)"
+REVIEWER="$REPO/scripts/commit_review.py"
+
+[ -f "$REVIEWER" ] || exit 0
+
+uv run "$REVIEWER" --mode push </dev/stdin || true
+
+exit 0

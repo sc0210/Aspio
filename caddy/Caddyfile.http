@@ -1,0 +1,28 @@
+{
+	# Tunnel-only deployments (CADDY_IMAGE / CADDYFILE / CADDY_BIND in .env). Cloudflare terminates
+	# TLS at its edge and cloudflared forwards plain HTTP to this origin, so there is
+	# no certificate to obtain and no Cloudflare DNS plugin needed: this file parses
+	# on the stock caddy:2-alpine image. auto_https off also stops Caddy adding an
+	# HTTP->HTTPS redirect, which would loop back through the edge.
+	auto_https off
+
+	# Whose X-Forwarded-For to believe — see the same block in caddy/Caddyfile.
+	# Docker's ranges cover cloudflared (a container on this network, or the host
+	# service reaching the published port via the bridge gateway).
+	servers {
+		trusted_proxies static 172.16.0.0/12
+	}
+}
+
+# Any Host: the tunnel's public hostname decides what reaches this, so the origin
+# need not repeat the domain. Same routing as caddy/Caddyfile: the backend under
+# /api/v1 (which the frontend calls same-origin), everything else — including
+# NextAuth's /api/auth/* — to Next.js.
+:80 {
+	handle /api/v1/* {
+		reverse_proxy backend:8000
+	}
+	handle {
+		reverse_proxy frontend:3000
+	}
+}

@@ -1,0 +1,148 @@
+version: 2
+updates:
+  # Frontend npm dependencies — grouped to avoid PR spam
+  - package-ecosystem: "npm"
+    directory: "/frontend"
+    schedule:
+      interval: "weekly"
+      day: "monday"
+    open-pull-requests-limit: 5
+    groups:
+      security-patches:
+        applies-to: security-updates
+        patterns: ["*"]
+      dev-tools:
+        applies-to: version-updates
+        patterns:
+          - "eslint*"
+          - "@types/*"
+          - "typescript"
+          - "jest*"
+          - "@testing-library/*"
+          - "playwright*"
+          - "@playwright/*"
+      ui-libs:
+        applies-to: version-updates
+        patterns:
+          - "react"
+          - "react-dom"
+          - "@headlessui/*"
+          - "@heroicons/*"
+          - "lucide-react"
+          - "recharts"
+          - "tailwindcss"
+          - "tailwind-merge"
+          - "clsx"
+      tanstack:
+        applies-to: version-updates
+        patterns:
+          - "@tanstack/*"
+    ignore:
+      # next 15→16 requires Turbopack migration + middleware→proxy rename
+      - dependency-name: "next"
+        update-types: ["version-update:semver-major"]
+      # next-auth v4→v5 is a breaking rewrite; pin until Auth.js v5 migration
+      - dependency-name: "next-auth"
+        update-types: ["version-update:semver-major"]
+      # i18next 25→26 needs compatibility review
+      - dependency-name: "i18next"
+        update-types: ["version-update:semver-major"]
+      - dependency-name: "react-i18next"
+        update-types: ["version-update:semver-major"]
+      # React 19 has breaking API changes; migrate deliberately
+      - dependency-name: "react"
+        update-types: ["version-update:semver-major"]
+      - dependency-name: "react-dom"
+        update-types: ["version-update:semver-major"]
+      - dependency-name: "@types/react"
+        update-types: ["version-update:semver-major"]
+      - dependency-name: "@types/react-dom"
+        update-types: ["version-update:semver-major"]
+      # HeadlessUI v2 has a rewritten API; pin until planned migration
+      - dependency-name: "@headlessui/react"
+        update-types: ["version-update:semver-major"]
+      # Recharts v3 and Tailwind v4 both have breaking changes
+      - dependency-name: "recharts"
+        update-types: ["version-update:semver-major"]
+      - dependency-name: "tailwindcss"
+        update-types: ["version-update:semver-major"]
+      - dependency-name: "tailwind-merge"
+        update-types: ["version-update:semver-major"]
+      # eslint v9/v10 introduced flat config — migrate separately
+      - dependency-name: "eslint"
+        update-types: ["version-update:semver-major"]
+      - dependency-name: "eslint-config-next"
+        update-types: ["version-update:semver-major"]
+      # TypeScript 6 has breaking changes; upgrade deliberately
+      - dependency-name: "typescript"
+        update-types: ["version-update:semver-major"]
+      # @types/node major tracks Node.js LTS; pin to stay on current LTS range
+      - dependency-name: "@types/node"
+        update-types: ["version-update:semver-major"]
+      # @hookform/resolvers v4+ has breaking schema-adapter changes
+      - dependency-name: "@hookform/resolvers"
+        update-types: ["version-update:semver-major"]
+
+  # Backend Python dependencies — grouped to avoid PR spam
+  - package-ecosystem: "pip"
+    directory: "/backend"
+    schedule:
+      interval: "weekly"
+      day: "monday"
+    open-pull-requests-limit: 5
+    groups:
+      security-patches:
+        applies-to: security-updates
+        patterns: ["*"]
+      fastapi-stack:
+        applies-to: version-updates
+        patterns:
+          - "fastapi"
+          - "uvicorn"
+          - "starlette"
+          - "pydantic*"
+      testing:
+        applies-to: version-updates
+        patterns:
+          - "pytest*"
+          - "httpx"
+          - "aiosqlite"
+      dev-tools:
+        applies-to: version-updates
+        patterns:
+          - "black"
+          - "ruff"
+          - "mypy"
+          - "pre-commit"
+    ignore:
+      # pytest-asyncio 1.x changed asyncio_mode default; migrate separately
+      - dependency-name: "pytest-asyncio"
+        update-types: ["version-update:semver-major"]
+      # pytest-cov 5+ dropped legacy options; review before upgrading
+      - dependency-name: "pytest-cov"
+        update-types: ["version-update:semver-major"]
+      # yfinance 1.x has a rewritten API; pin until usage is audited
+      - dependency-name: "yfinance"
+        update-types: ["version-update:semver-major"]
+      # types-redis: Redis was removed from the project — ignore all updates
+      - dependency-name: "types-redis"
+      # numpy 2.x changed the C API and dtype system — migrate separately
+      - dependency-name: "numpy"
+        update-types: ["version-update:semver-major"]
+      # bcrypt 5.x — review passlib compatibility before upgrading
+      - dependency-name: "bcrypt"
+        update-types: ["version-update:semver-major"]
+      # finlab 2.x — API rewrite; audit usage before upgrading
+      - dependency-name: "finlab"
+        update-types: ["version-update:semver-major"]
+
+  # GitHub Actions
+  - package-ecosystem: "github-actions"
+    directory: "/"
+    schedule:
+      interval: "monthly"
+    open-pull-requests-limit: 3
+    groups:
+      actions:
+        applies-to: version-updates
+        patterns: ["*"]
