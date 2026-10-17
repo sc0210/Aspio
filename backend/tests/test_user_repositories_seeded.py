@@ -98,15 +98,19 @@ class TestUpdates:
         await async_session.refresh(u)
         assert u.failed_login_attempts == 0 and u.last_login_ip == "1.2.3.4" and u.last_login_at
 
-    async def test_failed_logins_count_then_lock(self, repo, async_session):
+    async def test_lockout_follows_the_security_policy(self, repo, async_session):
+        from app.modules.users.security import account_security
+
         u = await repo.create_user(data("f@example.com"))
-        await repo.update_login_info(u.id, "1.1.1.1", success=False)
-        await async_session.refresh(u)
-        assert u.failed_login_attempts == 1 and u.account_locked_until is None
-        for _ in range(9):
+        first_lock = None
+        for attempt in range(1, 16):
             await repo.update_login_info(u.id, "1.1.1.1", success=False)
-        await async_session.refresh(u)
-        assert u.failed_login_attempts == 10 and u.account_locked_until is not None
+            await async_session.refresh(u)
+            assert u.failed_login_attempts == attempt
+            locked = u.account_locked_until is not None
+            assert locked == account_security.should_lock_account(attempt), f"attempt {attempt}"
+            first_lock = first_lock or (attempt if locked else None)
+        assert first_lock is not None and first_lock > 1  # a single typo never locks
         assert await repo.update_login_info(uuid4(), "1.1.1.1", success=False) is False
 
     async def test_soft_delete_hides_the_user(self, repo):
