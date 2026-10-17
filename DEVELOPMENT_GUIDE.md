@@ -1,7 +1,8 @@
 # Development Guide
 
 Day-to-day workflow and the environment traps that keep costing time. For setup see
-[README.md](README.md), for deploys see [docs/RASPBERRY_PI_DEPLOYMENT.md](docs/RASPBERRY_PI_DEPLOYMENT.md).
+[README.md](README.md), for sending a change [CONTRIBUTING.md](CONTRIBUTING.md), for deploys
+[docs/SELF_HOSTING.md](docs/SELF_HOSTING.md).
 
 ## Running the stack
 

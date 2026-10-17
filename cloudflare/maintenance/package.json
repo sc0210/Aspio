@@ -1,9 +1,0 @@
-{
-  "name": "aspiro-maintenance",
-  "private": true,
-  "type": "module",
-  "scripts": {
-    "test": "node --test worker.test.mjs",
-    "deploy": "npx wrangler@4 deploy"
-  }
-}

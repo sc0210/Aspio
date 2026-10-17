@@ -2,7 +2,7 @@
 
 How Aspiro is put together. For the domain vocabulary (wallets, Total Asset, Net Worth) see
 [FINANCIAL_TERMINOLOGY.md](FINANCIAL_TERMINOLOGY.md); for deploying see
-[RASPBERRY_PI_DEPLOYMENT.md](RASPBERRY_PI_DEPLOYMENT.md) and [SELF_HOSTING.md](SELF_HOSTING.md).
+[SELF_HOSTING.md](SELF_HOSTING.md).
 
 ## Stack
 

@@ -1,12 +1,12 @@
 name: CI
 
-# Validates every PR and every push to main. CI deploys nothing: whoever runs an
-# instance (this project's own server included) pulls the repo and builds it
-# themselves — see docs/SELF_HOSTING.md.
+# Validates every PR (forks included) and every push to main. CI deploys nothing:
+# whoever runs an instance pulls the repo and builds it themselves — see
+# docs/SELF_HOSTING.md. The same checks are listed for contributors in
+# CONTRIBUTING.md; keep the two in step.
 #
-# Each job runs only when its part of the tree changed (the `changes` job), which
-# keeps billed minutes down while the repo is private: running all five jobs on
-# every push spent ~3,000 minutes in the first half of October 2026. A skipped job
+# Each job runs only when its part of the tree changed (the `changes` job), so a
+# docs-only PR finishes in seconds instead of ~8 minutes. A skipped job
 # counts as passed for branch protection, so path-scoping is safe ONLY as
 # job-level `if:` — a workflow-level `paths:` filter would leave the required
 # check missing. If `changes` itself fails, everything runs.
@@ -105,7 +105,7 @@ jobs:
             # migrations, seed data) and the frontend's build inputs — not its source,
             # which the frontend job already builds.
             echo "images=$(hit '^backend/|^frontend/(Dockerfile|\.dockerignore|package(-lock)?\.json|next\.config\.[a-z]+)$|^scripts/ci/')"
-            echo "scripts=$(hit '^scripts/|^cloudflare/|^caddy/|^docker-compose|^backend/scripts/migrate\.sh$')"
+            echo "scripts=$(hit '^scripts/|^caddy/|^docker-compose|^backend/scripts/migrate\.sh$')"
           } | tee -a "$GITHUB_OUTPUT"
           echo "$n changed files"
 
@@ -336,37 +336,22 @@ jobs:
       - name: Smoke test
         run: bash scripts/ci/smoke_images.sh smoke-backend smoke-frontend
 
-  # The Pi deploy scripts decide what gets rebuilt on four ARM cores and have taken
-  # production down before (a cloudflared crash loop, and a Caddy recompile on every
-  # unrelated deploy). Their tests need no services and no deps, so there is no
-  # reason for them to be hand-run only — that is how they rot.
-  deploy-scripts:
-    name: Pi deploy scripts
+  # Self-hosters run these scripts on their own servers to install, update, back up
+  # and migrate an instance. Their tests need no services and no deps, so there is
+  # no reason for them to be hand-run only — that is how they rot.
+  self-host-scripts:
+    name: Self-host scripts
     needs: changes
     if: ${{ !cancelled() && (needs.changes.result != 'success' || needs.changes.outputs.scripts == 'true') }}
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v7
-      - name: Tunnel token detection
-        run: bash scripts/pi/tunnel_token_test.sh
-      - name: Rebuild scope
-        run: bash scripts/pi/rebuild_scope_test.sh
-      - name: Caddy config handling
-        run: bash scripts/pi/caddy_config_test.sh
-      - name: Deploy plan (run on the Pi)
-        run: bash scripts/pi/deploy_local_plan_test.sh
-      - name: Deploy plan (manual ssh path)
-        run: bash scripts/pi/deploy_remote_plan_test.sh
-      - name: SSD migration (PARTUUID rewrite)
-        run: bash scripts/pi/migrate_to_usb_ssd_test.sh
-      - name: aspiro CLI (self-host updates)
+      - name: aspiro CLI (install, update, backup)
         run: bash scripts/aspiro_test.sh
-      - name: Maintenance page Worker
-        run: node --test cloudflare/maintenance/worker.test.mjs
       - name: Shell syntax
         run: |
-          for f in scripts/pi/*.sh scripts/ci/*.sh scripts/aspiro backend/scripts/migrate.sh; do bash -n "$f" || exit 1; done
-          echo "all scripts/pi, scripts/ci, aspiro and migrate.sh parse"
+          for f in scripts/*.sh scripts/ci/*.sh scripts/aspiro backend/scripts/migrate.sh; do bash -n "$f" || exit 1; done
+          echo "all scripts parse"
       # Self-hosters run these on their own servers, so hold them to shellcheck too.
       # (shellcheck ships on ubuntu-latest; -S warning so a runner-image upgrade that
       # adds info-level notes cannot turn CI red.)

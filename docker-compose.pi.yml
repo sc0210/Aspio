@@ -119,14 +119,14 @@ services:
       - aspiro-network
 
   backend:
-    # Pinned, because scripts/aspiro and scripts/pi/deploy-local.sh tag the running
-    # image :previous by this exact name to roll back to (project "aspiro").
+    # Pinned, because scripts/aspiro tags the running image :previous by this exact
+    # name to roll back to (project "aspiro").
     image: aspiro-backend:latest
     build:
       context: ./backend
       dockerfile: Dockerfile
       args:
-        # Exported by scripts/aspiro and scripts/pi/deploy-local.sh; reported by /health.
+        # Exported by scripts/aspiro; reported by /health.
         - GIT_SHA=${GIT_SHA:-unknown}
     container_name: aspiro-backend
     environment: *backend-environment
@@ -162,10 +162,10 @@ services:
   # `aspiro` CLI runs exactly `docker compose --profile migrate run --rm migrate`, so
   # keep the service name, profile name and image.
   #
-  # Behind the `migrate` profile, so a plain `up` never starts it and production
-  # behaviour is unchanged: the Pi still takes schema changes as hand-applied SQL in
-  # backend/scripts/prod_sql/ + `alembic stamp head`, and scripts/pi/release_checks.sh
-  # still refuses to deploy code ahead of the database. Run it by hand with
+  # Behind the `migrate` profile, so a plain `up` never starts it: `aspiro update`
+  # runs it before restarting, and an instance updated without the CLI takes schema
+  # changes as hand-applied SQL in backend/scripts/prod_sql/ + `alembic stamp head`.
+  # Run it by hand with
   #   docker compose ... -f docker-compose.pi.yml --profile migrate run --rm migrate
   #
   # To make deploys migrate automatically — a deliberate decision that retires the
@@ -175,8 +175,6 @@ services:
   #         condition: service_completed_successfully
   # Then `up` runs the migration first and the backend never starts against a schema
   # that is behind it (a failed migration leaves the old backend container serving).
-  # Also drop aspiro_schema_gate from scripts/pi/deploy-local.sh at the same time,
-  # since it runs before `up` and would refuse the very deploy that migrates.
   migrate:
     image: aspiro-backend:latest
     pull_policy: never
@@ -241,8 +239,6 @@ services:
     # aspiro-caddy (which exists on no registry) fails the pull and falls back to
     # this build: stanza, as before. Verified both ways. Never `compose build caddy`
     # with CADDY_IMAGE set: it would compile xcaddy and tag it caddy:2-alpine.
-    # Not for the Pi: scripts/pi/deploy-local.sh validates and restarts Caddy against
-    # caddy/Caddyfile and aspiro-caddy, so it assumes both are unset.
     image: ${CADDY_IMAGE:-aspiro-caddy:latest}
     pull_policy: missing
     build:
@@ -259,11 +255,10 @@ services:
       - APP_DOMAIN=${APP_DOMAIN:-home.aspiro.dev}
       - CF_API_TOKEN=${CF_API_TOKEN:-}
     volumes:
-      # A SINGLE-FILE bind mount, which is pinned to the file's inode. rsync (as the
-      # deploy uses it) replaces this file by rename, giving it a new inode that the
+      # A SINGLE-FILE bind mount, which is pinned to the file's inode. `git pull` and
+      # most editors replace this file by rename, giving it a new inode that the
       # running container cannot see — so `caddy reload` re-reads the OLD content and
-      # exits 0. Editing this file therefore needs `docker restart aspiro-caddy`;
-      # deploy-local.sh does that, after validating the new file.
+      # exits 0. Editing this file therefore needs `docker restart aspiro-caddy`.
       - ./caddy/${CADDYFILE:-Caddyfile}:/etc/caddy/Caddyfile:ro
       - caddy_data:/data
       - caddy_config:/config
