@@ -348,7 +348,7 @@ async def refresh_portfolio_prices(
             portfolio_repo = PortfolioRepository(session)
 
             if portfolio_id:
-                portfolio = await portfolio_repo.get_portfolio_by_id(portfolio_id)
+                portfolio = await portfolio_repo.get_by_id(portfolio_id, current_user.id)
             else:
                 portfolio = await portfolio_repo.get_default_portfolio(current_user.id)
 
