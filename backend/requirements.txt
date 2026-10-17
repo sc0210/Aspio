@@ -27,7 +27,7 @@ slowapi==0.1.10
 python-dotenv==1.2.4
 
 # Async utilities
-aiofiles==23.2.1
+aiofiles==25.1.0
 
 # Email and notifications
 emails==1.1.3
