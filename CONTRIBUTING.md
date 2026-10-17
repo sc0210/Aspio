@@ -78,3 +78,8 @@ one Alembic head, or if migrating an empty database doesn't match the models.
 - Include a screenshot for a visible UI change; demo mode is fine.
 - Never commit secrets or real financial data. `.env` files stay local, and tests use fixtures.
 - `main` is protected, so changes land only through a reviewed PR with green checks.
+
+## License
+
+Aspiro is licensed under the [Apache License 2.0](LICENSE). By opening a pull request you agree
+that your contribution is licensed under the same terms (section 5 of the license).

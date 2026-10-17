@@ -70,4 +70,4 @@ CI runs, and how to send a change. Report security problems privately through
 
 ## License
 
-All rights reserved.
+[Apache License 2.0](LICENSE).
