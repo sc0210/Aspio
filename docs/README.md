@@ -10,7 +10,7 @@
 | [SECURITY.md](SECURITY.md) | You're touching auth, middleware, a raw query, or adding a table |
 | [SELF_HOSTING.md](SELF_HOSTING.md) | You're running your own Aspiro, built from a clone of this repo: setup, updates, backups, rollback |
 
-At the repo root: [README.md](../README.md) for setup,
+At the repo root: [README.md](../README.md) for the overview, self-host quick start and local setup,
 [CONTRIBUTING.md](../CONTRIBUTING.md) for sending a change,
 [DEVELOPMENT_GUIDE.md](../DEVELOPMENT_GUIDE.md) for day-to-day workflow, and
 [CLAUDE.md](../CLAUDE.md) for agent conventions.
