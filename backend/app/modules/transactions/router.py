@@ -257,28 +257,6 @@ async def create_transaction(
                 transaction_data, current_user.id
             )
 
-            # Update affected budgets if transaction is an expense
-            if transaction_data.type == TransactionType.EXPENSE:
-                try:
-                    from ..budgets.services import get_budget_service
-                    from ...core.database import get_db
-
-                    # Get a new database session for budget updates
-                    async for db in get_db():
-                        budget_service = get_budget_service(db)
-                        await budget_service.update_affected_budgets(
-                            user_id=current_user.id,
-                            transaction_date=transaction_data.transaction_date,
-                            category_id=transaction_data.category_id,
-                        )
-                        break
-                except Exception as e:
-                    # Log but don't fail the transaction creation
-                    import logging
-
-                    logging.getLogger(__name__).warning(
-                        f"Failed to update budgets: {str(e)}"
-                    )
 
             return result
     except ValueError as e:
@@ -1646,7 +1624,7 @@ async def update_transaction(
 ):
     """Update a transaction (supports both demo and authenticated modes)"""
     try:
-        # Get old transaction data before update for budget recalculation
+        # Get old transaction data before update for the portfolio sync below
         old_transaction_data = None
         if current_user:
             try:
@@ -1670,43 +1648,6 @@ async def update_transaction(
                 transaction_id, current_user.id, transaction_data
             )
 
-            # Update affected budgets for both old and new transaction data
-            if transaction and current_user:
-                try:
-                    from ..budgets.services import get_budget_service
-                    from ...core.database import get_db
-
-                    async for db in get_db():
-                        budget_service = get_budget_service(db)
-
-                        # Update budgets for old transaction date/category (if it was an expense)
-                        if (
-                            old_transaction_data
-                            and old_transaction_data.get("type")
-                            == TransactionType.EXPENSE
-                        ):
-                            await budget_service.update_affected_budgets(
-                                user_id=current_user.id,
-                                transaction_date=old_transaction_data[
-                                    "transaction_date"
-                                ],
-                                category_id=old_transaction_data["category_id"],
-                            )
-
-                        # Update budgets for new transaction date/category (if it's an expense)
-                        if transaction.get("type") == TransactionType.EXPENSE:
-                            await budget_service.update_affected_budgets(
-                                user_id=current_user.id,
-                                transaction_date=transaction["transaction_date"],
-                                category_id=transaction["category_id"],
-                            )
-                        break
-                except Exception as e:
-                    import logging
-
-                    logging.getLogger(__name__).warning(
-                        f"Failed to update budgets: {str(e)}"
-                    )
 
             # Sync portfolio holding if this was an investment purchase
             if transaction and old_transaction_data:
@@ -1731,7 +1672,7 @@ async def delete_transaction(
     transaction_id: str = Path(..., description="Transaction ID"),
 ):
     """Delete a transaction (supports both demo and authenticated modes)"""
-    # Get transaction data before deletion for budget update
+    # Get transaction data before deletion for the portfolio sync below
     transaction_data = None
     if current_user:
         try:
@@ -1753,26 +1694,6 @@ async def delete_transaction(
             transaction_id, current_user.id
         )
 
-        # Update affected budgets after deletion
-        if success and transaction_data:
-            try:
-                from ..budgets.services import get_budget_service
-                from ...core.database import get_db
-
-                async for db in get_db():
-                    budget_service = get_budget_service(db)
-                    await budget_service.update_affected_budgets(
-                        user_id=current_user.id,
-                        transaction_date=transaction_data["transaction_date"],
-                        category_id=transaction_data["category_id"],
-                    )
-                    break
-            except Exception as e:
-                import logging
-
-                logging.getLogger(__name__).warning(
-                    f"Failed to update budgets: {str(e)}"
-                )
 
         # Sync portfolio holding if this was an investment purchase
         if success and transaction_data:
