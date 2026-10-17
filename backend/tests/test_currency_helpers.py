@@ -31,10 +31,17 @@ class TestFormatCurrency:
     def test_code_and_no_symbol(self):
         assert c.format_currency(5, "USD", show_symbol=False, show_code=True) == "5.00 USD"
 
-    def test_asian_grouping(self):
+    def test_asian_grouping_below_threshold(self):
+        assert c.format_currency(999, "TWD", format_type="asian") == "NT$999.00"
+
+    def test_asian_grouping_uses_korean_units_today(self):
+        # Pins current behaviour for the grouping branch; see the xfail below.
         assert c.format_currency(12345, "TWD", format_type="asian") == "NT$1.2만"
         assert c.format_currency(250000000, "TWD", format_type="asian") == "NT$2.5억"
-        assert c.format_currency(999, "TWD", format_type="asian") == "NT$999.00"
+
+    @pytest.mark.xfail(strict=True, reason="Korean 만/억 are used for every currency, TWD should get 萬/億")
+    def test_twd_uses_chinese_units(self):
+        assert c.format_currency(12345, "TWD", format_type="asian") == "NT$1.2萬"
 
     def test_format_asian_number_below_threshold(self):
         assert c.format_asian_number(Decimal("5000")) == "5,000"

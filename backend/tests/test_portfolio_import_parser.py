@@ -130,4 +130,5 @@ class TestFileHandling:
 
     async def test_template_round_trips_through_the_parser(self):
         r = await parse_import_file(build_import_template_xlsx(), "template.xlsx")
-        assert r["errors"] == [] or all("Row" in e for e in r["errors"])
+        assert r["errors"] == []
+        assert [h["symbol"] for h in r["holdings"]] == ["0050", "006208", "VT", "BTC-USD"]

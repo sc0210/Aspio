@@ -155,6 +155,12 @@ class TestAllocation:
         assert await svc.get_current_allocation(USER) is first
         svc.holding_repo.get_portfolio_holdings.assert_awaited_once()
 
+    async def test_cache_is_keyed_by_portfolio(self):
+        svc = make_service([holding("0050", D("1"), "etf")])
+        a, b = uuid4(), uuid4()
+        assert await svc.get_current_allocation(USER, a) is not await svc.get_current_allocation(USER, b)
+        assert svc.holding_repo.get_portfolio_holdings.await_count == 2
+
     async def test_explicit_portfolio_id_uses_get_by_id(self):
         svc = make_service([])
         pid = uuid4()
