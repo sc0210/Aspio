@@ -14,7 +14,7 @@ from uuid import UUID
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select, and_
 
-from ...core.exceptions import NotFoundException, BusinessLogicException
+from ...core.exceptions import AspiroException, NotFoundException, BusinessLogicException
 from .models import PortfolioHolding, Portfolio
 from .repositories import PortfolioRepository, HoldingRepository
 from .rebalancing_schemas import (
@@ -281,15 +281,22 @@ class RebalancingService:
         )
 
     async def _twd_rate(self, currency: str) -> Decimal:
-        """Rate to TWD; 1 when unavailable, so a failed lookup degrades to the old behaviour."""
+        """Rate to TWD. Raises rather than guess: a wrong rate silently mis-sizes trades."""
         from app.utils.exchange_rate_service import get_exchange_rate_service
 
         try:
             rate = await get_exchange_rate_service(self.session).get_exchange_rate(currency, "TWD")
         except Exception as e:
             logger.warning(f"FX lookup {currency}->TWD failed: {e}")
-            return Decimal("1")
-        return safe_decimal(rate, Decimal("1")) or Decimal("1")
+            rate = None
+        rate = safe_decimal(rate, Decimal("0"))
+        if rate <= 0:
+            raise AspiroException(
+                f"Exchange rate {currency}/TWD unavailable, cannot value holdings",
+                status_code=503,
+                error_code="FX_UNAVAILABLE",
+            )
+        return rate
 
     async def calculate_rebalancing_plan(
         self,

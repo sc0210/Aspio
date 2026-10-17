@@ -97,9 +97,17 @@ async def test_dashboard_bundle(authenticated_client, seeded):
     assert data["rebalancing_plan"] is not None
 
 
-async def test_unknown_portfolio_id_is_a_404(authenticated_client, seeded):
-    r = authenticated_client.get(f"{BASE}/rebalancing/allocation", params={"portfolio_id": str(uuid4())})
-    assert r.status_code == 404
+@pytest.mark.parametrize("path", ["allocation", "plan", "alerts", "fx-accumulation", "dashboard"])
+async def test_unknown_portfolio_id_is_a_404(authenticated_client, seeded, path):
+    r = authenticated_client.get(f"{BASE}/rebalancing/{path}", params={"portfolio_id": str(uuid4())})
+    # fx-accumulation never reads the portfolio, so it has nothing to 404 on.
+    assert r.status_code == (200 if path == "fx-accumulation" else 404)
+
+
+async def test_fx_outage_is_a_503_not_a_wrong_total(authenticated_client, seeded, offline_fx):
+    offline_fx.get_exchange_rate.return_value = None
+    r = authenticated_client.get(f"{BASE}/rebalancing/allocation")
+    assert r.status_code == 503
 
 
 async def test_analytics_endpoint(authenticated_client, seeded):
@@ -142,3 +150,5 @@ async def test_holding_transaction_history_serialises_metadata(authenticated_cli
     await async_session.commit()
     (txn,) = await get(authenticated_client, "/holdings/symbol/0050/transactions")
     assert txn["symbol"] == "0050" and txn["metadata"] == {"source": "test"}
+    meta = authenticated_client.get(f"{BASE}/holdings/symbol/0050/transactions").json()["meta"]
+    assert (meta["page"], meta["limit"], meta["total"]) == (1, 50, 1) and meta["has_next"] is False

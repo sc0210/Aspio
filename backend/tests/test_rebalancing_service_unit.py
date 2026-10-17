@@ -9,7 +9,7 @@ from uuid import uuid4
 
 import pytest
 
-from app.core.exceptions import NotFoundException
+from app.core.exceptions import AspiroException, NotFoundException
 from app.modules.portfolio.rebalancing_schemas import ActionType, AlertType
 from app.modules.portfolio.rebalancing_service import (
     RebalancingService,
@@ -148,6 +148,26 @@ class TestAllocation:
         assert by["0050"].delta_amount == D("-350.00")
         assert by["CASH"].action == ActionType.BUY and by["CASH"].delta_amount == D("100.00")
         assert by["VT"].action == ActionType.HOLD
+
+    async def test_foreign_holdings_are_valued_in_twd(self):
+        svc = make_service([holding("0050", D("800"), "etf"), holding("VT", D("10"), "etf", currency="USD")])
+        fake = MagicMock(get_exchange_rate=AsyncMock(return_value=D("32")))
+        with patch("app.utils.exchange_rate_service.get_exchange_rate_service", return_value=fake):
+            summary = await svc.get_current_allocation(USER)
+        by = {a.asset_symbol: a for a in summary.allocations}
+        assert summary.total_portfolio_value == D("1120.00")
+        assert by["VT"].current_value == D("320.00")
+        fake.get_exchange_rate.assert_awaited_once_with("USD", "TWD")  # one lookup per currency
+
+    @pytest.mark.parametrize("failure", [
+        {"return_value": None}, {"return_value": D("0")}, {"side_effect": RuntimeError("down")}])
+    async def test_unavailable_rate_refuses_instead_of_guessing(self, failure):
+        svc = make_service([holding("VT", D("10"), "etf", currency="USD")])
+        fake = MagicMock(get_exchange_rate=AsyncMock(**failure))
+        with patch("app.utils.exchange_rate_service.get_exchange_rate_service", return_value=fake):
+            with pytest.raises(AspiroException) as exc:
+                await svc.get_current_allocation(USER)
+        assert exc.value.status_code == 503
 
     async def test_result_is_memoised_per_service(self):
         svc = make_service([holding("0050", D("1"), "etf")])
