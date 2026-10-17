@@ -109,9 +109,19 @@ class TestUpdates:
             assert u.failed_login_attempts == attempt
             locked = u.account_locked_until is not None
             assert locked == account_security.should_lock_account(attempt), f"attempt {attempt}"
-            first_lock = first_lock or (attempt if locked else None)
-        assert first_lock is not None and first_lock > 1  # a single typo never locks
+            if locked and first_lock is None:
+                first_lock = attempt
+                now = datetime.now(timezone.utc)
+                until = u.account_locked_until.replace(tzinfo=timezone.utc) if u.account_locked_until.tzinfo is None else u.account_locked_until
+                assert until > now
+                assert abs((until - now) - account_security.calculate_lockout_duration(attempt)) < timedelta(seconds=5)
+        assert first_lock == 5  # pinned: four typos are fine, the fifth locks
+        assert account_security.should_lock_account(4) is False and account_security.should_lock_account(5) is True
         assert await repo.update_login_info(uuid4(), "1.1.1.1", success=False) is False
+        # ...and a good login lifts the lock and clears the count.
+        await repo.update_login_info(u.id, "1.1.1.1", success=True)
+        await async_session.refresh(u)
+        assert u.account_locked_until is None and u.failed_login_attempts == 0
 
     async def test_soft_delete_hides_the_user(self, repo):
         u = await repo.create_user(data("d@example.com"))
