@@ -67,11 +67,13 @@ async def test_stats_every_period(authenticated_client, world, period):
     assert data
 
 
-async def test_stats_report_cash_flow(authenticated_client, world):
-    data = get(authenticated_client, "/stats", period="90d")
-    flat = json.dumps(data)
-    assert "55000" in flat or "50000" in flat  # income
-    assert "5000" in flat  # expenses 1200 + 800 + 3000
+async def test_stats_report_cash_flow_and_the_three_wallets(authenticated_client, world):
+    d = get(authenticated_client, "/stats", period="90d")
+    assert (d["totalIncome"], d["totalExpenses"]) == (55000.0, 5000.0)
+    assert (d["life_wallet"], d["portfolio_wallet"], d["emergency_wallet"]) == (45000.0, 1500.0, 5000.0)
+    assert d["total_asset"] == d["life_wallet"] + d["portfolio_wallet"] + d["emergency_wallet"]
+    assert d["total_debt"] == 10000.0 and d["netWorth"] == d["total_asset"] - d["total_debt"]
+    assert d["investment_total"] == d["portfolio_wallet"]
 
 
 @pytest.mark.parametrize("period", ["7d", "14d", "month", "30d", "90d", "6m", "1y", "ytd"])
@@ -85,13 +87,14 @@ async def test_historical_trends_income_and_expense_land_on_their_days(authentic
     today = business_today()
     assert float(points[(today - timedelta(days=3)).isoformat()]["income"]) == 50000
     assert float(points[(today - timedelta(days=1)).isoformat()]["expenses"]) == 3800
+    assert float(points[(today - timedelta(days=2)).isoformat()]["expenses"]) == 1200
 
 
-async def test_spending_by_category_ranks_housing_first(authenticated_client, world):
+async def test_spending_by_category_ranks_by_amount(authenticated_client, world):
     data = get(authenticated_client, "/spending-by-category", period="30d")
-    cats = data["categories"] if isinstance(data, dict) and "categories" in data else data
-    names = [c.get("category") or c.get("name") or c.get("categoryName") for c in cats]
-    assert names[0] in ("Housing",) and "Food & Dining" in names
+    assert [(c["name"], c["amount"], c["percentage"], c["transaction_count"]) for c in data["categories"]] == [
+        ("Housing", 3000.0, 60.0, 1), ("Food & Dining", 2000.0, 40.0, 2)]
+    assert data["total_amount"] == 5000.0
 
 
 async def test_spending_by_category_force_refresh(authenticated_client, world):
@@ -100,23 +103,28 @@ async def test_spending_by_category_force_refresh(authenticated_client, world):
 
 async def test_income_by_category(authenticated_client, world):
     data = get(authenticated_client, "/income-by-category", period="30d")
-    assert "Salary" in json.dumps(data)
+    assert [(c["name"], c["amount"]) for c in data["categories"]][0] == ("Salary", 55000.0)
 
 
-async def test_recent_activity_and_static_endpoints(authenticated_client, world):
+async def test_recent_activity(authenticated_client, world):
     get(authenticated_client, "/recent-activity", limit=5)
-    r = authenticated_client.get(f"{BASE}/health")
-    assert r.status_code == 200
-    assert authenticated_client.get(f"{BASE}/monthly-trend", params={"months": 3}).status_code == 200
-    assert authenticated_client.get(f"{BASE}/upcoming-events", params={"days_ahead": 60}).status_code == 200
-    assert authenticated_client.get(f"{BASE}/overview").status_code == 200
-    assert authenticated_client.get(f"{BASE}/goals-overview").status_code == 200
+
+
+@pytest.mark.parametrize("path,params", [
+    ("/health", {}), ("/monthly-trend", {"months": 3}), ("/upcoming-events", {"days_ahead": 60}),
+    ("/overview", {}), ("/goals-overview", {}),
+])
+async def test_static_endpoints_respond(authenticated_client, world, path, params):
+    assert authenticated_client.get(f"{BASE}{path}", params=params).status_code == 200
+
+
+async def test_refresh(authenticated_client, world):
     assert authenticated_client.post(f"{BASE}/refresh").status_code == 200
 
 
 async def test_wallet_trends_include_all_three_wallets(authenticated_client, world):
-    points = get(authenticated_client, "/wallet-trends", period="14d")["dataPoints"]
-    last = points[-1]
+    points = {p["date"][:10]: p for p in get(authenticated_client, "/wallet-trends", period="14d")["dataPoints"]}
+    last = points[business_today().isoformat()]
     assert float(last["lifeWallet"]) == 50000 - 1200 - 800 - 3000
     assert float(last["emergencyWallet"]) == 5000
     assert float(last["debtBalance"]) == 10000
