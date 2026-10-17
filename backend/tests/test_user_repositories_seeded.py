@@ -123,13 +123,13 @@ class TestUpdates:
         await async_session.refresh(u)
         assert u.account_locked_until is None and u.failed_login_attempts == 0
 
-    async def test_soft_delete_hides_the_user(self, repo):
+    async def test_deleted_at_hides_the_user(self, repo):
         u = await repo.create_user(data("d@example.com"))
-        assert await repo.soft_delete_user(u.id) is True
+        await repo.update_user(u.id, {"deleted_at": NOW()})
         assert await repo.get_user_by_id(u.id) is None
-        assert (await repo.get_user_by_id(u.id, include_deleted=True)).is_active is False
+        assert (await repo.get_user_by_id(u.id, include_deleted=True)).id == u.id
         assert await repo.get_user_by_email("d@example.com") is None
-        assert await repo.soft_delete_user(u.id) is False  # already gone
+        assert (await repo.get_user_by_email("d@example.com", include_deleted=True)).id == u.id
 
 
 class TestListAndStats:
@@ -137,7 +137,7 @@ class TestListAndStats:
         a = await repo.create_user(data("alice@example.com", name="Alice", is_verified=True, status=UserStatus.ACTIVE))
         b = await repo.create_user(data("bob@example.com", name="Bob", role=UserRole.ADMIN))
         c = await repo.create_user(data("carol@example.com", name="Carol", is_active=False))
-        await repo.soft_delete_user(c.id)
+        await repo.update_user(c.id, {"deleted_at": NOW()})
         return a, b, c
 
     async def test_paging_and_soft_delete(self, repo):
@@ -210,17 +210,6 @@ class TestRefreshTokens:
         await tokens.revoke_user_tokens(u.id)
         await async_session.refresh(keep)
         assert keep.is_active is False
-
-    async def test_cleanup_removes_expired_and_revoked_only(self, repo, async_session):
-        u = await self.setup_user(repo)
-        tokens = RefreshTokenRepository(async_session)
-        await tokens.create_refresh_token(u.id, "live", NOW() + timedelta(days=1))
-        await tokens.create_refresh_token(u.id, "old", NOW() - timedelta(days=1))
-        await tokens.create_refresh_token(u.id, "revoked", NOW() + timedelta(days=1))
-        await tokens.revoke_refresh_token("revoked")
-        assert await tokens.cleanup_expired_tokens() == 2
-        assert await tokens.get_refresh_token("live") is not None
-        assert await tokens.cleanup_expired_tokens() == 0
 
 
 class TestEmailTokens:

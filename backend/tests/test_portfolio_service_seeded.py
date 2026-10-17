@@ -11,7 +11,7 @@ import pytest_asyncio
 from app.modules.portfolio.models import (
     CurrencyRate, Dividend, HoldingWalletType, Portfolio, PortfolioHolding,
 )
-from app.modules.portfolio.services import get_analytics_service, get_portfolio_service
+from app.modules.portfolio.services import AnalyticsService, get_portfolio_service
 from app.modules.users.models import User, UserRole, UserStatus
 from app.utils.datetime_helpers import business_today
 
@@ -97,7 +97,7 @@ class TestUpdateTotals:
 
 class TestAssetAllocation:
     async def test_no_portfolio(self, async_session, test_user):
-        out = await get_analytics_service(async_session).get_asset_allocation(test_user.id)
+        out = await AnalyticsService(async_session).get_asset_allocation(test_user.id)
         assert out["by_type"] == [] and out["base_currency"] == "TWD"
 
     async def test_groups_by_type_sector_and_region_in_twd(self, async_session, test_user, pf):
@@ -111,7 +111,7 @@ class TestAssetAllocation:
         await async_session.commit()
         fx = MagicMock(get_exchange_rate=AsyncMock(return_value=D("40")))
         with patch("app.utils.exchange_rate_service.get_exchange_rate_service", return_value=fx):
-            out = await get_analytics_service(async_session).get_asset_allocation(test_user.id)
+            out = await AnalyticsService(async_session).get_asset_allocation(test_user.id)
         by_type = {r["type"]: r for r in out["by_type"]}
         assert by_type["Etf"]["value"] == 800.0  # 600 + 5 USD * 40
         assert by_type["Stock"]["percentage"] == pytest.approx(20.0)
@@ -126,13 +126,13 @@ class TestAssetAllocation:
         rates = {("USD", "TWD"): D("40"), ("JPY", "TWD"): D("0.2")}
         fx = MagicMock(get_exchange_rate=AsyncMock(side_effect=lambda f, t: rates[(f, t)]))
         with patch("app.utils.exchange_rate_service.get_exchange_rate_service", return_value=fx):
-            out = await get_analytics_service(async_session).get_asset_allocation(test_user.id)
+            out = await AnalyticsService(async_session).get_asset_allocation(test_user.id)
         assert out["by_type"][0]["value"] == 200.0
         fx.get_exchange_rate.assert_any_await("JPY", "TWD")
 
     async def test_empty_portfolio_has_no_slices(self, async_session, test_user, pf):
         with patch("app.utils.exchange_rate_service.get_exchange_rate_service", return_value=fake_fx(D("32"))):
-            out = await get_analytics_service(async_session).get_asset_allocation(test_user.id)
+            out = await AnalyticsService(async_session).get_asset_allocation(test_user.id)
         assert out["by_type"] == []
 
 
@@ -144,7 +144,7 @@ class TestDividends:
             currency="TWD")
 
     async def test_no_portfolio_returns_nulls(self, async_session, test_user):
-        out = await get_analytics_service(async_session).get_dividend_data(test_user.id)
+        out = await AnalyticsService(async_session).get_dividend_data(test_user.id)
         assert out["total_dividends"] is None and out["payments"] == []
 
     async def test_period_total_and_trailing_year_fallback(self, async_session, test_user, pf):
@@ -153,7 +153,7 @@ class TestDividends:
             self.dividend(test_user, 10, "100"), self.dividend(test_user, 100, "200"),
             self.dividend(test_user, 300, "400"), make_holding(pf, test_user, "0056", value="1", cost="1")])
         await async_session.commit()
-        svc = get_analytics_service(async_session)
+        svc = AnalyticsService(async_session)
         one_m = await svc.get_dividend_data(test_user.id, "1m")
         assert one_m["total_dividends"] == 100.0
         year = await svc.get_dividend_data(test_user.id, "1y")
@@ -170,11 +170,11 @@ class TestDividends:
             make_holding(pf, test_user, "0056", value="1", cost="1", annual_dividend=D("2"), qty="50"),
             self.dividend(test_user, 10, "5")])
         await async_session.commit()
-        out = await get_analytics_service(async_session).get_dividend_data(test_user.id)
+        out = await AnalyticsService(async_session).get_dividend_data(test_user.id)
         assert out["projected_annual"] == 100.0 and out["dividend_yield"] == pytest.approx(10.0)
 
     async def test_nothing_to_project_yields_nulls(self, async_session, test_user, pf):
-        out = await get_analytics_service(async_session).get_dividend_data(test_user.id)
+        out = await AnalyticsService(async_session).get_dividend_data(test_user.id)
         assert out["projected_annual"] is None and out["yield_on_cost"] is None
 
 
@@ -199,7 +199,7 @@ class TestUserScoping:
     async def test_nothing_of_anothers_leaks(self, async_session, test_user, pf, other):
         async_session.add(make_holding(pf, test_user, "0050", value="100", cost="50", sector="Broad", region="TW"))
         await async_session.commit()
-        analytics = get_analytics_service(async_session)
+        analytics = AnalyticsService(async_session)
         with patch("app.utils.exchange_rate_service.get_exchange_rate_service", return_value=fake_fx(D("32"))):
             alloc = await analytics.get_asset_allocation(test_user.id)
         assert [r["value"] for r in alloc["by_type"]] == [100.0] and [r["type"] for r in alloc["by_region"]] == ["TW"]
