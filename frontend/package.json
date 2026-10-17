@@ -65,7 +65,7 @@
     "react": "^19.3.0",
     "react-dom": "^19.3.0",
     "react-hook-form": "^7.89.0",
-    "react-hot-toast": "^2.4.1",
+    "react-hot-toast": "^2.6.1",
     "react-i18next": "^15.7.3",
     "recharts": "^2.15.4",
     "tailwind-merge": "^2.6.1",
