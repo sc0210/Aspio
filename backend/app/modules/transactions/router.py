@@ -1090,6 +1090,8 @@ async def update_category(
             raise HTTPException(status_code=404, detail="Category not found")
 
         return category
+    except HTTPException:
+        raise
     except ValueError as e:
         raise HTTPException(status_code=400, detail=str(e))
     except Exception as e:
@@ -1187,6 +1189,8 @@ async def update_recurring_transaction(
             )
 
         return recurring
+    except HTTPException:
+        raise
     except ValueError as e:
         raise HTTPException(status_code=400, detail=str(e))
     except Exception as e:
@@ -1701,6 +1705,8 @@ async def update_transaction(
             raise HTTPException(status_code=404, detail="Transaction not found")
 
         return transaction
+    except HTTPException:
+        raise
     except ValueError as e:
         raise HTTPException(status_code=400, detail=str(e))
     except Exception as e:
