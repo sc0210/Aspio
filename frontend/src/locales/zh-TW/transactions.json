@@ -212,7 +212,11 @@
       "emergency": "緊急預備金",
       "life": "生活錢包"
     },
-    "currency": "幣別"
+    "currency": "幣別",
+    "errAmount": "請輸入金額",
+    "errDescription": "請輸入說明",
+    "errCategory": "請選擇分類",
+    "errSameWallet": "來源與目標錢包不能相同"
   },
   "importExport": {
     "button": "匯出 / 匯入",

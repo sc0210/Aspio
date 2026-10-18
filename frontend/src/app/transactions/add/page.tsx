@@ -18,57 +18,9 @@ import { useCurrentUser } from '@/hooks/useCurrentUser';
 import { useDemo } from '@/contexts/DemoContext';
 import { DashboardLayout } from '@/components/layout/DashboardLayout';
 import { QUERY_KEYS, invalidateDashboardData } from '@/hooks/useDataSynchronization';
-import { localDateString, formatCurrency } from '@/utils/formatters';
+import { localDateString } from '@/utils/formatters';
 import { Card } from '@/components/ui/Card';
-
-const TRANSACTION_TYPES = [
-  { value: 'expense',    label: 'Expense',    icon: '💸', color: 'red'    },
-  { value: 'income',     label: 'Income',     icon: '💰', color: 'green'  },
-  { value: 'transfer',   label: 'Transfer',   icon: '🔄', color: 'blue'   },
-  { value: 'investment', label: 'Investment', icon: '📈', color: 'purple' },
-];
-
-const CATEGORIES = {
-  expense: [
-    { value: 'Dining',          label: 'Dining',     icon: '🍽️' },
-    { value: 'Groceries',       label: 'Groceries',  icon: '🛒' },
-    { value: 'Transportation',  label: 'Transport',  icon: '🚗' },
-    { value: 'Shopping',        label: 'Shopping',   icon: '🛍️' },
-    { value: 'Entertainment',   label: 'Fun',        icon: '🎬' },
-    { value: 'Healthcare',      label: 'Health',     icon: '🏥' },
-    { value: 'Housing',         label: 'Housing',    icon: '🏠' },
-    { value: 'Utilities',       label: 'Utilities',  icon: '💡' },
-    { value: 'Travel',          label: 'Travel',     icon: '✈️' },
-    { value: 'Gift',            label: 'Gift',       icon: '🎁' },
-    { value: 'Loan Payment',    label: 'Loan',       icon: '💳' },
-    { value: 'Others',          label: 'Others',     icon: '📦' },
-  ],
-  income: [
-    { value: 'Salary',             label: 'Salary',     icon: '💼' },
-    { value: 'Freelance',          label: 'Freelance',  icon: '💻' },
-    { value: 'Investment Returns', label: 'Investment', icon: '📈' },
-    { value: 'Gift',               label: 'Gift',       icon: '🎁' },
-    { value: 'Others',             label: 'Others',     icon: '💵' },
-  ],
-};
-
-const PAYMENT_METHODS = [
-  { value: 'cash',           label: 'Cash',          icon: '💵', color: 'bg-green-50 dark:bg-green-900/20'  },
-  { value: 'credit_card',    label: 'Credit Card',   icon: '💳', color: 'bg-blue-50 dark:bg-blue-900/20'   },
-  { value: 'bank_transfer',  label: 'Bank Transfer', icon: '🏦', color: 'bg-gray-50 dark:bg-gray-700'      },
-  { value: 'digital_wallet', label: 'E-Wallet',      icon: '📱', color: 'bg-orange-50 dark:bg-orange-900/20' },
-];
-
-// Life and Emergency are the only cash wallets. The Portfolio wallet holds
-// invested assets only — never cash — so it is not a valid wallet for income/
-// expense entries OR transfers. To move cash into investments you buy a holding
-// (which debits the Life Wallet).
-const WALLET_TYPES = [
-  { value: 'life',      label: 'Life Wallet',      icon: '💳', color: 'bg-blue-50 dark:bg-blue-900/20',     description: 'Daily income/expenses' },
-  { value: 'emergency', label: 'Emergency Wallet', icon: '🚨', color: 'bg-orange-50 dark:bg-orange-900/20', description: 'Emergency fund'        },
-];
-
-const INCOME_EXPENSE_WALLET_TYPES = WALLET_TYPES;
+import { TRANSACTION_TYPES, CashFields, TagsField, validateCashFields } from '@/components/transactions/TransactionFormFields';
 
 export default function AddTransactionPage() {
   const router = useRouter();
@@ -106,7 +58,6 @@ export default function AddTransactionPage() {
   const [investHoldingId, setInvestHoldingId] = useState('');
   const [investSellQty, setInvestSellQty]   = useState('');
 
-  const [tagInput, setTagInput]   = useState('');
   const [errors, setErrors]       = useState<Record<string, string>>({});
   const [isSubmitting, setIsSubmitting] = useState(false);
 
@@ -179,16 +130,8 @@ export default function AddTransactionPage() {
         const sq = parseFloat(investSellQty);
         if (!investSellQty || isNaN(sq) || sq <= 0) newErrors.investSellQty = t('transactions:form.invest.errSellQty', 'Enter a quantity to sell');
       }
-    } else if (formData.type !== 'transfer') {
-      if (!formData.amount || parseFloat(formData.amount) <= 0) newErrors.amount = 'Enter amount';
-      if (!formData.description.trim()) newErrors.description = 'Add description';
-      if (!formData.category) newErrors.category = 'Select category';
     } else {
-      if (!formData.amount || parseFloat(formData.amount) <= 0) newErrors.amount = 'Enter amount';
-      if (!formData.description.trim()) newErrors.description = 'Add description';
-      if (formData.fromWallet === formData.toWallet) {
-        newErrors.transfer = 'Source and destination wallets must be different';
-      }
+      Object.assign(newErrors, validateCashFields(formData, t));
     }
 
     setErrors(newErrors);
@@ -356,27 +299,6 @@ export default function AddTransactionPage() {
       setIsSubmitting(false);
     }
   };
-
-  const handleAddTag = () => {
-    const tag = tagInput.trim().replace(/^#/, '');
-    if (tag && !formData.tags.includes(tag)) {
-      setFormData(prev => ({ ...prev, tags: [...prev.tags, tag] }));
-      setTagInput('');
-    }
-  };
-
-  const handleRemoveTag = (tagToRemove: string) => {
-    setFormData(prev => ({ ...prev, tags: prev.tags.filter(t => t !== tagToRemove) }));
-  };
-
-  const handleTagInputKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
-    if (e.key === 'Enter') { e.preventDefault(); handleAddTag(); }
-    else if (e.key === 'Backspace' && tagInput === '' && formData.tags.length > 0) {
-      handleRemoveTag(formData.tags[formData.tags.length - 1]);
-    }
-  };
-
-  const currentCategories = formData.type === 'transfer' ? [] : CATEGORIES[formData.type as keyof typeof CATEGORIES] || [];
 
   // ─── type-button active colours ───────────────────────────────────────────
   const activeClass: Record<string, string> = {
@@ -759,311 +681,15 @@ export default function AddTransactionPage() {
             ══════════════════════════════════════════════════════════════ */}
             {formData.type !== 'investment' && (
               <>
-                {/* Date + Description + Amount */}
-                <div>
-                  <div className="flex flex-col sm:flex-row gap-3">
-                    <div className="w-full sm:w-36">
-                      <label htmlFor="tx-date" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">{t('transactions:fields.date', 'Date')}</label>
-                      <input
-                        id="tx-date"
-                        type="date"
-                        value={formData.date}
-                        onChange={(e) => handleInputChange('date', e.target.value)}
-                        className="w-full bg-transparent border border-gray-300 dark:border-gray-600 rounded-lg px-2 py-2 text-sm text-gray-900 dark:text-white focus-visible:ring-2 focus-visible:ring-primary-500 focus-visible:border-primary-500"
-                      />
-                    </div>
-                    <div className="flex-1">
-                      <label htmlFor="tx-description" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">{t('transactions:fields.description', 'Description')}</label>
-                      <input
-                        aria-invalid={!!errors.description}
-                        aria-describedby={errors.description ? "tx-description-error" : undefined}
-                        id="tx-description"
-                        type="text"
-                        value={formData.description}
-                        onChange={(e) => handleInputChange('description', e.target.value)}
-                        placeholder={t('transactions:form.descriptionPlaceholder', "What's this for?")}
-                        className={cn(
-                          'w-full bg-transparent border border-gray-300 dark:border-gray-600 rounded-lg px-3 py-2 text-sm text-gray-900 dark:text-white placeholder-gray-400 dark:placeholder-gray-500 focus-visible:ring-2 focus-visible:ring-primary-500 focus-visible:border-primary-500',
-                          errors.description && 'border-error-400'
-                        )}
-                        autoFocus
-                      />
-                      {errors.description && <p id="tx-description-error" role="alert" className="text-xs text-error-500 mt-1">{errors.description}</p>}
-                    </div>
-                    <div className="w-full sm:w-40">
-                      <label htmlFor="tx-amount" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">{t('transactions:fields.amount', 'Amount')}</label>
-                      <div className="flex items-center gap-1 border border-gray-300 dark:border-gray-600 rounded-lg px-2 py-2">
-                        <select
-                          value={formData.currency}
-                          onChange={(e) => handleInputChange('currency', e.target.value)}
-                          className="bg-transparent text-xs font-bold text-gray-600 dark:text-gray-400 focus:outline-none focus-visible:ring-2 focus-visible:ring-primary-500 rounded pr-1 border-r border-gray-200 dark:border-gray-600 mr-1"
-                          aria-label={t('transactions:form.currency', 'Currency')}
-                        >
-                          {['TWD', 'USD', 'HKD', 'JPY', 'EUR', 'SGD'].map(c => (
-                            <option key={c} value={c}>{c}</option>
-                          ))}
-                        </select>
-                        <input
-                          aria-invalid={!!errors.amount}
-                          aria-describedby={errors.amount ? "tx-amount-error" : undefined}
-                          id="tx-amount"
-                          type="number"
-                          inputMode="decimal"
-                          onWheel={(e) => e.currentTarget.blur()}
-                          step="0.01"
-                          min="0"
-                          value={formData.amount}
-                          onChange={(e) => handleInputChange('amount', e.target.value)}
-                          placeholder="0"
-                          className={cn(
-                            'flex-1 text-base font-semibold bg-transparent border-none outline-none text-gray-900 dark:text-white placeholder-gray-300 dark:placeholder-gray-600 focus:ring-0',
-                            errors.amount && 'text-error-500'
-                          )}
-                        />
-                      </div>
-                      {errors.amount && <p id="tx-amount-error" role="alert" className="text-xs text-error-500 mt-1">{errors.amount}</p>}
-                    </div>
-                  </div>
-                </div>
-
-                {/* Category (income / expense) */}
-                {formData.type !== 'transfer' && (
-                  <div>
-                    <div id="tx-group-category" className="text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                      {t('transactions:form.categoryLabel', 'Category')} {errors.category && <span className="text-error-500 text-xs">*</span>}
-                    </div>
-                    <div role="group" aria-labelledby="tx-group-category" className="grid grid-cols-3 sm:grid-cols-4 gap-2">
-                      {currentCategories.map((category) => {
-                        const isSelected = formData.category === category.value;
-                        return (
-                          <button
-                            aria-pressed={isSelected}
-                            key={category.value}
-                            type="button"
-                            onClick={() => handleInputChange('category', category.value)}
-                            className={cn(
-                              'flex flex-col items-center gap-1 p-2 rounded-lg transition-all min-h-[72px] touch-manipulation border-2',
-                              isSelected
-                                ? 'bg-primary-100 dark:bg-primary-900/40 border-primary-500 dark:border-primary-400 shadow-md scale-105'
-                                : 'bg-white dark:bg-gray-800 border-gray-200 dark:border-gray-600 hover:bg-gray-50 dark:hover:bg-gray-700 hover:border-gray-300 dark:hover:border-gray-500 active:scale-95'
-                            )}
-                          >
-                            <span className="text-2xl">{category.icon}</span>
-                            <span className={cn(
-                              'text-xs font-medium text-center leading-tight',
-                              isSelected ? 'text-primary-700 dark:text-primary-300' : 'text-gray-700 dark:text-gray-300'
-                            )}>{t(`transactions:form.categories.${category.value}`, category.label)}</span>
-                          </button>
-                        );
-                      })}
-                    </div>
-                    {errors.category && <p className="text-sm text-error-500 mt-1">{errors.category}</p>}
-                  </div>
-                )}
-
-                {/* Loan Link (expense only) */}
-                {formData.type === 'expense' && activeLoans.length > 0 && (
-                  <div>
-                    <div id="tx-group-loan" className="text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                      {t('transactions:form.linkToLoan', 'Link to Loan')} <span className="text-xs text-gray-400 font-normal italic">{t('transactions:form.linkToLoanHint', '(optional — reduces loan balance)')}</span>
-                    </div>
-                    <div role="group" aria-labelledby="tx-group-loan" className="grid grid-cols-1 sm:grid-cols-3 gap-2">
-                      <button
-                        aria-pressed={!formData.loanId}
-                        type="button"
-                        onClick={() => handleInputChange('loanId', '')}
-                        className={cn(
-                          'flex items-center gap-2 p-3 rounded-xl border-2 text-sm font-medium transition-all duration-200',
-                          !formData.loanId
-                            ? 'border-gray-400 bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-200'
-                            : 'border-gray-200 dark:border-gray-700 text-gray-500 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-gray-800'
-                        )}
-                      >
-                        <span>🚫</span> {t('transactions:form.loanNone', 'None')}
-                      </button>
-                      {activeLoans.map(loan => (
-                        <button
-                          aria-pressed={formData.loanId === loan.id}
-                          key={loan.id}
-                          type="button"
-                          onClick={() => handleInputChange('loanId', loan.id)}
-                          className={cn(
-                            'flex flex-col items-start gap-0.5 p-3 rounded-xl border-2 text-sm transition-all duration-200',
-                            formData.loanId === loan.id
-                              ? 'border-purple-500 bg-purple-50 dark:bg-purple-900/30 shadow-md'
-                              : 'border-gray-200 dark:border-gray-700 hover:border-purple-300 dark:hover:border-purple-700 hover:bg-gray-50 dark:hover:bg-gray-800'
-                          )}
-                        >
-                          <span className={cn('font-semibold', formData.loanId === loan.id ? 'text-purple-700 dark:text-purple-300' : 'text-gray-700 dark:text-gray-300')}>
-                            💳 {loan.name}
-                          </span>
-                          <span className="text-xs text-gray-500 dark:text-gray-400">
-                            {t('transactions:form.loanBalance', 'Balance')}: {formatCurrency(loan.current_balance, loan.currency, { precision: 0 })}
-                          </span>
-                        </button>
-                      ))}
-                    </div>
-                  </div>
-                )}
-
-                {/* Transfer wallet selection */}
-                {formData.type === 'transfer' && (
-                  <div className="space-y-4">
-                    <div className="flex items-start gap-2 p-3 rounded-lg bg-amber-50 dark:bg-amber-900/20 text-amber-700 dark:text-amber-300 text-xs">
-                      <span className="text-base">💡</span>
-                      <span>{t('transactions:form.transferHint.use', 'Use')} <strong>{t('transactions:form.types.transfer', 'Transfer')}</strong> {t('transactions:form.transferHint.mid', 'to move cash between wallets. To buy or sell assets, use the')} <strong>{t('transactions:form.types.investment', 'Investment')}</strong> {t('transactions:form.transferHint.end', 'tab instead.')}</span>
-                    </div>
-                    <div>
-                      <div id="tx-group-from-wallet" className="text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">{t('transactions:form.fromWallet', 'From Wallet')} <span className="text-error-500">*</span></div>
-                      <div role="group" aria-labelledby="tx-group-from-wallet" className="grid grid-cols-2 sm:grid-cols-4 gap-3">
-                        {WALLET_TYPES.map((wallet) => (
-                          <button
-                            aria-pressed={formData.fromWallet === wallet.value}
-                            key={wallet.value}
-                            type="button"
-                            onClick={() => handleInputChange('fromWallet', wallet.value)}
-                            className={cn(
-                              'flex flex-col items-start gap-2 p-3 rounded-xl transition-all duration-200 border-2',
-                              formData.fromWallet === wallet.value
-                                ? 'border-expense-500 bg-expense-50 dark:bg-expense-900/30 shadow-md'
-                                : 'border-gray-200 dark:border-gray-700 hover:border-expense-300 dark:hover:border-expense-700 hover:bg-gray-50 dark:hover:bg-gray-800'
-                            )}
-                          >
-                            <div className="flex items-center gap-2 w-full">
-                              <span className="text-lg">{wallet.icon}</span>
-                              <span className={cn('text-xs font-semibold', formData.fromWallet === wallet.value ? 'text-expense-700 dark:text-expense-300' : 'text-gray-700 dark:text-gray-300')}>{t(`transactions:form.wallets.${wallet.value}`, wallet.label)}</span>
-                            </div>
-                          </button>
-                        ))}
-                      </div>
-                    </div>
-                    <div className="flex justify-center"><div className="text-3xl text-blue-500">↓</div></div>
-                    <div>
-                      <div id="tx-group-to-wallet" className="text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">{t('transactions:form.toWallet', 'To Wallet')} <span className="text-error-500">*</span></div>
-                      <div role="group" aria-labelledby="tx-group-to-wallet" className="grid grid-cols-2 sm:grid-cols-4 gap-3">
-                        {WALLET_TYPES.map((wallet) => (
-                          <button
-                            aria-pressed={formData.toWallet === wallet.value}
-                            key={wallet.value}
-                            type="button"
-                            onClick={() => handleInputChange('toWallet', wallet.value)}
-                            className={cn(
-                              'flex flex-col items-start gap-2 p-3 rounded-xl transition-all duration-200 border-2',
-                              formData.toWallet === wallet.value
-                                ? 'border-income-500 bg-income-50 dark:bg-income-900/30 shadow-md'
-                                : 'border-gray-200 dark:border-gray-700 hover:border-income-300 dark:hover:border-income-700 hover:bg-gray-50 dark:hover:bg-gray-800'
-                            )}
-                          >
-                            <div className="flex items-center gap-2 w-full">
-                              <span className="text-lg">{wallet.icon}</span>
-                              <span className={cn('text-xs font-semibold', formData.toWallet === wallet.value ? 'text-income-700 dark:text-income-300' : 'text-gray-700 dark:text-gray-300')}>{t(`transactions:form.wallets.${wallet.value}`, wallet.label)}</span>
-                            </div>
-                          </button>
-                        ))}
-                      </div>
-                    </div>
-                    {errors.transfer && <p className="text-sm text-error-500 text-center">{errors.transfer}</p>}
-                  </div>
-                )}
-
-                {/* Payment Method (income / expense only) */}
-                {formData.type !== 'transfer' && (
-                  <div>
-                    <div id="tx-group-payment" className="text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                      {t('transactions:form.paymentMethodLabel', 'Payment Method')} <span className="text-xs text-gray-400 font-normal italic">{t('transactions:form.optional', '(optional)')}</span>
-                    </div>
-                    <div role="group" aria-labelledby="tx-group-payment" className="grid grid-cols-2 sm:grid-cols-4 gap-2">
-                      {PAYMENT_METHODS.map((method) => (
-                        <button
-                          aria-pressed={formData.paymentMethod === method.value}
-                          key={method.value}
-                          type="button"
-                          onClick={() => handleInputChange('paymentMethod', method.value)}
-                          className={cn(
-                            'flex flex-col items-center gap-1.5 p-3 rounded-xl transition-all duration-200 min-h-[72px] touch-manipulation',
-                            formData.paymentMethod === method.value
-                              ? 'bg-primary-500 dark:bg-primary-600 ring-2 ring-primary-500 ring-offset-2 shadow-lg scale-105'
-                              : method.color + ' hover:scale-105 hover:shadow-md active:scale-95'
-                          )}
-                        >
-                          <span className={cn('text-2xl', formData.paymentMethod === method.value && 'scale-110')}>{method.icon}</span>
-                          <span className={cn('text-xs font-medium text-center leading-tight', formData.paymentMethod === method.value ? 'text-white' : 'text-gray-700 dark:text-gray-300')}>{t(`transactions:form.paymentMethods.${method.value}`, method.label)}</span>
-                        </button>
-                      ))}
-                    </div>
-                  </div>
-                )}
-
-                {/* Wallet Type (income / expense only) */}
-                {formData.type !== 'transfer' && (
-                  <div>
-                    <div id="tx-group-wallet-type" className="text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                      {t('transactions:form.walletTypeLabel', 'Wallet Type')} <span className="text-error-500">*</span>
-                    </div>
-                    <div role="group" aria-labelledby="tx-group-wallet-type" className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                      {INCOME_EXPENSE_WALLET_TYPES.map((wallet) => (
-                        <button
-                          aria-pressed={formData.walletType === wallet.value}
-                          key={wallet.value}
-                          type="button"
-                          onClick={() => handleInputChange('walletType', wallet.value)}
-                          className={cn(
-                            'flex flex-col items-start gap-2 p-4 rounded-xl transition-all duration-200 border-2',
-                            formData.walletType === wallet.value
-                              ? 'border-primary-500 bg-primary-50 dark:bg-primary-900/30 shadow-md'
-                              : 'border-gray-200 dark:border-gray-700 hover:border-primary-300 dark:hover:border-primary-700 hover:bg-gray-50 dark:hover:bg-gray-800'
-                          )}
-                        >
-                          <div className="flex items-center gap-2 w-full">
-                            <span className="text-xl">{wallet.icon}</span>
-                            <span className={cn('text-sm font-semibold', formData.walletType === wallet.value ? 'text-primary-700 dark:text-primary-300' : 'text-gray-700 dark:text-gray-300')}>{t(`transactions:form.wallets.${wallet.value}`, wallet.label)}</span>
-                          </div>
-                          <p className={cn('text-xs w-full text-left', formData.walletType === wallet.value ? 'text-primary-600 dark:text-primary-400' : 'text-gray-500 dark:text-gray-400')}>{t(`transactions:form.walletDescriptions.${wallet.value}`, wallet.description)}</p>
-                        </button>
-                      ))}
-                    </div>
-                  </div>
-                )}
-
-                {/* Tags */}
-                <div>
-                  <label htmlFor="tx-tags" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                    {t('transactions:fields.tags', 'Tags')} <span className="text-xs text-gray-400 font-normal italic">{t('transactions:form.optional', '(optional)')}</span>
-                  </label>
-                  <div className="flex items-center gap-2 mb-3">
-                    <div className="flex-1 relative">
-                      <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 text-sm">#</span>
-                      <input
-                        id="tx-tags"
-                        type="text"
-                        value={tagInput}
-                        onChange={(e) => setTagInput(e.target.value)}
-                        onKeyDown={handleTagInputKeyDown}
-                        placeholder={t('transactions:form.tagPlaceholder', 'Add a tag (press Enter)')}
-                        className="w-full bg-transparent border border-gray-300 dark:border-gray-600 rounded-lg pl-7 pr-3 py-2 text-sm text-gray-900 dark:text-white placeholder-gray-400 dark:placeholder-gray-500 focus-visible:ring-2 focus-visible:ring-primary-500 focus-visible:border-primary-500"
-                      />
-                    </div>
-                    <button
-                      type="button"
-                      onClick={handleAddTag}
-                      disabled={!tagInput.trim()}
-                      className={cn('px-4 py-2 rounded-lg text-sm font-medium transition-colors', tagInput.trim() ? 'bg-primary-500 text-white hover:bg-primary-600' : 'bg-gray-200 dark:bg-gray-700 text-gray-400 cursor-not-allowed')}
-                    >{t('transactions:form.addTag', 'Add')}</button>
-                  </div>
-                  {formData.tags.length > 0 && (
-                    <div className="flex flex-wrap gap-2">
-                      {formData.tags.map((tag) => (
-                        <div key={tag} className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-primary-100 dark:bg-primary-900/30 text-primary-700 dark:text-primary-300 rounded-full text-sm">
-                          <span>#{tag}</span>
-                          <button type="button" onClick={() => handleRemoveTag(tag)} className="hover:text-primary-900 dark:hover:text-primary-100 transition-colors">
-                            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" /></svg>
-                          </button>
-                        </div>
-                      ))}
-                    </div>
-                  )}
-                  <p className="text-xs text-gray-500 dark:text-gray-400 mt-2">{t('transactions:form.tagsHelp', 'Use tags to organize your transactions (e.g., #vacation, #business)')}</p>
-                </div>
+                <CashFields
+                  idPrefix="tx"
+                  formData={formData}
+                  errors={errors}
+                  onChange={handleInputChange}
+                  activeLoans={activeLoans}
+                  showInvestmentHint
+                />
+                <TagsField idPrefix="tx" tags={formData.tags} onChange={(tags) => setFormData(prev => ({ ...prev, tags }))} />
               </>
             )}
 

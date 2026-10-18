@@ -12,10 +12,18 @@ import path from 'path';
  */
 
 const SRC = path.join(__dirname, '..', '..');
+// The edit page renders its groups through TransactionFormFields.
 const FILES = [
   'app/transactions/add/page.tsx',
-  'app/transactions/edit/[id]/page.tsx',
+  'components/transactions/TransactionFormFields.tsx',
 ];
+
+/** Quoted values and template-literal values (`${p}-group-x`) of an attribute. */
+function attrValues(src: string, attr: string): string[] {
+  const quoted = [...src.matchAll(new RegExp(`\\b${attr}="([^"{]+)"`, 'g'))].map((m) => m[1]);
+  const templated = [...src.matchAll(new RegExp(`\\b${attr}=\\{\`([^\`]+)\`\\}`, 'g'))].map((m) => m[1]);
+  return [...quoted, ...templated];
+}
 
 /** The slice of source belonging to one role="group" container. */
 function groupBlocks(src: string): string[] {
@@ -39,16 +47,14 @@ function groupBlocks(src: string): string[] {
 
 describe.each(FILES)('button groups in %s', (rel) => {
   const src = fs.readFileSync(path.join(SRC, rel), 'utf8');
-  const ids = new Set([...src.matchAll(/\bid="([^"{]+)"/g)].map((m) => m[1]));
+  const ids = new Set(attrValues(src, 'id'));
 
   it('declares at least one group', () => {
     expect(groupBlocks(src).length).toBeGreaterThan(0);
   });
 
   it('every aria-labelledby resolves to an id in the same file', () => {
-    const dangling = [...src.matchAll(/aria-labelledby="([^"{]+)"/g)]
-      .map((m) => m[1])
-      .filter((ref) => !ids.has(ref));
+    const dangling = attrValues(src, 'aria-labelledby').filter((ref) => !ids.has(ref));
     expect(dangling).toEqual([]);
   });
 

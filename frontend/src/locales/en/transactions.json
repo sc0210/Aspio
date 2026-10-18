@@ -212,7 +212,11 @@
       "emergency": "Emergency Wallet",
       "life": "Life Wallet"
     },
-    "currency": "Currency"
+    "currency": "Currency",
+    "errAmount": "Enter amount",
+    "errDescription": "Add description",
+    "errCategory": "Select category",
+    "errSameWallet": "Source and destination wallets must be different"
   },
   "importExport": {
     "button": "Export / Import",
