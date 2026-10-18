@@ -4,7 +4,6 @@ import { DemoBanner } from '@/components/demo/DemoBanner';
 import { AnalyticsConsentBanner } from '@/components/analytics/AnalyticsConsentBanner';
 import { AnalyticsBootstrap } from '@/components/analytics/AnalyticsBootstrap';
 import { GlobalErrorBoundary } from '@/components/errors/GlobalErrorBoundary';
-import { PerformanceOptimizer } from '@/components/performance/PerformanceOptimizer';
 import { Toaster } from 'react-hot-toast';
 import { getPublicApiUrl, isAbsoluteUrl } from '@/lib/api-url';
 import './globals-hybrid.css';
@@ -133,7 +132,6 @@ export default function RootLayout({
         <Providers>
           <GlobalErrorBoundary>
             <AnalyticsBootstrap />
-            <PerformanceOptimizer />
             <div className="min-h-full">
               <DemoBanner />
               {/* Not a <main>: DashboardLayout owns the app's one main landmark

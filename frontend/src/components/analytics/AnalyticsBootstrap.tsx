@@ -4,6 +4,7 @@ import { useEffect } from 'react';
 import { usePathname } from 'next/navigation';
 import { analyticsProvider } from '@/lib/analytics/provider';
 import { hasAnalyticsConsent, shouldTrackAnalytics } from '@/lib/analytics/config';
+import { webVitalsReporter } from '@/lib/vitals';
 import { log } from '@/utils/logger';
 
 /** Maximum length for error messages sent to analytics — avoids leaking stack details. */
@@ -29,11 +30,12 @@ function reportClientError(
 export function AnalyticsBootstrap() {
     const pathname = usePathname();
 
-    // Initialise analytics on first mount
+    // Initialise analytics on first mount; Web Vitals report through it (consent-gated)
     useEffect(() => {
         analyticsProvider.initialize().catch((error) => {
             log.warn('Analytics initialization failed', error, 'Analytics');
         });
+        webVitalsReporter.init();
     }, []);
 
     // Track page views on navigation
