@@ -376,6 +376,14 @@ async def test_user(async_session: AsyncSession) -> User:
 
     user, _ = await user_service.register_user(user_data, "127.0.0.1")
 
+    # Approve it as AdminService.approve_user does: registration leaves it pending and inactive
+    from app.modules.users.models import User as UserModel, UserStatus
+
+    db_user = await async_session.get(UserModel, user.id)
+    db_user.status = UserStatus.ACTIVE
+    db_user.is_active = True
+    await async_session.commit()
+
     # Verify the user for testing
     if hasattr(user_service, 'user_repo') and hasattr(user_service.user_repo, 'verify_user_email'):
         await user_service.user_repo.verify_user_email(user.id)

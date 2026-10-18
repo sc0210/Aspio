@@ -10,10 +10,11 @@ from datetime import datetime, timedelta, timezone
 from typing import Optional, Dict, Any, Tuple
 from uuid import UUID
 
+from sqlalchemy import and_, select
 from sqlalchemy.ext.asyncio import AsyncSession
 from fastapi import HTTPException, status
 
-from .models import User, UserStatus
+from .models import PreferredCurrency, PreferredLanguage, User, UserStatus
 from .schemas import (
     UserRegistration, UserUpdate, UserResponse, UserProfileResponse,
     LoginRequest, LoginResponse, TokenRefreshRequest, TokenRefreshResponse,
@@ -93,13 +94,20 @@ class UserService:
             # Prepare user data for creation
             create_data = user_data.model_dump(exclude={'password', 'confirm_password', 'referral_code', 'terms_accepted'})
             create_data.update({
+                'email': user_data.email.lower(),
                 'password': user_data.password,
                 'referred_by_user_id': referred_by_user_id,
                 'status': UserStatus.PENDING_APPROVAL,  # Require admin approval
+                'is_active': False,  # is_active defaults to True; approval activates
+                'is_verified': False,
             })
-            
+
             # Create user
             user = await self.user_repo.create_user(create_data)
+            if not user.preferences:
+                user.initialize_preferences()
+                await self.session.commit()
+                await self.session.refresh(user)
 
             # Skip email verification for pending approval users
             # They will be activated when admin approves them
@@ -376,7 +384,23 @@ class UserService:
         try:
             # Prepare update data
             update_dict = update_data.model_dump(exclude_unset=True)
-            
+
+            if update_dict.get('username') is not None:
+                taken = await self.session.execute(
+                    select(User.id).where(
+                        and_(User.username == update_dict['username'], User.id != user_id)
+                    )
+                )
+                if taken.scalar_one_or_none():
+                    raise HTTPException(
+                        status_code=status.HTTP_409_CONFLICT,
+                        detail="Username already taken",
+                    )
+
+            # The column stores cents; the API takes dollars
+            if update_dict.get('monthly_income') is not None:
+                update_dict['monthly_income'] = int(update_dict['monthly_income'] * 100)
+
             # Update user
             updated_user = await self.user_repo.update_user(user_id, update_dict)
             if not updated_user:
@@ -398,6 +422,53 @@ class UserService:
                 detail="Failed to update profile"
             )
     
+
+    async def update_user_data(self, user_id: UUID, update_data: dict) -> User:
+        """Apply a raw dict of user fields and return the updated ORM user.
+
+        Unlike update_user_profile (which takes the UserUpdate schema), this
+        accepts an already-built dict so callers like the regional-preferences
+        endpoint can set columns — preferred_currency / preferred_language /
+        timezone — that aren't part of UserUpdate. Enum-backed columns are
+        coerced from their string codes so the Core UPDATE binds a valid enum
+        member instead of raising a LookupError.
+        """
+        try:
+            data = dict(update_data)
+
+            if isinstance(data.get("preferred_currency"), str):
+                try:
+                    data["preferred_currency"] = PreferredCurrency(data["preferred_currency"])
+                except ValueError:
+                    raise HTTPException(
+                        status_code=status.HTTP_400_BAD_REQUEST,
+                        detail=f"Unsupported currency: {data['preferred_currency']}",
+                    )
+            if isinstance(data.get("preferred_language"), str):
+                try:
+                    data["preferred_language"] = PreferredLanguage(data["preferred_language"])
+                except ValueError:
+                    raise HTTPException(
+                        status_code=status.HTTP_400_BAD_REQUEST,
+                        detail=f"Unsupported language: {data['preferred_language']}",
+                    )
+
+            updated_user = await self.user_repo.update_user(user_id, data)
+            if not updated_user:
+                raise HTTPException(
+                    status_code=status.HTTP_404_NOT_FOUND,
+                    detail="User not found",
+                )
+            return updated_user
+
+        except HTTPException:
+            raise
+        except Exception as e:
+            logger.error(f"Error updating user data: {str(e)}")
+            raise HTTPException(
+                status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+                detail="Failed to update user data",
+            )
     async def request_password_reset(self, email_data: ForgotPasswordRequest) -> bool:
         """
         Request password reset by sending reset email.

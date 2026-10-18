@@ -63,7 +63,7 @@ def make_mock_user(
 
 def make_service(session=None):
     """Create a UserService with all repos mocked."""
-    mock_session = session or MagicMock()
+    mock_session = session or MagicMock(commit=AsyncMock(), refresh=AsyncMock())
 
     with (
         patch("app.modules.users.services.get_user_repository") as mock_user_repo_factory,

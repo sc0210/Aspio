@@ -84,6 +84,17 @@ class TestRegistration:
         result = await async_session.execute(select(User).where(User.email == "new@example.com"))
         user = result.scalar_one()
         assert user.status == UserStatus.PENDING_APPROVAL
+        assert user.is_active is False  # the column defaults to True
+        assert user.is_verified is False
+
+    @pytest.mark.asyncio
+    async def test_register_lowercases_email(self, async_session: AsyncSession):
+        from sqlalchemy import select
+
+        await UserService(async_session).register_user(_reg("Mixed@Example.com"))
+
+        result = await async_session.execute(select(User).where(User.email == "mixed@example.com"))
+        assert result.scalar_one_or_none() is not None
 
     @pytest.mark.asyncio
     async def test_register_duplicate_email_raises_400(self, async_session: AsyncSession):
@@ -126,6 +137,7 @@ class TestPendingUserBlocked:
         from app.modules.users.repositories import get_user_repository
         user = await get_user_repository(async_session).get_user_by_email("ok@example.com")
         user.status = UserStatus.ACTIVE
+        user.is_active = True  # as AdminService.approve_user does
         async_session.add(user)
         await async_session.commit()
 

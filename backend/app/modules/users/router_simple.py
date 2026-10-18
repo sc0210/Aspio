@@ -15,7 +15,7 @@ from .schemas import (
     UserUpdate,
     UserResponse,
 )
-from .services_simple import get_user_service
+from .services import get_user_service
 from .dependencies import (
     CurrentUser,
     rate_limit_check,

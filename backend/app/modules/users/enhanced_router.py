@@ -22,7 +22,7 @@ from .schemas import (
     AchievementProgressResponse, UserActivityRequest,
     RegionalPreferencesUpdate
 )
-from .services_simple import get_user_service
+from .services import get_user_service
 from .gamification_service import get_gamification_service, get_user_analytics_service
 from .dependencies import (
     CurrentUser
