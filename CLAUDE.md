@@ -11,7 +11,7 @@ Aspiro is a full-stack personal finance app targeting Asian markets. Users track
 - Backend: FastAPI, SQLAlchemy 2.0 async, Pydantic v2, Alembic
 - Database: PostgreSQL 15 — Docker locally and in the production stack (loopback-bound)
 - Auth: NextAuth.js (frontend) + JWT / Google OAuth (backend)
-- Deployment: self-hosted. Nothing deploys automatically and nothing is published: CI only validates, and each instance clones the repo and builds its own images with `scripts/aspiro setup` / `scripts/aspiro update` (`docs/SELF_HOSTING.md`). The internet reaches an instance through a Cloudflare Tunnel, so no router port is open. Keep Cloudflare **Bot Fight Mode off**: it blocks the LINE webhook.
+- Deployment: self-hosted. Nothing deploys automatically and nothing is published: CI only validates, and each instance clones the repo and builds its own images with `scripts/aspiro setup` / `scripts/aspiro update` (`docs/SELF_HOSTING.md`). Outside access is a Cloudflare Tunnel (`--profile tunnel`) or Tailscale (`--profile tailscale`: tailnet-only, or public with Funnel), so no router port is open. Keep Cloudflare **Bot Fight Mode off**: it blocks the LINE webhook; tailnet-only Tailscale cannot receive it at all.
 
 **Docs:** `docs/README.md` is the index. The ones worth loading before editing: `docs/ARCHITECTURE.md`, `docs/FINANCIAL_TERMINOLOGY.md` (money invariants), `docs/UI_CONVENTIONS.md`, `docs/TESTING.md`, `docs/SECURITY.md`. The API reference is generated at `/docs` on a running backend — never write it down. Docs that go stale get deleted, not archived; if you find one wrong, fix or delete it in the same change.
 
@@ -23,7 +23,7 @@ Aspiro is a full-stack personal finance app targeting Asian markets. Users track
 ```
 Services: frontend :3000 · backend :8000 · Swagger :8000/docs · pgAdmin :5050
 
-**Production stack:** `docker-compose.pi.yml` (the name is historical; it runs on any amd64/arm64 host) runs Postgres, backend, the production frontend build and Caddy, with `cloudflared` behind the `tunnel` profile. See `docs/SELF_HOSTING.md`.
+**Production stack:** `docker-compose.pi.yml` (the name is historical; it runs on any amd64/arm64 host) runs Postgres, backend, the production frontend build and Caddy, with `cloudflared` behind the `tunnel` profile and `tailscale` behind the `tailscale` profile. See `docs/SELF_HOSTING.md`.
 
 ### Backend only
 ```bash

@@ -40,12 +40,14 @@
 # Optional pieces, each off by default so the running Pi is unchanged:
 #   --profile tunnel     cloudflared in a container (the Pi runs it under systemd)
 #                        (COMPOSE_PROFILES=tunnel in .env does the same)
+#   --profile tailscale  Tailscale instead of (or beside) cloudflared: private
+#                        https://<host>.<tailnet>.ts.net, public with Funnel
 #   --profile migrate    one-shot `alembic upgrade heads` (see the migrate service);
 #                        `docker compose --profile migrate run --rm migrate`
 #   CADDY_IMAGE=caddy:2-alpine + CADDYFILE=Caddyfile.http in .env
 #                        stock Caddy serving plain HTTP :80 only, for hosts reached
-#                        solely through a Cloudflare Tunnel (no LAN HTTPS, no
-#                        Cloudflare API token, no 10-minute xcaddy build)
+#                        solely through a Cloudflare Tunnel or Tailscale (no LAN
+#                        HTTPS, no Cloudflare API token, no 10-minute xcaddy build)
 # ---------------------------------------------------------------------------
 
 # Shared by the backend and the one-shot services that run its image, so the
@@ -63,7 +65,7 @@ x-backend-environment: &backend-environment
   - ACCESS_TOKEN_EXPIRE_MINUTES=30
   - REFRESH_TOKEN_EXPIRE_DAYS=7
   - CORS_ORIGINS=["https://${APP_DOMAIN:?APP_DOMAIN is required - the public hostname (see production.env.sample)}"]
-  # cloudflared → caddy → backend once the tunnel fronts this, so the client IP
+  # cloudflared (or tailscale) → caddy → backend once either fronts this, so the client IP
   # sits two entries from the end of X-Forwarded-For. Without this the rate
   # limiter buckets every visitor under the proxy's address and one busy user
   # throttles everyone.
@@ -245,8 +247,9 @@ services:
     container_name: aspiro-caddy
     restart: unless-stopped
     ports:
-      # Tunnel-only hosts set CADDY_BIND=127.0.0.1 (production.env.sample does), so
-      # the plain-HTTP origin is reachable only by the local cloudflared, never the LAN.
+      # Tunnel-only and Tailscale hosts set CADDY_BIND=127.0.0.1 (production.env.sample
+      # does), so the plain-HTTP origin is reachable only by cloudflared or tailscale
+      # over the compose network, never the LAN.
       - "${CADDY_BIND:-0.0.0.0}:80:80"
       - "${CADDY_BIND:-0.0.0.0}:443:443"
     environment:
@@ -291,12 +294,46 @@ services:
     networks:
       - aspiro-network
 
+  # Tailscale ingress, the alternative to cloudflared. The node joins your tailnet
+  # as TS_HOSTNAME and `tailscale serve` gives it https://<TS_HOSTNAME>.<tailnet>.ts.net
+  # with a real certificate, proxied to http://caddy:80 (tailscale/serve.json). That
+  # address is reachable only from your own tailnet devices, which is also why Google
+  # sign-in works where a LAN IP cannot: the redirect URI is a public-suffix https name.
+  # TS_SERVE_FILE=funnel.json adds Funnel, which opens the same address to the whole
+  # internet — needed for the LINE webhook, since LINE's servers are not on your tailnet.
+  #
+  # Opt-in like cloudflared (`--profile tailscale` or COMPOSE_PROFILES=tailscale):
+  # without an auth key it would sit waiting to log in. The key is used once; the
+  # node identity then lives in the tailscale_state volume.
+  tailscale:
+    image: tailscale/tailscale:latest
+    container_name: aspiro-tailscale
+    profiles: ["tailscale"]
+    restart: unless-stopped
+    hostname: ${TS_HOSTNAME:-aspiro}
+    environment:
+      - TS_AUTHKEY=${TS_AUTHKEY:-}
+      - TS_HOSTNAME=${TS_HOSTNAME:-aspiro}
+      - TS_STATE_DIR=/var/lib/tailscale
+      - TS_SERVE_CONFIG=/config/serve.json
+      # Userspace networking: no NET_ADMIN or /dev/net/tun. Serve still reaches
+      # caddy:80 over this compose network.
+      - TS_USERSPACE=true
+    volumes:
+      - tailscale_state:/var/lib/tailscale
+      - ./tailscale/${TS_SERVE_FILE:-serve.json}:/config/serve.json:ro
+    depends_on:
+      - caddy
+    networks:
+      - aspiro-network
+
 volumes:
   postgres_data:
   backend_logs:
   backend_uploads:
   caddy_data:
   caddy_config:
+  tailscale_state:
 
 networks:
   aspiro-network:

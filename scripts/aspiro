@@ -2,7 +2,8 @@
 # aspiro — set up, update, back up and inspect a self-hosted Aspiro.
 #
 #   aspiro setup  [--domain D] [--google-client-id ID] [--google-client-secret S]
-#                 [--tunnel-token T] [--non-interactive] [--force [--rotate-secrets]]
+#                 [--tunnel-token T] [--tailscale-authkey K [--funnel|--no-funnel]]
+#                 [--non-interactive] [--force [--rotate-secrets]]
 #                 --force updates an existing .env in place, keeping every value not
 #                 given; --rotate-secrets also regenerates SECRET_KEY/NEXTAUTH_SECRET
 #   aspiro update [--ref REF] [--init]
@@ -39,7 +40,7 @@ warn() { printf 'WARNING: %s\n' "$*" >&2; }
 die()  { printf 'ERROR: %s\n' "$*" >&2; exit 1; }
 
 usage() {
-  sed -n '2,14p' "${BASH_SOURCE[0]}" | sed 's/^# \{0,1\}//'
+  sed -n '2,15p' "${BASH_SOURCE[0]}" | sed 's/^# \{0,1\}//'
 }
 
 # --- pure helpers (unit-tested) ------------------------------------------------------
@@ -157,10 +158,21 @@ aspiro_ask() {  # aspiro_ask <var> <prompt> [secret]
   return 0
 }
 
+# Add a compose profile to COMPOSE_PROFILES in env file $1, keeping any others listed.
+aspiro_add_profile() {
+  local file=$1 profile=$2 profiles
+  profiles=$(aspiro_env_get "$file" COMPOSE_PROFILES)
+  case ",$profiles," in
+    *,"$profile",*) ;;
+    ,,) aspiro_env_set "$file" COMPOSE_PROFILES "$profile" ;;
+    *) aspiro_env_set "$file" COMPOSE_PROFILES "$profiles,$profile" ;;
+  esac
+}
+
 cmd_setup() {
   local force=0 interactive=1 rotate=0
   local domain="${ASPIRO_DOMAIN:-}" gid="${GOOGLE_CLIENT_ID:-}" gsecret="${GOOGLE_CLIENT_SECRET:-}"
-  local tunnel="${CF_TUNNEL_TOKEN:-}"
+  local tunnel="${CF_TUNNEL_TOKEN:-}" tskey="${TS_AUTHKEY:-}" serve_file=""
   [ -t 0 ] || interactive=0
   while [ $# -gt 0 ]; do
     case "$1" in
@@ -168,6 +180,9 @@ cmd_setup() {
       --google-client-id) gid=${2:?}; shift 2 ;;
       --google-client-secret) gsecret=${2:?}; shift 2 ;;
       --tunnel-token) tunnel=${2:?}; shift 2 ;;
+      --tailscale-authkey) tskey=${2:?}; shift 2 ;;
+      --funnel) serve_file=funnel.json; shift ;;
+      --no-funnel) serve_file=serve.json; shift ;;
       --non-interactive|-y) interactive=0; shift ;;
       --force) force=1; shift ;;
       --rotate-secrets) rotate=1; shift ;;
@@ -188,6 +203,8 @@ cmd_setup() {
     [ -n "$gid" ] || gid=$(aspiro_env_get "$env" GOOGLE_CLIENT_ID)
     [ -n "$gsecret" ] || gsecret=$(aspiro_env_get "$env" GOOGLE_CLIENT_SECRET)
     [ -n "$tunnel" ] || tunnel=$(aspiro_env_get "$env" CF_TUNNEL_TOKEN)
+    [ -n "$tskey" ] || tskey=$(aspiro_env_get "$env" TS_AUTHKEY)
+    [ -n "$serve_file" ] || serve_file=$(aspiro_env_get "$env" TS_SERVE_FILE)
     cp -p "$env" "$env.bak.$(date +%Y%m%d%H%M%S)"
     log "backed up the existing .env; existing values are kept unless replaced"
     [ "$rotate" -eq 0 ] || log "rotating SECRET_KEY and NEXTAUTH_SECRET (signs everyone out); POSTGRES_PASSWORD is kept"
@@ -195,10 +212,16 @@ cmd_setup() {
   command -v openssl >/dev/null 2>&1 || die "openssl is required to generate secrets"
 
   if [ "$interactive" -eq 1 ]; then
-    aspiro_ask domain "Public hostname (e.g. aspiro.example.com)"
+    aspiro_ask domain "Hostname people open (e.g. aspiro.example.com, or aspiro.<tailnet>.ts.net with Tailscale)"
     aspiro_ask gid "Google OAuth client ID (blank to skip Google sign-in)"
     aspiro_ask gsecret "Google OAuth client secret" secret
-    aspiro_ask tunnel "Cloudflare Tunnel token (blank if you run cloudflared yourself)" secret
+    aspiro_ask tunnel "Cloudflare Tunnel token (blank to skip)" secret
+    aspiro_ask tskey "Tailscale auth key (blank to skip)" secret
+    if [ -n "$tskey" ] && [ -z "$serve_file" ]; then
+      local reply=""
+      read -r -p "Open it to the whole internet with Tailscale Funnel? Needed for the LINE webhook [y/N]: " reply
+      case "$reply" in [Yy]*) serve_file=funnel.json ;; *) serve_file=serve.json ;; esac
+    fi
   fi
   domain=${domain#https://}; domain=${domain#http://}; domain=${domain%%/*}
   [ -n "$domain" ] || die "a hostname is required (--domain or ASPIRO_DOMAIN)"
@@ -231,22 +254,33 @@ cmd_setup() {
   aspiro_env_set "$tmp" GOOGLE_CLIENT_ID "$gid"
   aspiro_env_set "$tmp" GOOGLE_CLIENT_SECRET "$gsecret"
   aspiro_env_set "$tmp" CF_TUNNEL_TOKEN "$tunnel"
-  if [ -n "$tunnel" ]; then
-    # Add 'tunnel' to the profiles, keeping any others already listed.
-    local profiles
-    profiles=$(aspiro_env_get "$tmp" COMPOSE_PROFILES)
-    case ",$profiles," in
-      *,tunnel,*) ;;
-      ,,) aspiro_env_set "$tmp" COMPOSE_PROFILES tunnel ;;
-      *) aspiro_env_set "$tmp" COMPOSE_PROFILES "$profiles,tunnel" ;;
-    esac
+  [ -z "$tunnel" ] || aspiro_add_profile "$tmp" tunnel
+  if [ -n "$tskey" ]; then
+    aspiro_env_set "$tmp" TS_AUTHKEY "$tskey"
+    aspiro_env_set "$tmp" TS_SERVE_FILE "${serve_file:-serve.json}"
+    # The node name is the first label of a *.ts.net APP_DOMAIN, so the two agree.
+    case "$domain" in *.ts.net) aspiro_env_set "$tmp" TS_HOSTNAME "${domain%%.*}" ;; esac
+    aspiro_add_profile "$tmp" tailscale
   fi
   mv -f "$tmp" "$env"
   chmod 600 "$env"
 
   log "wrote $env (mode 600)"
   [ -n "$gid" ] || warn "no Google OAuth client — Google sign-in will not work until GOOGLE_CLIENT_ID/SECRET are set"
-  [ -n "$tunnel" ] || warn "no tunnel token — point your own cloudflared (or proxy) at http://localhost:80"
+  if [ -z "$tunnel" ] && [ -z "$tskey" ]; then
+    warn "no tunnel token or Tailscale key — point your own cloudflared, tailscale serve or proxy at http://localhost:80"
+  fi
+  if [ -n "$tskey" ]; then
+    case "$domain" in
+      *.ts.net) ;;
+      *) warn "with Tailscale, the hostname should be <name>.<tailnet>.ts.net — sign-in and CORS only work on the hostname given here" ;;
+    esac
+    if [ "${serve_file:-serve.json}" = funnel.json ]; then
+      log "Tailscale Funnel: https://$domain is public; your tailnet policy must grant this node the 'funnel' attribute"
+    else
+      log "Tailscale: https://$domain is reachable from your tailnet only (no LINE webhook; use --funnel for that)"
+    fi
+  fi
   if [ -n "$gid" ]; then
     log "Google OAuth redirect URI to register: https://$domain/api/auth/callback/google"
   fi

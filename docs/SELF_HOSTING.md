@@ -4,8 +4,8 @@ Run your own Aspiro from this repository. Nothing is published for you to pull: 
 the code and build it on your machine, with Docker (recommended) or without.
 
 The Docker stack is `docker-compose.pi.yml`: Postgres, the backend, the frontend and Caddy,
-plus an optional `cloudflared`. A Cloudflare Tunnel dials out, so no inbound port has to be
-opened.
+plus an optional `cloudflared` or `tailscale` container for access from outside your network.
+Both dial out, so no inbound port has to be opened.
 
 ## Requirements
 
@@ -13,7 +13,9 @@ opened.
 - `git` and `openssl`.
 - **Docker path:** Docker Engine with the compose plugin, run by a user in the `docker` group.
 - **Without Docker:** PostgreSQL 15, Python 3.11, Node 22, and a reverse proxy (Caddy, nginx).
-- A domain on Cloudflare (free plan) if it should be reachable from outside your network.
+- For access from outside your network, one of:
+  - a domain on Cloudflare (free plan), for a Cloudflare Tunnel, or
+  - a Tailscale account (free for personal use), for a private `*.ts.net` address.
 - Optional: `age` or `gpg` to encrypt backups, the `aws` CLI to upload them to R2/S3.
 
 ## 1. Get the code
@@ -25,7 +27,24 @@ cd /opt/aspiro
 
 Stay on `main` to follow every change, or `git checkout <tag>` to run a fixed version.
 
-## 2. Cloudflare Tunnel (for outside access)
+## 2. Outside access: Cloudflare Tunnel or Tailscale
+
+Both connect out from your machine, so nothing is opened on your router. They differ in
+who can reach the app:
+
+| | Cloudflare Tunnel | Tailscale | Tailscale + Funnel |
+|---|---|---|---|
+| Who can open it | anyone on the internet | only your own devices, signed in to your tailnet | anyone on the internet |
+| Address | your domain, e.g. `aspiro.example.com` | `aspiro.<tailnet>.ts.net` | `aspiro.<tailnet>.ts.net` |
+| Needs | a domain on Cloudflare | a Tailscale account; the Tailscale app on each device | the same, plus the `funnel` node attribute |
+| LINE bot webhook | works | does not work (LINE's servers are not on your tailnet) | works |
+| Google sign-in | works | works | works |
+
+Pick **Tailscale** for a private instance that only you (and devices you add) use. Pick
+**Cloudflare Tunnel**, or **Tailscale + Funnel**, when other people or the LINE bot must
+reach it. You can run both; `APP_DOMAIN` is then the address people open in a browser.
+
+### 2a. Cloudflare Tunnel
 
 1. Cloudflare → **Zero Trust → Networks → Tunnels**: create a tunnel and copy its token.
 2. Add a **public hostname** (e.g. `aspiro.example.com`) pointing at:
@@ -33,10 +52,27 @@ Stay on `main` to follow every change, or `git checkout <tag>` to run a fixed ve
    - `http://localhost:80` if it runs on the host (`sudo cloudflared service install <token>`).
 3. Keep **Security → Bots → Bot Fight Mode OFF**: it blocks the LINE webhook and uptime probes.
 
+### 2b. Tailscale
+
+1. Tailscale admin console → **DNS**: turn on **MagicDNS** and **HTTPS Certificates**, and
+   note your tailnet name (the `<tailnet>.ts.net` part).
+2. **Settings → Keys**: generate an auth key. It is used once, to add the machine; after
+   that the node's identity lives in the `tailscale_state` volume.
+3. Only for Funnel: in **Access controls**, give the node the `funnel` attribute
+   (`"nodeAttrs": [{"target": ["autogroup:member"], "attr": ["funnel"]}]`, or a narrower target).
+4. Give the key to `aspiro setup` (below) with the hostname `aspiro.<tailnet>.ts.net`; add
+   `--funnel` to make it public. The node is named after the hostname's first label.
+
+The `tailscale` container serves `https://aspiro.<tailnet>.ts.net` with a certificate it
+obtains itself and forwards to Caddy (`tailscale/serve.json`, or `tailscale/funnel.json`
+with Funnel). Open it from any device signed in to your tailnet.
+
 ## 3. Google sign-in
 
 Google Cloud Console → **APIs & Services → Credentials** → OAuth client, type *Web
-application*:
+application*. Use the address people open: your Cloudflare hostname, or the `*.ts.net`
+one with Tailscale. Google rejects a LAN IP as a redirect URI, but accepts a `ts.net` name
+even when only your tailnet can reach it.
 
 - Authorized JavaScript origin: `https://aspiro.example.com`
 - Authorized redirect URI: `https://aspiro.example.com/api/auth/callback/google`
@@ -49,11 +85,14 @@ scripts/aspiro update --init     # first install only: builds, initialises the d
 scripts/aspiro status
 ```
 
-`setup` asks for the hostname, the Google client ID and secret, and the tunnel token, and
-prints the redirect URI to register. It never overwrites `.env` unless you pass `--force`,
+`setup` asks for the hostname, the Google client ID and secret, the Cloudflare tunnel token
+and the Tailscale auth key (skip whichever you don't use), and prints the redirect URI to
+register. It never overwrites `.env` unless you pass `--force`,
 which keeps every existing value unless you give a new one; `--force --rotate-secrets` also
 regenerates `SECRET_KEY` and `NEXTAUTH_SECRET` (everyone is signed out). For a script, pass
-`--non-interactive --domain … --google-client-id … --google-client-secret … --tunnel-token …`.
+`--non-interactive --domain … --google-client-id … --google-client-secret …` plus
+`--tunnel-token …` or `--tailscale-authkey … [--funnel]`. `--force --funnel` / `--no-funnel`
+switches an existing Tailscale install between public and tailnet-only.
 LINE and SMTP settings are documented in `production.env.sample`.
 
 Pass `--init` on the first install only. It is the only mode allowed to build the schema in
@@ -156,8 +195,11 @@ update and restore that backup when rolling back across a schema change.
       backend refuses placeholder secrets unless `ALLOW_INSECURE_DEFAULTS=true`; never set
       that on a reachable host.
 - [ ] If a secret leaks: `aspiro setup --force --rotate-secrets`; rotate the tunnel token in
-      Cloudflare; changing `POSTGRES_PASSWORD` also needs an `ALTER USER` in Postgres.
+      Cloudflare, or remove the machine in the Tailscale admin console and set a new auth key;
+      changing `POSTGRES_PASSWORD` also needs an `ALTER USER` in Postgres.
 - [ ] Postgres listens on loopback only, and no router port is forwarded.
-- [ ] Put **Cloudflare Access** in front of `/admin*` and `/api/v1/admin*`.
+- [ ] Public instances (Cloudflare, or Tailscale with Funnel): put **Cloudflare Access** in
+      front of `/admin*` and `/api/v1/admin*`. Funnel has no equivalent, so a public Funnel
+      instance relies on the app's own admin checks. A tailnet-only instance is private already.
 - [ ] Leave `ENABLE_API_DOCS` off (the default), or put `/docs` and `/openapi.json` behind Access.
 - [ ] Backups are encrypted and stored off the host.

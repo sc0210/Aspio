@@ -228,6 +228,36 @@ d2="$work/setup-notunnel"; mkdir -p "$d2"
 cp "$d/production.env.sample" "$d2/"
 run_cli "$d2" "$work/bin" setup --non-interactive --domain a.example.com
 expect "no tunnel token, no tunnel profile" has_not "$d2/.env" 'COMPOSE_PROFILES'
+expect "no ingress at all is warned about" has "$work/out" 'no tunnel token or Tailscale key'
+
+d3="$work/setup-tailscale"; mkdir -p "$d3"
+cp "$d/production.env.sample" "$d3/"
+run_cli "$d3" "$work/bin" setup --non-interactive --domain aspiro.tail1234.ts.net --tailscale-authkey tskey-abc
+expect "Tailscale setup succeeds" [ "$rc" -eq 0 ]
+expect "a Tailscale key enables the tailscale profile" [ "$(aspiro_env_get "$d3/.env" COMPOSE_PROFILES)" = tailscale ]
+expect "...stores the key" [ "$(aspiro_env_get "$d3/.env" TS_AUTHKEY)" = tskey-abc ]
+expect "...serves to the tailnet only by default" [ "$(aspiro_env_get "$d3/.env" TS_SERVE_FILE)" = serve.json ]
+expect "...names the node after the ts.net hostname" [ "$(aspiro_env_get "$d3/.env" TS_HOSTNAME)" = aspiro ]
+expect "...says the address is tailnet-only" has "$work/out" 'reachable from your tailnet only'
+expect "...no ingress warning" has_not "$work/out" 'no tunnel token or Tailscale key'
+expect "...no hostname warning for a ts.net name" has_not "$work/out" 'should be <name>.<tailnet>.ts.net'
+
+run_cli "$d3" "$work/bin" setup --non-interactive --force --funnel
+expect "--force --funnel switches to Funnel" [ "$(aspiro_env_get "$d3/.env" TS_SERVE_FILE)" = funnel.json ]
+expect "...keeps the key" [ "$(aspiro_env_get "$d3/.env" TS_AUTHKEY)" = tskey-abc ]
+expect "...says the address is public" has "$work/out" 'Tailscale Funnel'
+run_cli "$d3" "$work/bin" setup --non-interactive --force
+expect "--force without a funnel flag keeps Funnel" [ "$(aspiro_env_get "$d3/.env" TS_SERVE_FILE)" = funnel.json ]
+run_cli "$d3" "$work/bin" setup --non-interactive --force --no-funnel --tunnel-token tok
+expect "--no-funnel goes back to tailnet-only" [ "$(aspiro_env_get "$d3/.env" TS_SERVE_FILE)" = serve.json ]
+expect "both ingresses keep both profiles" [ "$(aspiro_env_get "$d3/.env" COMPOSE_PROFILES)" = tailscale,tunnel ]
+
+d4="$work/setup-tailscale-domain"; mkdir -p "$d4"
+cp "$d/production.env.sample" "$d4/"
+run_cli "$d4" "$work/bin" setup --non-interactive --domain aspiro.example.com --tailscale-authkey tskey-abc
+expect "Tailscale with a non-ts.net hostname still succeeds" [ "$rc" -eq 0 ]
+expect "...but warns about the hostname" has "$work/out" 'should be <name>.<tailnet>.ts.net'
+expect "...and leaves the node name at its default" has_not "$d4/.env" 'TS_HOSTNAME'
 
 run_cli "$d" "$work/bin" setup --bogus
 expect "unknown setup option fails" [ "$rc" -ne 0 ]
