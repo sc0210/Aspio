@@ -3,7 +3,7 @@
 import { useState, useEffect, ReactNode } from 'react';
 import Link from 'next/link';
 import { MenuIcon } from '@/components/ui/OptimizedIcons';
-import { NotificationBell } from '@/components/notifications/NotificationBell';
+import { NotificationBell } from '@/components/layout/NotificationBell';
 import { WhatsNewModal } from '@/components/whatsnew/WhatsNewModal';
 import { WhatsNewButton } from '@/components/whatsnew/WhatsNewButton';
 import { DashboardSidebar } from './DashboardSidebar';

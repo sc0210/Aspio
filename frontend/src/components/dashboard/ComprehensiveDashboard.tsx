@@ -38,7 +38,7 @@ const TransactionHeatmap = dynamic(
   { ssr: false, loading: () => <div className="animate-pulse bg-gray-200 dark:bg-gray-700 rounded-2xl h-96" role="status" aria-label="Loading cash flow heatmap" /> }
 );
 import { MonthlyInsightCard } from './MonthlyInsightCard';
-import { FinancialTermsHelp } from '@/components/help/FinancialTermsHelp';
+import { FinancialTermsHelp } from '@/components/dashboard/FinancialTermsHelp';
 import { useTranslation } from 'react-i18next';
 import { useGoals } from '@/hooks/useGoals';
 import { GoalsOverview } from '@/components/goals/GoalsOverview';

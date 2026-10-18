@@ -94,7 +94,7 @@ jest.mock('@/components/ui/DataRefreshButton', () => ({
   DataRefreshButton: () => <button data-testid="refresh-btn" />,
 }));
 
-jest.mock('@/components/help/FinancialTermsHelp', () => ({
+jest.mock('@/components/dashboard/FinancialTermsHelp', () => ({
   FinancialTermsHelp: () => <div />,
 }));
 

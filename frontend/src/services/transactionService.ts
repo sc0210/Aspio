@@ -586,18 +586,6 @@ class TransactionService {
     return apiClient.get('/transactions/categories');
   }
 
-  async createCategory(category: Omit<TransactionCategory, 'id'>): Promise<ApiResponse<TransactionCategory>> {
-    return apiClient.post('/transactions/categories', category);
-  }
-
-  async updateCategory(id: string, updates: Partial<TransactionCategory>): Promise<ApiResponse<TransactionCategory>> {
-    return apiClient.put(`/transactions/categories/${id}`, updates);
-  }
-
-  async deleteCategory(id: string): Promise<ApiResponse<void>> {
-    return apiClient.delete(`/transactions/categories/${id}`);
-  }
-
   async getStats(period: '30d' | '90d' | '1y' = '30d'): Promise<ApiResponse<TransactionStats>> {
     return apiClient.get(`/transactions/analytics/summary?period=${period}`);
   }

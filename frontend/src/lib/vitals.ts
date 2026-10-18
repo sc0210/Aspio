@@ -259,17 +259,6 @@ class WebVitalsReporter {
 
     return summary;
   }
-
-  // Method to manually report custom metrics
-  reportCustomMetric(name: string, value: number, _context?: unknown) {
-    this.reportMetric({
-      name,
-      value,
-      delta: value,
-      id: `custom-${name}-${Date.now()}`,
-      rating: this.getMetricRating(name, value),
-    });
-  }
 }
 
 // Create singleton instance
