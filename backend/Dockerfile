@@ -10,9 +10,18 @@ RUN apt-get update \
 RUN python -m venv /opt/venv
 ENV PATH="/opt/venv/bin:$PATH"
 
-COPY requirements.txt .
+# FinLab (TW whole-market data) pulls in pyarrow and scipy, ~300MB the app only
+# uses when FINLAB_API_TOKEN is set, so it is installed on request:
+# docker-compose.pi.yml passes INSTALL_FINLAB=true when .env has a token.
+ARG INSTALL_FINLAB=false
+COPY requirements.txt requirements-finlab.txt ./
 RUN pip install --no-cache-dir --upgrade pip \
-    && pip install --no-cache-dir -r requirements.txt
+    && pip install --no-cache-dir -r requirements.txt \
+    && if [ "$INSTALL_FINLAB" = "true" ]; then pip install --no-cache-dir -r requirements-finlab.txt; fi \
+    # Nothing at runtime needs the packages' own test suites (pandas' alone is
+    # 40MB) or the installers; only the app's imports are kept.
+    && find /opt/venv -depth -type d -name tests -path '*/site-packages/*' -exec rm -rf {} + \
+    && pip uninstall -y pip setuptools
 
 # Runtime stage — lean image without build tools
 FROM python:3.11-slim
@@ -38,14 +47,15 @@ RUN apt-get update \
         poppler-utils \
     && rm -rf /var/lib/apt/lists/*
 
-COPY --from=builder /opt/venv /opt/venv
-COPY . .
-
 # /app/uploads exists in the image so a fresh named volume mounted there copies
-# its aspiro ownership instead of coming up root-owned.
+# its aspiro ownership instead of coming up root-owned. The source is copied
+# already owned by aspiro: a `chown -R` after the COPY would store it twice.
 RUN useradd --create-home --shell /bin/bash aspiro \
     && mkdir -p /app/uploads \
-    && chown -R aspiro:aspiro /app
+    && chown aspiro:aspiro /app /app/uploads
+
+COPY --from=builder /opt/venv /opt/venv
+COPY --chown=aspiro:aspiro . .
 USER aspiro
 
 EXPOSE 8000
