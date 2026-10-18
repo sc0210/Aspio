@@ -520,15 +520,16 @@ class TransactionAttachmentBase(BaseModel):
 class TransactionAttachmentResponse(TransactionAttachmentBase, TimestampMixin):
     """Schema for transaction attachment responses"""
 
-    id: str
-    transaction_id: str
+    # UUIDs, as the model stores them (str rejected every row); JSON is unchanged.
+    id: uuid.UUID
+    transaction_id: uuid.UUID
     original_filename: str
     file_path: str
     storage_provider: str
     ocr_text: Optional[str] = None
     processed: bool
     processing_error: Optional[str] = None
-    uploaded_by: str
+    uploaded_by: uuid.UUID
     model_config = ConfigDict(from_attributes=True)
 
 

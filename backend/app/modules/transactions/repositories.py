@@ -754,6 +754,9 @@ class TransactionRepository:
         trends, the peer comparison) share it, so a pending, failed or cancelled
         transaction can never move one figure while leaving another alone.
         """
+        if isinstance(user_id, str):
+            # The column is a UUID; Postgres tolerates the string, SQLite does not.
+            user_id = uuid_module.UUID(user_id)
         return [Transaction.user_id == user_id, *TransactionRepository.countable_conditions()]
 
     async def signed_amount_twd(self, conditions, rates: Optional[Dict[str, Decimal]] = None):
@@ -1545,11 +1548,17 @@ class TransactionCategoryRepository:
         self, category_id: str, update_data: dict
     ) -> Optional[TransactionCategory]:
         """Update a category"""
+        import uuid
+
+        try:
+            category_uuid = uuid.UUID(category_id) if isinstance(category_id, str) else category_id
+        except ValueError:
+            return None
         update_data["updated_at"] = datetime.now(timezone.utc)
 
         stmt = (
             update(TransactionCategory)
-            .where(TransactionCategory.id == category_id)
+            .where(TransactionCategory.id == category_uuid)
             .values(**update_data)
             .returning(TransactionCategory)
         )
@@ -1557,11 +1566,11 @@ class TransactionCategoryRepository:
         result = await self.db.execute(stmt)
         await self.db.commit()
 
-        updated_category = result.scalar_one_or_none()
-        if updated_category:
-            await self.db.refresh(updated_category)
-
-        return updated_category
+        if result.scalar_one_or_none() is None:
+            return None
+        # Re-read through get_by_id so subcategories is loaded: the response
+        # model reads it, and a lazy load there fails outside the greenlet.
+        return await self.get_by_id(category_uuid)
 
     async def increment_usage(self, category_id: str):
         """Increment category usage count"""

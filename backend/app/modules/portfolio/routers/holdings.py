@@ -241,9 +241,7 @@ async def get_holding(
 
     try:
         holding_service = get_holding_repository(session)
-        holding = await holding_service.get_holding(
-            holding_id=holding_id, user_id=current_user.id
-        )
+        holding = await holding_service.get_by_id(holding_id, current_user.id)
 
         if not holding:
             raise HTTPException(
@@ -865,7 +863,7 @@ async def get_holding_transactions(
                     txn.transaction_date.isoformat() if txn.transaction_date else None
                 ),
                 "notes": txn.notes,
-                "metadata": txn.metadata,
+                "metadata": txn.item_metadata,
                 "createdAt": txn.created_at.isoformat(),
                 "updatedAt": txn.updated_at.isoformat(),
             }
@@ -875,12 +873,7 @@ async def get_holding_transactions(
         return ApiResponse.success_response(
             data=transactions_data,
             message=f"Found {len(transactions_data)} transaction(s) for {symbol}",
-            meta={
-                "total": total,
-                "skip": skip,
-                "limit": limit,
-                "symbol": symbol.upper(),
-            },
+            meta=PaginationMeta.create(page=skip // limit + 1, limit=limit, total=total),
         )
 
     except Exception as e:
@@ -909,7 +902,8 @@ async def calculate_portfolio_irr(
     try:
         # Get user's default portfolio
         portfolio_repo = get_portfolio_repository(session)
-        portfolios = await portfolio_repo.get_user_portfolios(current_user.id)
+        # Returns (portfolios, total); the bare tuple was always truthy.
+        portfolios, _ = await portfolio_repo.get_user_portfolios(current_user.id)
 
         if not portfolios:
             raise HTTPException(

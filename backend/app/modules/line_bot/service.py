@@ -74,7 +74,7 @@ from app.modules.transactions.repositories import (
 )
 from app.modules.users.security import jwt_manager
 from app.utils.exchange_rate_service import ExchangeRateService
-from app.utils.datetime_helpers import business_today
+from app.utils.datetime_helpers import business_day_of, business_now, business_today
 
 logger = logging.getLogger(__name__)
 settings = get_settings()
@@ -2567,10 +2567,14 @@ async def handle_summary_command(
         await _reply(reply_token, "No expenses in this group yet.")
         return
 
-    now = datetime.now(timezone.utc)
+    # The month is the business (Taipei) month: in UTC, the first eight hours
+    # of each month still counted as, and were titled, the previous one.
+    now = business_now()
     month_start = now.replace(day=1, hour=0, minute=0, second=0, microsecond=0)
 
-    expenses = await SharedExpenseRepository(db).get_expenses_since(group.id, month_start)
+    expenses = await SharedExpenseRepository(db).get_expenses_since(
+        group.id, month_start.astimezone(timezone.utc)
+    )
 
     if not expenses:
         await _reply(reply_token, f"No expenses this month ({now.strftime('%B')}).")
@@ -2787,7 +2791,7 @@ async def handle_dm_balance_command(
         await _reply_flex(reply_token, "Link your Aspiro account", _flex_not_linked())
         return
 
-    now = datetime.now(timezone.utc)
+    now = business_now()  # the business month: transaction dates are Taipei days
     month_start = date(now.year, now.month, 1)
     month_end = date(now.year + 1, 1, 1) if now.month == 12 else date(now.year, now.month + 1, 1)
 
@@ -2820,7 +2824,7 @@ async def handle_dm_summary_command(
 
     from app.utils.fx_sql import in_twd
 
-    now = datetime.now(timezone.utc)
+    now = business_now()  # the business month: transaction dates are Taipei days
     month_start = date(now.year, now.month, 1)
     month_end = date(now.year + 1, 1, 1) if now.month == 12 else date(now.year, now.month + 1, 1)
 
@@ -2916,13 +2920,14 @@ async def handle_goals_command(
     )
     goals = result.scalars().all()
 
-    now = datetime.now(timezone.utc)
+    today = business_today()
     goal_rows = [
         {
-            "name": g.name,
+            # Goals have a title, not a name: g.name raised for anyone with a goal.
+            "name": g.title,
             "current_amount": float(g.current_amount),
             "target_amount": float(g.target_amount),
-            "days_left": (g.target_date - now).days if g.target_date else None,
+            "days_left": (business_day_of(g.target_date) - today).days if g.target_date else None,
         }
         for g in goals
     ]

@@ -17,6 +17,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
 from ...core.exceptions import NotFoundException
+from ...utils.datetime_helpers import to_utc
 from .models import (
     Portfolio,
     PortfolioHolding,
@@ -527,8 +528,10 @@ class HoldingRepository:
                 all_lots = await self.get_all_lots_by_symbol(
                     portfolio_id, symbol, user_id
                 )
+                # Compare as UTC: a driver may hand back a naive datetime for a
+                # timezone-aware column, and naive != aware even at the same instant.
                 existing = next(
-                    (lot for lot in all_lots if lot.purchase_date == purchase_date),
+                    (lot for lot in all_lots if to_utc(lot.purchase_date) == to_utc(purchase_date)),
                     None,
                 )
 

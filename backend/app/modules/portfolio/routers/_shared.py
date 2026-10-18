@@ -582,7 +582,7 @@ async def fetch_historical_data_background(symbol: str, market: str, days: int =
     Uses a fresh database session to avoid concurrent operation conflicts.
     """
     try:
-        from ...core.database import async_session
+        from app.core.database import async_session
         from app.modules.portfolio.historical_price_service import (
             get_historical_price_service,
         )

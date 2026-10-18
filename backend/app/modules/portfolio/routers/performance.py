@@ -270,6 +270,8 @@ async def get_time_weighted_return(
             data=twr_data, message="Time-weighted return calculated successfully"
         )
 
+    except HTTPException:
+        raise
     except Exception as e:
         logger.error(
             f"Failed to calculate time-weighted return: {str(e)}", exc_info=True
@@ -343,6 +345,8 @@ async def get_historical_performance(
             message=f"Historical performance data retrieved ({interval} interval)",
         )
 
+    except HTTPException:
+        raise
     except Exception as e:
         logger.error(f"Failed to get historical performance: {str(e)}", exc_info=True)
         raise HTTPException(
@@ -409,6 +413,8 @@ async def get_holding_periods(
             data=periods_data, message="Holding periods analyzed successfully"
         )
 
+    except HTTPException:
+        raise
     except Exception as e:
         logger.error(f"Failed to analyze holding periods: {str(e)}", exc_info=True)
         raise HTTPException(

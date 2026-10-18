@@ -10,7 +10,7 @@ can safely run every day without spamming the same reminder.
 """
 
 import logging
-from datetime import date
+from datetime import date, timedelta
 from decimal import Decimal
 from typing import Optional
 
@@ -67,7 +67,9 @@ async def generate_payment_due_reminders(
 
     created = 0
     for loan in loans:
-        due = _next_payment_date(loan.payment_due_day, today=today)
+        # _next_payment_date(today=X) is strictly after X; asking from yesterday
+        # makes a payment due today count as due today, not next month.
+        due = _next_payment_date(loan.payment_due_day, today=today - timedelta(days=1))
         days_until = (due - today).days
         if days_until < 0 or days_until > days_ahead:
             continue

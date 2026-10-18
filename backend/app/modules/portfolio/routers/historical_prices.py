@@ -103,10 +103,16 @@ async def fetch_all_holdings_historical_prices(
         # Get user's holdings
         holding_repo = get_holding_repository(session)
 
+        # Scoped to the caller: a named portfolio must be theirs, otherwise
+        # the default one. (This called two repository methods that never existed.)
         if portfolio_id:
-            holdings = await holding_repo.get_holdings_by_portfolio(portfolio_id)
+            portfolio = await get_portfolio_repository(session).get_by_id(portfolio_id, current_user.id)
         else:
-            holdings = await holding_repo.get_holdings_by_user(current_user.id)
+            portfolio = await get_portfolio_service(session).get_default_portfolio(current_user.id)
+        holdings = (
+            [h for h in await holding_repo.get_all_lots(portfolio.id, current_user.id) if h.is_active]
+            if portfolio else []
+        )
 
         if not holdings:
             return ApiResponse.success_response(

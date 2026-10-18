@@ -15,6 +15,7 @@ from ._shared import (  # noqa: F401  explicit re-import for underscore-prefixed
 )
 from ..symbols import canonical_symbol
 from app.utils.datetime_helpers import business_today
+from app.core.exceptions import AspiroException
 
 router = APIRouter()
 
@@ -450,6 +451,8 @@ async def get_asset_allocation(
             message="Asset allocation retrieved successfully",
         )
 
+    except AspiroException:
+        raise  # keep 404s etc. instead of masking them as 500
     except Exception as e:
         logger.error(f"Failed to get asset allocation: {str(e)}", exc_info=True)
         raise HTTPException(
@@ -494,6 +497,8 @@ async def get_rebalancing_plan(
             message="Rebalancing plan generated successfully",
         )
 
+    except AspiroException:
+        raise  # keep 404s etc. instead of masking them as 500
     except Exception as e:
         logger.error(f"Failed to generate rebalancing plan: {str(e)}", exc_info=True)
         raise HTTPException(
@@ -535,6 +540,8 @@ async def get_fx_accumulation(
             message="FX accumulation retrieved successfully",
         )
 
+    except AspiroException:
+        raise  # keep 404s etc. instead of masking them as 500
     except Exception as e:
         logger.error(f"Failed to get FX accumulation: {str(e)}", exc_info=True)
         raise HTTPException(
@@ -586,6 +593,8 @@ async def get_rebalancing_alerts(
             message="Rebalancing alerts retrieved successfully",
         )
 
+    except AspiroException:
+        raise  # keep 404s etc. instead of masking them as 500
     except Exception as e:
         logger.error(f"Failed to get rebalancing alerts: {str(e)}", exc_info=True)
         raise HTTPException(
@@ -644,6 +653,8 @@ async def get_rebalancing_dashboard(
 
     except HTTPException:
         raise
+    except AspiroException:
+        raise  # keep 404s etc. instead of masking them as 500
     except Exception as e:
         logger.error(f"Failed to get rebalancing dashboard: {str(e)}", exc_info=True)
         raise HTTPException(
@@ -713,7 +724,7 @@ async def update_target_allocations(
 
         # Store targets in portfolio metadata with full asset details
         # Important: Create a new dict to avoid SQLAlchemy MetaData object issues
-        current_metadata = dict(portfolio.metadata) if portfolio.metadata else {}
+        current_metadata = dict(portfolio.item_metadata) if portfolio.item_metadata else {}
 
         # Store both percentages and asset metadata (name, type)
         current_metadata["target_allocations"] = {
@@ -728,8 +739,8 @@ async def update_target_allocations(
             timezone.utc
         ).isoformat()
 
-        # Assign the updated dict back to portfolio.metadata
-        portfolio.metadata = current_metadata
+        # Assign the updated dict back (a new object, so the JSON column is marked dirty)
+        portfolio.item_metadata = current_metadata
 
         # Commit to database
         await session.commit()
