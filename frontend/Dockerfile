@@ -46,16 +46,15 @@ ENV PORT 3000
 ENV HOSTNAME 0.0.0.0
 
 RUN addgroup --system --gid 1001 nodejs
-RUN adduser --system --uid 1001 nextjs
+RUN adduser --system --uid 1001 nextjs && chown nextjs:nodejs /app
 
-COPY --from=builder /app/public ./public
-COPY --from=builder /app/.next/standalone ./
-COPY --from=builder /app/.next/static ./.next/static
+COPY --chown=nextjs:nodejs --from=builder /app/public ./public
+COPY --chown=nextjs:nodejs --from=builder /app/.next/standalone ./
+COPY --chown=nextjs:nodejs --from=builder /app/.next/static ./.next/static
 # Adds the target's @img/sharp-* binaries beside whatever the builder traced; sharp
 # loads the one matching the CPU it runs on.
-COPY --from=sharp /sharp/node_modules/@img ./node_modules/@img
+COPY --chown=nextjs:nodejs --from=sharp /sharp/node_modules/@img ./node_modules/@img
 
-RUN chown -R nextjs:nodejs /app
 USER nextjs
 
 ARG GIT_SHA=unknown

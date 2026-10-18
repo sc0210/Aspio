@@ -1,3 +1,6 @@
+# The tests cover the FinLab path too.
+-r requirements-finlab.txt
+
 # Testing
 pytest==9.1.1
 pytest-asyncio>=1.4.0,<2.0

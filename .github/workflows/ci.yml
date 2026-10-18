@@ -192,6 +192,7 @@ jobs:
           cache-dependency-path: |
             backend/requirements.txt
             backend/requirements-dev.txt
+            backend/requirements-finlab.txt
       - run: pip install -r requirements.txt -r requirements-dev.txt
       # Runs on an in-memory SQLite DB (see tests/conftest.py) — no external
       # services needed.

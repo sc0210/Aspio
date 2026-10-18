@@ -75,6 +75,7 @@ x-backend-environment: &backend-environment
   - GOOGLE_REDIRECT_URI=https://${APP_DOMAIN:?APP_DOMAIN is required - the public hostname (see production.env.sample)}/api/auth/callback/google
   - LINE_CHANNEL_SECRET=${LINE_CHANNEL_SECRET:-}
   - LINE_CHANNEL_ACCESS_TOKEN=${LINE_CHANNEL_ACCESS_TOKEN:-}
+  - FINLAB_API_TOKEN=${FINLAB_API_TOKEN:-}
   - FRONTEND_URL=https://${APP_DOMAIN:?APP_DOMAIN is required - the public hostname (see production.env.sample)}
   # The self-hosted quickchart container is omitted here (its image is amd64-only,
   # and a Pi cannot run it under emulation at a useful speed). This is therefore the
@@ -128,6 +129,9 @@ services:
       args:
         # Exported by scripts/aspiro; reported by /health.
         - GIT_SHA=${GIT_SHA:-unknown}
+        # FinLab and its ~300MB of pyarrow/scipy go into the image only when .env has
+        # a FinLab token (or INSTALL_FINLAB=true); without one the app never uses it.
+        - INSTALL_FINLAB=${INSTALL_FINLAB:-${FINLAB_API_TOKEN:+true}}
     container_name: aspiro-backend
     environment: *backend-environment
     depends_on:

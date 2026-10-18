@@ -1,3 +1,12 @@
+# Local virtualenvs: the image builds its own in /opt/venv
+.venv
+venv
+.mypy_cache
+.ruff_cache
+
+# Runtime data (a named volume in production)
+uploads/
+
 # Python bytecode
 __pycache__
 *.pyc

@@ -51,7 +51,8 @@ pytz==2026.5
 
 # Market Data APIs
 yfinance==0.2.66
-finlab==2.2.1
+# finlab (Taiwan market data) is in requirements-finlab.txt: it pulls in pyarrow and
+# scipy (~300MB) and only runs when FINLAB_API_TOKEN is set; Yahoo covers TW otherwise.
 
 # Receipt OCR — runs locally against the tesseract binaries installed in the
 # image (see Dockerfile). Deliberately not a cloud OCR service: the Pi that
