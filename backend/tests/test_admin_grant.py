@@ -42,6 +42,19 @@ class TestGrantAdmin:
         assert login.access_token
 
     @pytest.mark.asyncio
+    async def test_leaves_a_suspended_account_blocked(self, async_session):
+        await _register(async_session, "owner@example.com")
+        user = await _user(async_session, "owner@example.com")
+        user.status = UserStatus.SUSPENDED
+        user.is_active = False
+        await async_session.commit()
+
+        await grant_admin(async_session, "owner@example.com", "super_admin")
+
+        await async_session.refresh(user)
+        assert user.status == UserStatus.SUSPENDED and not user.is_active
+
+    @pytest.mark.asyncio
     async def test_matches_the_email_regardless_of_case(self, async_session):
         await _register(async_session, "owner@example.com")
         assert await grant_admin(async_session, "  Owner@Example.COM ", "admin") is not None

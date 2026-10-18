@@ -32,7 +32,8 @@ async def grant_admin(session: AsyncSession, email: str, role: str) -> Optional[
     if not user:
         return None
 
-    if user.status == UserStatus.PENDING_APPROVAL or not user.is_active:
+    # Only a pending registration: a suspended or deactivated account stays blocked.
+    if user.status == UserStatus.PENDING_APPROVAL:
         user.status = UserStatus.ACTIVE
         user.is_active = True
         await session.commit()
