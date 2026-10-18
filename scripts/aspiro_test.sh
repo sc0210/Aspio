@@ -104,6 +104,9 @@ case "$1" in
             cur=$(get aspiro-frontend:latest)
             if [ -z "${FAKE_FRONTEND_HEALTHY_ID:-}" ] || [ "$cur" = "$FAKE_FRONTEND_HEALTHY_ID" ]; then exit 0; fi
             exit 1 ;;
+          *backend*create_admin.py*)
+            # FAKE_ADMIN_RC=1: the script found no account with that email.
+            exit "${FAKE_ADMIN_RC:-0}" ;;
           *pg_dump*)
             echo '-- PostgreSQL database dump'
             i=0; while [ $i -lt 50 ]; do echo "INSERT INTO t VALUES ($i);"; i=$((i+1)); done
@@ -178,6 +181,7 @@ pg=$(aspiro_env_get "$d/.env" POSTGRES_PASSWORD)
 expect "POSTGRES_PASSWORD is 48 hex chars" eval '[[ "$pg" =~ ^[0-9a-f]{48}$ ]]'
 expect "tunnel token enables the tunnel profile" has "$d/.env" 'COMPOSE_PROFILES=tunnel'
 expect "Google redirect URI is printed" has "$work/out" 'https://aspiro.example.com/api/auth/callback/google'
+expect "...and how to make yourself admin" has "$work/out" 'aspiro admin grant <your email>'
 mode=$(file_mode "$d/.env")
 expect ".env is mode 600" [ "$mode" = 600 ]
 expect "no temp file left behind" eval '[ -z "$(ls "$d" | grep "\.env\.new")" ]'
@@ -459,6 +463,24 @@ expect "a missing gpg fails the backup too" [ $? -ne 0 ]
 run_cli "$d" "$work/bin" status
 expect "status succeeds" [ "$rc" -eq 0 ]
 expect "status shows health" has "$work/out" '"status":"healthy"'
+
+echo "admin"
+: > "$STUB_LOG"
+run_cli "$d" "$work/bin" admin grant owner@example.com
+expect "admin grant succeeds" [ "$rc" -eq 0 ]
+expect "...runs the grant in the backend, super_admin by default" \
+  has "$STUB_LOG" 'exec -T backend python scripts/create_admin.py grant owner@example.com --role super_admin'
+run_cli "$d" "$work/bin" admin grant ops@example.com support
+expect "...passes an explicit role" has "$STUB_LOG" 'create_admin.py grant ops@example.com --role support'
+(export FAKE_ADMIN_RC=1; run_cli "$d" "$work/bin" admin grant nobody@example.com; exit "$rc")
+expect "a grant for an unregistered email fails" [ $? -ne 0 ]
+run_cli "$d" "$work/bin" admin list
+expect "admin list succeeds" [ "$rc" -eq 0 ]
+expect "...and runs the list in the backend" has "$STUB_LOG" 'exec -T backend python scripts/create_admin.py list'
+run_cli "$d" "$work/bin" admin grant
+expect "admin grant without an email fails" [ "$rc" -ne 0 ]
+run_cli "$d" "$work/bin" admin
+expect "admin without a subcommand fails" [ "$rc" -ne 0 ]
 
 run_cli "$d" "$work/bin" frobnicate
 expect "unknown command fails" [ "$rc" -ne 0 ]

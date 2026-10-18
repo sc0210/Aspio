@@ -12,6 +12,8 @@
 #                 --init lets migrations build an empty database: a first install
 #                 only, never inferred (a lost volume must fail, not start empty)
 #   aspiro backup [--dir DIR] [--keep N]
+#   aspiro admin grant EMAIL [ROLE]   make a registered account an admin (default
+#                 super_admin; approves it if pending)   |   aspiro admin list
 #   aspiro status
 #
 # Runs from the git checkout that holds docker-compose.pi.yml. Nothing is published
@@ -40,7 +42,7 @@ warn() { printf 'WARNING: %s\n' "$*" >&2; }
 die()  { printf 'ERROR: %s\n' "$*" >&2; exit 1; }
 
 usage() {
-  sed -n '2,15p' "${BASH_SOURCE[0]}" | sed 's/^# \{0,1\}//'
+  sed -n '2,17p' "${BASH_SOURCE[0]}" | sed 's/^# \{0,1\}//'
 }
 
 # --- pure helpers (unit-tested) ------------------------------------------------------
@@ -286,6 +288,7 @@ cmd_setup() {
   fi
   if [ "$existing" -eq 0 ]; then
     log "next: aspiro update --init   (--init on this first install only)"
+    log "then: register at https://$domain, and make yourself admin: aspiro admin grant <your email>"
   else
     # An existing install: never suggest --init, which would rebuild an empty database.
     log "next: aspiro update   (or 'docker compose up -d' if only settings changed)"
@@ -526,6 +529,25 @@ cmd_backup() {
 
 # --- status --------------------------------------------------------------------------
 
+# --- admin ---------------------------------------------------------------------------
+
+cmd_admin() {
+  aspiro_require_env
+  local sub=${1:-}
+  [ $# -gt 0 ] && shift
+  case "$sub" in
+    grant)
+      local email=${1:-} role=${2:-super_admin}
+      [ -n "$email" ] || die "usage: aspiro admin grant <email> [role]"
+      compose exec -T backend python scripts/create_admin.py grant "$email" --role "$role"
+      ;;
+    list)
+      compose exec -T backend python scripts/create_admin.py list
+      ;;
+    *) die "usage: aspiro admin grant <email> [role]  |  aspiro admin list" ;;
+  esac
+}
+
 cmd_status() {
   aspiro_require_env
   local state="$ASPIRO_DIR/.aspiro-state" svc
@@ -558,6 +580,7 @@ main() {
     update) cmd_update "$@" ;;
     backup) cmd_backup "$@" ;;
     status) cmd_status "$@" ;;
+    admin) cmd_admin "$@" ;;
     version|--version) echo "aspiro CLI $ASPIRO_VERSION_CLI" ;;
     ""|-h|--help|help) usage ;;
     *) usage >&2; die "unknown command '$cmd'" ;;
