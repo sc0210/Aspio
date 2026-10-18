@@ -25,7 +25,7 @@ NOTE: this migration originally created a `backend_access` policy
 `FOR ALL USING (true) WITH CHECK (true)` *without* a `TO postgres` clause, so it
 defaulted to PUBLIC and actually GRANTED anon/authenticated full access via
 PostgREST (Supabase lint 0024 / rls_policy_always_true). It now enables RLS and
-drops that policy instead of creating it. See migrations/enable_rls_all_tables.sql.
+drops that policy instead of creating it. See scripts/enable_rls_all_tables.sql.
 """
 from alembic import op
 
