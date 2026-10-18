@@ -6,7 +6,6 @@ Schema migrations live in backend/alembic/, not here.
 
 Components:
 - base.py: SQLAlchemy base models and model registration
-- session.py: Database session management utilities
 """
 
 from .base import Base, BaseModel, import_all_models

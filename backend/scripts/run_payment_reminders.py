@@ -25,7 +25,7 @@ from app.database.base import import_all_models  # noqa: E402
 
 import_all_models()  # register every mapper before any query runs
 
-from app.database.session import AsyncSessionLocal  # noqa: E402
+from app.core.database import async_session  # noqa: E402
 from app.modules.loans.reminders import (  # noqa: E402
     DEFAULT_DAYS_AHEAD,
     generate_payment_due_reminders,
@@ -36,7 +36,7 @@ logger = logging.getLogger("run_payment_reminders")
 
 
 async def main(days_ahead: int) -> None:
-    async with AsyncSessionLocal() as session:
+    async with async_session() as session:
         created = await generate_payment_due_reminders(session, days_ahead=days_ahead)
         await session.commit()
     logger.info("Done: created %d payment-due notification(s)", created)

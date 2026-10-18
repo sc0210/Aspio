@@ -18,7 +18,7 @@ from apscheduler.events import EVENT_JOB_ERROR, EVENT_JOB_EXECUTED
 from sqlalchemy import select, text
 
 from app.core.database import engine
-from app.database.session import AsyncSessionLocal
+from app.core.database import async_session
 from app.modules.portfolio.price_update_service import PriceUpdateService
 from app.modules.portfolio.historical_price_service import HistoricalPriceService
 from app.modules.portfolio.models import PortfolioHolding
@@ -48,7 +48,7 @@ async def update_all_users_prices(market: str = "ALL"):
     """
     logger.info(f"Starting scheduled price update for market: {market}")
 
-    async with AsyncSessionLocal() as session:
+    async with async_session() as session:
         try:
             # Get all active users with holdings
             if market == "ALL":
@@ -97,7 +97,7 @@ async def sync_historical_data_for_all_users(days: int = 7):
     """
     logger.info(f"Starting scheduled historical data sync ({days} days)")
 
-    async with AsyncSessionLocal() as session:
+    async with async_session() as session:
         try:
             # Get all distinct symbols with their markets
             query = (
@@ -196,7 +196,7 @@ async def send_payment_due_reminders():
     from app.modules.loans.reminders import generate_payment_due_reminders
 
     logger.info("Starting scheduled payment-due reminder scan")
-    async with AsyncSessionLocal() as session:
+    async with async_session() as session:
         try:
             created = await generate_payment_due_reminders(session)
             await session.commit()
@@ -215,7 +215,7 @@ async def send_spending_alerts():
     from app.modules.transactions.spending_alerts import generate_spending_alerts
 
     logger.info("Starting scheduled spending-alert scan")
-    async with AsyncSessionLocal() as session:
+    async with async_session() as session:
         try:
             created = await generate_spending_alerts(session)
             await session.commit()

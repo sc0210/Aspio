@@ -15,7 +15,7 @@ from pathlib import Path
 sys.path.insert(0, str(Path(__file__).parent.parent))
 
 from sqlalchemy import select
-from app.database.session import get_db_session
+from app.core.database import get_db
 from app.modules.users.models import User
 from app.modules.admin.models import AdminUser, AdminRole
 
@@ -23,7 +23,7 @@ from app.modules.admin.models import AdminUser, AdminRole
 async def create_admin_user(email: str, role: str = "super_admin"):
     """Create or update admin user by email."""
 
-    async for session in get_db_session():
+    async for session in get_db():
         try:
             # Find user by email
             result = await session.execute(
@@ -76,7 +76,7 @@ async def create_admin_user(email: str, role: str = "super_admin"):
 
 async def list_admins():
     """List all existing admin users."""
-    async for session in get_db_session():
+    async for session in get_db():
         try:
             result = await session.execute(
                 select(AdminUser, User)

@@ -319,7 +319,7 @@ class PortfolioService:
                     from app.modules.portfolio.market_data_service import (
                         get_market_data_service as get_mds,
                     )
-                    from app.database.session import AsyncSessionLocal
+                    from app.core.database import async_session
 
                     settings = get_settings()
                     market_data_service = get_mds(
@@ -338,7 +338,7 @@ class PortfolioService:
 
                     if current_price and current_price > 0:
                         # Update in a new database session
-                        async with AsyncSessionLocal() as bg_session:
+                        async with async_session() as bg_session:
                             from app.modules.portfolio.repositories import (
                                 HoldingRepository,
                             )

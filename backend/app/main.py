@@ -118,9 +118,9 @@ async def lifespan(app: FastAPI):
 
     # Initialize admin users
     try:
-        from app.database.session import get_db_session
+        from app.core.database import get_db
 
-        async for session in get_db_session():
+        async for session in get_db():
             await init_admin_users(session)
             logger.info("Admin users initialized")
             break
@@ -129,10 +129,10 @@ async def lifespan(app: FastAPI):
 
     # Initialize demo user
     try:
-        from app.database.session import get_db_session
+        from app.core.database import get_db
         from app.modules.users.init_demo_user import init_demo_user
 
-        async for session in get_db_session():
+        async for session in get_db():
             await init_demo_user(session)
             break
     except Exception as e:
@@ -140,10 +140,10 @@ async def lifespan(app: FastAPI):
 
     # Seed demo user's portfolio + transactions
     try:
-        from app.database.session import get_db_session
+        from app.core.database import get_db
         from app.modules.users.init_demo_data import init_demo_data
 
-        async for session in get_db_session():
+        async for session in get_db():
             await init_demo_data(session)
             break
     except Exception as e:

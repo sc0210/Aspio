@@ -17,7 +17,7 @@ from app.modules.transactions.models import TransactionType
 from app.utils.fx_sql import to_twd
 from app.modules.portfolio.repositories import PortfolioRepository
 from app.modules.users.repositories import UserRepository
-from app.database.session import AsyncSession
+from sqlalchemy.ext.asyncio import AsyncSession
 from app.utils.date_utils import DateRangeCalculator
 from .schemas import (
     PeriodEnum,

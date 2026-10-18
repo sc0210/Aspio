@@ -90,7 +90,7 @@ async def test_the_write_path_drops_a_bar_for_an_open_session(monkeypatch):
     async def _one_session():
         yield MagicMock()
 
-    monkeypatch.setattr(svc, "get_db_session", _one_session, raising=False)
+    monkeypatch.setattr(svc, "get_db", _one_session)
 
     result = await service.fetch_and_store_historical_data(
         "VT", "US", date(2026, 9, 14), MONDAY, force_refresh=True
