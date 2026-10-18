@@ -1,6 +1,6 @@
 import localFont from 'next/font/local';
 import { Providers } from './providers';
-import { DemoBanner } from '@/components/demo/DemoBanner';
+import { DemoBanner } from '@/components/layout/DemoBanner';
 import { AnalyticsConsentBanner } from '@/components/analytics/AnalyticsConsentBanner';
 import { AnalyticsBootstrap } from '@/components/analytics/AnalyticsBootstrap';
 import { GlobalErrorBoundary } from '@/components/errors/GlobalErrorBoundary';

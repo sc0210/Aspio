@@ -4,7 +4,7 @@ import i18n from 'i18next';
 import { initReactI18next } from 'react-i18next';
 import authEn from '@/locales/en/auth.json';
 import commonEn from '@/locales/en/common.json';
-import { DemoBanner } from '@/components/demo/DemoBanner';
+import { DemoBanner } from '@/components/layout/DemoBanner';
 import { useDemo } from '@/contexts/DemoContext';
 
 // The banner's copy all comes from i18n keys. lib/i18n never initialises under
