@@ -11,6 +11,7 @@ docstring is the authoritative usage; this is only an index.
 | `prod_sql/` | Idempotent SQL for each schema change, applied by hand on prod, then `alembic stamp head`. `_verify_pending.sql` reports what a DB is missing |
 | `seed/` | Reference data (`categories.sql`, `currencies.sql`) |
 | `add_performance_indexes.py` | Adds dashboard query indexes not covered by Alembic |
+| `enable_rls_all_tables.sql` | The 2026-05 baseline that turned on row-level security for every table then in the schema; the RLS migrations since build on it. Not idempotent |
 
 ## One-shot jobs
 

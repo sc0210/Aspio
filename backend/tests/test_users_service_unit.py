@@ -63,7 +63,7 @@ def make_mock_user(
 
 def make_service(session=None):
     """Create a UserService with all repos mocked."""
-    mock_session = session or MagicMock()
+    mock_session = session or MagicMock(commit=AsyncMock(), refresh=AsyncMock())
 
     with (
         patch("app.modules.users.services.get_user_repository") as mock_user_repo_factory,
@@ -441,6 +441,17 @@ class TestGetUserProfile:
 # ─── UserService.update_user_profile ─────────────────────────────────────────
 
 class TestUpdateUserProfile:
+
+    @pytest.mark.asyncio
+    async def test_monthly_income_rounds_to_cents(self):
+        # 19.99 * 100 is 1998.999… in floating point; truncating it lost a cent.
+        svc = make_service()
+        svc.user_repo.update_user = AsyncMock(return_value=make_mock_user())
+
+        with patch("app.modules.users.schemas.UserProfileResponse.model_validate", return_value=MagicMock()):
+            await svc.update_user_profile(uuid4(), UserUpdate(monthly_income=19.99))
+
+        assert svc.user_repo.update_user.call_args.args[1]["monthly_income"] == 1999
 
     @pytest.mark.asyncio
     async def test_update_success(self):

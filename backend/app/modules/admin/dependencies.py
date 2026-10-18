@@ -8,7 +8,7 @@ from typing import Optional
 from fastapi import Depends, HTTPException, status, Request
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.database.session import get_db_session
+from app.core.database import get_db
 from app.modules.users.dependencies import (
     get_current_active_user as get_current_user,
     get_optional_current_user
@@ -19,7 +19,7 @@ from .models import AdminUser, AdminPermission, AdminRole
 from .repositories import AdminRepository
 
 
-async def get_admin_repository(session: AsyncSession = Depends(get_db_session)) -> AdminRepository:
+async def get_admin_repository(session: AsyncSession = Depends(get_db)) -> AdminRepository:
     """Get admin repository instance"""
     return AdminRepository(session)
 

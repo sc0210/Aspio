@@ -10,7 +10,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from typing import Optional, List
 from uuid import UUID
 
-from app.database.session import get_db_session
+from app.core.database import get_db
 from app.common.schemas import ApiResponse
 from .dependencies import (
     get_current_admin,
@@ -58,7 +58,7 @@ async def list_users(
     skip: int = Query(0, ge=0),
     limit: int = Query(50, ge=1, le=200),
     current_admin: AdminUser = Depends(require_view_users),
-    session: AsyncSession = Depends(get_db_session),
+    session: AsyncSession = Depends(get_db),
 ):
     """
     List all users with filtering and search.
@@ -91,7 +91,7 @@ async def list_users(
 async def get_user_details(
     user_id: UUID = Path(..., description="User ID"),
     current_admin: AdminUser = Depends(require_view_users),
-    session: AsyncSession = Depends(get_db_session),
+    session: AsyncSession = Depends(get_db),
 ):
     """
     Get detailed information about a specific user.
@@ -118,7 +118,7 @@ async def get_user_details(
 async def toggle_user_active(
     user_id: UUID = Path(..., description="User ID"),
     current_admin: AdminUser = Depends(require_super_admin),
-    session: AsyncSession = Depends(get_db_session),
+    session: AsyncSession = Depends(get_db),
 ):
     """
     Toggle user active/inactive status.
@@ -151,7 +151,7 @@ async def toggle_user_active(
 async def delete_user(
     user_id: UUID = Path(..., description="User ID to delete"),
     current_admin: AdminUser = Depends(require_super_admin),
-    session: AsyncSession = Depends(get_db_session),
+    session: AsyncSession = Depends(get_db),
 ):
     """
     Delete a user and all associated data.
@@ -203,7 +203,7 @@ async def get_user_api_usage(
     user_id: UUID = Path(...),
     days: int = Query(7, ge=1, le=90, description="Number of days to analyze"),
     current_admin: AdminUser = Depends(require_view_analytics),
-    session: AsyncSession = Depends(get_db_session),
+    session: AsyncSession = Depends(get_db),
 ):
     """
     Get API usage statistics for a specific user.
@@ -234,7 +234,7 @@ async def get_pending_users(
     skip: int = Query(0, ge=0),
     limit: int = Query(50, ge=1, le=100),
     current_admin: AdminUser = Depends(require_view_users),
-    session: AsyncSession = Depends(get_db_session),
+    session: AsyncSession = Depends(get_db),
 ):
     """
     Get all users pending approval.
@@ -257,7 +257,7 @@ async def get_pending_users(
 async def approve_user(
     user_id: UUID = Path(..., description="User ID to approve"),
     current_admin: AdminUser = Depends(require_super_admin),
-    session: AsyncSession = Depends(get_db_session),
+    session: AsyncSession = Depends(get_db),
 ):
     """
     Approve a pending user and activate their account.
@@ -290,7 +290,7 @@ async def reject_user(
     user_id: UUID = Path(..., description="User ID to reject"),
     reason: Optional[str] = Query(None, description="Rejection reason"),
     current_admin: AdminUser = Depends(require_super_admin),
-    session: AsyncSession = Depends(get_db_session),
+    session: AsyncSession = Depends(get_db),
 ):
     """
     Reject a pending user and delete their account.
@@ -341,7 +341,7 @@ async def reject_user(
 async def bulk_approve_users(
     user_ids: List[UUID],
     current_admin: AdminUser = Depends(require_super_admin),
-    session: AsyncSession = Depends(get_db_session),
+    session: AsyncSession = Depends(get_db),
 ):
     """
     Bulk approve multiple pending users.
@@ -400,7 +400,7 @@ async def bulk_approve_users(
 async def bulk_delete_users(
     user_ids: List[UUID],
     current_admin: AdminUser = Depends(require_super_admin),
-    session: AsyncSession = Depends(get_db_session),
+    session: AsyncSession = Depends(get_db),
 ):
     """
     Bulk delete multiple users.
@@ -457,7 +457,7 @@ async def bulk_delete_users(
 async def vacuum_database(
     table: Optional[str] = Query(None, description="Table to vacuum; omit to vacuum all tables"),
     current_admin: AdminUser = Depends(require_super_admin),
-    session: AsyncSession = Depends(get_db_session),
+    session: AsyncSession = Depends(get_db),
 ):
     """
     Run VACUUM ANALYZE on a specific table or all tables.
@@ -489,7 +489,7 @@ async def vacuum_database(
 @router.get("/database/cleanup-preview", response_model=ApiResponse)
 async def cleanup_preview(
     current_admin: AdminUser = Depends(require_super_admin),
-    session: AsyncSession = Depends(get_db_session),
+    session: AsyncSession = Depends(get_db),
 ):
     """
     Preview counts of stale data that can be safely cleaned (no changes made).
@@ -510,7 +510,7 @@ async def cleanup_preview(
 @router.post("/database/cleanup", response_model=ApiResponse)
 async def run_cleanup(
     current_admin: AdminUser = Depends(require_super_admin),
-    session: AsyncSession = Depends(get_db_session),
+    session: AsyncSession = Depends(get_db),
 ):
     """
     Permanently remove stale/dummy data. Demo user data is protected and never touched.
@@ -541,7 +541,7 @@ async def run_cleanup(
 @router.get("/stats/system", response_model=ApiResponse)
 async def get_system_stats(
     current_admin: AdminUser = Depends(get_current_admin),
-    session: AsyncSession = Depends(get_db_session),
+    session: AsyncSession = Depends(get_db),
 ):
     """
     Get overall system statistics.
@@ -575,7 +575,7 @@ async def get_system_stats(
 @router.get("/stats/database", response_model=ApiResponse)
 async def get_database_stats(
     current_admin: AdminUser = Depends(require_view_system_stats),
-    session: AsyncSession = Depends(get_db_session),
+    session: AsyncSession = Depends(get_db),
 ):
     """
     Get database performance and usage statistics.
@@ -602,7 +602,7 @@ async def get_database_stats(
 async def get_api_usage_stats(
     hours: int = Query(24, ge=1, le=168, description="Hours to analyze"),
     current_admin: AdminUser = Depends(require_view_analytics),
-    session: AsyncSession = Depends(get_db_session),
+    session: AsyncSession = Depends(get_db),
 ):
     """
     Get API usage statistics across all users.
@@ -637,7 +637,7 @@ async def get_audit_logs(
     skip: int = Query(0, ge=0),
     limit: int = Query(50, ge=1, le=100),
     current_admin: AdminUser = Depends(require_view_system_stats),
-    session: AsyncSession = Depends(get_db_session),
+    session: AsyncSession = Depends(get_db),
 ):
     """
     Get admin action audit logs.
@@ -668,7 +668,7 @@ async def get_audit_logs(
 @router.get("/health/detailed", response_model=ApiResponse)
 async def get_detailed_health(
     current_admin: AdminUser = Depends(require_view_system_stats),
-    session: AsyncSession = Depends(get_db_session),
+    session: AsyncSession = Depends(get_db),
 ):
     """
     Get detailed system health check.
@@ -701,7 +701,7 @@ async def list_admins(
     limit: int = Query(50, ge=1, le=100),
     is_active: Optional[bool] = Query(None),
     current_admin: AdminUser = Depends(require_super_admin),
-    session: AsyncSession = Depends(get_db_session),
+    session: AsyncSession = Depends(get_db),
 ):
     """
     List all admin users.
@@ -722,7 +722,7 @@ async def create_admin(
     user_id: UUID,
     role: str,
     current_admin: AdminUser = Depends(require_super_admin),
-    session: AsyncSession = Depends(get_db_session),
+    session: AsyncSession = Depends(get_db),
 ):
     """
     Create new admin user.

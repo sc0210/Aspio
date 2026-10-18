@@ -16,6 +16,7 @@ from .historical_price_repository import HistoricalPriceRepository
 from .market_data_service import MarketDataService
 from .symbols import canonical_symbol
 from app.core.config import get_settings
+from app.core.database import get_db
 from app.utils.market_sessions import session_closed
 from app.utils.datetime_helpers import business_today
 
@@ -87,9 +88,8 @@ class HistoricalPriceService:
             # Check what data we already have (unless force refresh)
             if not force_refresh:
                 # Use a separate session to avoid concurrent operations error
-                from ...database.session import get_db_session
 
-                async for check_session in get_db_session():
+                async for check_session in get_db():
                     check_repo = HistoricalPriceRepository(check_session)
                     missing_ranges = await check_repo.get_missing_date_ranges(
                         symbol, start_date, end_date
@@ -183,10 +183,9 @@ class HistoricalPriceService:
             # Bulk upsert to database using a fresh session/repository to avoid
             # AsyncSession concurrency conflicts when this method is invoked
             # concurrently from update routines.
-            from ...database.session import get_db_session
 
             records_stored = 0
-            async for db_session in get_db_session():
+            async for db_session in get_db():
                 repo = HistoricalPriceRepository(db_session)
                 records_stored = await repo.bulk_upsert_prices(price_records)
                 break

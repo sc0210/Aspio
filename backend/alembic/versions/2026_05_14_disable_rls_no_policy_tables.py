@@ -14,7 +14,7 @@ PostgREST/anon access — which is the intent.
 NOTE: this migration originally created a permissive `backend_access` policy
 (`FOR ALL TO postgres USING (true) WITH CHECK (true)`). Even scoped to postgres
 this is the always-true anti-pattern (Supabase lint 0024); it's dropped rather
-than created now, matching migrations/enable_rls_all_tables.sql.
+than created now, matching scripts/enable_rls_all_tables.sql.
 
 DO blocks make each statement safe to run locally where these tables may
 not exist.

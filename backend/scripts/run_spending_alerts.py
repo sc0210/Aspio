@@ -27,7 +27,7 @@ from app.database.base import import_all_models  # noqa: E402
 
 import_all_models()  # register every mapper before any query runs
 
-from app.database.session import AsyncSessionLocal  # noqa: E402
+from app.core.database import async_session  # noqa: E402
 from app.modules.transactions.spending_alerts import (  # noqa: E402
     DEFAULT_THRESHOLD,
     generate_spending_alerts,
@@ -38,7 +38,7 @@ logger = logging.getLogger("run_spending_alerts")
 
 
 async def main(threshold: Decimal) -> None:
-    async with AsyncSessionLocal() as session:
+    async with async_session() as session:
         created = await generate_spending_alerts(session, threshold=threshold)
         await session.commit()
     logger.info("Done: created %d spending alert(s)", created)
