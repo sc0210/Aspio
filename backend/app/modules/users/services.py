@@ -399,7 +399,7 @@ class UserService:
 
             # The column stores cents; the API takes dollars
             if update_dict.get('monthly_income') is not None:
-                update_dict['monthly_income'] = int(update_dict['monthly_income'] * 100)
+                update_dict['monthly_income'] = round(update_dict['monthly_income'] * 100)
 
             # Update user
             updated_user = await self.user_repo.update_user(user_id, update_dict)
