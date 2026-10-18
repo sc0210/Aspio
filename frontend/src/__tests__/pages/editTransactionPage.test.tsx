@@ -319,7 +319,7 @@ describe('EditTransactionPage — Invest Mode Validation', () => {
     fireEvent.change(screen.getByPlaceholderText(/e\.g\. 0050/i), { target: { value: '' } });
     fireEvent.click(screen.getByText('Update Investment Transaction'));
 
-    await waitFor(() => expect(screen.getByText('Enter symbol')).toBeInTheDocument());
+    await waitFor(() => expect(screen.getByText('Enter a symbol')).toBeInTheDocument());
     expect(mockUpdateTransaction).not.toHaveBeenCalled();
   });
 
@@ -339,7 +339,7 @@ describe('EditTransactionPage — Invest Mode Validation', () => {
     fireEvent.change(screen.getByPlaceholderText('100.00'), { target: { value: '0' } });
     fireEvent.click(screen.getByText('Update Investment Transaction'));
 
-    await waitFor(() => expect(screen.getByText('Enter price')).toBeInTheDocument());
+    await waitFor(() => expect(screen.getByText('Enter price per unit')).toBeInTheDocument());
     expect(mockUpdateTransaction).not.toHaveBeenCalled();
   });
 });
