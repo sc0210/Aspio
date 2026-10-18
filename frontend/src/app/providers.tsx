@@ -1,5 +1,7 @@
 'use client';
 
+import '@/lib/service-worker'; // registers /sw.js (prod) or clears stale workers (dev)
+
 import React, { useState, useEffect } from 'react';
 import { QueryClient, QueryClientProvider, focusManager } from '@tanstack/react-query';
 import { SessionProvider } from 'next-auth/react';
