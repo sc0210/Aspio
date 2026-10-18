@@ -76,6 +76,8 @@ git clone https://github.com/sc0210/Aspio.git /opt/aspiro && cd /opt/aspiro
 scripts/aspiro setup            # asks for your hostname, Google OAuth client and tunnel/Tailscale key
 scripts/aspiro update --init    # first install: builds, initialises the database, starts
 scripts/aspiro status
+# register in the app, then make yourself admin:
+scripts/aspiro admin grant you@example.com
 ```
 
 Later, `scripts/aspiro update` pulls, rebuilds and restarts, and rolls back if the database

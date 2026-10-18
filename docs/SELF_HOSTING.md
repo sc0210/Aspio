@@ -103,6 +103,25 @@ The first build compiles Caddy from source and the frontend from scratch: a few 
 x86, much longer on a Pi. Then `https://aspiro.example.com/` should load and
 `https://aspiro.example.com/api/v1/users/me` should answer `401`.
 
+### Make yourself admin
+
+New accounts wait for an admin to approve them, so the first admin is made from the
+command line. Register at `https://aspiro.example.com/` with your own email, then:
+
+```bash
+scripts/aspiro admin grant you@example.com              # super_admin by default
+scripts/aspiro admin grant helper@example.com support   # roles: super_admin, admin, moderator, analyst, support
+scripts/aspiro admin list
+```
+
+`grant` approves the account if it is still pending and gives it the role; sign out and back
+in to see `/admin`. From then on, approve users and manage other admins on the admin page.
+Do it after your own registration succeeded: that proves nobody else registered your email.
+
+`ADMIN_EMAILS=you@example.com:super_admin` in `.env` does the same at every backend start.
+Use it only on a private (tailnet-only) instance: on a public one, whoever registers a listed
+email first becomes admin at the next restart.
+
 ### Updates
 
 ```bash
@@ -198,6 +217,8 @@ update and restore that backup when rolling back across a schema change.
       Cloudflare, or remove the machine in the Tailscale admin console and set a new auth key;
       changing `POSTGRES_PASSWORD` also needs an `ALTER USER` in Postgres.
 - [ ] Postgres listens on loopback only, and no router port is forwarded.
+- [ ] `aspiro admin list` shows only the admins you expect, and a public instance leaves
+      `ADMIN_EMAILS` unset.
 - [ ] Public instances (Cloudflare, or Tailscale with Funnel): put **Cloudflare Access** in
       front of `/admin*` and `/api/v1/admin*`. Funnel has no equivalent, so a public Funnel
       instance relies on the app's own admin checks. A tailnet-only instance is private already.

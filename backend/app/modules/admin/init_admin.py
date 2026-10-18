@@ -1,114 +1,80 @@
 """
-Admin initialization script.
-
-Automatically creates admin accounts based on environment configuration.
-Run this on application startup to ensure admin accounts exist.
+Granting admin roles outside the admin panel: the ADMIN_EMAILS setting, applied at
+startup, and scripts/create_admin.py (`aspiro admin grant`). Both go through
+grant_admin, so they approve the account and set the role the same way.
 """
-
 import logging
-from sqlalchemy import select
+from typing import Optional
+
+from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.config import get_settings
-from app.modules.users.models import User
-from .models import AdminRole
+from app.modules.users.models import User, UserStatus
+from .models import AdminRole, AdminUser
 from .repositories import AdminRepository
 
 logger = logging.getLogger(__name__)
 settings = get_settings()
 
 
+async def grant_admin(session: AsyncSession, email: str, role: str) -> Optional[AdminUser]:
+    """Make the account registered as `email` an active admin with `role`.
+
+    A registration still pending approval is approved, as AdminService.approve_user
+    does, so the new admin can log in. Returns None when no account has that email.
+    Raises ValueError for an unknown role.
+    """
+    role = AdminRole(role).value
+    user = (
+        await session.execute(select(User).where(func.lower(User.email) == email.strip().lower()))
+    ).scalar_one_or_none()
+    if not user:
+        return None
+
+    if user.status == UserStatus.PENDING_APPROVAL or not user.is_active:
+        user.status = UserStatus.ACTIVE
+        user.is_active = True
+        await session.commit()
+        from app.modules.users.dependencies import invalidate_user_auth_cache
+
+        invalidate_user_auth_cache(user.id)
+        logger.info(f"Approved {user.email} while granting {role}")
+
+    repo = AdminRepository(session)
+    admin = await repo.get_by_user_id(user.id)
+    if admin:
+        if admin.role != role or not admin.is_active:
+            admin = await repo.update(admin.id, {"role": role, "is_active": True})
+        return admin
+    return await repo.create({
+        "user_id": user.id,
+        "role": role,
+        "is_active": True,
+        "notes": "Granted outside the admin panel (ADMIN_EMAILS or create_admin.py)",
+    })
+
+
 async def init_admin_users(session: AsyncSession):
+    """Apply ADMIN_EMAILS ("email:role,email:role") at startup.
+
+    It runs on every start, so a listed account is re-granted its role even after
+    it was changed in the admin panel. Remove an entry to stop that.
     """
-    Initialize admin users from environment configuration.
-    
-    Reads ADMIN_EMAILS from .env and creates/updates admin accounts.
-    Format: ADMIN_EMAILS=admin1@example.com:super_admin,admin2@example.com:admin
-    """
-    
-    if not settings.ADMIN_EMAILS:
-        logger.info("No admin emails configured in environment")
-        return
-    
-    admin_config = settings.ADMIN_EMAILS.strip()
-    if not admin_config:
-        return
-    
-    # Parse admin configuration
-    # Format: email1:role1,email2:role2
-    admin_entries = admin_config.split(',')
-    
-    admin_repo = AdminRepository(session)
-    created_count = 0
-    updated_count = 0
-    
-    for entry in admin_entries:
+    for entry in (settings.ADMIN_EMAILS or "").split(","):
         entry = entry.strip()
         if not entry:
             continue
-        
-        parts = entry.split(':')
-        if len(parts) != 2:
-            logger.warning(f"Invalid admin config format: {entry}")
+        email, sep, role = entry.rpartition(":")
+        if not sep or not email:
+            logger.warning(f"Invalid ADMIN_EMAILS entry (want email:role): {entry}")
             continue
-        
-        email, role = parts[0].strip(), parts[1].strip()
-        
-        # Validate role
         try:
-            admin_role = AdminRole(role)
+            admin = await grant_admin(session, email, role.strip())
         except ValueError:
             logger.error(f"Invalid admin role '{role}' for {email}")
             continue
-        
-        # Find user by email
-        result = await session.execute(
-            select(User).where(User.email == email)
-        )
-        user = result.scalar_one_or_none()
-        
-        if not user:
-            logger.warning(f"User not found for admin email: {email}")
-            continue
-        
-        # Check if admin account exists
-        existing_admin = await admin_repo.get_by_user_id(user.id)
-        
-        if existing_admin:
-            # Update existing admin role if changed
-            if existing_admin.role != role:
-                await admin_repo.update(existing_admin.id, {
-                    "role": role,
-                    "is_active": True
-                })
-                updated_count += 1
-                logger.info(f"Updated admin role for {email}: {role}")
-            else:
-                logger.debug(f"Admin account already exists for {email}")
+        if admin is None:
+            logger.warning(f"ADMIN_EMAILS: no account registered as {email} yet")
         else:
-            # Create new admin account
-            await admin_repo.create({
-                "user_id": user.id,
-                "role": role,
-                "is_active": True,
-                "notes": "Auto-created from environment configuration"
-            })
-            created_count += 1
-            logger.info(f"Created admin account for {email}: {role}")
-    
-    if created_count > 0 or updated_count > 0:
-        logger.info(f"Admin initialization complete: {created_count} created, {updated_count} updated")
-    else:
-        logger.debug("No admin accounts created or updated")
-
-
-# Example .env configuration:
-"""
-# Admin Configuration
-# Format: email1:role1,email2:role2
-# Roles: super_admin, admin, moderator, analyst, support
-ADMIN_EMAILS=admin@aspiro.com:super_admin,support@aspiro.com:support
-
-# Alternative: Single super admin
-ADMIN_EMAILS=admin@aspiro.com:super_admin
-"""
+            logger.info(f"ADMIN_EMAILS: {email} is {admin.role}")
