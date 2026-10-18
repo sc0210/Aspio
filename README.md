@@ -68,18 +68,20 @@ Buying a holding debits Life and selling credits it back. Details are in
 
 Aspiro has no hosted service and no published images: you clone the repo and build your own
 instance. It runs on any 64-bit Linux or macOS host, Raspberry Pi 4/5 included, and can be
-reached from outside through a Cloudflare Tunnel without opening a router port.
+reached from outside without opening a router port: publicly through a Cloudflare Tunnel, or
+privately from your own devices through Tailscale (public too with Funnel).
 
 ```bash
 git clone https://github.com/sc0210/Aspio.git /opt/aspiro && cd /opt/aspiro
-scripts/aspiro setup            # asks for your domain and Google OAuth client, writes .env
+scripts/aspiro setup            # asks for your hostname, Google OAuth client and tunnel/Tailscale key
 scripts/aspiro update --init    # first install: builds, initialises the database, starts
 scripts/aspiro status
 ```
 
 Later, `scripts/aspiro update` pulls, rebuilds and restarts, and rolls back if the database
-migration doesn't land. [docs/SELF_HOSTING.md](docs/SELF_HOSTING.md) covers the Cloudflare
-Tunnel, Google sign-in, running without Docker, backups, rollback and a security checklist.
+migration doesn't land. [docs/SELF_HOSTING.md](docs/SELF_HOSTING.md) covers choosing between
+Cloudflare Tunnel and Tailscale, Google sign-in, running without Docker, backups, rollback and a
+security checklist.
 
 ## Run it locally
 
@@ -116,7 +118,7 @@ environment traps worth knowing about.
 | Frontend | Next.js 16 (App Router) · React 19 · TypeScript · Tailwind CSS · TanStack Query · NextAuth · Recharts |
 | Backend | FastAPI · SQLAlchemy 2 (async) · Pydantic v2 · Alembic |
 | Data | PostgreSQL 15 |
-| Self-host | Docker Compose · Caddy · Cloudflare Tunnel |
+| Self-host | Docker Compose · Caddy · Cloudflare Tunnel or Tailscale |
 
 Exact versions are in `frontend/package.json` and `backend/requirements.txt`.
 
