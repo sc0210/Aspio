@@ -14,7 +14,7 @@ bcrypt==3.2.2
 python-multipart==0.0.32
 authlib==1.8.0
 httpx==0.28.1
-PyJWT==2.15.0
+PyJWT==2.15.1
 
 # Validation and serialization
 pydantic[email]==2.14.0
