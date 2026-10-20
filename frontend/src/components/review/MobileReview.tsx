@@ -60,7 +60,7 @@ export function MobileReview() {
                         description={t('common:review.emptyBody', 'No income or spending was logged in this month, so there is nothing to review yet.')}
                         action={
                             <Link href="/transactions/add"
-                                className="inline-flex items-center justify-center px-4 py-2 rounded-lg bg-prosperity-600 hover:bg-prosperity-700 text-white text-sm font-medium transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-prosperity-500">
+                                className="inline-flex items-center justify-center px-4 py-2 rounded-lg bg-prosperity-700 hover:bg-prosperity-800 text-white text-sm font-medium transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-prosperity-500">
                                 {t('common:review.addTransaction', 'Add a transaction')}
                             </Link>
                         }
@@ -74,10 +74,10 @@ export function MobileReview() {
                     </>
                 )}
 
-                <p className="text-center px-4 pt-1 text-xs font-semibold leading-relaxed text-gray-400 dark:text-gray-500">
+                <p className="text-center px-4 pt-1 text-xs font-semibold leading-relaxed text-gray-500 dark:text-gray-500">
                     {t('dashboard:mobile.fullReview', 'Income sources, wealth moves & goals')}
                     <br />
-                    <span className="text-primary-600 dark:text-primary-400">→ {t('dashboard:mobile.onLargerScreen', 'on tablet / desktop')}</span>
+                    <span className="text-primary-700 dark:text-primary-400">→ {t('dashboard:mobile.onLargerScreen', 'on tablet / desktop')}</span>
                 </p>
             </div>
         </DashboardLayout>

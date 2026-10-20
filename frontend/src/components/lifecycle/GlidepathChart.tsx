@@ -119,7 +119,7 @@ export function GlidepathChart({ data, colors, crossoverAge, maxLeverage, labels
                     <ReferenceLine
                         y={1}
                         stroke="currentColor"
-                        className="text-gray-400 dark:text-gray-500"
+                        className="text-gray-500 dark:text-gray-500"
                         strokeDasharray="4 4"
                         label={{ value: labels.noDebt, position: 'insideBottomRight', fontSize: 10, fill: 'currentColor' }}
                     />
@@ -134,7 +134,7 @@ export function GlidepathChart({ data, colors, crossoverAge, maxLeverage, labels
                         <ReferenceLine
                             x={crossoverAge}
                             stroke="currentColor"
-                            className="text-prosperity-500"
+                            className="text-prosperity-700 dark:text-prosperity-500"
                             strokeDasharray="4 4"
                             label={{ value: `${labels.crossover} · ${crossoverAge}`, position: 'insideTopLeft', fontSize: 10, fill: 'currentColor' }}
                         />

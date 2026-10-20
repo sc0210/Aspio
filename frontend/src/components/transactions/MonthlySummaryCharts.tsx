@@ -183,7 +183,7 @@ export function MonthlySummaryCharts({
                                 className={cn(
                                     'px-5 py-2.5 rounded-lg text-sm font-semibold transition-all duration-200 flex items-center gap-2 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-500',
                                     showBarChart
-                                        ? 'bg-primary-600 text-white shadow-md scale-105'
+                                        ? 'bg-primary-700 text-white shadow-md scale-105'
                                         : 'text-gray-700 dark:text-gray-300 hover:bg-white dark:hover:bg-gray-600'
                                 )}
                             >
@@ -196,7 +196,7 @@ export function MonthlySummaryCharts({
                                 className={cn(
                                     'px-5 py-2.5 rounded-lg text-sm font-semibold transition-all duration-200 flex items-center gap-2 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-500',
                                     showLineChart
-                                        ? 'bg-primary-600 text-white shadow-md scale-105'
+                                        ? 'bg-primary-700 text-white shadow-md scale-105'
                                         : 'text-gray-700 dark:text-gray-300 hover:bg-white dark:hover:bg-gray-600'
                                 )}
                             >
@@ -250,7 +250,7 @@ export function MonthlySummaryCharts({
                                         const v = value as number;
                                         return Math.abs(v) >= 1_000_000
                                             ? `NT$${(v / 1_000_000).toFixed(1)}M`
-                                            : `NT$${(v / 1000).toFixed(0)}k`;
+                                            : `NT$${(v / 1000).toFixed(0)}K`;
                                     }}
                                 />
                                 <Tooltip

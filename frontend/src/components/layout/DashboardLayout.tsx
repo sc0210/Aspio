@@ -89,7 +89,7 @@ export function DashboardLayout({ children, rightSidebar, topBarActions }: Dashb
             <button
               onClick={() => setSidebarOpen(true)}
               aria-label="Open navigation menu"
-              className="p-2 rounded-lg text-gray-500 hover:text-gray-700 hover:bg-gray-100 dark:text-gray-400 dark:hover:text-gray-200 dark:hover:bg-gray-700 transition-colors min-w-[48px] min-h-[48px] flex items-center justify-center"
+              className="p-2 rounded-lg text-gray-600 hover:text-gray-700 hover:bg-gray-100 dark:text-gray-400 dark:hover:text-gray-200 dark:hover:bg-gray-700 transition-colors min-w-[48px] min-h-[48px] flex items-center justify-center"
             >
               <MenuIcon className="w-6 h-6" />
             </button>

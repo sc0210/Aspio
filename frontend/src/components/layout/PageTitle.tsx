@@ -78,8 +78,8 @@ export function PageTitle() {
     <div className="flex items-center gap-1.5 min-w-0">
       {parentKey && (
         <>
-          <span className="text-sm text-gray-400 dark:text-gray-500 truncate">{t(parentKey)}</span>
-          <span className="text-sm text-gray-400 dark:text-gray-500" aria-hidden="true">/</span>
+          <span className="text-sm text-gray-500 dark:text-gray-500 truncate">{t(parentKey)}</span>
+          <span className="text-sm text-gray-500 dark:text-gray-500" aria-hidden="true">/</span>
         </>
       )}
       <h1 className="text-sm font-semibold text-gray-800 dark:text-gray-100 truncate">

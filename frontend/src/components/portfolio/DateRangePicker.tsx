@@ -118,7 +118,7 @@ export const DateRangePicker = ({
                             <h3 className="text-sm font-bold text-gray-900 dark:text-white">Select Date Range</h3>
                             <button
                                 onClick={() => setIsOpen(false)}
-                                className="p-1 text-gray-400 hover:text-gray-600 dark:hover:text-gray-200 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors"
+                                className="p-1 text-gray-500 dark:text-gray-400 hover:text-gray-600 dark:hover:text-gray-200 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors"
                                 aria-label="Close"
                             >
                                 <XMarkIcon className="w-4 h-4" />
@@ -184,7 +184,7 @@ export const DateRangePicker = ({
                                 disabled={!tempRange.startDate || !tempRange.endDate}
                                 className={cn(
                                     'flex-1 px-3 py-2 text-xs font-semibold rounded-lg',
-                                    'text-white bg-primary-600 hover:bg-primary-700',
+                                    'text-white bg-primary-700 hover:bg-primary-800',
                                     'disabled:opacity-50 disabled:cursor-not-allowed',
                                     'transition-colors'
                                 )}

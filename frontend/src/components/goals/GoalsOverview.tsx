@@ -177,7 +177,7 @@ export function GoalsOverview({ goals = [], isLoading = false, onEdit, onContrib
     if (goals.length === 0) {
         return (
             <div className="rounded-xl p-6 border border-gray-100 dark:border-gray-700/50 text-center">
-                <div className="text-gray-400 dark:text-gray-500 mb-4">
+                <div className="text-gray-500 dark:text-gray-500 mb-4">
                     <svg className="w-16 h-16 mx-auto mb-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
                     </svg>
@@ -190,7 +190,7 @@ export function GoalsOverview({ goals = [], isLoading = false, onEdit, onContrib
                 </div>
                 <Link
                     href="/goals"
-                    className="inline-block px-4 py-2 bg-primary-600 hover:bg-primary-700 text-white text-sm font-medium rounded-lg transition-colors"
+                    className="inline-block px-4 py-2 bg-primary-700 hover:bg-primary-800 text-white text-sm font-medium rounded-lg transition-colors"
                 >
                     {t('goals:createFirst')}
                 </Link>
@@ -210,13 +210,13 @@ export function GoalsOverview({ goals = [], isLoading = false, onEdit, onContrib
                 <div className="flex items-center justify-between px-5 py-3 border-b border-gray-100 dark:border-gray-700">
                     <div className="flex items-center gap-3">
                         <h3 className="text-sm font-semibold text-gray-700 dark:text-gray-300">{t('goals:overview.title', 'Goals')}</h3>
-                        <div className="flex items-center gap-1.5 text-xs text-gray-400 dark:text-gray-500">
+                        <div className="flex items-center gap-1.5 text-xs text-gray-500 dark:text-gray-500">
                             <span className="font-semibold text-gray-600 dark:text-gray-400">{activeGoals.length}</span> {t('goals:overview.active')}
                             <span className="text-gray-300 dark:text-gray-600">·</span>
                             <span className="font-semibold text-gray-600 dark:text-gray-400">{completedGoals.length}</span> {t('goals:overview.completed')}
                         </div>
                     </div>
-                    <Link href="/goals" className="text-xs font-medium text-primary-600 hover:text-primary-700 dark:text-primary-400 dark:hover:text-primary-300">
+                    <Link href="/goals" className="text-xs font-medium text-primary-700 hover:text-primary-800 dark:text-primary-400 dark:hover:text-primary-300">
                         {t('goals:overview.viewAll')}
                     </Link>
                 </div>
@@ -245,10 +245,10 @@ export function GoalsOverview({ goals = [], isLoading = false, onEdit, onContrib
                         {firstRetirement && (
                             <div className="rounded-xl p-4 border border-prosperity-200 dark:border-prosperity-700/50 bg-gradient-to-br from-prosperity-50 to-prosperity-100/60 dark:from-prosperity-900/20 dark:to-prosperity-800/10">
                                 <div className="flex items-center gap-1 mb-1">
-                                    <span className="text-xs font-semibold uppercase tracking-wide text-prosperity-600 dark:text-prosperity-400">{t('goals:overview.retirement')}</span>
-                                    <svg className="w-3 h-3 text-prosperity-500 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 7h8m0 0v8m0-8l-8 8-4-4-6 6" /></svg>
+                                    <span className="text-xs font-semibold uppercase tracking-wide text-prosperity-700 dark:text-prosperity-400">{t('goals:overview.retirement')}</span>
+                                    <svg className="w-3 h-3 text-prosperity-700 dark:text-prosperity-500 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 7h8m0 0v8m0-8l-8 8-4-4-6 6" /></svg>
                                 </div>
-                                <p className="text-2xl font-bold text-prosperity-600 dark:text-prosperity-400 mb-2">
+                                <p className="text-2xl font-bold text-prosperity-700 dark:text-prosperity-400 mb-2">
                                     {isValueVisible ? `${retirementPct.toFixed(1)}%` : '•••%'}
                                 </p>
                                 <div
@@ -294,7 +294,7 @@ export function GoalsOverview({ goals = [], isLoading = false, onEdit, onContrib
                     )}
 
                     {goals.length > 3 && (
-                        <p className="text-center text-xs text-primary-600 hover:text-primary-700 dark:text-primary-400">
+                        <p className="text-center text-xs text-primary-700 hover:text-primary-800 dark:text-primary-400">
                             <Link href="/goals">{t('goals:overview.moreGoals', { count: goals.length - 3 })}</Link>
                         </p>
                     )}
@@ -314,7 +314,7 @@ export function GoalsOverview({ goals = [], isLoading = false, onEdit, onContrib
                     </p>
                     <Link
                         href="/goals"
-                        className="text-primary-600 hover:text-primary-700 dark:text-primary-400 dark:hover:text-primary-300 text-sm font-medium"
+                        className="text-primary-700 hover:text-primary-800 dark:text-primary-400 dark:hover:text-primary-300 text-sm font-medium"
                     >
                         {t('goals:overview.viewAll')}
                     </Link>
@@ -351,7 +351,7 @@ export function GoalsOverview({ goals = [], isLoading = false, onEdit, onContrib
                         <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-2 mb-3">
                             <div className="flex-1 min-w-0">
                                 <div className="flex flex-wrap items-center gap-1.5 mb-1">
-                                    <span className="text-xs font-semibold uppercase tracking-wide text-prosperity-600 dark:text-prosperity-400">
+                                    <span className="text-xs font-semibold uppercase tracking-wide text-prosperity-700 dark:text-prosperity-400">
                                         {t('goals:overview.retirement')}
                                     </span>
                                     <span className="inline-flex items-center gap-1 text-xs bg-emerald-100 dark:bg-emerald-800/40 text-emerald-700 dark:text-emerald-300 px-2 py-0.5 rounded-full font-medium">
@@ -361,7 +361,7 @@ export function GoalsOverview({ goals = [], isLoading = false, onEdit, onContrib
                                 </div>
                                 <p className="text-sm sm:text-base font-semibold text-gray-800 dark:text-gray-100 leading-tight truncate">{goal.title}</p>
                             </div>
-                            <span className="text-xl sm:text-2xl font-bold text-prosperity-600 dark:text-prosperity-400 shrink-0">
+                            <span className="text-xl sm:text-2xl font-bold text-prosperity-700 dark:text-prosperity-400 shrink-0">
                                 {isValueVisible ? `${pct.toFixed(1)}%` : '•••%'}
                             </span>
                         </div>
@@ -403,7 +403,7 @@ export function GoalsOverview({ goals = [], isLoading = false, onEdit, onContrib
                 <div className="text-center pt-2">
                     <Link
                         href="/goals"
-                        className="text-primary-600 hover:text-primary-700 dark:text-primary-400 dark:hover:text-primary-300 text-sm font-medium"
+                        className="text-primary-700 hover:text-primary-800 dark:text-primary-400 dark:hover:text-primary-300 text-sm font-medium"
                     >
                         {t('goals:overview.moreGoals', { count: goals.length - 3 })}
                     </Link>

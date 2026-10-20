@@ -62,14 +62,14 @@ export function DrawdownSlider({ stress }: Props) {
                 <label htmlFor={id} className="text-xs font-medium text-gray-700 dark:text-gray-200">
                     {t('lifecycle.safety.sliderLabel', 'If the market falls')}
                 </label>
-                <span className="text-sm font-bold tabular-nums text-error-600 dark:text-error-400">−{drop}%</span>
+                <span className="text-sm font-bold tabular-nums text-error-700 dark:text-error-400">−{drop}%</span>
             </div>
 
             <div className="relative mt-2">
                 <input id={id} type="range" min={MIN_DROP} max={MAX_DROP} step={1} value={drop}
                     onChange={(e) => setDrop(Number(e.target.value))}
                     aria-valuetext={`−${drop}%`}
-                    className="w-full accent-error-500" />
+                    className="w-full h-11 sm:h-6 cursor-pointer accent-error-500" />
                 {wipe !== null && wipe >= MIN_DROP && wipe <= MAX_DROP && (
                     <span aria-hidden="true" title={t('lifecycle.safety.wipeoutMark', 'Your money hits zero')}
                         className="pointer-events-none absolute -top-1 h-5 w-0.5 bg-error-500"
@@ -95,13 +95,13 @@ export function DrawdownSlider({ stress }: Props) {
             <dl className="mt-3 grid grid-cols-3 gap-2 text-center">
                 <div>
                     <dt className="text-xs text-gray-500 dark:text-gray-400">{t('lifecycle.safety.colYours', 'Your money left')}</dt>
-                    <dd className={cn('text-sm font-bold tabular-nums', s.wipedOut ? 'text-error-600 dark:text-error-400' : 'text-gray-900 dark:text-white')}>
+                    <dd className={cn('text-sm font-bold tabular-nums', s.wipedOut ? 'text-error-700 dark:text-error-400' : 'text-gray-900 dark:text-white')}>
                         {s.wipedOut ? t('lifecycle.safety.wipedOut', 'wiped out') : money(s.netAfter)}
                     </dd>
                 </div>
                 <div>
                     <dt className="text-xs text-gray-500 dark:text-gray-400">{t('lifecycle.safety.colLoss', 'You lose')}</dt>
-                    <dd className="text-sm font-bold tabular-nums text-error-500">−{Math.min(100, s.ownMoneyLossPct).toFixed(0)}%</dd>
+                    <dd className="text-sm font-bold tabular-nums text-error-700 dark:text-error-400">−{Math.min(100, s.ownMoneyLossPct).toFixed(0)}%</dd>
                 </div>
                 <div>
                     <dt className="text-xs text-gray-500 dark:text-gray-400">{t('lifecycle.safety.colLev', 'Leverage after')}</dt>

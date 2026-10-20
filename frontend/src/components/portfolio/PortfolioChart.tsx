@@ -240,7 +240,7 @@ export const PortfolioChart = memo(function PortfolioChart({ holdings, baseCurre
     return (
       <div className="card">
         <div className="text-center py-12">
-          <ChartBarIcon className="w-12 h-12 text-gray-400 mx-auto mb-4" />
+          <ChartBarIcon className="w-12 h-12 text-gray-500 dark:text-gray-400 mx-auto mb-4" />
           <h3 className="text-lg font-medium text-gray-900 dark:text-white mb-2">
             No Portfolio Data
           </h3>
@@ -274,7 +274,7 @@ export const PortfolioChart = memo(function PortfolioChart({ holdings, baseCurre
           <div className="max-w-md text-center">
             <div className="mb-4 flex justify-center">
               <div className="p-4 bg-error-100 dark:bg-error-900/30 rounded-full">
-                <ExclamationTriangleIcon className="w-12 h-12 text-error-600 dark:text-error-400" />
+                <ExclamationTriangleIcon className="w-12 h-12 text-error-700 dark:text-error-400" />
               </div>
             </div>
             <h3 className="text-lg font-bold text-gray-900 dark:text-white mb-2">
@@ -285,7 +285,7 @@ export const PortfolioChart = memo(function PortfolioChart({ holdings, baseCurre
             </p>
             <button
               onClick={fetchHistoricalData}
-              className="px-4 py-2 bg-primary-600 hover:bg-primary-700 text-white rounded-lg text-sm font-medium transition-colors"
+              className="px-4 py-2 bg-primary-700 hover:bg-primary-800 text-white rounded-lg text-sm font-medium transition-colors"
             >
               Retry
             </button>
@@ -358,7 +358,7 @@ export const PortfolioChart = memo(function PortfolioChart({ holdings, baseCurre
               }}
               tickFormatter={(value) => {
                 if (value >= 1000000) return `${(value / 1000000).toFixed(1)}M`;
-                if (value >= 1000) return `${(value / 1000).toFixed(0)}k`;
+                if (value >= 1000) return `${(value / 1000).toFixed(0)}K`;
                 return value.toString();
               }}
               width={70}
@@ -534,7 +534,7 @@ export const PortfolioChart = memo(function PortfolioChart({ holdings, baseCurre
                 <div className="text-sm font-bold text-gray-900 dark:text-white">
                   {formatCurrency(item.value, baseCurrency)}
                 </div>
-                <div className="text-xs font-semibold text-primary-600 dark:text-primary-400">
+                <div className="text-xs font-semibold text-primary-700 dark:text-primary-400">
                   {item.percentage.toFixed(1)}%
                 </div>
               </div>
@@ -612,7 +612,7 @@ export const PortfolioChart = memo(function PortfolioChart({ holdings, baseCurre
               </span>
               <span className={cn(
                 'text-sm font-bold',
-                currentPeriodChange >= 0 ? 'text-prosperity-600 dark:text-prosperity-400' : 'text-error-600 dark:text-error-400'
+                currentPeriodChange >= 0 ? 'text-prosperity-700 dark:text-prosperity-400' : 'text-error-700 dark:text-error-400'
               )}>
                 {formatPercentage(currentPeriodChange)}
               </span>
@@ -705,7 +705,7 @@ export const PortfolioChart = memo(function PortfolioChart({ holdings, baseCurre
                     className={cn(
                       'px-2 sm:px-3.5 py-2 text-xs sm:text-sm font-semibold rounded-lg transition-all duration-200 whitespace-nowrap flex-shrink-0',
                       timeframe === option.value
-                        ? 'bg-primary-600 dark:bg-primary-500 text-white shadow-lg shadow-primary-500/30 scale-105'
+                        ? 'bg-primary-700 dark:bg-primary-500 text-white shadow-lg shadow-primary-500/30 scale-105'
                         : 'text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white hover:bg-gray-50 dark:hover:bg-gray-700/50'
                     )}
                   >
@@ -727,7 +727,7 @@ export const PortfolioChart = memo(function PortfolioChart({ holdings, baseCurre
             </span>
             <span className={cn(
               'text-lg font-bold',
-              currentPeriodChange >= 0 ? 'text-prosperity-600 dark:text-prosperity-400' : 'text-error-600 dark:text-error-400'
+              currentPeriodChange >= 0 ? 'text-prosperity-700 dark:text-prosperity-400' : 'text-error-700 dark:text-error-400'
             )}>
               {formatPercentage(currentPeriodChange)}
             </span>

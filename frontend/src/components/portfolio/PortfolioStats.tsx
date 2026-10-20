@@ -195,7 +195,7 @@ export function PortfolioStats({ portfolio, performance, isValueVisible, apiStat
       {isLoading && (
         <div className="absolute inset-0 bg-white/50 dark:bg-gray-900/50 backdrop-blur-sm z-20 rounded-xl flex items-center justify-center">
           <div className="flex flex-col items-center gap-2">
-            <ArrowPathIcon className="w-8 h-8 text-primary-600 dark:text-primary-400 animate-spin" />
+            <ArrowPathIcon className="w-8 h-8 text-primary-700 dark:text-primary-400 animate-spin" />
             <span className="text-sm font-medium text-gray-700 dark:text-gray-300">Updating...</span>
           </div>
         </div>
@@ -217,7 +217,7 @@ export function PortfolioStats({ portfolio, performance, isValueVisible, apiStat
                   <p
                     className={cn(
                       "text-base font-bold tabular-nums transition-all duration-200",
-                      period.dollarValue >= 0 ? 'text-success-600 dark:text-success-400' : 'text-error-600 dark:text-error-400'
+                      period.dollarValue >= 0 ? 'text-success-700 dark:text-success-400' : 'text-error-700 dark:text-error-400'
                     )}
                   >
                     {isValueVisible ? (
@@ -245,7 +245,7 @@ export function PortfolioStats({ portfolio, performance, isValueVisible, apiStat
                   <div className="absolute top-0 right-0 w-20 h-20 bg-primary-500/8 dark:bg-primary-500/15 rounded-full -mr-10 -mt-10 group-hover:scale-150 transition-transform duration-500"></div>
                   <div className="relative flex items-center gap-2 sm:gap-2.5 md:gap-3">
                     <div className="flex-shrink-0 p-2.5 bg-primary-100 dark:bg-primary-900/30 rounded-lg shadow-sm group-hover:scale-110 transition-transform duration-300">
-                      <BanknotesIcon className="w-6 h-6 text-primary-600 dark:text-primary-400" />
+                      <BanknotesIcon className="w-6 h-6 text-primary-700 dark:text-primary-400" />
                     </div>
                     <div className="flex-1">
                       <p className="text-xs md:text-sm font-semibold text-primary-700 dark:text-primary-300 mb-1 uppercase tracking-wider">{t('portfolio:stats.totalValue')}</p>
@@ -266,7 +266,7 @@ export function PortfolioStats({ portfolio, performance, isValueVisible, apiStat
                           out on a euro position. Saying so is the difference
                           between an approximate figure and a wrong one. */}
                       {isValueVisible && conversionNote && (
-                        <p className="text-[11px] text-amber-600 dark:text-amber-400 mt-0.5">
+                        <p className="text-[11px] text-amber-700 dark:text-amber-400 mt-0.5">
                           {conversionNote}
                         </p>
                       )}
@@ -298,7 +298,7 @@ export function PortfolioStats({ portfolio, performance, isValueVisible, apiStat
                     )}>
                       <ChartBarIcon className={cn(
                         'w-6 h-6',
-                        portfolio.totalGainLoss >= 0 ? 'text-success-600 dark:text-success-400' : 'text-error-600 dark:text-error-400'
+                        portfolio.totalGainLoss >= 0 ? 'text-success-700 dark:text-success-400' : 'text-error-700 dark:text-error-400'
                       )} />
                     </div>
                     <div className="flex-1">
@@ -309,7 +309,7 @@ export function PortfolioStats({ portfolio, performance, isValueVisible, apiStat
                       <div className="flex items-center gap-2">
                         <p className={cn(
                           'text-xl sm:text-2xl md:text-2xl font-bold',
-                          portfolio.totalGainLoss >= 0 ? 'text-success-600 dark:text-success-400' : 'text-error-600 dark:text-error-400'
+                          portfolio.totalGainLoss >= 0 ? 'text-success-700 dark:text-success-400' : 'text-error-700 dark:text-error-400'
                         )}>
                           {isValueVisible
                             ? `${portfolio.totalGainLoss >= 0 ? '+' : ''}${formatCurrency(portfolio.totalGainLoss, portfolio.currency, { precision: 0 })}`
@@ -319,7 +319,7 @@ export function PortfolioStats({ portfolio, performance, isValueVisible, apiStat
                       </div>
                       <p className={cn(
                         'text-xs mt-0.5 font-semibold',
-                        portfolio.gainLossPercentage >= 0 ? 'text-success-600 dark:text-success-400' : 'text-error-600 dark:text-error-400'
+                        portfolio.gainLossPercentage >= 0 ? 'text-success-700 dark:text-success-400' : 'text-error-700 dark:text-error-400'
                       )}>
                         {isValueVisible
                           ? `${formatPercentage(portfolio.gainLossPercentage)} ${t('portfolio:stats.roi')}`
@@ -375,7 +375,7 @@ export function PortfolioStats({ portfolio, performance, isValueVisible, apiStat
                     )}>
                       <CalendarIcon className={cn(
                         'w-6 h-6',
-                        todayChange >= 0 ? 'text-success-600 dark:text-success-400' : 'text-error-600 dark:text-error-400'
+                        todayChange >= 0 ? 'text-success-700 dark:text-success-400' : 'text-error-700 dark:text-error-400'
                       )} />
                     </div>
                     <div className="flex-1">
@@ -386,7 +386,7 @@ export function PortfolioStats({ portfolio, performance, isValueVisible, apiStat
                       <div className="flex items-center gap-2 transition-all duration-200">
                         <p className={cn(
                           'text-xl sm:text-2xl md:text-2xl font-bold tabular-nums',
-                          todayChange >= 0 ? 'text-success-600 dark:text-success-400' : 'text-error-600 dark:text-error-400'
+                          todayChange >= 0 ? 'text-success-700 dark:text-success-400' : 'text-error-700 dark:text-error-400'
                         )}>
                           {isValueVisible
                             ? `${todayChange >= 0 ? '+' : ''}${formatCurrency(todayChange, portfolio.currency, { precision: 0 })}`
@@ -396,7 +396,7 @@ export function PortfolioStats({ portfolio, performance, isValueVisible, apiStat
                       </div>
                       <p className={cn(
                         'text-xs mt-0.5 font-semibold',
-                        todayChange >= 0 ? 'text-success-600 dark:text-success-400' : 'text-error-600 dark:text-error-400'
+                        todayChange >= 0 ? 'text-success-700 dark:text-success-400' : 'text-error-700 dark:text-error-400'
                       )}>
                         {isValueVisible
                           ? `${formatPercentage(todayChangePercent)}`
@@ -422,11 +422,11 @@ export function PortfolioStats({ portfolio, performance, isValueVisible, apiStat
               <p className="text-sm font-semibold text-gray-800 dark:text-gray-100">
                 {t('portfolio:stats.analysisTitle')}
               </p>
-              <p className="text-xs text-gray-400 dark:text-gray-500 truncate">
+              <p className="text-xs text-gray-500 dark:text-gray-500 truncate">
                 {t('portfolio:stats.analysisSubtitle')}
               </p>
             </div>
-            <ChevronDownIcon className="w-5 h-5 flex-shrink-0 text-gray-400 transition-transform duration-200 group-open:rotate-180" />
+            <ChevronDownIcon className="w-5 h-5 flex-shrink-0 text-gray-500 dark:text-gray-400 transition-transform duration-200 group-open:rotate-180" />
           </summary>
 
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 pt-3">
@@ -450,10 +450,10 @@ export function PortfolioStats({ portfolio, performance, isValueVisible, apiStat
                                 <p className={cn(
                                   'text-lg font-bold tabular-nums',
                                   riskMetrics.sharpeRatio > 1
-                                    ? 'text-success-600 dark:text-success-400'
+                                    ? 'text-success-700 dark:text-success-400'
                                     : riskMetrics.sharpeRatio > 0
-                                      ? 'text-amber-600 dark:text-amber-400'
-                                      : 'text-error-600 dark:text-error-400'
+                                      ? 'text-amber-700 dark:text-amber-400'
+                                      : 'text-error-700 dark:text-error-400'
                                 )}>
                                   {riskMetrics.sharpeRatio.toFixed(2)}
                                 </p>
@@ -463,8 +463,8 @@ export function PortfolioStats({ portfolio, performance, isValueVisible, apiStat
                               </>
                             ) : (
                               <>
-                                <p className="text-lg font-bold text-gray-400 dark:text-gray-500">N/A</p>
-                                <p className="text-xs text-gray-400 dark:text-gray-500">{t('portfolio:riskMetrics.needData')}</p>
+                                <p className="text-lg font-bold text-gray-500 dark:text-gray-500">N/A</p>
+                                <p className="text-xs text-gray-500 dark:text-gray-500">{t('portfolio:riskMetrics.needData')}</p>
                               </>
                             )}
                           </div>
@@ -478,8 +478,8 @@ export function PortfolioStats({ portfolio, performance, isValueVisible, apiStat
                                   riskMetrics.beta < 0.8
                                     ? 'text-blue-600 dark:text-blue-400'
                                     : riskMetrics.beta <= 1.2
-                                      ? 'text-amber-600 dark:text-amber-400'
-                                      : 'text-error-600 dark:text-error-400'
+                                      ? 'text-amber-700 dark:text-amber-400'
+                                      : 'text-error-700 dark:text-error-400'
                                 )}>
                                   {riskMetrics.beta.toFixed(2)}
                                 </p>
@@ -489,8 +489,8 @@ export function PortfolioStats({ portfolio, performance, isValueVisible, apiStat
                               </>
                             ) : (
                               <>
-                                <p className="text-lg font-bold text-gray-400 dark:text-gray-500">N/A</p>
-                                <p className="text-xs text-gray-400 dark:text-gray-500">{t('portfolio:riskMetrics.noSpyData')}</p>
+                                <p className="text-lg font-bold text-gray-500 dark:text-gray-500">N/A</p>
+                                <p className="text-xs text-gray-500 dark:text-gray-500">{t('portfolio:riskMetrics.noSpyData')}</p>
                               </>
                             )}
                           </div>
@@ -510,13 +510,13 @@ export function PortfolioStats({ portfolio, performance, isValueVisible, apiStat
                     <div className="absolute top-0 right-0 w-20 h-20 bg-amber-500/8 dark:bg-amber-500/15 rounded-full -mr-10 -mt-10 group-hover:scale-150 transition-transform duration-500" />
                     <div className="relative flex items-center gap-2 sm:gap-2.5 md:gap-3">
                       <div className="flex-shrink-0 p-2.5 bg-amber-100 dark:bg-amber-900/30 rounded-lg shadow-sm group-hover:scale-110 transition-transform duration-300">
-                        <ArrowTrendingUpIcon className="w-6 h-6 text-amber-600 dark:text-amber-400" />
+                        <ArrowTrendingUpIcon className="w-6 h-6 text-amber-700 dark:text-amber-400" />
                       </div>
                       <div className="flex-1">
                         <p className="text-xs md:text-sm font-semibold text-amber-700 dark:text-amber-300 mb-1 uppercase tracking-wider">{t('portfolio:stats.cagrLabel')}</p>
                         <p className={cn(
                           'text-xl sm:text-2xl font-bold tabular-nums',
-                          (riskMetrics!.cagr! >= 0) ? 'text-success-600 dark:text-success-400' : 'text-error-600 dark:text-error-400'
+                          (riskMetrics!.cagr! >= 0) ? 'text-success-700 dark:text-success-400' : 'text-error-700 dark:text-error-400'
                         )}>
                           {isValueVisible
                             ? `${riskMetrics!.cagr! >= 0 ? '+' : ''}${riskMetrics!.cagr!.toFixed(1)}%`
@@ -539,7 +539,7 @@ export function PortfolioStats({ portfolio, performance, isValueVisible, apiStat
                     <div className="absolute top-0 right-0 w-20 h-20 bg-error-500/8 dark:bg-error-500/15 rounded-full -mr-10 -mt-10 group-hover:scale-150 transition-transform duration-500" />
                     <div className="relative flex items-center gap-2 sm:gap-2.5 md:gap-3">
                       <div className="flex-shrink-0 p-2.5 bg-error-100 dark:bg-error-900/30 rounded-lg shadow-sm group-hover:scale-110 transition-transform duration-300">
-                        <ChartBarIcon className="w-6 h-6 text-error-600 dark:text-error-400" />
+                        <ChartBarIcon className="w-6 h-6 text-error-700 dark:text-error-400" />
                       </div>
                       <div className="flex-1">
                         <p className="text-xs md:text-sm font-semibold text-error-700 dark:text-error-300 mb-1 uppercase tracking-wider">{t('portfolio:stats.drawdownLabel')}</p>
@@ -547,7 +547,7 @@ export function PortfolioStats({ portfolio, performance, isValueVisible, apiStat
                           {hasDrawdown && (
                             <div>
                               <p className="text-xs text-gray-500 dark:text-gray-400 uppercase tracking-wide">{t('portfolio:stats.maxDrawdown')}</p>
-                              <p className="text-lg font-bold tabular-nums text-error-600 dark:text-error-400">
+                              <p className="text-lg font-bold tabular-nums text-error-700 dark:text-error-400">
                                 {isValueVisible ? `${riskMetrics!.maxDrawdown!.toFixed(1)}%` : '•••%'}
                               </p>
                             </div>
@@ -558,7 +558,7 @@ export function PortfolioStats({ portfolio, performance, isValueVisible, apiStat
                           {hasVolatility && (
                             <div>
                               <p className="text-xs text-gray-500 dark:text-gray-400 uppercase tracking-wide">{t('portfolio:stats.volatility')}</p>
-                              <p className="text-lg font-bold tabular-nums text-amber-600 dark:text-amber-400">
+                              <p className="text-lg font-bold tabular-nums text-amber-700 dark:text-amber-400">
                                 {isValueVisible ? `${riskMetrics!.annualizedVolatility!.toFixed(1)}%` : '•••%'}
                               </p>
                             </div>
@@ -597,7 +597,7 @@ export function PortfolioStats({ portfolio, performance, isValueVisible, apiStat
                           )}
                           {typeof dividendIncome?.yieldOnValue === 'number' && (
                             <p className="text-xs text-gray-500 dark:text-gray-400">
-                              {t('portfolio:stats.yieldOnValue')}: <span className="font-semibold text-success-600 dark:text-success-400">{dividendIncome.yieldOnValue.toFixed(2)}%</span>
+                              {t('portfolio:stats.yieldOnValue')}: <span className="font-semibold text-success-700 dark:text-success-400">{dividendIncome.yieldOnValue.toFixed(2)}%</span>
                             </p>
                           )}
                         </div>
@@ -629,7 +629,7 @@ export function PortfolioStats({ portfolio, performance, isValueVisible, apiStat
                       )}>
                         <ArrowTrendingUpIcon className={cn(
                           "w-6 h-6",
-                          realizedPnl!.realizedGainLoss >= 0 ? "text-success-600 dark:text-success-400" : "text-error-600 dark:text-error-400"
+                          realizedPnl!.realizedGainLoss >= 0 ? "text-success-700 dark:text-success-400" : "text-error-700 dark:text-error-400"
                         )} />
                       </div>
                       <div className="flex-1">
@@ -639,7 +639,7 @@ export function PortfolioStats({ portfolio, performance, isValueVisible, apiStat
                         )}>{t('portfolio:stats.realizedLabel')}</p>
                         <p className={cn(
                           "text-xl sm:text-2xl font-bold tabular-nums",
-                          realizedPnl!.realizedGainLoss >= 0 ? "text-success-600 dark:text-success-400" : "text-error-600 dark:text-error-400"
+                          realizedPnl!.realizedGainLoss >= 0 ? "text-success-700 dark:text-success-400" : "text-error-700 dark:text-error-400"
                         )}>
                           {isValueVisible
                             ? `${realizedPnl!.realizedGainLoss >= 0 ? '+' : ''}${formatCurrency(realizedPnl!.realizedGainLoss, realizedPnl!.currency, { precision: 0 })}`
@@ -664,7 +664,7 @@ export function PortfolioStats({ portfolio, performance, isValueVisible, apiStat
                     <div className="absolute top-0 right-0 w-20 h-20 bg-sky-500/8 dark:bg-sky-500/15 rounded-full -mr-10 -mt-10 group-hover:scale-150 transition-transform duration-500" />
                     <div className="relative flex items-center gap-2 sm:gap-2.5 md:gap-3">
                       <div className="flex-shrink-0 p-2.5 bg-sky-100 dark:bg-sky-900/30 rounded-lg shadow-sm group-hover:scale-110 transition-transform duration-300">
-                        <ScaleIcon className="w-6 h-6 text-sky-600 dark:text-sky-400" />
+                        <ScaleIcon className="w-6 h-6 text-sky-700 dark:text-sky-400" />
                       </div>
                       <div className="flex-1">
                         <p className="text-xs md:text-sm font-semibold text-sky-700 dark:text-sky-300 mb-1 uppercase tracking-wider">
@@ -672,7 +672,7 @@ export function PortfolioStats({ portfolio, performance, isValueVisible, apiStat
                         </p>
                         <p className={cn(
                           'text-xl sm:text-2xl font-bold tabular-nums',
-                          riskMetrics!.alpha! >= 0 ? 'text-success-600 dark:text-success-400' : 'text-error-600 dark:text-error-400'
+                          riskMetrics!.alpha! >= 0 ? 'text-success-700 dark:text-success-400' : 'text-error-700 dark:text-error-400'
                         )}>
                           {isValueVisible
                             ? `${riskMetrics!.alpha! >= 0 ? '+' : ''}${riskMetrics!.alpha!.toFixed(2)}%`

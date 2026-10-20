@@ -125,10 +125,10 @@ export function ReadinessScorecard({ seed, cashNeededAtPurchase, monthlyHousingC
     );
 
     const scoreColor = readiness.allClear
-        ? 'text-prosperity-600 dark:text-prosperity-400'
+        ? 'text-prosperity-700 dark:text-prosperity-400'
         : readiness.score >= 60
-            ? 'text-warning-600 dark:text-warning-400'
-            : 'text-error-600 dark:text-error-400';
+            ? 'text-warning-700 dark:text-warning-400'
+            : 'text-error-700 dark:text-error-400';
 
     const labelFor = (key: ReadinessCondition['key']) => ({
         debt: t('housing.ready.debt', '① Debt cleared / refinanced'),
@@ -153,10 +153,10 @@ export function ReadinessScorecard({ seed, cashNeededAtPurchase, monthlyHousingC
                     className="flex-1 min-w-0 flex items-center justify-between gap-2 text-left rounded-lg focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-400"
                 >
                     <h3 className="min-w-0 text-sm font-semibold text-gray-700 dark:text-gray-300 flex items-center gap-1.5">
-                        <ShieldCheckIcon className="w-4 h-4 shrink-0 text-prosperity-500" />
+                        <ShieldCheckIcon className="w-4 h-4 shrink-0 text-prosperity-700 dark:text-prosperity-500" />
                         <span className="truncate">{t('housing.ready.title', 'Am I ready to buy?')}</span>
                     </h3>
-                    <ChevronDownIcon className={cn('w-4 h-4 shrink-0 text-gray-400 transition-transform', open && 'rotate-180')} />
+                    <ChevronDownIcon className={cn('w-4 h-4 shrink-0 text-gray-500 dark:text-gray-400 transition-transform', open && 'rotate-180')} />
                 </button>
                 {open && dirty && (
                     <button
@@ -174,7 +174,7 @@ export function ReadinessScorecard({ seed, cashNeededAtPurchase, monthlyHousingC
                         ref={adjustRef}
                         onClick={() => setEditing((e) => !e)}
                         aria-expanded={editing}
-                        className="shrink-0 flex items-center gap-1 text-xs text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200 transition-colors rounded focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-400"
+                        className="shrink-0 flex items-center gap-1 text-xs text-gray-600 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200 transition-colors rounded focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-400"
                     >
                         <PencilSquareIcon className="w-3.5 h-3.5 shrink-0" />
                         {editing ? t('housing.ready.done', 'Done') : t('housing.ready.adjust', 'Adjust my numbers')}
@@ -193,7 +193,7 @@ export function ReadinessScorecard({ seed, cashNeededAtPurchase, monthlyHousingC
                             : 'border-gray-200 dark:border-gray-700',
                     )}>
                         <div className={cn('text-4xl font-bold tabular-nums', scoreColor)}>{readiness.score}</div>
-                        <div className="text-sm text-gray-400 dark:text-gray-500 mb-2">{t('housing.ready.scoreLabel', 'readiness score')}</div>
+                        <div className="text-sm text-gray-500 dark:text-gray-500 mb-2">{t('housing.ready.scoreLabel', 'readiness score')}</div>
                         <div className="text-sm font-semibold text-gray-700 dark:text-gray-200">
                             {t('housing.ready.metCount', '{{n}} of 4 conditions met', { n: readiness.metCount })}
                         </div>
@@ -204,12 +204,12 @@ export function ReadinessScorecard({ seed, cashNeededAtPurchase, monthlyHousingC
                         )}
                         {/* Both can be true at once, and the score reflects both. */}
                         {editedFigures && (
-                            <p className="mt-1 text-xs font-medium text-warning-600 dark:text-warning-400">
+                            <p className="mt-1 text-xs font-medium text-warning-700 dark:text-warning-400">
                                 {t('housing.ready.edited', 'using figures you edited')}
                             </p>
                         )}
                         {refinanced && (
-                            <p className="mt-1 text-xs font-medium text-warning-600 dark:text-warning-400">
+                            <p className="mt-1 text-xs font-medium text-warning-700 dark:text-warning-400">
                                 {t('housing.ready.assumingRefi', 'assuming the debt is refinanced')}
                             </p>
                         )}
@@ -227,7 +227,7 @@ export function ReadinessScorecard({ seed, cashNeededAtPurchase, monthlyHousingC
                                 {readiness.biggestGap.shortfall > 0 && (
                                     <>
                                         {' — '}
-                                        <span className="text-error-600 dark:text-error-400 font-semibold">
+                                        <span className="text-error-700 dark:text-error-400 font-semibold">
                                             {isValueVisible ? formatTWDCompact(readiness.biggestGap.shortfall) : '•••'} {t('housing.ready.short', 'short')}
                                         </span>
                                     </>
@@ -286,7 +286,7 @@ export function ReadinessScorecard({ seed, cashNeededAtPurchase, monthlyHousingC
                                     </div>
                                 )}
                                 <div className="flex items-center justify-between mt-1">
-                                    <span className="text-xs text-gray-400 dark:text-gray-500">
+                                    <span className="text-xs text-gray-500 dark:text-gray-500">
                                         {c.key !== 'debt' && (
                                             <>{t('housing.ready.target', 'target')} {isValueVisible ? formatTWDCompact(c.target) : '•••'}</>
                                         )}
@@ -297,7 +297,7 @@ export function ReadinessScorecard({ seed, cashNeededAtPurchase, monthlyHousingC
                                         </span>
                                     )}
                                     {c.met && (
-                                        <span className="text-xs text-prosperity-600 dark:text-prosperity-400 font-medium">✓ {t('housing.ready.met', 'met')}</span>
+                                        <span className="text-xs text-prosperity-700 dark:text-prosperity-400 font-medium">✓ {t('housing.ready.met', 'met')}</span>
                                     )}
                                 </div>
                             </div>
@@ -341,9 +341,9 @@ function WanField({ label, value, onChange, isValueVisible }: { label: string; v
                         aria-label={label}
                     />
                 ) : (
-                    <span className="w-full text-right tabular-nums text-gray-400 dark:text-gray-500 text-sm">•••</span>
+                    <span className="w-full text-right tabular-nums text-gray-500 dark:text-gray-500 text-sm">•••</span>
                 )}
-                <span className="text-xs text-gray-400 dark:text-gray-500">{t('housing.unitWan')}</span>
+                <span className="text-xs text-gray-500 dark:text-gray-500">{t('housing.unitWan')}</span>
             </div>
         </div>
     );
@@ -363,7 +363,7 @@ function RawField({ label, value, onChange, isValueVisible }: { label: string; v
                     aria-label={label}
                 />
             ) : (
-                <span className="w-full block text-right tabular-nums text-gray-400 dark:text-gray-500 text-sm">•••</span>
+                <span className="w-full block text-right tabular-nums text-gray-500 dark:text-gray-500 text-sm">•••</span>
             )}
         </div>
     );

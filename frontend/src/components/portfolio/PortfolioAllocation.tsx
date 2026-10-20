@@ -183,7 +183,7 @@ export function PortfolioAllocation({ allocation, isValueVisible }: PortfolioAll
             aria-pressed={activeView === 'type'}
             className={`flex-1 px-3 py-2 text-sm font-medium rounded-md transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-500 ${activeView === 'type'
                 ? 'bg-white dark:bg-gray-600 text-gray-900 dark:text-white shadow-sm'
-                : 'text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300'
+                : 'text-gray-600 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300'
               }`}
           >
             {t('portfolio:allocationBy.type')}
@@ -193,7 +193,7 @@ export function PortfolioAllocation({ allocation, isValueVisible }: PortfolioAll
             aria-pressed={activeView === 'sector'}
             className={`flex-1 px-3 py-2 text-sm font-medium rounded-md transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-500 ${activeView === 'sector'
                 ? 'bg-white dark:bg-gray-600 text-gray-900 dark:text-white shadow-sm'
-                : 'text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300'
+                : 'text-gray-600 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300'
               }`}
           >
             {t('portfolio:allocationBy.sector')}
@@ -203,7 +203,7 @@ export function PortfolioAllocation({ allocation, isValueVisible }: PortfolioAll
             aria-pressed={activeView === 'region'}
             className={`flex-1 px-3 py-2 text-sm font-medium rounded-md transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-500 ${activeView === 'region'
                 ? 'bg-white dark:bg-gray-600 text-gray-900 dark:text-white shadow-sm'
-                : 'text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300'
+                : 'text-gray-600 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300'
               }`}
           >
             {t('portfolio:allocationBy.region')}
@@ -317,7 +317,7 @@ export function PortfolioAllocation({ allocation, isValueVisible }: PortfolioAll
                       }
                     </div>
                     {isActive && (
-                      <div className="mt-1 text-xs text-primary-600 dark:text-primary-400 animate-fade-in">
+                      <div className="mt-1 text-xs text-primary-700 dark:text-primary-400 animate-fade-in">
                         <span className="inline-flex items-center">
                           <svg className="w-3 h-3 mr-1" fill="currentColor" viewBox="0 0 20 20">
                             <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />

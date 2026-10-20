@@ -25,15 +25,15 @@ function Slider({
         <div>
             <div className="flex items-baseline justify-between mb-1">
                 <label className="text-xs font-medium text-gray-600 dark:text-gray-400">{label}</label>
-                <span className="text-xs font-bold text-amber-600 dark:text-amber-300 tabular-nums">{value}{suffix}</span>
+                <span className="text-xs font-bold text-amber-700 dark:text-amber-300 tabular-nums">{value}{suffix}</span>
             </div>
             <input
                 type="range" min={min} max={max} step={step} value={value}
                 onChange={(e) => onChange(parseFloat(e.target.value))}
-                className="w-full h-1.5 bg-gray-200 dark:bg-gray-700 rounded-lg appearance-none cursor-pointer accent-amber-500 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-400"
+                className="w-full h-11 sm:h-6 cursor-pointer accent-amber-500 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-400"
                 aria-label={label}
             />
-            {hint && <p className="mt-1 text-sm text-gray-400 dark:text-gray-500">{hint}</p>}
+            {hint && <p className="mt-1 text-sm text-gray-500 dark:text-gray-500">{hint}</p>}
         </div>
     );
 }
@@ -68,9 +68,9 @@ export function CarImpactPanel({ context }: Props) {
                     <TruckIcon className="w-4 h-4 text-amber-500" />
                     {t('housing.car.title', 'What if you buy a car first?')}
                 </h3>
-                <ChevronDownIcon className={cn('w-4 h-4 text-gray-400 transition-transform', open && 'rotate-180')} />
+                <ChevronDownIcon className={cn('w-4 h-4 text-gray-500 dark:text-gray-400 transition-transform', open && 'rotate-180')} />
             </button>
-            <p className="text-sm text-gray-400 dark:text-gray-500 mt-1">
+            <p className="text-sm text-gray-500 dark:text-gray-500 mt-1">
                 {t('housing.car.subtitle', 'See how many years a car — and its loan — pushes back your house.')}
             </p>
 
@@ -100,7 +100,7 @@ export function CarImpactPanel({ context }: Props) {
                             ) : (
                                 <>
                                     <div className="flex items-center gap-2">
-                                        <ClockIcon className={cn('w-5 h-5 flex-shrink-0', impact.delayMonths && impact.delayMonths > 0 ? 'text-warning-600 dark:text-warning-400' : 'text-prosperity-600 dark:text-prosperity-400')} />
+                                        <ClockIcon className={cn('w-5 h-5 flex-shrink-0', impact.delayMonths && impact.delayMonths > 0 ? 'text-warning-700 dark:text-warning-400' : 'text-prosperity-700 dark:text-prosperity-400')} />
                                         <span className={cn('text-lg sm:text-xl font-bold', impact.delayMonths && impact.delayMonths > 0 ? 'text-warning-700 dark:text-warning-300' : 'text-prosperity-700 dark:text-prosperity-300')}>
                                             {impact.delayMonths && impact.delayMonths > 0
                                                 ? t('housing.car.delayHeadline', 'Delays your house by ~{{y}} yr', { y: impact.delayYears })
@@ -118,13 +118,13 @@ export function CarImpactPanel({ context }: Props) {
                         <div className="grid grid-cols-2 gap-3">
                             <div className="rounded-xl border border-gray-200 dark:border-gray-700 p-3 text-center">
                                 <p className="text-sm text-gray-500 dark:text-gray-400 mb-0.5">{t('housing.car.withoutCar', 'Without car')}</p>
-                                <p className="text-base font-bold text-prosperity-600 dark:text-prosperity-400 tabular-nums">
+                                <p className="text-base font-bold text-prosperity-700 dark:text-prosperity-400 tabular-nums">
                                     {baseYear ?? '—'}
                                 </p>
                             </div>
                             <div className="rounded-xl border border-gray-200 dark:border-gray-700 p-3 text-center">
                                 <p className="text-sm text-gray-500 dark:text-gray-400 mb-0.5">{t('housing.car.withCar', 'With car')}</p>
-                                <p className="text-base font-bold text-warning-600 dark:text-warning-400 tabular-nums">
+                                <p className="text-base font-bold text-warning-700 dark:text-warning-400 tabular-nums">
                                     {carYear ?? t('housing.car.never', 'never')}
                                 </p>
                             </div>
@@ -138,7 +138,7 @@ export function CarImpactPanel({ context }: Props) {
                             <Stat label={t('housing.car.debtAfter', 'Debt after car')} value={isValueVisible ? formatTWDCompact(impact.debtAfterCar) : '•••'} tone="warn" />
                         </div>
 
-                        <p className="text-sm text-gray-400 dark:text-gray-500">
+                        <p className="text-sm text-gray-500 dark:text-gray-500">
                             {t('housing.car.valueAtEnd', 'A depreciating asset — worth about {{amount}} after {{n}} years (not counted toward house liquidity).', {
                                 amount: isValueVisible ? formatTWDCompact(impact.carValueAtLoanEnd) : '•••',
                                 n: car.loanTermYears,
@@ -180,7 +180,7 @@ export function CarImpactPanel({ context }: Props) {
                                     className="w-full text-right tabular-nums bg-transparent border-b border-gray-200 dark:border-gray-600 focus-visible:border-amber-500 focus-visible:outline-none px-1 py-0.5 text-sm"
                                     aria-label={t('housing.car.running', 'Running cost / mo')}
                                 />
-                                <p className="mt-1 text-sm text-gray-400 dark:text-gray-500">{t('housing.car.runningHint', 'insurance, fuel, upkeep, parking')}</p>
+                                <p className="mt-1 text-sm text-gray-500 dark:text-gray-500">{t('housing.car.runningHint', 'insurance, fuel, upkeep, parking')}</p>
                             </div>
                         </div>
                     </div>
@@ -195,7 +195,7 @@ function Stat({ label, value, tone }: { label: string; value: string; tone?: 'wa
         <div>
             <p className={cn(
                 'text-sm sm:text-base font-bold tabular-nums',
-                tone === 'bad' ? 'text-error-600 dark:text-error-400' : tone === 'warn' ? 'text-amber-600 dark:text-amber-400' : 'text-gray-900 dark:text-white',
+                tone === 'bad' ? 'text-error-700 dark:text-error-400' : tone === 'warn' ? 'text-amber-700 dark:text-amber-400' : 'text-gray-900 dark:text-white',
             )}>{value}</p>
             <p className="text-sm text-gray-500 dark:text-gray-400 leading-tight mt-0.5">{label}</p>
         </div>

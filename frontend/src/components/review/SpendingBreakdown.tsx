@@ -92,7 +92,7 @@ function CategoryBreakdownCard({
                 {showAllTransactionsLink && (
                     <Link
                         href="/transactions"
-                        className="text-xs font-medium text-primary-600 dark:text-primary-400 hover:underline focus:outline-none focus-visible:ring-2 focus-visible:ring-primary-500 rounded"
+                        className="inline-block py-3.5 -my-3.5 sm:py-1 sm:-my-1 text-xs font-medium text-primary-700 dark:text-primary-400 hover:underline focus:outline-none focus-visible:ring-2 focus-visible:ring-primary-500 rounded"
                     >
                         {t('review.allTransactions', 'All transactions')}
                     </Link>
@@ -180,7 +180,7 @@ function Row({
                         }}
                     />
                 </div>
-                <span className="text-xs text-gray-400 dark:text-gray-500 w-10 text-right">
+                <span className="text-xs text-gray-500 dark:text-gray-500 w-10 text-right">
                     {line.share.toFixed(0)}%
                 </span>
             </div>

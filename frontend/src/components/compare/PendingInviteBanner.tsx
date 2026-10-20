@@ -51,14 +51,14 @@ export default function PendingInviteBanner({ invites, onRespond }: PendingInvit
               {t('savings.inviteRequestSuffix', 'wants to save together with you.')}
             </p>
             {errors[invite.id] && (
-              <p className="text-xs text-error-600 dark:text-error-400 mt-1">{errors[invite.id]}</p>
+              <p className="text-xs text-error-700 dark:text-error-400 mt-1">{errors[invite.id]}</p>
             )}
           </div>
           <div className="flex gap-2 shrink-0">
             <button
               onClick={() => respond(invite.id, 'accept')}
               disabled={loadingId === invite.id}
-              className="px-3 py-1.5 bg-green-600 text-white text-sm font-medium rounded-lg hover:bg-green-700 disabled:opacity-50 transition-colors"
+              className="px-3 py-1.5 bg-green-700 text-white text-sm font-medium rounded-lg hover:bg-green-800 disabled:opacity-50 transition-colors"
             >
               {t('savings.accept', 'Accept')}
             </button>

@@ -92,7 +92,7 @@ describe('MonthlyInsightCard', () => {
       render(<MonthlyInsightCard stats={baseStats} />);
       const netEl = screen.getByText('+NT$30000');
       expect(netEl).toBeInTheDocument();
-      expect(netEl).toHaveClass('text-prosperity-600');
+      expect(netEl).toHaveClass('text-prosperity-700');
     });
 
     it('shows negative net without extra prefix and red color', () => {
@@ -100,7 +100,7 @@ describe('MonthlyInsightCard', () => {
       render(<MonthlyInsightCard stats={lossStats} />);
       // net = -20000; component renders `${net>=0?'+':''}${formatTWD(net)}` = "NT$-20000"
       const netEl = screen.getByText('NT$-20000');
-      expect(netEl).toHaveClass('text-error-600');
+      expect(netEl).toHaveClass('text-error-700');
     });
   });
 
@@ -109,33 +109,33 @@ describe('MonthlyInsightCard', () => {
       render(<MonthlyInsightCard stats={{ monthlyIncome: 100000, monthlyExpenses: 70000 }} />);
       // net = 30000, rate = 30% → emerald
       const rateEl = screen.getByText('30.0%');
-      expect(rateEl).toHaveClass('text-prosperity-600');
+      expect(rateEl).toHaveClass('text-prosperity-700');
     });
 
     it('applies amber color when savings rate is between 0% and 20%', () => {
       render(<MonthlyInsightCard stats={{ monthlyIncome: 100000, monthlyExpenses: 90000 }} />);
       // net = 10000, rate = 10% → amber
       const rateEl = screen.getByText('10.0%');
-      expect(rateEl).toHaveClass('text-amber-600');
+      expect(rateEl).toHaveClass('text-amber-700');
     });
 
     it('applies red color when savings rate is negative (spending > income)', () => {
       render(<MonthlyInsightCard stats={{ monthlyIncome: 50000, monthlyExpenses: 60000 }} />);
       // net = -10000, rate = -20% → red
       const rateEl = screen.getByText('-20.0%');
-      expect(rateEl).toHaveClass('text-error-600');
+      expect(rateEl).toHaveClass('text-error-700');
     });
 
     it('applies amber color at exactly 0% savings rate', () => {
       render(<MonthlyInsightCard stats={{ monthlyIncome: 50000, monthlyExpenses: 50000 }} />);
       const rateEl = screen.getByText('0.0%');
-      expect(rateEl).toHaveClass('text-amber-600');
+      expect(rateEl).toHaveClass('text-amber-700');
     });
 
     it('applies emerald color at exactly 20% savings rate', () => {
       render(<MonthlyInsightCard stats={{ monthlyIncome: 100000, monthlyExpenses: 80000 }} />);
       const rateEl = screen.getByText('20.0%');
-      expect(rateEl).toHaveClass('text-prosperity-600');
+      expect(rateEl).toHaveClass('text-prosperity-700');
     });
   });
 

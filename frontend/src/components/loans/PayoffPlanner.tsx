@@ -144,7 +144,7 @@ export function PayoffPlanner({ loans }: Props) {
                             className={`px-3 py-1.5 rounded-lg text-sm font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-rose-400 ${
                                 strategy === s
                                     ? 'bg-white dark:bg-gray-700 text-gray-900 dark:text-white shadow-sm'
-                                    : 'text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200'}`}>
+                                    : 'text-gray-600 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200'}`}>
                             {t(`planner.${s}`)}
                         </button>
                     ))}
@@ -177,17 +177,17 @@ export function PayoffPlanner({ loans }: Props) {
                     <p className="text-sm text-gray-600 dark:text-gray-400">{t('planner.interest')}</p>
                     <p className="text-2xl font-bold text-gray-900 dark:text-white tabular-nums">{fmt(plan.totalInterest)}</p>
                     {plan.months === null && (
-                        <p className="text-xs text-amber-600 dark:text-amber-400">{t('planner.interestCapped')}</p>
+                        <p className="text-xs text-amber-700 dark:text-amber-400">{t('planner.interestCapped')}</p>
                     )}
                 </div>
 
                 <div>
                     <p className="text-sm text-gray-600 dark:text-gray-400">{t('planner.vsMinimums')}</p>
                     {base.months === null && plan.months !== null ? (
-                        <p className="text-sm font-semibold text-green-600 dark:text-green-400">{t('planner.minimumsNever')}</p>
+                        <p className="text-sm font-semibold text-green-700 dark:text-green-400">{t('planner.minimumsNever')}</p>
                     ) : (monthsSaved ?? 0) > 0 || interestSaved >= 1 ? (
                         <>
-                            <p className="text-2xl font-bold text-green-600 dark:text-green-400">
+                            <p className="text-2xl font-bold text-green-700 dark:text-green-400">
                                 {monthsSaved ? t('planner.sooner', { span: fmtSpan(monthsSaved) }) : '—'}
                             </p>
                             <p className="text-xs text-green-700 dark:text-green-300 tabular-nums">
@@ -231,7 +231,7 @@ export function PayoffPlanner({ loans }: Props) {
                         {plan.payoffOrder.map((p, i) => (
                             <li key={p.id} className="flex items-center justify-between gap-3 text-sm">
                                 <span className="min-w-0 truncate text-gray-700 dark:text-gray-300">
-                                    <span className="text-gray-400 tabular-nums mr-1.5">{i + 1}.</span>{p.name}
+                                    <span className="text-gray-500 dark:text-gray-400 tabular-nums mr-1.5">{i + 1}.</span>{p.name}
                                 </span>
                                 <span className="shrink-0 tabular-nums text-gray-500 dark:text-gray-400">{fmtMonth(p.month)}</span>
                             </li>

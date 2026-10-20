@@ -97,7 +97,7 @@ function SortableRow({ transaction, children }: { transaction: Transaction; chil
           description: transaction.description,
           defaultValue: 'Drag to reorder {{description}}',
         })}
-        className="flex-shrink-0 w-6 flex items-center justify-center rounded-md text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-800 cursor-grab active:cursor-grabbing touch-none focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-500"
+        className="flex-shrink-0 w-6 flex items-center justify-center rounded-md text-gray-500 dark:text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-800 cursor-grab active:cursor-grabbing touch-none focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-500"
       >
         <Bars2Icon className="w-4 h-4" aria-hidden="true" />
       </button>

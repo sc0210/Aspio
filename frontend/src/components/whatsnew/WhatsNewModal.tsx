@@ -64,14 +64,14 @@ export function WhatsNewModal() {
                 <Link
                     href="/changelog"
                     onClick={close}
-                    className="text-xs font-medium text-primary-600 dark:text-primary-400 hover:underline rounded focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-400"
+                    className="text-xs font-medium text-primary-700 dark:text-primary-400 hover:underline rounded focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-400"
                 >
                     {t('whatsNew.viewAll', 'View all updates')}
                 </Link>
                 <button
                     type="button"
                     onClick={close}
-                    className="inline-flex items-center gap-1.5 rounded-lg bg-primary-600 hover:bg-primary-700 px-4 py-2 text-sm font-semibold text-white transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-400 focus-visible:ring-offset-2 dark:focus-visible:ring-offset-gray-800"
+                    className="inline-flex items-center gap-1.5 rounded-lg bg-primary-700 hover:bg-primary-800 px-4 py-2 text-sm font-semibold text-white transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-400 focus-visible:ring-offset-2 dark:focus-visible:ring-offset-gray-800"
                 >
                     <SparklesIcon className="w-4 h-4" />
                     {t('whatsNew.gotIt', 'Got it')}

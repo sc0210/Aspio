@@ -107,7 +107,7 @@ function HoldingRowBase({
             type="checkbox"
             checked={isSelected}
             onChange={() => onToggleSelect(holding)}
-            className="w-4 h-4 rounded border-gray-300 dark:border-gray-600 text-primary-600 focus-visible:ring-primary-500 cursor-pointer"
+            className="w-4 h-4 rounded border-gray-300 dark:border-gray-600 text-primary-700 dark:text-primary-600 focus-visible:ring-primary-500 cursor-pointer"
           />
         </td>
       )}
@@ -150,7 +150,7 @@ function HoldingRowBase({
                 className="ml-1 p-1 hover:bg-green-100 dark:hover:bg-green-900/30 rounded transition-colors"
                 title="Sell this holding"
               >
-                <CurrencyDollarIcon className="w-4 h-4 text-green-600 dark:text-green-400" />
+                <CurrencyDollarIcon className="w-4 h-4 text-green-700 dark:text-green-400" />
               </button>
             )}
             {/* Trend link - navigate to asset detail page */}
@@ -190,7 +190,7 @@ function HoldingRowBase({
                   className="flex items-center gap-1 px-1.5 py-0.5 rounded bg-warning-50 dark:bg-warning-900/30 cursor-help"
                   title={`Price updated ${formatTimeAgo(holding.lastUpdated, t)} - Click Refresh to update`}
                 >
-                  <ClockIcon className="w-3 h-3 text-warning-500 dark:text-warning-400" />
+                  <ClockIcon className="w-3 h-3 text-warning-700 dark:text-warning-400" />
                 </span>
               )}
               <span className={cn(
@@ -210,13 +210,13 @@ function HoldingRowBase({
             {!isCash && holding.dayChange != null && (
               <div className={cn(
                 'text-xs mt-0.5 leading-tight',
-                holding.dayChange >= 0 ? 'text-success-600 dark:text-success-400' : 'text-error-600 dark:text-error-400'
+                holding.dayChange >= 0 ? 'text-success-700 dark:text-success-400' : 'text-error-700 dark:text-error-400'
               )}>
                 {holding.dayChange >= 0 ? '+' : ''}{formatCurrency(holding.dayChange, holding.currency)}
                 {holding.dayChangePercentage != null && (
                   <span className="ml-1">({holding.dayChangePercentage >= 0 ? '+' : ''}{holding.dayChangePercentage.toFixed(2)}%)</span>
                 )}
-                <span className="ml-1 text-gray-400 dark:text-gray-500">{t('portfolio:holdings.today')}</span>
+                <span className="ml-1 text-gray-500 dark:text-gray-500">{t('portfolio:holdings.today')}</span>
               </div>
             )}
           </div>
@@ -227,7 +227,7 @@ function HoldingRowBase({
       <td className="px-3 md:px-6 py-4 whitespace-nowrap">
         <div className="flex items-center justify-center">
           {isCash ? (
-            <span className="text-xs text-gray-400">—</span>
+            <span className="text-xs text-gray-500 dark:text-gray-400">—</span>
           ) : (
             <Link
               href={`/portfolio/holdings/${holding.symbol}`}
@@ -254,7 +254,7 @@ function HoldingRowBase({
               // trades in. The converted figure is secondary and marked
               // approximate, because it moves with the rate and the rate is a
               // snapshot.
-              <div className="text-xs font-normal text-gray-400 dark:text-gray-500 tabular-nums">
+              <div className="text-xs font-normal text-gray-500 dark:text-gray-500 tabular-nums">
                 ≈ {formatCurrency(holding.totalValue * baseRate, baseCurrency)}
               </div>
             )}
@@ -271,7 +271,7 @@ function HoldingRowBase({
             {/* Gain/Loss Amount and ROI */}
             <div className="flex items-center justify-end space-x-2">
               {(holding.gainLoss || 0) >= 0 ? (
-                <ArrowTrendingUpIcon className="w-4 h-4 text-success-500" />
+                <ArrowTrendingUpIcon className="w-4 h-4 text-success-700 dark:text-success-500" />
               ) : (
                 <ArrowTrendingDownIcon className="w-4 h-4 text-error-500" />
               )}
@@ -279,7 +279,7 @@ function HoldingRowBase({
                 {/* Total Gain/Loss Amount */}
                 <div className={cn(
                   'text-sm font-semibold leading-tight',
-                  (holding.gainLoss || 0) >= 0 ? 'text-success-600 dark:text-success-400' : 'text-error-600 dark:text-error-400'
+                  (holding.gainLoss || 0) >= 0 ? 'text-success-700 dark:text-success-400' : 'text-error-700 dark:text-error-400'
                 )}>
                   {isValueVisible
                     ? `${(holding.gainLoss || 0) >= 0 ? '+' : ''}${formatCurrency(holding.gainLoss || 0, holding.currency)}`
@@ -289,7 +289,7 @@ function HoldingRowBase({
                 {/* ROI (Return on Investment) - Simple percentage gain */}
                 <div className={cn(
                   'text-xs leading-tight',
-                  (holding.gainLossPercentage || 0) >= 0 ? 'text-success-500 dark:text-success-400' : 'text-error-500 dark:text-error-400'
+                  (holding.gainLossPercentage || 0) >= 0 ? 'text-success-700 dark:text-success-400' : 'text-error-500 dark:text-error-400'
                 )}>
                   {isValueVisible
                     ? `${(holding.gainLossPercentage || 0) >= 0 ? '+' : ''}${(holding.gainLossPercentage || 0).toFixed(2)}% ROI`

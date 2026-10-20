@@ -51,10 +51,10 @@ function Slider({
             <input
                 type="range" min={min} max={max} step={step} value={value}
                 onChange={(e) => onChange(parseFloat(e.target.value))}
-                className="w-full h-1.5 bg-gray-200 dark:bg-gray-700 rounded-lg appearance-none cursor-pointer accent-indigo-600 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-400"
+                className="w-full h-11 sm:h-6 cursor-pointer accent-indigo-600 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-400"
                 aria-label={label}
             />
-            {hint && <p className="mt-1 text-sm text-gray-400 dark:text-gray-500">{hint}</p>}
+            {hint && <p className="mt-1 text-sm text-gray-500 dark:text-gray-500">{hint}</p>}
         </div>
     );
 }
@@ -103,7 +103,7 @@ export function GlidepathPanel({ seed, preferences, onPreferenceChange }: Props)
                         <ChartBarSquareIcon className="w-4 h-4 text-indigo-500" />
                         {t('lifecycle.glide.title', 'The glidepath')}
                     </h3>
-                    <p className="text-sm text-gray-400 dark:text-gray-500 mt-1">
+                    <p className="text-sm text-gray-500 dark:text-gray-500 mt-1">
                         {t('lifecycle.glide.subtitle', 'Target leverage falls on its own as savings accumulate. Your job is to follow it down, not to predict the market.')}
                     </p>
                 </div>
@@ -111,7 +111,7 @@ export function GlidepathPanel({ seed, preferences, onPreferenceChange }: Props)
                     type="button"
                     onClick={() => setShowAssumptions((s) => !s)}
                     aria-expanded={showAssumptions}
-                    className="flex items-center gap-1 text-xs text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200 transition-colors rounded focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-400 shrink-0"
+                    className="flex items-center gap-1 text-xs text-gray-600 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200 transition-colors rounded focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-400 shrink-0"
                 >
                     <AdjustmentsHorizontalIcon className="w-3.5 h-3.5" />
                     {t('lifecycle.glide.assumptions', 'Assumptions')}
@@ -129,7 +129,7 @@ export function GlidepathPanel({ seed, preferences, onPreferenceChange }: Props)
                 <div className="flex items-start gap-2.5">
                     <FlagIcon className={cn(
                         'w-5 h-5 shrink-0 mt-0.5',
-                        path.crossoverYear !== null ? 'text-prosperity-500' : 'text-gray-400',
+                        path.crossoverYear !== null ? 'text-prosperity-700' : 'text-gray-500 dark:text-gray-400',
                     )} />
                     <div className="min-w-0">
                         <p className="text-xs font-bold text-gray-800 dark:text-gray-100">
@@ -236,7 +236,7 @@ export function GlidepathPanel({ seed, preferences, onPreferenceChange }: Props)
                 />
             </div>
 
-            <p className="mt-2 text-xs text-gray-400 dark:text-gray-500 leading-relaxed">
+            <p className="mt-2 text-xs text-gray-500 dark:text-gray-500 leading-relaxed">
                 {t('lifecycle.glide.note', 'A projection, not a forecast: it assumes a steady return and that you keep saving. Loan repayments already sit in your recorded expenses, so the payment is added back to savings the month the loan clears.')}
             </p>
         </Card>

@@ -126,7 +126,7 @@ export function MonthContextCard({ context, loading, error }: MonthContextCardPr
                 ))}
             </ol>
 
-            <div className="mt-1 flex justify-between text-xs text-gray-400 dark:text-gray-500">
+            <div className="mt-1 flex justify-between text-xs text-gray-500 dark:text-gray-500">
                 <span>{monthLabel(context.months[0].key, i18n.language)}</span>
                 <span>{monthLabel(context.months[context.months.length - 1].key, i18n.language)}</span>
             </div>

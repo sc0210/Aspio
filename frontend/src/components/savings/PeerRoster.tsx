@@ -31,7 +31,7 @@ export function PeerRoster({ accepted, sentPending, removingId, onRemove }: Peer
       onClick={() => onRemove(connectionId)}
       disabled={removingId === connectionId}
       aria-label={label}
-      className="absolute -top-2 -right-2 w-6 h-6 rounded-full bg-gray-200 dark:bg-gray-600 text-gray-600 dark:text-gray-300 hover:bg-red-100 hover:text-red-600 dark:hover:bg-red-900/40 dark:hover:text-red-400 flex items-center justify-center transition-colors disabled:opacity-50 touch-manipulation focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-400"
+      className="absolute -top-2 -right-2 w-6 h-6 before:absolute before:-inset-2.5 before:content-[''] rounded-full bg-gray-200 dark:bg-gray-600 text-gray-600 dark:text-gray-300 hover:bg-red-100 hover:text-red-600 dark:hover:bg-red-900/40 dark:hover:text-red-400 flex items-center justify-center transition-colors disabled:opacity-50 touch-manipulation focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-400"
     >
       <XMarkIcon className="w-3.5 h-3.5" />
     </button>
@@ -39,7 +39,7 @@ export function PeerRoster({ accepted, sentPending, removingId, onRemove }: Peer
 
   return (
     <div className="bg-white dark:bg-gray-800 rounded-xl p-4 shadow-sm">
-      <p className="text-xs font-semibold text-gray-400 dark:text-gray-500 uppercase tracking-wide mb-3">
+      <p className="text-xs font-semibold text-gray-500 dark:text-gray-500 uppercase tracking-wide mb-3">
         {t('savings.peersLabel', 'Members')}
       </p>
       <ul className="flex flex-wrap gap-5">
@@ -48,7 +48,7 @@ export function PeerRoster({ accepted, sentPending, removingId, onRemove }: Peer
             <div className="relative">
               <div
                 aria-hidden="true"
-                className="w-12 h-12 rounded-full bg-primary-600 flex items-center justify-center text-white font-semibold"
+                className="w-12 h-12 rounded-full bg-primary-700 flex items-center justify-center text-white font-semibold"
               >
                 {conn.other_user.name.charAt(0).toUpperCase()}
               </div>
@@ -83,10 +83,10 @@ export function PeerRoster({ accepted, sentPending, removingId, onRemove }: Peer
                 t('savings.cancelInvite', 'Cancel invite to {{name}}', { name: conn.other_user.name }),
               )}
             </div>
-            <span className="text-xs text-gray-400 dark:text-gray-500 max-w-[64px] truncate text-center">
+            <span className="text-xs text-gray-500 dark:text-gray-500 max-w-[64px] truncate text-center">
               {conn.other_user.name}
             </span>
-            <span className="text-xs text-amber-600 dark:text-amber-400 font-medium">
+            <span className="text-xs text-amber-700 dark:text-amber-400 font-medium">
               {t('savings.pendingLabel', 'pending')}
             </span>
           </li>

@@ -35,10 +35,10 @@ export function SpreadPanel({ spread, debt, interest, realizedReturnPct, realize
     return (
         <Card padding="md">
             <h3 className="text-sm font-semibold text-gray-700 dark:text-gray-300 flex items-center gap-1.5">
-                <ArrowTrendingUpIcon className="w-4 h-4 text-prosperity-500" />
+                <ArrowTrendingUpIcon className="w-4 h-4 text-prosperity-700 dark:text-prosperity-500" />
                 {t('lifecycle.spread.title', 'Is the leverage paying for itself?')}
             </h3>
-            <p className="text-sm text-gray-400 dark:text-gray-500 mt-1 mb-4">
+            <p className="text-sm text-gray-500 dark:text-gray-500 mt-1 mb-4">
                 {t('lifecycle.spread.subtitle', 'Measured, not assumed: the rate your loans actually charge against the return your holdings actually delivered.')}
             </p>
 
@@ -64,7 +64,7 @@ export function SpreadPanel({ spread, debt, interest, realizedReturnPct, realize
             </div>
 
             {realizedReturnSource === 'twr' && (
-                <p className="-mt-2 mb-3 text-xs text-gray-400 dark:text-gray-500">
+                <p className="-mt-2 mb-3 text-xs text-gray-500 dark:text-gray-500">
                     {t('lifecycle.spread.twrBasis', 'Time-weighted since {{since}}: your own deposits are taken out, so it measures the investments, not the saving.', {
                         since: realizedReturnSince ?? '—',
                     })}
@@ -88,24 +88,24 @@ export function SpreadPanel({ spread, debt, interest, realizedReturnPct, realize
             {/* What it has cost so far. */}
             <div className="mt-4 grid grid-cols-1 sm:grid-cols-2 gap-2">
                 <div className="rounded-xl border border-gray-200 dark:border-gray-700 p-3">
-                    <p className="text-xs uppercase tracking-wide text-gray-400 dark:text-gray-500">
+                    <p className="text-xs uppercase tracking-wide text-gray-500 dark:text-gray-500">
                         {t('lifecycle.spread.paidLabel', 'Interest paid so far')}
                     </p>
-                    <p className="text-lg font-bold tabular-nums text-error-600 dark:text-error-400 mt-0.5">
+                    <p className="text-lg font-bold tabular-nums text-error-700 dark:text-error-400 mt-0.5">
                         {isValueVisible ? formatTWDCompact(interest.paid) : '•••'}
                     </p>
-                    <p className="text-xs text-gray-400 dark:text-gray-500 mt-0.5">
+                    <p className="text-xs text-gray-500 dark:text-gray-500 mt-0.5">
                         {t('lifecycle.spread.onSchedule', 'on the contractual schedule')}
                     </p>
                 </div>
                 <div className="rounded-xl border border-gray-200 dark:border-gray-700 p-3">
-                    <p className="text-xs uppercase tracking-wide text-gray-400 dark:text-gray-500">
+                    <p className="text-xs uppercase tracking-wide text-gray-500 dark:text-gray-500">
                         {t('lifecycle.spread.remainingLabel', 'Interest still ahead')}
                     </p>
                     <p className="text-lg font-bold tabular-nums text-gray-800 dark:text-gray-100 mt-0.5">
                         {isValueVisible ? formatTWDCompact(interest.remaining) : '•••'}
                     </p>
-                    <p className="text-xs text-gray-400 dark:text-gray-500 mt-0.5">
+                    <p className="text-xs text-gray-500 dark:text-gray-500 mt-0.5">
                         {t('lifecycle.spread.ifRunToTerm', 'if the loans run to term')}
                     </p>
                 </div>
@@ -130,12 +130,12 @@ function Metric({
             'rounded-xl border p-3 text-center',
             emphasise ? 'border-gray-300 dark:border-gray-600' : 'border-gray-200 dark:border-gray-700',
         )}>
-            <p className="text-xs uppercase tracking-wide text-gray-400 dark:text-gray-500">{label}</p>
+            <p className="text-xs uppercase tracking-wide text-gray-500 dark:text-gray-500">{label}</p>
             <p className={cn(
                 'font-bold tabular-nums mt-0.5',
                 emphasise ? 'text-xl' : 'text-lg',
-                tone === 'good' && 'text-prosperity-600 dark:text-prosperity-400',
-                tone === 'bad' && 'text-error-600 dark:text-error-400',
+                tone === 'good' && 'text-prosperity-700 dark:text-prosperity-400',
+                tone === 'bad' && 'text-error-700 dark:text-error-400',
                 tone === 'neutral' && 'text-gray-500 dark:text-gray-400',
             )}>
                 {value}

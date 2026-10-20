@@ -157,8 +157,8 @@ export const DailyPerformanceChart = memo(function DailyPerformanceChart({
               className={cn(
                 'text-sm font-bold tabular-nums',
                 isPositive
-                  ? 'text-success-600 dark:text-success-400'
-                  : 'text-error-600 dark:text-error-400'
+                  ? 'text-success-700 dark:text-success-400'
+                  : 'text-error-700 dark:text-error-400'
               )}
             >
               {isValueVisible ? (
@@ -181,8 +181,8 @@ export const DailyPerformanceChart = memo(function DailyPerformanceChart({
               className={cn(
                 'text-sm font-bold tabular-nums',
                 isPositive
-                  ? 'text-success-600 dark:text-success-400'
-                  : 'text-error-600 dark:text-error-400'
+                  ? 'text-success-700 dark:text-success-400'
+                  : 'text-error-700 dark:text-error-400'
               )}
               aria-label={`Return ${isPositive ? 'gain' : 'loss'} of ${data.changePercent.toFixed(2)} percent`}
             >
@@ -219,8 +219,8 @@ export const DailyPerformanceChart = memo(function DailyPerformanceChart({
                         className={cn(
                           'text-xs font-bold tabular-nums',
                           holdingIsPositive
-                            ? 'text-success-600 dark:text-success-400'
-                            : 'text-error-600 dark:text-error-400'
+                            ? 'text-success-700 dark:text-success-400'
+                            : 'text-error-700 dark:text-error-400'
                         )}
                         aria-label={`${holding.symbol} ${holdingIsPositive ? 'gain' : 'loss'}`}
                       >
@@ -254,7 +254,7 @@ export const DailyPerformanceChart = memo(function DailyPerformanceChart({
         <div className="text-center max-w-sm">
           <div className="w-16 h-16 mx-auto mb-4 rounded-xl bg-gray-100 dark:bg-gray-800 flex items-center justify-center">
             <svg
-              className="w-8 h-8 text-gray-400 dark:text-gray-600"
+              className="w-8 h-8 text-gray-500 dark:text-gray-600"
               fill="none"
               stroke="currentColor"
               viewBox="0 0 24 24"

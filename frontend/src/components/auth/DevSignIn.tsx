@@ -46,7 +46,7 @@ export function DevSignIn() {
 
   return (
     <div>
-      <div className="relative flex items-center gap-2 text-xs text-gray-400 mb-3">
+      <div className="relative flex items-center gap-2 text-xs text-gray-500 dark:text-gray-400 mb-3">
         <div className="flex-1 h-px bg-gray-200 dark:bg-gray-700" />
         <span className="flex-shrink-0">Development only</span>
         <div className="flex-1 h-px bg-gray-200 dark:bg-gray-700" />

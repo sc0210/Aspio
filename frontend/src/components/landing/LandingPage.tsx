@@ -24,11 +24,11 @@ import { ThemeToggle } from '../ui/ThemeToggle';
 import { Card } from '@/components/ui/Card';
 
 const FEATURE_COLORS = [
-  { bg: 'bg-primary-50 dark:bg-primary-900/20', icon: 'text-primary-600 dark:text-primary-400', accent: 'from-primary-400/60 via-primary-300/40 to-indigo-400/60' },
+  { bg: 'bg-primary-50 dark:bg-primary-900/20', icon: 'text-primary-700 dark:text-primary-400', accent: 'from-primary-400/60 via-primary-300/40 to-indigo-400/60' },
   { bg: 'bg-violet-50 dark:bg-violet-900/20',   icon: 'text-violet-600 dark:text-violet-400',   accent: 'from-violet-400/60 via-violet-300/40 to-purple-400/60' },
-  { bg: 'bg-amber-50 dark:bg-amber-900/20',     icon: 'text-amber-600 dark:text-amber-400',     accent: 'from-amber-400/60 via-amber-300/40 to-yellow-400/60' },
-  { bg: 'bg-emerald-50 dark:bg-emerald-900/20', icon: 'text-emerald-600 dark:text-emerald-400', accent: 'from-emerald-400/60 via-teal-300/40 to-cyan-400/60' },
-  { bg: 'bg-teal-50 dark:bg-teal-900/20',       icon: 'text-teal-600 dark:text-teal-400',       accent: 'from-teal-400/60 via-cyan-300/40 to-emerald-400/60' },
+  { bg: 'bg-amber-50 dark:bg-amber-900/20',     icon: 'text-amber-700 dark:text-amber-400',     accent: 'from-amber-400/60 via-amber-300/40 to-yellow-400/60' },
+  { bg: 'bg-emerald-50 dark:bg-emerald-900/20', icon: 'text-emerald-700 dark:text-emerald-400', accent: 'from-emerald-400/60 via-teal-300/40 to-cyan-400/60' },
+  { bg: 'bg-teal-50 dark:bg-teal-900/20',       icon: 'text-teal-700 dark:text-teal-400',       accent: 'from-teal-400/60 via-cyan-300/40 to-emerald-400/60' },
   { bg: 'bg-rose-50 dark:bg-rose-900/20',       icon: 'text-rose-600 dark:text-rose-400',       accent: 'from-rose-400/60 via-pink-300/40 to-rose-400/60' },
 ];
 
@@ -268,7 +268,7 @@ export function LandingPage() {
                   key={feature.name}
                   className="flex flex-col items-center text-center gap-2 p-4 rounded-xl border border-gray-200 dark:border-gray-700 bg-gray-50/60 dark:bg-gray-800/40"
                 >
-                  <Icon className="w-5 h-5 text-gray-400 dark:text-gray-500" />
+                  <Icon className="w-5 h-5 text-gray-500 dark:text-gray-500" />
                   <span className="text-xs font-medium text-gray-600 dark:text-gray-300 leading-snug">
                     {feature.name}
                   </span>
@@ -414,13 +414,13 @@ export function LandingPage() {
             </Link>
 
             <div className="flex flex-wrap justify-center gap-4 sm:gap-6">
-              <Link href="/privacy" className="text-gray-400 hover:text-white transition-colors text-sm">
+              <Link href="/privacy" className="text-gray-500 dark:text-gray-400 hover:text-white transition-colors text-sm">
                 {t('landing.footer.privacy')}
               </Link>
-              <Link href="/terms" className="text-gray-400 hover:text-white transition-colors text-sm">
+              <Link href="/terms" className="text-gray-500 dark:text-gray-400 hover:text-white transition-colors text-sm">
                 {t('landing.footer.terms')}
               </Link>
-              <Link href="/support" className="text-gray-400 hover:text-white transition-colors text-sm">
+              <Link href="/support" className="text-gray-500 dark:text-gray-400 hover:text-white transition-colors text-sm">
                 {t('landing.footer.support')}
               </Link>
             </div>

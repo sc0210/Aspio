@@ -77,9 +77,9 @@ export function AssetGoalCard({
         else text = t('goals:card.date.years', { years: Math.ceil(days / 365) });
 
         let className: string;
-        if (days < 0) className = 'text-error-600 dark:text-error-400 font-semibold';
+        if (days < 0) className = 'text-error-700 dark:text-error-400 font-semibold';
         else if (days <= 14) className = 'text-error-500 dark:text-error-400 font-medium';
-        else if (days <= 60) className = 'text-amber-600 dark:text-amber-400';
+        else if (days <= 60) className = 'text-amber-700 dark:text-amber-400';
         else className = 'text-gray-600 dark:text-gray-400';
 
         return { text, className };
@@ -92,8 +92,8 @@ export function AssetGoalCard({
         const isOverdue = !!targetDate && targetDate.getTime() < Date.now() && !isCompleted;
         // Soften the date: overdue reads as muted amber, not an alarming bold red.
         const denseDateClass = isOverdue
-            ? 'text-amber-600 dark:text-amber-500'
-            : 'text-gray-400 dark:text-gray-500';
+            ? 'text-amber-700 dark:text-amber-500'
+            : 'text-gray-500 dark:text-gray-500';
         return (
             <Card padding="none" radius="xl" shadow="none" className="p-3 hover:border-primary-300 dark:hover:border-primary-500 transition-colors">
                 {/* Row 1: icon + title + status/priority */}
@@ -118,7 +118,7 @@ export function AssetGoalCard({
                     <span className="text-lg font-bold text-gray-900 dark:text-white tabular-nums truncate">
                         {isValueVisible ? formatCurrency(current, currency) : '•••••'}
                     </span>
-                    <span className="text-xs text-gray-400 dark:text-gray-500 shrink-0">
+                    <span className="text-xs text-gray-500 dark:text-gray-500 shrink-0">
                         / {isValueVisible ? formatCurrency(target, currency) : '•••••'}
                     </span>
                 </div>
@@ -154,7 +154,7 @@ export function AssetGoalCard({
                                 type="button"
                                 onClick={(e) => { e.stopPropagation(); onContribute(); }}
                                 aria-label={t('goals:card.aria.contribute', { title })}
-                                className="px-3 py-1.5 bg-primary-600 hover:bg-primary-700 text-white text-xs font-medium rounded-lg transition-colors"
+                                className="px-3 py-1.5 bg-primary-700 hover:bg-primary-800 text-white text-xs font-medium rounded-lg transition-colors"
                             >
                                 {t('goals:card.contribute')}
                             </button>
@@ -313,7 +313,7 @@ export function AssetGoalCard({
                             type="button"
                             onClick={(e) => { e.stopPropagation(); onContribute(); }}
                             aria-label={t('goals:card.aria.contribute', { title })}
-                            className="flex-1 px-4 py-2.5 min-h-[44px] bg-primary-600 hover:bg-primary-700 text-white text-sm font-medium rounded-lg transition-colors duration-200 shadow-sm hover:shadow-md"
+                            className="flex-1 px-4 py-2.5 min-h-[44px] bg-primary-700 hover:bg-primary-800 text-white text-sm font-medium rounded-lg transition-colors duration-200 shadow-sm hover:shadow-md"
                         >
                             {t('goals:card.contribute')}
                         </button>
@@ -337,7 +337,7 @@ export function AssetGoalCard({
                             type="button"
                             onClick={(e) => { e.stopPropagation(); setConfirmingDelete(true); }}
                             aria-label={t('goals:card.aria.delete', { title })}
-                            className="px-4 py-2.5 min-h-[44px] border border-error-300 dark:border-error-600 hover:bg-error-50 dark:hover:bg-error-900/30 text-error-600 dark:text-error-400 text-sm font-medium rounded-lg transition-colors duration-200"
+                            className="px-4 py-2.5 min-h-[44px] border border-error-300 dark:border-error-600 hover:bg-error-50 dark:hover:bg-error-900/30 text-error-700 dark:text-error-400 text-sm font-medium rounded-lg transition-colors duration-200"
                         >
                             {t('common:common.delete')}
                         </button>

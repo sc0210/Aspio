@@ -20,8 +20,8 @@ const PROVISIONAL_NOTE = 'not final — the market has not closed for this day y
 const WEEKDAY_LABELS = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri'];
 
 function cellColorClass(change: number | null, maxAbs: number, invertColors: boolean): string {
-    if (change === null) return 'bg-gray-100 dark:bg-gray-800/60 text-gray-400 dark:text-gray-600';
-    if (change === 0) return 'bg-gray-100 dark:bg-gray-800 text-gray-400';
+    if (change === null) return 'bg-gray-100 dark:bg-gray-800/60 text-gray-500 dark:text-gray-600';
+    if (change === 0) return 'bg-gray-100 dark:bg-gray-800 text-gray-500 dark:text-gray-400';
 
     const ratio = maxAbs > 0 ? Math.min(Math.abs(change) / maxAbs, 1) : 0;
     const isGain = change > 0;
@@ -56,7 +56,7 @@ export function PortfolioCalendarHeatmap({ data, isValueVisible }: Props) {
 
     if (blocks.length === 0) {
         return (
-            <div className="flex items-center justify-center py-20 text-sm text-gray-400 dark:text-gray-500">
+            <div className="flex items-center justify-center py-20 text-sm text-gray-500 dark:text-gray-500">
                 No data available for this period.
             </div>
         );
@@ -111,7 +111,7 @@ export function PortfolioCalendarHeatmap({ data, isValueVisible }: Props) {
                     {invertColors ? '🇹🇼 TW mode' : 'TW mode'}
                 </button>
 
-                <span className="ml-auto text-[11px] text-gray-400 dark:text-gray-500">
+                <span className="ml-auto text-[11px] text-gray-500 dark:text-gray-500">
                     Max daily: {isValueVisible ? formatCurrency(maxAbs) : '•••'}
                 </span>
             </div>
@@ -132,8 +132,8 @@ export function PortfolioCalendarHeatmap({ data, isValueVisible }: Props) {
                                 <span className={cn(
                                     'text-xs font-bold tabular-nums',
                                     (invertColors ? !isMonthPositive : isMonthPositive)
-                                        ? 'text-emerald-600 dark:text-emerald-400'
-                                        : 'text-red-600 dark:text-red-400',
+                                        ? 'text-emerald-700 dark:text-emerald-400'
+                                        : 'text-red-700 dark:text-red-400',
                                 )}>
                                     {isValueVisible ? formatCompactChange(monthSum) : '•••'}
                                 </span>
@@ -144,12 +144,12 @@ export function PortfolioCalendarHeatmap({ data, isValueVisible }: Props) {
                             {WEEKDAY_LABELS.map((d) => (
                                 <div
                                     key={d}
-                                    className="text-center text-xs font-semibold text-gray-400 dark:text-gray-500 py-0.5 uppercase"
+                                    className="text-center text-xs font-semibold text-gray-500 dark:text-gray-500 py-0.5 uppercase"
                                 >
                                     {d}
                                 </div>
                             ))}
-                            <div className="text-center text-[11px] font-semibold text-gray-400 dark:text-gray-500 py-0.5">
+                            <div className="text-center text-[11px] font-semibold text-gray-500 dark:text-gray-500 py-0.5">
                                 Σ wk
                             </div>
                         </div>

@@ -455,7 +455,7 @@ export default function AddTransactionPage() {
                         </div>
                         <div className="flex-1">
                           <label htmlFor="tx-invest-name" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                            {t('transactions:form.invest.name', 'Name')} <span className="text-xs text-gray-400 font-normal italic">{t('transactions:form.optional', '(optional)')}</span>
+                            {t('transactions:form.invest.name', 'Name')} <span className="text-xs text-gray-500 dark:text-gray-400 font-normal italic">{t('transactions:form.optional', '(optional)')}</span>
                           </label>
                           <input
                             id="tx-invest-name"
@@ -539,7 +539,7 @@ export default function AddTransactionPage() {
                             <span className="flex-1 text-2xl font-black text-violet-700 dark:text-violet-300 tabular-nums">{fmtTotal}</span>
                             <span className="text-xs font-semibold px-2 py-1 rounded-md bg-violet-100 dark:bg-violet-900/40 text-violet-600 dark:text-violet-400">{t('transactions:form.invest.expenseBadge', 'EXPENSE')}</span>
                           </div>
-                          <p className="text-xs text-gray-400 dark:text-gray-500 mt-1.5">
+                          <p className="text-xs text-gray-500 dark:text-gray-500 mt-1.5">
                             {qty > 0 && price > 0 ? `${qty} × ${price} = ` : ''}<strong>{t('transactions:form.wallets.life', 'Life Wallet')}</strong> {t('transactions:form.invest.buyFlowSuffix', 'outflow → Portfolio')}
                           </p>
                         </div>
@@ -566,7 +566,7 @@ export default function AddTransactionPage() {
                       </div>
 
                       {holdingsLoading ? (
-                        <p className="text-xs text-gray-400 dark:text-gray-500 text-center py-2">{t('transactions:form.invest.loadingHoldings', 'Loading holdings…')}</p>
+                        <p className="text-xs text-gray-500 dark:text-gray-500 text-center py-2">{t('transactions:form.invest.loadingHoldings', 'Loading holdings…')}</p>
                       ) : sellableHoldings.length === 0 ? (
                         <div className="text-center text-sm text-gray-500 dark:text-gray-400 border-2 border-dashed border-gray-200 dark:border-gray-700 rounded-xl py-6 px-4">
                           {t('transactions:form.invest.noHoldingsPrefix', 'No holdings to sell yet. Use')} <strong>{t('transactions:form.invest.buyAsset', 'Buy Asset')}</strong> {t('transactions:form.invest.noHoldingsSuffix', '(or the Portfolio page) to add one first.')}
@@ -600,7 +600,7 @@ export default function AddTransactionPage() {
                                 >
                                   <span className="text-xs font-bold font-mono text-gray-900 dark:text-white">{h.symbol}</span>
                                   <span className="text-xs text-gray-500 dark:text-gray-400 truncate max-w-[88px]">{h.name}</span>
-                                  <span className="text-xs font-semibold text-emerald-600 dark:text-emerald-400">{h.quantity} {t('transactions:form.invest.units', 'units')}</span>
+                                  <span className="text-xs font-semibold text-emerald-700 dark:text-emerald-400">{h.quantity} {t('transactions:form.invest.units', 'units')}</span>
                                 </button>
                               ))}
                             </div>
@@ -629,17 +629,17 @@ export default function AddTransactionPage() {
                                 )}
                               />
                               {selectedHolding ? (
-                                <p className="text-xs text-gray-400 dark:text-gray-500 mt-1">{t('transactions:form.invest.availablePrefix', 'Available:')} <strong>{selectedHolding.quantity}</strong> {t('transactions:form.invest.units', 'units')}</p>
+                                <p className="text-xs text-gray-500 dark:text-gray-500 mt-1">{t('transactions:form.invest.availablePrefix', 'Available:')} <strong>{selectedHolding.quantity}</strong> {t('transactions:form.invest.units', 'units')}</p>
                               ) : errors.investSellQty ? (
                                 <p className="text-xs text-error-500 mt-1">{errors.investSellQty}</p>
                               ) : null}
                             </div>
                             <div className="flex-1">
                               <label htmlFor="tx-invest-sell-price" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                                {t('transactions:form.invest.pricePerUnit', 'Price / Unit')} <span className="text-xs text-gray-400 font-normal italic">{t('transactions:form.optional', '(optional)')}</span>
+                                {t('transactions:form.invest.pricePerUnit', 'Price / Unit')} <span className="text-xs text-gray-500 dark:text-gray-400 font-normal italic">{t('transactions:form.optional', '(optional)')}</span>
                               </label>
                               <div className="flex items-center gap-1.5">
-                                <span className="text-xs font-bold text-emerald-600 dark:text-emerald-400 px-1">{investCurrency}</span>
+                                <span className="text-xs font-bold text-emerald-700 dark:text-emerald-400 px-1">{investCurrency}</span>
                                 <input
                                   id="tx-invest-sell-price"
                                   type="number"
@@ -653,7 +653,7 @@ export default function AddTransactionPage() {
                                   className="flex-1 bg-transparent border border-gray-300 dark:border-gray-600 rounded-lg px-3 py-2 text-sm font-semibold text-gray-900 dark:text-white placeholder-gray-400 focus-visible:ring-2 focus-visible:ring-emerald-500 focus-visible:border-emerald-500"
                                 />
                               </div>
-                              <p className="text-xs text-gray-400 dark:text-gray-500 mt-1">{t('transactions:form.invest.leaveBlankMarket', 'Leave blank to use the current market price.')}</p>
+                              <p className="text-xs text-gray-500 dark:text-gray-500 mt-1">{t('transactions:form.invest.leaveBlankMarket', 'Leave blank to use the current market price.')}</p>
                             </div>
                           </div>
 

@@ -367,7 +367,7 @@ export function EditGoalModal({ isOpen, onClose, goal }: EditGoalModalProps) {
                                         <button
                                             type="submit"
                                             disabled={updateGoal.isPending}
-                                            className="px-6 py-2.5 min-h-[44px] bg-primary-600 hover:bg-primary-700 text-white rounded-lg transition-colors font-medium disabled:opacity-50 disabled:cursor-not-allowed"
+                                            className="px-6 py-2.5 min-h-[44px] bg-primary-700 hover:bg-primary-800 text-white rounded-lg transition-colors font-medium disabled:opacity-50 disabled:cursor-not-allowed"
                                         >
                                             {updateGoal.isPending ? t('goals:saving') : t('goals:saveChanges')}
                                         </button>

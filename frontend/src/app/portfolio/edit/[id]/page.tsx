@@ -404,7 +404,7 @@ export default function EditHoldingPage() {
         <div className="card">
           <div className="flex items-center mb-6">
             <div className="p-3 bg-primary-50 dark:bg-primary-900/20 rounded-lg mr-4">
-              <PencilIcon className="w-6 h-6 text-primary-600 dark:text-primary-400" />
+              <PencilIcon className="w-6 h-6 text-primary-700 dark:text-primary-400" />
             </div>
             <div className="flex-1">
               <div className="flex items-center gap-3">
@@ -434,7 +434,7 @@ export default function EditHoldingPage() {
               </div>
               <div>
                 <span className="text-gray-600 dark:text-gray-400">Gain/Loss:</span>
-                <div className={`font-medium ${holding.gainLoss >= 0 ? 'text-success-600 dark:text-success-400' : 'text-error-600 dark:text-error-400'}`}>
+                <div className={`font-medium ${holding.gainLoss >= 0 ? 'text-success-700 dark:text-success-400' : 'text-error-700 dark:text-error-400'}`}>
                   {holding.gainLoss >= 0 ? '+' : ''}{holding.currency} {holding.gainLoss?.toLocaleString()}
                   ({holding.gainLossPercentage?.toFixed(2)}%)
                 </div>
@@ -523,7 +523,7 @@ export default function EditHoldingPage() {
               </div>
               <input type="hidden" {...register('walletType')} value={walletType} />
               {errors.walletType && (
-                <p className="mt-2 text-sm text-error-600">{errors.walletType.message}</p>
+                <p className="mt-2 text-sm text-error-700 dark:text-error-600">{errors.walletType.message}</p>
               )}
             </div>
 
@@ -564,7 +564,7 @@ export default function EditHoldingPage() {
                     ))}
                   </select>
                   {errors.currency && (
-                    <p id="currency-error" role="alert" className="mt-1 text-sm text-error-600">{errors.currency.message}</p>
+                    <p id="currency-error" role="alert" className="mt-1 text-sm text-error-700 dark:text-error-600">{errors.currency.message}</p>
                   )}
                 </div>
 
@@ -586,7 +586,7 @@ export default function EditHoldingPage() {
                     ))}
                   </select>
                   {errors.exchange && (
-                    <p id="exchange-error" role="alert" className="mt-1 text-sm text-error-600">{errors.exchange.message}</p>
+                    <p id="exchange-error" role="alert" className="mt-1 text-sm text-error-700 dark:text-error-600">{errors.exchange.message}</p>
                   )}
                 </div>
               </div>
@@ -614,7 +614,7 @@ export default function EditHoldingPage() {
                   label="Average Cost Per Unit"
                   placeholder={t('portfolio:fields.averageCostPlaceholder', 'Cost per share/unit')}
                   error={errors.averageCost?.message}
-                  leftIcon={<CurrencyDollarIcon className="w-5 h-5 text-gray-400" />}
+                  leftIcon={<CurrencyDollarIcon className="w-5 h-5 text-gray-500 dark:text-gray-400" />}
                   required
                 />
 

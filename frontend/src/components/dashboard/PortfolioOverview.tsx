@@ -93,7 +93,7 @@ function MiniCalendarSection({
           {hasData && (
             <span className={cn(
               'text-xs font-bold tabular-nums',
-              isPositive ? 'text-emerald-600 dark:text-emerald-400' : 'text-red-600 dark:text-red-400',
+              isPositive ? 'text-emerald-700 dark:text-emerald-400' : 'text-red-700 dark:text-red-400',
             )}>
               {isValueVisible
                 ? formatCompactChange(monthSum)
@@ -103,7 +103,7 @@ function MiniCalendarSection({
         </div>
         <Link
           href="/portfolio/trend?view=calendar"
-          className="text-[11px] font-medium text-primary-600 hover:text-primary-700 dark:text-primary-400 dark:hover:text-primary-300 transition-colors"
+          className="text-[11px] font-medium text-primary-700 hover:text-primary-800 dark:text-primary-400 dark:hover:text-primary-300 transition-colors"
         >
           Full calendar →
         </Link>
@@ -112,11 +112,11 @@ function MiniCalendarSection({
       {/* Weekday headers (Mon–Fri) + weekly sum */}
       <div className="grid grid-cols-6 gap-0.5 mb-0.5">
         {MINI_CAL_WEEKDAYS.map((d, i) => (
-          <div key={i} className="text-center text-[11px] font-semibold text-gray-400 dark:text-gray-500">
+          <div key={i} className="text-center text-[11px] font-semibold text-gray-500 dark:text-gray-500">
             {d}
           </div>
         ))}
-        <div className="text-center text-[11px] font-semibold text-gray-400 dark:text-gray-500">Σ</div>
+        <div className="text-center text-[11px] font-semibold text-gray-500 dark:text-gray-500">Σ</div>
       </div>
 
       {/* Week rows: 5 weekday cells + 1 weekly sum (text only) */}
@@ -167,7 +167,7 @@ function MiniCalendarSection({
                 {hasWeekData && (
                   <span className={cn(
                     'text-[10px] leading-none font-bold tabular-nums text-center px-0.5',
-                    isWeekPositive ? 'text-emerald-600 dark:text-emerald-400' : 'text-red-600 dark:text-red-400',
+                    isWeekPositive ? 'text-emerald-700 dark:text-emerald-400' : 'text-red-700 dark:text-red-400',
                   )}>
                     {isValueVisible ? formatCompactChange(weekSum) : '•••'}
                   </span>
@@ -213,19 +213,19 @@ function MetricPill({
   color: 'emerald' | 'rose' | 'amber' | 'violet' | 'indigo' | 'sky' | 'gray';
 }) {
   const colorMap = {
-    emerald: 'text-emerald-600 dark:text-emerald-400',
+    emerald: 'text-emerald-700 dark:text-emerald-400',
     rose:    'text-rose-600 dark:text-rose-400',
-    amber:   'text-amber-600 dark:text-amber-400',
+    amber:   'text-amber-700 dark:text-amber-400',
     violet:  'text-violet-600 dark:text-violet-400',
     indigo:  'text-indigo-600 dark:text-indigo-400',
-    sky:     'text-sky-600 dark:text-sky-400',
+    sky:     'text-sky-700 dark:text-sky-400',
     gray:    'text-gray-500 dark:text-gray-400',
   };
   return (
     <div className="flex flex-col gap-0.5 min-w-0">
-      <p className="text-xs font-medium text-gray-400 dark:text-gray-500 uppercase tracking-wide truncate">{label}</p>
+      <p className="text-xs font-medium text-gray-500 dark:text-gray-500 uppercase tracking-wide truncate">{label}</p>
       <p className={cn('text-sm font-bold tabular-nums', colorMap[color])}>{value}</p>
-      {subLabel && <p className="text-xs text-gray-400 dark:text-gray-500 truncate">{subLabel}</p>}
+      {subLabel && <p className="text-xs text-gray-500 dark:text-gray-500 truncate">{subLabel}</p>}
     </div>
   );
 }
@@ -328,26 +328,26 @@ export function PortfolioOverview({ portfolio, dateRange }: PortfolioOverviewPro
           <h3 className="text-sm font-semibold text-gray-700 dark:text-gray-300">
             {t('dashboard:portfolioOverview.title', 'Investments')}
           </h3>
-          <span className="text-xs font-medium text-gray-400 dark:text-gray-500 bg-gray-100 dark:bg-gray-700 px-2 py-0.5 rounded-full ml-2">{dateRange ? PERIOD_LABELS[dateRange] ?? dateRange : 'All'}</span>
+          <span className="text-xs font-medium text-gray-500 dark:text-gray-500 bg-gray-100 dark:bg-gray-700 px-2 py-0.5 rounded-full ml-2">{dateRange ? PERIOD_LABELS[dateRange] ?? dateRange : 'All'}</span>
         </div>
         <div className="flex items-center gap-2">
           <button
             onClick={() => toggleValueVisibility()}
-            className="p-1.5 text-gray-400 hover:text-gray-600 dark:text-gray-500 dark:hover:text-gray-300 transition-colors rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700"
+            className="p-1.5 text-gray-500 hover:text-gray-600 dark:text-gray-500 dark:hover:text-gray-300 transition-colors rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700"
             aria-label={isValueVisible ? t('dashboard:portfolioOverview.hideValues') : t('dashboard:portfolioOverview.showValues')}
           >
             {isValueVisible ? <EyeSlashIcon className="w-4 h-4" /> : <EyeIcon className="w-4 h-4" />}
           </button>
           <Link
             href="/portfolio/trend"
-            className="text-xs text-primary-600 hover:text-primary-700 dark:text-primary-400 dark:hover:text-primary-300 font-medium transition-colors"
+            className="text-xs text-primary-700 hover:text-primary-800 dark:text-primary-400 dark:hover:text-primary-300 font-medium transition-colors"
           >
             {t('dashboard:portfolioOverview.viewDetails')}
           </Link>
           <Link
             href="/portfolio/trend?view=calendar"
             title="Calendar view — daily P&L heatmap"
-            className="p-1 rounded-lg text-gray-400 hover:text-primary-600 dark:hover:text-primary-400 hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors"
+            className="p-1 rounded-lg text-gray-500 dark:text-gray-400 hover:text-primary-600 dark:hover:text-primary-400 hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors"
           >
             <CalendarDaysIcon className="w-4 h-4" />
           </Link>
@@ -358,7 +358,7 @@ export function PortfolioOverview({ portfolio, dateRange }: PortfolioOverviewPro
         /* ── Empty state ── */
         <div className="text-center py-12">
           <div className="inline-flex items-center justify-center w-16 h-16 rounded-full bg-primary-100 dark:bg-primary-900/20 mb-4">
-            <ChartBarIcon className="w-8 h-8 text-primary-600 dark:text-primary-400" aria-hidden="true" />
+            <ChartBarIcon className="w-8 h-8 text-primary-700 dark:text-primary-400" aria-hidden="true" />
           </div>
           <p className="text-base font-medium text-gray-900 dark:text-white mb-2">
             {t('dashboard:portfolioOverview.noInvestments')}
@@ -368,7 +368,7 @@ export function PortfolioOverview({ portfolio, dateRange }: PortfolioOverviewPro
           </p>
           <Link
             href="/portfolio/add"
-            className="inline-flex items-center px-5 py-2.5 text-sm font-medium text-white bg-primary-600 rounded-lg hover:bg-primary-700 focus:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-primary-500 transition-colors dark:focus-visible:ring-offset-gray-800"
+            className="inline-flex items-center px-5 py-2.5 text-sm font-medium text-white bg-primary-700 rounded-lg hover:bg-primary-800 focus:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-primary-500 transition-colors dark:focus-visible:ring-offset-gray-800"
           >
             {t('dashboard:portfolioOverview.addInvestment')}
           </Link>
@@ -440,7 +440,7 @@ export function PortfolioOverview({ portfolio, dateRange }: PortfolioOverviewPro
                     <div className="flex items-center justify-center h-full">
                       <div className="text-center max-w-[16rem] mx-auto">
                         <div className="inline-flex items-center justify-center w-16 h-16 rounded-full bg-primary-100 dark:bg-primary-900/20 mb-4">
-                          <ArrowTrendingUpIcon className="w-8 h-8 text-primary-600 dark:text-primary-400" aria-hidden="true" />
+                          <ArrowTrendingUpIcon className="w-8 h-8 text-primary-700 dark:text-primary-400" aria-hidden="true" />
                         </div>
                         <p className="text-sm font-medium text-gray-700 dark:text-gray-200 mb-1">
                           {hasAnyHistory
@@ -454,7 +454,7 @@ export function PortfolioOverview({ portfolio, dateRange }: PortfolioOverviewPro
                         </p>
                         <Link
                           href="/portfolio/trend"
-                          className="inline-flex items-center px-4 py-2 text-sm font-medium text-white bg-primary-600 rounded-lg hover:bg-primary-700 transition-colors"
+                          className="inline-flex items-center px-4 py-2 text-sm font-medium text-white bg-primary-700 rounded-lg hover:bg-primary-800 transition-colors"
                         >
                           {t('dashboard:portfolioOverview.viewDetails', 'View Details')}
                         </Link>

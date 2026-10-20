@@ -477,7 +477,7 @@ export default function AddInvestmentPage() {
         <div className="card">
           <div className="flex items-center mb-4">
             <div className="p-2 bg-primary-50 dark:bg-primary-900/20 rounded-lg mr-3">
-              <ChartBarIcon className="w-5 h-5 text-primary-600 dark:text-primary-400" />
+              <ChartBarIcon className="w-5 h-5 text-primary-700 dark:text-primary-400" />
             </div>
             <div className="flex-1">
               <h1 className="md:hidden text-lg sm:text-xl font-bold text-gray-900 dark:text-white">{t('portfolio:addHolding.title')}</h1>
@@ -490,7 +490,7 @@ export default function AddInvestmentPage() {
           {/* Required Fields Notice */}
           <div className="mb-4 p-3 bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800 rounded-lg">
             <div className="flex items-center gap-2">
-              <span className="text-amber-600 dark:text-amber-400 font-medium text-sm">
+              <span className="text-amber-700 dark:text-amber-400 font-medium text-sm">
                 ⚠️ Fields marked with <span className="text-error-500">*</span> {t('portfolio:addHolding.areRequired')}
               </span>
             </div>
@@ -500,7 +500,7 @@ export default function AddInvestmentPage() {
             {/* Required Fields Section */}
             <div className="p-4 bg-gray-50 dark:bg-gray-800/50 rounded-lg border-2 border-primary-200 dark:border-primary-800">
               <h3 className="text-sm font-semibold text-primary-700 dark:text-primary-300 mb-3 flex items-center gap-2">
-                <span className="flex items-center justify-center w-5 h-5 bg-primary-600 text-white rounded-full text-xs">1</span>
+                <span className="flex items-center justify-center w-5 h-5 bg-primary-700 text-white rounded-full text-xs">1</span>
                 {t('portfolio:addHolding.requiredSection')}
               </h3>
 
@@ -533,7 +533,7 @@ export default function AddInvestmentPage() {
                         if (symbol) handleSymbolLookup(symbol);
                       }}
                       disabled={isLoadingQuote || !watch('symbol')}
-                      className="px-4 py-2 bg-primary-600 hover:bg-primary-700 disabled:bg-gray-300 disabled:cursor-not-allowed text-white rounded-lg font-medium transition-colors text-sm"
+                      className="px-4 py-2 bg-primary-700 hover:bg-primary-800 disabled:bg-gray-300 disabled:cursor-not-allowed text-white rounded-lg font-medium transition-colors text-sm"
                     >
                       {isLoadingQuote ? 'Loading...' : 'Lookup'}
                     </button>
@@ -549,7 +549,7 @@ export default function AddInvestmentPage() {
                         <button
                           type="button"
                           onClick={() => handleSymbolLookup(watch('symbol'))}
-                          className="text-xs text-primary-600 hover:text-primary-700 dark:text-primary-400"
+                          className="text-xs text-primary-700 hover:text-primary-800 dark:text-primary-400"
                         >
                           {t('portfolio:refresh')}
                         </button>
@@ -585,7 +585,7 @@ export default function AddInvestmentPage() {
                     ))}
                   </select>
                   {errors.type && (
-                    <p id="type-error" role="alert" className="mt-1 text-sm text-error-600">{errors.type.message}</p>
+                    <p id="type-error" role="alert" className="mt-1 text-sm text-error-700 dark:text-error-600">{errors.type.message}</p>
                   )}
                 </div>
 
@@ -636,7 +636,7 @@ export default function AddInvestmentPage() {
                   </div>
                   <input type="hidden" {...register('walletType')} value={walletType} />
                   {errors.walletType && (
-                    <p className="mt-2 text-sm text-error-600">{errors.walletType.message}</p>
+                    <p className="mt-2 text-sm text-error-700 dark:text-error-600">{errors.walletType.message}</p>
                   )}
                 </div>
 
@@ -676,7 +676,7 @@ export default function AddInvestmentPage() {
                     label={<span className="font-semibold">{t('portfolio:addHolding.purchasePrice')} <span className="text-error-500">*</span></span>}
                     placeholder={t('portfolio:addHolding.pricePlaceholder')}
                     error={errors.averageCost?.message}
-                    leftIcon={<CurrencyDollarIcon className="w-5 h-5 text-gray-400" />}
+                    leftIcon={<CurrencyDollarIcon className="w-5 h-5 text-gray-500 dark:text-gray-400" />}
                   />
                   <p className="mt-1 text-xs text-gray-500 dark:text-gray-400">
                     {t('portfolio:addHolding.purchasePriceHint')}
@@ -701,7 +701,7 @@ export default function AddInvestmentPage() {
                     ))}
                   </select>
                   {errors.currency && (
-                    <p id="currency-error" role="alert" className="mt-1 text-sm text-error-600">{errors.currency.message}</p>
+                    <p id="currency-error" role="alert" className="mt-1 text-sm text-error-700 dark:text-error-600">{errors.currency.message}</p>
                   )}
                 </div>
 
@@ -723,7 +723,7 @@ export default function AddInvestmentPage() {
                     ))}
                   </select>
                   {errors.exchange && (
-                    <p id="exchange-error" role="alert" className="mt-1 text-sm text-error-600">{errors.exchange.message}</p>
+                    <p id="exchange-error" role="alert" className="mt-1 text-sm text-error-700 dark:text-error-600">{errors.exchange.message}</p>
                   )}
                 </div>
 

@@ -100,7 +100,7 @@ function GroupCard({ group, isDemo, selfId }: { group: Group; isDemo: boolean; s
       <div className="p-4 sm:p-5 flex items-center justify-between gap-3">
         <Link href={`/groups/${group.id}`} className="flex items-center gap-3 min-w-0 hover:opacity-80 transition-opacity">
           <div className="w-10 h-10 rounded-full bg-green-100 dark:bg-green-900/30 flex items-center justify-center shrink-0">
-            <UserGroupIcon className="w-5 h-5 text-green-600 dark:text-green-400" />
+            <UserGroupIcon className="w-5 h-5 text-green-700 dark:text-green-400" />
           </div>
           <div className="min-w-0">
             <p className="font-semibold text-gray-900 dark:text-white truncate">
@@ -129,7 +129,7 @@ function GroupCard({ group, isDemo, selfId }: { group: Group; isDemo: boolean; s
       {expanded && balances && (
         <div className="border-t border-gray-100 dark:border-gray-800 px-4 sm:px-5 py-4">
           {!hasBalance ? (
-            <div className="flex items-center justify-center gap-2 py-3 text-sm text-green-600 dark:text-green-400">
+            <div className="flex items-center justify-center gap-2 py-3 text-sm text-green-700 dark:text-green-400">
               <CheckCircleIconSolid className="w-4 h-4" />
               <span className="font-medium">{t('allSettledUp')}</span>
             </div>
@@ -151,14 +151,14 @@ function GroupCard({ group, isDemo, selfId }: { group: Group; isDemo: boolean; s
                       ) : (
                         <>
                           <span className="font-medium text-gray-900 dark:text-white">{name(b.owed_by)}</span>
-                          <span className="text-gray-400 dark:text-gray-500 mx-1.5">{t('owes')}</span>
+                          <span className="text-gray-500 dark:text-gray-500 mx-1.5">{t('owes')}</span>
                           <span className="font-medium text-gray-900 dark:text-white">{name(b.owed_to)}</span>
                         </>
                       )}
                     </span>
                     <span className={`font-semibold shrink-0 ${
-                      owedToYou ? 'text-green-600 dark:text-green-400'
-                        : youOwe ? 'text-red-600 dark:text-red-400' : 'text-gray-700 dark:text-gray-300'}`}>
+                      owedToYou ? 'text-green-700 dark:text-green-400'
+                        : youOwe ? 'text-red-700 dark:text-red-400' : 'text-gray-700 dark:text-gray-300'}`}>
                       {fmt(b.amount, b.currency)}
                     </span>
                   </div>
@@ -219,7 +219,7 @@ function DesktopGroupsPage() {
             accent="green"
             actions={
                 linkStatus?.linked ? (
-                    <div className="flex items-center gap-1.5 text-xs text-green-600 dark:text-green-400 font-medium">
+                    <div className="flex items-center gap-1.5 text-xs text-green-700 dark:text-green-400 font-medium">
                         <CheckCircleIcon className="w-4 h-4" />
                         <span>
                             {linkStatus.display_name
@@ -263,7 +263,7 @@ function DesktopGroupsPage() {
           <div className="rounded-2xl bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-700 shadow-sm overflow-hidden animate-fade-in">
             <div className="px-6 py-12 text-center">
               <div className="w-12 h-12 rounded-full bg-gray-100 dark:bg-gray-800 flex items-center justify-center mx-auto mb-4">
-                <UserGroupIcon className="w-6 h-6 text-gray-400" />
+                <UserGroupIcon className="w-6 h-6 text-gray-500 dark:text-gray-400" />
               </div>
               <p className="font-semibold text-gray-900 dark:text-white mb-1">
                 {t('groups:noGroups.title')}

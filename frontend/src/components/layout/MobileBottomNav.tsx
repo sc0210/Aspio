@@ -153,7 +153,7 @@ function MoreSheet({ open, onClose, isDemoMode, onDisableDemo }: MoreSheetProps)
               >
                 <Icon className={cn(
                   'w-5 h-5 mr-3 flex-shrink-0',
-                  isActive ? 'text-primary-500 dark:text-primary-400' : 'text-gray-400 dark:text-gray-500'
+                  isActive ? 'text-primary-500 dark:text-primary-400' : 'text-gray-500 dark:text-gray-500'
                 )} />
                 {t(labelKey)}
               </Link>
@@ -165,7 +165,7 @@ function MoreSheet({ open, onClose, isDemoMode, onDisableDemo }: MoreSheetProps)
         <div className="mx-2 px-4 py-3 rounded-xl border border-gray-100 dark:border-gray-700 mb-1">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-2.5">
-              <GlobeAltIcon className="w-5 h-5 text-gray-400 dark:text-gray-500 flex-shrink-0" />
+              <GlobeAltIcon className="w-5 h-5 text-gray-500 dark:text-gray-500 flex-shrink-0" />
               <span className="text-sm font-medium text-gray-700 dark:text-gray-200">
                 {t('navigation.language', 'Language')}
               </span>
@@ -196,7 +196,7 @@ function MoreSheet({ open, onClose, isDemoMode, onDisableDemo }: MoreSheetProps)
           {isDemoMode ? (
             <button
               onClick={() => { onClose(); onDisableDemo(); }}
-              className="flex items-center w-full px-4 py-3 rounded-xl text-sm font-medium text-error-600 dark:text-error-400 hover:bg-error-50 dark:hover:bg-error-900/20 transition-colors min-h-[52px] touch-manipulation"
+              className="flex items-center w-full px-4 py-3 rounded-xl text-sm font-medium text-error-700 dark:text-error-400 hover:bg-error-50 dark:hover:bg-error-900/20 transition-colors min-h-[52px] touch-manipulation"
             >
               <ArrowLeftOnRectangleIcon className="w-5 h-5 mr-3 flex-shrink-0" />
               {t('navigation.exitDemo')}
@@ -204,7 +204,7 @@ function MoreSheet({ open, onClose, isDemoMode, onDisableDemo }: MoreSheetProps)
           ) : (
             <button
               onClick={handleSignOut}
-              className="flex items-center w-full px-4 py-3 rounded-xl text-sm font-medium text-error-600 dark:text-error-400 hover:bg-error-50 dark:hover:bg-error-900/20 transition-colors min-h-[52px] touch-manipulation"
+              className="flex items-center w-full px-4 py-3 rounded-xl text-sm font-medium text-error-700 dark:text-error-400 hover:bg-error-50 dark:hover:bg-error-900/20 transition-colors min-h-[52px] touch-manipulation"
             >
               <ArrowLeftOnRectangleIcon className="w-5 h-5 mr-3 flex-shrink-0" />
               {t('navigation.signOut')}
@@ -262,7 +262,7 @@ export function MobileBottomNav() {
                     'min-w-[44px] touch-manipulation transition-colors',
                     'focus:outline-none focus-visible:ring-2 focus-visible:ring-primary-500',
                     isActive
-                      ? 'text-primary-600 dark:text-primary-400'
+                      ? 'text-primary-700 dark:text-primary-400'
                       : 'text-gray-500 dark:text-gray-400'
                   )}
                 >
@@ -287,7 +287,7 @@ export function MobileBottomNav() {
                   'min-w-[44px] touch-manipulation transition-colors',
                   'focus:outline-none focus-visible:ring-2 focus-visible:ring-primary-500',
                   isActive
-                    ? 'text-primary-600 dark:text-primary-400'
+                    ? 'text-primary-700 dark:text-primary-400'
                     : 'text-gray-500 dark:text-gray-400'
                 )}
               >

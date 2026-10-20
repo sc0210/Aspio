@@ -138,7 +138,7 @@ export function RecordPaymentModal({ loan, onClose }: Props) {
 
           {/* Error */}
           {principalError && (
-            <p className="text-xs text-red-600 dark:text-red-400">{principalError}</p>
+            <p className="text-xs text-red-700 dark:text-red-400">{principalError}</p>
           )}
 
           {/* New balance preview */}
@@ -163,7 +163,7 @@ export function RecordPaymentModal({ loan, onClose }: Props) {
             <button
               type="submit"
               disabled={recordPayment.isPending || !!principalError || principalPortion <= 0}
-              className="flex-1 py-2.5 rounded-xl bg-primary-600 hover:bg-primary-700 text-sm font-medium text-white transition-colors disabled:opacity-50"
+              className="flex-1 py-2.5 rounded-xl bg-primary-700 hover:bg-primary-800 text-sm font-medium text-white transition-colors disabled:opacity-50"
             >
               {recordPayment.isPending ? t('paymentModal.recording') : t('paymentModal.record')}
             </button>

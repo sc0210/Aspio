@@ -51,7 +51,7 @@ export function FXTrackerCard({
           </p>
         </div>
         {readyToConvert && (
-          <div className="flex items-center text-green-600 dark:text-green-400">
+          <div className="flex items-center text-green-700 dark:text-green-400">
             <CheckCircleIcon className="w-5 h-5 mr-2" />
             <span className="text-sm font-medium">{t('fx.ready')}</span>
           </div>
@@ -143,14 +143,14 @@ export function FXTrackerCard({
       {readyToConvert ? (
         <button
           onClick={onConvert}
-          className="w-full bg-green-600 hover:bg-green-700 text-white font-medium py-3 px-4 rounded-lg transition-colors flex items-center justify-center"
+          className="w-full bg-green-700 hover:bg-green-800 text-white font-medium py-3 px-4 rounded-lg transition-colors flex items-center justify-center"
         >
           <ArrowPathIcon className="w-5 h-5 mr-2" />
           {t('fx.convertNow')}
         </button>
       ) : (
         <div className="text-center p-4 bg-gray-50 dark:bg-gray-900/50 rounded-lg">
-          <ClockIcon className="w-8 h-8 mx-auto text-gray-400 dark:text-gray-500 mb-2" />
+          <ClockIcon className="w-8 h-8 mx-auto text-gray-500 dark:text-gray-500 mb-2" />
           <p className="text-sm text-gray-600 dark:text-gray-400">
             {t('fx.accumulating')}
           </p>

@@ -307,9 +307,9 @@ function SavingsGroups() {
       <div className="space-y-6">
         {/* Mobile header — desktop title is in top bar */}
         <div className="md:hidden flex items-center justify-between">
-          <p className="text-base font-bold text-gray-900 dark:text-white">
+          <h1 className="text-base font-bold text-gray-900 dark:text-white">
             {t('savings.title', 'Savings Groups')}
-          </p>
+          </h1>
           <div className="flex gap-2">
             {canCreateGoal && (
               <DemoLocked>
@@ -335,7 +335,7 @@ function SavingsGroups() {
         )}
 
         {error && (
-          <div role="alert" className="bg-error-50 dark:bg-error-900/20 text-error-600 dark:text-error-400 p-4 rounded-lg text-sm">
+          <div role="alert" className="bg-error-50 dark:bg-error-900/20 text-error-700 dark:text-error-400 p-4 rounded-lg text-sm">
             {error}
           </div>
         )}
@@ -369,7 +369,7 @@ function SavingsGroups() {
                 <DemoLocked>
                   <button
                     onClick={() => setIsAddPeerOpen(true)}
-                    className="flex items-center gap-2 px-4 py-2 bg-primary-600 text-white rounded-lg text-sm font-medium hover:bg-primary-700 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-400 focus-visible:ring-offset-1 transition-colors"
+                    className="flex items-center gap-2 px-4 py-2 bg-primary-700 text-white rounded-lg text-sm font-medium hover:bg-primary-800 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-400 focus-visible:ring-offset-1 transition-colors"
                   >
                     <PlusIcon className="w-4 h-4" />
                     {t('savings.addPeer', 'Add Member')}
@@ -407,7 +407,7 @@ function SavingsGroups() {
                           {!isDemo && (
                             <button
                               onClick={() => setIsCreateGoalOpen(true)}
-                              className="flex items-center gap-2 px-4 py-2 bg-primary-600 text-white rounded-lg text-sm font-medium hover:bg-primary-700 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-400 focus-visible:ring-offset-1 transition-colors"
+                              className="flex items-center gap-2 px-4 py-2 bg-primary-700 text-white rounded-lg text-sm font-medium hover:bg-primary-800 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-400 focus-visible:ring-offset-1 transition-colors"
                             >
                               <PlusIcon className="w-4 h-4" />
                               {t('savings.createGoal', 'New Goal')}
@@ -429,7 +429,7 @@ function SavingsGroups() {
                       )}
                     </div>
                   ) : compareError ? (
-                    <div role="alert" className="bg-error-50 dark:bg-error-900/20 text-error-600 dark:text-error-400 p-4 rounded-lg text-sm">
+                    <div role="alert" className="bg-error-50 dark:bg-error-900/20 text-error-700 dark:text-error-400 p-4 rounded-lg text-sm">
                       {compareError}
                     </div>
                   ) : compareLoading || !compareData ? (
@@ -511,7 +511,7 @@ function TabBar({ tab, onSelect }: { tab: Tab; onSelect: (tab: Tab) => void }) {
               'px-4 py-1.5 rounded-md text-sm font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-400',
               selected
                 ? 'bg-white dark:bg-gray-700 text-gray-900 dark:text-white shadow-sm'
-                : 'text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200',
+                : 'text-gray-600 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200',
             )}
           >
             {t(`savings.tabs.${id}`)}
@@ -532,7 +532,7 @@ function CombinedProgress({ goals }: { goals: SharedGoalOut[] }) {
 
   return (
     <div className="bg-gradient-to-r from-primary-50 via-blue-50 to-prosperity-50/40 dark:from-primary-900/20 dark:via-blue-900/10 dark:to-prosperity-900/10 rounded-xl p-5 border border-primary-100/70 dark:border-primary-800/40">
-      <p className="text-xs font-semibold text-primary-600 dark:text-primary-400 uppercase tracking-wide mb-3">
+      <p className="text-xs font-semibold text-primary-700 dark:text-primary-400 uppercase tracking-wide mb-3">
         {t('savings.summary.title', 'Combined savings progress')}
       </p>
       <div className="flex items-end gap-2 mb-3">
@@ -566,7 +566,7 @@ function CombinedProgress({ goals }: { goals: SharedGoalOut[] }) {
         </div>
         {completedCount > 0 && (
           <div>
-            <span className="font-semibold text-prosperity-600 dark:text-prosperity-400">
+            <span className="font-semibold text-prosperity-700 dark:text-prosperity-400">
               <span aria-hidden="true">🎉 </span>{completedCount}
             </span>
             <span className="text-gray-500 dark:text-gray-400 ml-1">{t('savings.summary.completed', 'completed')}</span>

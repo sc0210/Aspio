@@ -89,14 +89,14 @@ export default function AddPeerModal({ isOpen, onClose, onSuccess }: AddPeerModa
             type="button"
             onClick={onClose}
             aria-label={t('common.close', 'Close')}
-            className="text-gray-400 hover:text-gray-600 dark:hover:text-gray-200 transition-colors"
+            className="text-gray-500 dark:text-gray-400 hover:text-gray-600 dark:hover:text-gray-200 transition-colors"
           >
             <XMarkIcon className="w-5 h-5" aria-hidden="true" />
           </button>
         </div>
 
         <div className="relative">
-          <MagnifyingGlassIcon className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
+          <MagnifyingGlassIcon className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-500 dark:text-gray-400" />
           <input
             ref={inputRef}
             type="text"
@@ -126,7 +126,7 @@ export default function AddPeerModal({ isOpen, onClose, onSuccess }: AddPeerModa
 
           {!searching && result && (
             <div className="flex items-center gap-3 p-3 bg-gray-50 dark:bg-gray-700/50 rounded-xl">
-              <div className="w-10 h-10 rounded-full bg-primary-600 flex items-center justify-center text-white font-semibold text-sm shrink-0">
+              <div className="w-10 h-10 rounded-full bg-primary-700 flex items-center justify-center text-white font-semibold text-sm shrink-0">
                 {result.name.charAt(0).toUpperCase()}
               </div>
               <div className="flex-1 min-w-0">
@@ -138,13 +138,13 @@ export default function AddPeerModal({ isOpen, onClose, onSuccess }: AddPeerModa
         </div>
 
         {error && (
-          <p className="text-xs text-error-600 dark:text-error-400 mt-2">{error}</p>
+          <p className="text-xs text-error-700 dark:text-error-400 mt-2">{error}</p>
         )}
 
         <button
           onClick={handleInvite}
           disabled={!result || submitting}
-          className="mt-4 w-full py-2.5 bg-primary-600 text-white text-sm font-medium rounded-lg hover:bg-primary-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+          className="mt-4 w-full py-2.5 bg-primary-700 text-white text-sm font-medium rounded-lg hover:bg-primary-800 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
         >
           {submitting ? t('savings.sending', 'Sending…') : t('savings.sendInvite', 'Send Invite')}
         </button>

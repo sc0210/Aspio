@@ -40,7 +40,7 @@ function HoldingsTableHeader({ showBulkSelect, onSelectAll, allSelected }: {
               type="checkbox"
               checked={!!allSelected}
               onChange={onSelectAll}
-              className="w-4 h-4 rounded border-gray-300 dark:border-gray-600 text-primary-600 focus-visible:ring-primary-500 focus-visible:ring-offset-2 dark:focus-visible:ring-offset-gray-900 cursor-pointer transition-colors"
+              className="w-4 h-4 rounded border-gray-300 dark:border-gray-600 text-primary-700 dark:text-primary-600 focus-visible:ring-primary-500 focus-visible:ring-offset-2 dark:focus-visible:ring-offset-gray-900 cursor-pointer transition-colors"
             />
           </th>
         )}
@@ -246,7 +246,7 @@ export function HoldingsList({
     return (
       <div className="py-12 text-center">
         <div className="mx-auto mb-3 flex h-12 w-12 items-center justify-center rounded-full bg-gray-100 dark:bg-gray-700">
-          <ChartBarIcon className="h-6 w-6 text-gray-400 dark:text-gray-500" />
+          <ChartBarIcon className="h-6 w-6 text-gray-500 dark:text-gray-500" />
         </div>
         <p className="text-sm font-medium text-gray-700 dark:text-gray-300">
           {t('portfolio:holdings.noHoldingsInWallet', 'No holdings in this wallet')}
@@ -267,7 +267,7 @@ export function HoldingsList({
             <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
               <div className="flex items-center gap-3">
                 <div className="p-2.5 bg-primary-50 dark:bg-primary-900/30 rounded-xl flex-shrink-0">
-                  <ChartBarIcon className="w-5 h-5 text-primary-600 dark:text-primary-400" />
+                  <ChartBarIcon className="w-5 h-5 text-primary-700 dark:text-primary-400" />
                 </div>
                 <div>
                   <h3 className="text-base font-bold text-gray-900 dark:text-white">
@@ -289,9 +289,9 @@ export function HoldingsList({
                   )} />
                   <p className={cn(
                     'text-xs font-semibold',
-                    apiStatus === 'connected' && 'text-emerald-600 dark:text-emerald-400',
+                    apiStatus === 'connected' && 'text-emerald-700 dark:text-emerald-400',
                     apiStatus === 'disconnected' && 'text-rose-600 dark:text-rose-400',
-                    apiStatus === 'loading' && 'text-yellow-600 dark:text-yellow-400'
+                    apiStatus === 'loading' && 'text-yellow-700 dark:text-yellow-400'
                   )}>
                     {apiStatus === 'connected' && 'Live'}
                     {apiStatus === 'disconnected' && 'Offline'}
@@ -318,7 +318,7 @@ export function HoldingsList({
                 {onAddInvestment && (
                   <button
                     onClick={onAddInvestment}
-                    className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-primary-600 hover:bg-primary-700 dark:bg-primary-500 dark:hover:bg-primary-600 text-white text-xs font-semibold rounded-lg shadow-sm hover:shadow-md transition-all duration-200 active:scale-[0.98]"
+                    className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-primary-700 hover:bg-primary-800 dark:bg-primary-500 dark:hover:bg-primary-600 text-white text-xs font-semibold rounded-lg shadow-sm hover:shadow-md transition-all duration-200 active:scale-[0.98]"
                     title="Buy Investment"
                   >
                     <PlusIcon className="w-3.5 h-3.5" />
@@ -328,7 +328,7 @@ export function HoldingsList({
                 {onSellFromWallet && (
                   <button
                     onClick={onSellFromWallet}
-                    className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-green-600 hover:bg-green-700 dark:bg-green-500 dark:hover:bg-green-600 text-white text-xs font-semibold rounded-lg shadow-sm hover:shadow-md transition-all duration-200 active:scale-[0.98]"
+                    className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-green-700 hover:bg-green-800 dark:bg-green-500 dark:hover:bg-green-600 text-white text-xs font-semibold rounded-lg shadow-sm hover:shadow-md transition-all duration-200 active:scale-[0.98]"
                     title="Sell Investment"
                   >
                     <ArrowDownTrayIcon className="w-3.5 h-3.5" />
@@ -388,7 +388,7 @@ export function HoldingsList({
           <div className="px-6 py-5 border-b border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800">
             <div className="flex items-center gap-3">
               <div className="p-2.5 bg-success-50 dark:bg-success-900/30 rounded-xl">
-                <ChartBarIcon className="w-5 h-5 text-success-600 dark:text-success-400" />
+                <ChartBarIcon className="w-5 h-5 text-success-700 dark:text-success-400" />
               </div>
               <div>
                 <h3 className="text-lg font-bold text-gray-900 dark:text-white">

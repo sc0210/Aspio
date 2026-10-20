@@ -46,7 +46,7 @@ export function ChangeChip({ change, moreIsBetter, neutral, unavailable, classNa
 
     if (unavailable) {
         return (
-            <span className={cn('text-xs text-gray-400 dark:text-gray-500', className)}>
+            <span className={cn('text-xs text-gray-500 dark:text-gray-500', className)}>
                 {t('review.noComparison', 'no comparison')}
             </span>
         );
@@ -54,7 +54,7 @@ export function ChangeChip({ change, moreIsBetter, neutral, unavailable, classNa
 
     if (change.amount === 0) {
         return (
-            <span className={cn('text-xs text-gray-400 dark:text-gray-500', className)}>
+            <span className={cn('text-xs text-gray-500 dark:text-gray-500', className)}>
                 {t('review.unchanged', 'flat')}
             </span>
         );

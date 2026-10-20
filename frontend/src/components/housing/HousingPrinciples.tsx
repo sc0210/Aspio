@@ -31,10 +31,10 @@ export function HousingPrinciples() {
                     <SparklesIcon className="w-4 h-4 text-amber-500" />
                     {t('housing.principles.title', 'Principles — buying without wrecking the life you buy it for')}
                 </h3>
-                <ChevronDownIcon className={cn('w-4 h-4 text-gray-400 transition-transform', open && 'rotate-180')} />
+                <ChevronDownIcon className={cn('w-4 h-4 text-gray-500 dark:text-gray-400 transition-transform', open && 'rotate-180')} />
             </button>
 
-            <p className="text-sm text-gray-400 dark:text-gray-500 mt-1">
+            <p className="text-sm text-gray-500 dark:text-gray-500 mt-1">
                 {t('housing.principles.subtitle', 'A home should raise quality of life — the goal is a calm, spacious future, not just a title deed.')}
             </p>
 

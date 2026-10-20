@@ -45,7 +45,7 @@ export function UpcomingPayments({ loans }: { loans: DebtAccount[] }) {
                     </span>
                 ) : (
                     // Amounts in different currencies don't add up to one figure.
-                    <span className="text-xs text-gray-400 dark:text-gray-500">{t('upcoming.mixedCurrencies')}</span>
+                    <span className="text-xs text-gray-500 dark:text-gray-500">{t('upcoming.mixedCurrencies')}</span>
                 ))}
             </div>
             {items.length === 0 ? (
@@ -57,8 +57,8 @@ export function UpcomingPayments({ loans }: { loans: DebtAccount[] }) {
                             <span className="sm:w-28 shrink-0 whitespace-nowrap text-sm tabular-nums text-gray-700 dark:text-gray-300">{fmtDay(p.date)}</span>
                             <span className="min-w-0 flex-1 truncate text-sm font-medium text-gray-900 dark:text-white">{p.name}</span>
                             <span className={cn('shrink-0 text-xs font-medium',
-                                p.daysAway < 0 ? 'text-error-600 dark:text-error-400'
-                                    : p.daysAway <= 3 ? 'text-amber-600 dark:text-amber-400' : 'text-gray-500 dark:text-gray-400')}>
+                                p.daysAway < 0 ? 'text-error-700 dark:text-error-400'
+                                    : p.daysAway <= 3 ? 'text-amber-700 dark:text-amber-400' : 'text-gray-500 dark:text-gray-400')}>
                                 {when(p.daysAway)}
                             </span>
                             <span className="sm:w-24 shrink-0 text-right text-sm font-semibold tabular-nums text-gray-900 dark:text-white">

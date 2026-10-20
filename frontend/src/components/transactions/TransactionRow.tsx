@@ -76,7 +76,7 @@ function TransactionRowBase({
             type="checkbox"
             checked={isSelected}
             onChange={() => onSelect(transaction.id)}
-            className="h-4 w-4 sm:h-5 sm:w-5 mt-0.5 text-primary-600 focus-visible:ring-primary-500 border-gray-300 rounded touch-manipulation flex-shrink-0"
+            className="h-4 w-4 sm:h-5 sm:w-5 mt-0.5 text-primary-700 dark:text-primary-600 focus-visible:ring-primary-500 border-gray-300 rounded touch-manipulation flex-shrink-0"
             aria-label={`Select transaction ${transaction.description}`}
           />
 
@@ -138,10 +138,10 @@ function TransactionRowBase({
                     className={cn(
                       'text-sm font-semibold whitespace-nowrap',
                       transaction.type === 'income'
-                        ? 'text-success-600 dark:text-success-400'
+                        ? 'text-success-700 dark:text-success-400'
                         : transaction.type === 'transfer'
                         ? 'text-gray-600 dark:text-gray-400'
-                        : 'text-error-600 dark:text-error-400'
+                        : 'text-error-700 dark:text-error-400'
                     )}
                   >
                     {isValueVisible
@@ -153,14 +153,14 @@ function TransactionRowBase({
 
                 <div className="flex items-center">
                   {transaction.type === 'income' ? (
-                    <ArrowTrendingUpIcon className="hidden sm:block w-4 h-4 text-success-500" />
+                    <ArrowTrendingUpIcon className="hidden sm:block w-4 h-4 text-success-700 dark:text-success-500" />
                   ) : (
-                    <ArrowTrendingDownIcon className="hidden sm:block w-4 h-4 text-gray-400" />
+                    <ArrowTrendingDownIcon className="hidden sm:block w-4 h-4 text-gray-500 dark:text-gray-400" />
                   )}
 
                   <Menu as="div" className="relative">
                     <MenuButton
-                      className="p-1 sm:p-1.5 text-gray-500 hover:text-gray-700 transition-opacity min-w-[44px] min-h-[44px] flex items-center justify-center"
+                      className="p-1 sm:p-1.5 text-gray-600 hover:text-gray-700 transition-opacity min-w-[44px] min-h-[44px] flex items-center justify-center"
                       aria-label={`Actions for ${transaction.description}`}
                     >
                       <EllipsisVerticalIcon className="w-4 h-4" />

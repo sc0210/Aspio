@@ -49,7 +49,7 @@ it('signs the total by the holding\'s own gain, so a loss never reads "+-"', () 
   expect(card).toHaveTextContent(formatCurrency(-50, 'TWD'));
   expect(card).toHaveTextContent('(-0.23%)');
   expect(card.textContent).not.toMatch(/\+-|\+\(-/);
-  expect(card.querySelector('.text-error-600')).not.toBeNull();
+  expect(card.querySelector('.text-error-700')).not.toBeNull();
 });
 
 it('masks every figure, the Total card\'s included, when values are hidden', () => {

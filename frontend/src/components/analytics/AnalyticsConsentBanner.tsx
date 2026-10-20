@@ -61,7 +61,7 @@ export function AnalyticsConsentBanner() {
                         {/* Header */}
                         <div className="flex items-start gap-4 mb-4">
                             <div className="flex-shrink-0">
-                                <ShieldCheckIcon className="w-8 h-8 text-primary-600 dark:text-primary-400" />
+                                <ShieldCheckIcon className="w-8 h-8 text-primary-700 dark:text-primary-400" />
                             </div>
                             <div className="flex-1">
                                 <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-2">
@@ -72,7 +72,7 @@ export function AnalyticsConsentBanner() {
                                     {!isExpanded && (
                                         <button
                                             onClick={() => setIsExpanded(true)}
-                                            className="ml-1 text-primary-600 dark:text-primary-400 hover:underline font-medium focus:outline-none focus-visible:ring-2 focus-visible:ring-primary-500 focus-visible:ring-offset-1 rounded"
+                                            className="ml-1 text-primary-700 dark:text-primary-400 hover:underline font-medium focus:outline-none focus-visible:ring-2 focus-visible:ring-primary-500 focus-visible:ring-offset-1 rounded"
                                             aria-expanded={isExpanded}
                                             aria-controls="analytics-details"
                                         >
@@ -112,7 +112,7 @@ export function AnalyticsConsentBanner() {
                             </div>
                             <button
                                 onClick={handleDecline}
-                                className="flex-shrink-0 p-2.5 min-w-[44px] min-h-[44px] flex items-center justify-center text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 transition-colors"
+                                className="flex-shrink-0 p-2.5 min-w-[44px] min-h-[44px] flex items-center justify-center text-gray-500 dark:text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 transition-colors"
                                 aria-label="Dismiss privacy banner"
                             >
                                 <XMarkIcon className="w-5 h-5" />

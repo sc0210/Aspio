@@ -32,7 +32,7 @@ export function GoalsTodayCard({ goals, loading, error }: GoalsTodayCardProps) {
             <h2 className="text-base font-semibold text-gray-900 dark:text-white">
                 {t('review.goals', 'Goals')}
             </h2>
-            <span className="text-xs text-gray-400 dark:text-gray-500">
+            <span className="text-xs text-gray-500 dark:text-gray-500">
                 {t('review.asOfToday', 'as of today')}
             </span>
         </div>
@@ -71,7 +71,7 @@ export function GoalsTodayCard({ goals, loading, error }: GoalsTodayCardProps) {
                 </p>
                 <Link
                     href="/goals"
-                    className="mt-2 inline-block text-xs font-medium text-primary-600 dark:text-primary-400 hover:underline focus:outline-none focus-visible:ring-2 focus-visible:ring-primary-500 rounded"
+                    className="mt-2 inline-block text-xs font-medium text-primary-700 dark:text-primary-400 hover:underline focus:outline-none focus-visible:ring-2 focus-visible:ring-primary-500 rounded"
                 >
                     {t('review.setAGoal', 'Set one')}
                 </Link>
@@ -104,7 +104,7 @@ export function GoalsTodayCard({ goals, loading, error }: GoalsTodayCardProps) {
                     <dt className="text-xs text-gray-500 dark:text-gray-400">
                         {t('review.onTrack', 'On track')}
                     </dt>
-                    <dd className="font-semibold text-prosperity-600 dark:text-prosperity-400">
+                    <dd className="font-semibold text-prosperity-700 dark:text-prosperity-400">
                         {goals.goalsOnTrack}
                     </dd>
                 </div>
@@ -112,7 +112,7 @@ export function GoalsTodayCard({ goals, loading, error }: GoalsTodayCardProps) {
                     <dt className="text-xs text-gray-500 dark:text-gray-400">
                         {t('review.behind', 'Behind')}
                     </dt>
-                    <dd className="font-semibold text-amber-600 dark:text-amber-400">
+                    <dd className="font-semibold text-amber-700 dark:text-amber-400">
                         {goals.goalsBehind}
                     </dd>
                 </div>
@@ -120,7 +120,7 @@ export function GoalsTodayCard({ goals, loading, error }: GoalsTodayCardProps) {
 
             <Link
                 href="/goals"
-                className="mt-4 inline-block text-xs font-medium text-primary-600 dark:text-primary-400 hover:underline focus:outline-none focus-visible:ring-2 focus-visible:ring-primary-500 rounded"
+                className="mt-4 inline-block text-xs font-medium text-primary-700 dark:text-primary-400 hover:underline focus:outline-none focus-visible:ring-2 focus-visible:ring-primary-500 rounded"
             >
                 {t('review.allGoals', 'All goals')}
             </Link>

@@ -211,7 +211,7 @@ function SignInForm() {
             <h2 className="text-2xl font-bold text-gray-900 dark:text-white">{t('auth:signIn.welcomeBack')}</h2>
             <p className="mt-1 text-sm text-gray-500 dark:text-gray-400">
               {t('auth:signIn.noAccount')}{' '}
-              <Link href="/auth/signup" className="font-semibold text-primary-600 dark:text-primary-400 hover:text-primary-700">
+              <Link href="/auth/signup" className="font-semibold text-primary-700 dark:text-primary-400 hover:text-primary-800">
                 {t('auth:signIn.signUpFree')}
               </Link>
             </p>
@@ -230,7 +230,7 @@ function SignInForm() {
                   error={errors.email?.message}
                   placeholder={t('auth:signIn.emailPlaceholder')}
                   autoComplete="email"
-                  leftIcon={<EnvelopeIcon className="w-4 h-4 text-gray-400" />}
+                  leftIcon={<EnvelopeIcon className="w-4 h-4 text-gray-500 dark:text-gray-400" />}
                 />
 
                 <div>
@@ -241,13 +241,13 @@ function SignInForm() {
                     error={errors.password?.message}
                     placeholder={t('auth:signIn.passwordPlaceholder')}
                     autoComplete="current-password"
-                    leftIcon={<LockClosedIcon className="w-4 h-4 text-gray-400" />}
+                    leftIcon={<LockClosedIcon className="w-4 h-4 text-gray-500 dark:text-gray-400" />}
                     rightIcon={
                       <button
                         type="button"
                         tabIndex={-1}
                         onClick={() => setShowPassword(v => !v)}
-                        className="text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 transition-colors"
+                        className="text-gray-500 dark:text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 transition-colors"
                         aria-label={showPassword ? t('auth:signIn.hidePassword') : t('auth:signIn.showPassword')}
                       >
                         {showPassword
@@ -257,7 +257,7 @@ function SignInForm() {
                     }
                   />
                   <div className="flex justify-end mt-1.5">
-                    <Link href="/auth/forgot-password" className="text-xs text-primary-600 dark:text-primary-400 hover:text-primary-700">
+                    <Link href="/auth/forgot-password" className="text-xs text-primary-700 dark:text-primary-400 hover:text-primary-800">
                       {t('auth:signIn.forgotPassword')}
                     </Link>
                   </div>
@@ -279,7 +279,7 @@ function SignInForm() {
                   <div className="w-full border-t border-gray-200 dark:border-gray-600" />
                 </div>
                 <div className="relative flex justify-center text-xs">
-                  <span className="px-3 bg-white dark:bg-gray-800 text-gray-400 font-medium">{t('auth:signIn.orDivider')}</span>
+                  <span className="px-3 bg-white dark:bg-gray-800 text-gray-500 dark:text-gray-400 font-medium">{t('auth:signIn.orDivider')}</span>
                 </div>
               </div>
 
@@ -296,7 +296,7 @@ function SignInForm() {
 
               {/* Demo */}
               <div>
-                <div className="relative flex items-center gap-2 text-xs text-gray-400 mb-3">
+                <div className="relative flex items-center gap-2 text-xs text-gray-500 dark:text-gray-400 mb-3">
                   <div className="flex-1 h-px bg-gray-200 dark:bg-gray-700" />
                   <span className="flex-shrink-0">{t('auth:signIn.justExploring')}</span>
                   <div className="flex-1 h-px bg-gray-200 dark:bg-gray-700" />
@@ -310,7 +310,7 @@ function SignInForm() {
                   {isDemoLoading ? <LoadingSpinner size="sm" /> : <span>✦</span>}
                   {t('auth:signIn.tryDemoAccount')}
                 </button>
-                <p className="mt-1.5 text-center text-xs text-gray-400 dark:text-gray-500">
+                <p className="mt-1.5 text-center text-xs text-gray-500 dark:text-gray-500">
                   {t('auth:signIn.demoSignsInAs')} <code className="text-xs bg-gray-100 dark:bg-gray-700 px-1 py-0.5 rounded font-mono">demo@aspiro.dev</code>
                 </p>
               </div>

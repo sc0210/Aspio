@@ -147,7 +147,7 @@ function DesktopLoansPage() {
           <div className="bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 p-6 sm:p-12 text-center">
             <div className="max-w-md mx-auto">
               <div className="w-12 h-12 sm:w-16 sm:h-16 mx-auto mb-3 sm:mb-4 rounded-full bg-primary-100 dark:bg-primary-900/20 flex items-center justify-center">
-                <BanknotesIcon className="w-6 h-6 sm:w-8 sm:h-8 text-primary-600 dark:text-primary-400" />
+                <BanknotesIcon className="w-6 h-6 sm:w-8 sm:h-8 text-primary-700 dark:text-primary-400" />
               </div>
               <h3 className="text-base sm:text-lg font-semibold text-gray-900 dark:text-white mb-2">
                 {t('emptyState.title')}
@@ -157,7 +157,7 @@ function DesktopLoansPage() {
               </p>
               <button
                 onClick={() => setShowAddModal(true)}
-                className="inline-flex items-center gap-2 px-5 py-2.5 bg-primary-600 hover:bg-primary-700 text-white font-medium rounded-lg transition-colors shadow-sm w-full sm:w-auto justify-center"
+                className="inline-flex items-center gap-2 px-5 py-2.5 bg-primary-700 hover:bg-primary-800 text-white font-medium rounded-lg transition-colors shadow-sm w-full sm:w-auto justify-center"
               >
                 <PlusIcon className="w-4 h-4 sm:w-5 sm:h-5" />
                 {t('addFirstLoan')}

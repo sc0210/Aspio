@@ -94,9 +94,9 @@ export function AssetAllocationCard({
 
   const getDeviationColor = (currentPct: number, targetPct: number) => {
     const points = deviationPoints(currentPct, targetPct);
-    if (isOffTarget(points)) return 'text-red-600 dark:text-red-400';
-    if (isNearTarget(points)) return 'text-orange-600 dark:text-orange-400';
-    return 'text-green-600 dark:text-green-400';
+    if (isOffTarget(points)) return 'text-red-700 dark:text-red-400';
+    if (isNearTarget(points)) return 'text-orange-700 dark:text-orange-400';
+    return 'text-green-700 dark:text-green-400';
   };
 
   const getActionBadge = (action: string) => {
@@ -249,7 +249,7 @@ export function AssetAllocationCard({
         </div>
         <div className="flex items-center gap-3">
           {hasSignificantDeviation && !isEditMode && (
-            <div className="flex items-center text-orange-600 dark:text-orange-400">
+            <div className="flex items-center text-orange-700 dark:text-orange-400">
               <ExclamationTriangleIcon className="w-5 h-5 mr-2" />
               <span className="text-sm font-medium">{t('allocation.needsRebalancing')}</span>
             </div>
@@ -495,7 +495,7 @@ export function AssetAllocationCard({
                     <div className={cn(
                       'text-sm font-medium',
                       allocation.delta > 0 ? 'text-blue-600 dark:text-blue-400' :
-                      allocation.delta < 0 ? 'text-orange-600 dark:text-orange-400' :
+                      allocation.delta < 0 ? 'text-orange-700 dark:text-orange-400' :
                       'text-gray-600 dark:text-gray-400'
                     )}>
                       {allocation.delta > 0 ? '+' : ''}{formatCurrency(allocation.delta)}
@@ -511,7 +511,7 @@ export function AssetAllocationCard({
                     <td className="py-3 px-2 text-center">
                       <button
                         onClick={() => handleDeleteAsset(allocation.asset)}
-                        className="text-red-600 dark:text-red-400 hover:text-red-800 dark:hover:text-red-300 transition-colors"
+                        className="text-red-700 dark:text-red-400 hover:text-red-800 dark:hover:text-red-300 transition-colors"
                         title={t('allocation.deleteAsset')}
                       >
                         <XMarkIcon className="w-5 h-5" />

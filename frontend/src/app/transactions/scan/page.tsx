@@ -214,8 +214,8 @@ export default function ScanReceiptPage() {
           <div className="border-2 border-dashed border-gray-300 dark:border-gray-600 rounded-lg p-8 text-center mb-6">
             <div className="space-y-4">
               <div className="flex justify-center space-x-4">
-                <CameraIcon className="w-12 h-12 text-gray-400" />
-                <PhotoIcon className="w-12 h-12 text-gray-400" />
+                <CameraIcon className="w-12 h-12 text-gray-500 dark:text-gray-400" />
+                <PhotoIcon className="w-12 h-12 text-gray-500 dark:text-gray-400" />
               </div>
               <div>
                 <h3 className="text-lg font-medium text-gray-900 dark:text-white mb-2">
@@ -309,7 +309,7 @@ export default function ScanReceiptPage() {
         {scanFailed && !isProcessing && (
           <div className="p-4 bg-warning-50 dark:bg-warning-900/20 border border-warning-200 dark:border-warning-700 rounded-lg">
             <div className="flex items-start gap-3">
-              <ExclamationTriangleIcon className="w-6 h-6 text-warning-600 dark:text-warning-400 flex-shrink-0" />
+              <ExclamationTriangleIcon className="w-6 h-6 text-warning-700 dark:text-warning-400 flex-shrink-0" />
               <div className="flex-1">
                 <p className="font-medium text-warning-900 dark:text-warning-200">
                   {t('transactions:scan.failedTitle')}
@@ -335,7 +335,7 @@ export default function ScanReceiptPage() {
           <div className="space-y-6">
             <div className="flex items-center justify-between p-4 bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800 rounded-lg">
               <div className="flex items-center">
-                <CheckCircleIcon className="w-6 h-6 text-green-600 dark:text-green-400 mr-3" />
+                <CheckCircleIcon className="w-6 h-6 text-green-700 dark:text-green-400 mr-3" />
                 <div>
                   <p className="font-medium text-green-900 dark:text-green-200">{t('transactions:scan.success')}</p>
                   <p className="text-sm text-green-700 dark:text-green-300">
@@ -347,7 +347,7 @@ export default function ScanReceiptPage() {
 
             {extractedData.confidence < 0.8 && (
               <div className="flex items-center p-4 bg-yellow-50 dark:bg-yellow-900/20 border border-yellow-200 dark:border-yellow-800 rounded-lg">
-                <ExclamationTriangleIcon className="w-6 h-6 text-yellow-600 dark:text-yellow-400 mr-3" />
+                <ExclamationTriangleIcon className="w-6 h-6 text-yellow-700 dark:text-yellow-400 mr-3" />
                 <div>
                   <p className="font-medium text-yellow-900 dark:text-yellow-200">{t('transactions:scan.verifyTitle')}</p>
                   <p className="text-sm text-yellow-700 dark:text-yellow-300">

@@ -124,7 +124,7 @@ export function RecentTransactions({ dateRange }: RecentTransactionsProps) {
         </h3>
         <Link
           href="/transactions"
-          className="text-xs text-primary-600 hover:text-primary-700 dark:text-primary-400 dark:hover:text-primary-300 font-medium transition-colors"
+          className="text-xs text-primary-700 hover:text-primary-800 dark:text-primary-400 dark:hover:text-primary-300 font-medium transition-colors"
         >
           {t('dashboard:recentTransactions.viewAll')}
         </Link>
@@ -135,7 +135,7 @@ export function RecentTransactions({ dateRange }: RecentTransactionsProps) {
       ) : transactions.length === 0 ? (
         <div className="text-center py-8">
           <div className="inline-flex items-center justify-center w-12 h-12 rounded-full bg-gray-100 dark:bg-gray-700 mb-3">
-            <CreditCardIcon className="w-6 h-6 text-gray-400" aria-hidden="true" />
+            <CreditCardIcon className="w-6 h-6 text-gray-500 dark:text-gray-400" aria-hidden="true" />
           </div>
           <p className="text-sm font-medium text-gray-900 dark:text-white mb-1">{t('dashboard:recentTransactions.noTransactions')}</p>
           <p className="text-xs text-gray-600 dark:text-gray-400 mb-4">
@@ -143,7 +143,7 @@ export function RecentTransactions({ dateRange }: RecentTransactionsProps) {
           </p>
           <Link
             href="/transactions/add"
-            className="inline-flex items-center px-4 py-2 text-sm font-medium text-white bg-primary-600 rounded-lg hover:bg-primary-700 transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-primary-500 dark:focus-visible:ring-offset-gray-800"
+            className="inline-flex items-center px-4 py-2 text-sm font-medium text-white bg-primary-700 rounded-lg hover:bg-primary-800 transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-primary-500 dark:focus-visible:ring-offset-gray-800"
           >
             {t('dashboard:recentTransactions.addTransaction')}
           </Link>
@@ -177,7 +177,7 @@ export function RecentTransactions({ dateRange }: RecentTransactionsProps) {
                   className={cn(
                     'text-sm font-semibold whitespace-nowrap',
                     transaction.type === 'income'
-                      ? 'text-success-600 dark:text-success-400'
+                      ? 'text-success-700 dark:text-success-400'
                       : 'text-gray-900 dark:text-white'
                   )}
                 >
@@ -186,9 +186,9 @@ export function RecentTransactions({ dateRange }: RecentTransactionsProps) {
                 </div>
 
                 {transaction.type === 'income' ? (
-                  <ArrowTrendingUpIcon className="w-4 h-4 text-success-500 flex-shrink-0" aria-hidden="true" />
+                  <ArrowTrendingUpIcon className="w-4 h-4 text-success-700 dark:text-success-500 flex-shrink-0" aria-hidden="true" />
                 ) : (
-                  <ArrowTrendingDownIcon className="w-4 h-4 text-gray-400 flex-shrink-0" aria-hidden="true" />
+                  <ArrowTrendingDownIcon className="w-4 h-4 text-gray-500 dark:text-gray-400 flex-shrink-0" aria-hidden="true" />
                 )}
               </div>
             </Link>

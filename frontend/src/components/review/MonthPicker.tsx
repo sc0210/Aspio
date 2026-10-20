@@ -32,7 +32,7 @@ export function MonthPicker({ range, onChange }: MonthPickerProps) {
 
     const step =
         'p-2 rounded-lg min-w-[44px] min-h-[44px] flex items-center justify-center transition-colors ' +
-        'text-gray-500 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-800 hover:text-gray-900 dark:hover:text-white ' +
+        'text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-800 hover:text-gray-900 dark:hover:text-white ' +
         'focus:outline-none focus-visible:ring-2 focus-visible:ring-primary-500 ' +
         'disabled:opacity-40 disabled:hover:bg-transparent disabled:cursor-not-allowed';
 
@@ -61,7 +61,7 @@ export function MonthPicker({ range, onChange }: MonthPickerProps) {
                             type="button"
                             onClick={() => onChange(thisMonth)}
                             className={cn(
-                                'text-xs text-primary-600 dark:text-primary-400 hover:underline',
+                                'text-xs text-primary-700 dark:text-primary-400 hover:underline',
                                 'focus:outline-none focus-visible:ring-2 focus-visible:ring-primary-500 rounded',
                             )}
                         >

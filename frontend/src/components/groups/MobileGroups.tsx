@@ -139,7 +139,7 @@ export function MobileGroups() {
                     </div>
                 ) : inputs.length === 0 ? (
                     <div className="rounded-3xl bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 p-8 text-center space-y-2">
-                        <UserGroupIcon className="w-8 h-8 mx-auto text-gray-400" />
+                        <UserGroupIcon className="w-8 h-8 mx-auto text-gray-500 dark:text-gray-400" />
                         <p className="font-bold text-gray-900 dark:text-white">{t('noGroups.title')}</p>
                         <p className="text-sm text-gray-500 dark:text-gray-400">{t('noGroups.description', { command: '/link' })}</p>
                     </div>
@@ -155,7 +155,7 @@ export function MobileGroups() {
                             )}
                             {position.totals.length === 0 ? (
                                 position.failedCount > 0 ? null : (
-                                <p className="mt-2 text-[22px] font-extrabold tracking-tight text-green-600 dark:text-green-400">
+                                <p className="mt-2 text-[22px] font-extrabold tracking-tight text-green-700 dark:text-green-400">
                                     ✓ {t('mobile.allSquare')}
                                 </p>
                                 )
@@ -163,7 +163,7 @@ export function MobileGroups() {
                                 position.totals.map((tot, i) => (
                                     <div key={tot.currency} className={i > 0 ? 'mt-4 pt-4 border-t border-gray-100 dark:border-gray-700' : 'mt-1'}>
                                         <p className={`text-[32px] leading-none font-extrabold tracking-tight tabular-nums ${
-                                            tot.net > 0 ? 'text-green-600 dark:text-green-400'
+                                            tot.net > 0 ? 'text-green-700 dark:text-green-400'
                                                 : tot.net < 0 ? 'text-rose-600 dark:text-rose-400' : 'text-gray-900 dark:text-white'}`}>
                                             {tot.net > 0 ? '+' : tot.net < 0 ? '−' : ''}{hide(fmt(tot.net, tot.currency))}
                                         </p>
@@ -172,11 +172,11 @@ export function MobileGroups() {
                                         </p>
                                         <div className="mt-3 grid grid-cols-2 gap-2">
                                             <div className="rounded-2xl bg-green-50 dark:bg-green-900/20 px-3 py-2.5">
-                                                <p className="text-[11.5px] font-bold text-green-800 dark:text-green-200">{t('mobile.owedToYou')}</p>
+                                                <p className="text-xs font-bold text-green-800 dark:text-green-200">{t('mobile.owedToYou')}</p>
                                                 <p className="text-[15px] font-extrabold tabular-nums text-green-900 dark:text-green-100">{hide(fmt(tot.owedToYou, tot.currency))}</p>
                                             </div>
                                             <div className="rounded-2xl bg-rose-50 dark:bg-rose-900/20 px-3 py-2.5">
-                                                <p className="text-[11.5px] font-bold text-rose-800 dark:text-rose-200">{t('mobile.youOwe')}</p>
+                                                <p className="text-xs font-bold text-rose-800 dark:text-rose-200">{t('mobile.youOwe')}</p>
                                                 <p className="text-[15px] font-extrabold tabular-nums text-rose-900 dark:text-rose-100">{hide(fmt(tot.youOwe, tot.currency))}</p>
                                             </div>
                                         </div>
@@ -196,19 +196,19 @@ export function MobileGroups() {
                                         <Card padding="sm" radius="2xl" shadow="none" hover>
                                         <div className="flex items-center gap-3">
                                         <div className="w-10 h-10 rounded-full bg-green-100 dark:bg-green-900/30 grid place-items-center shrink-0">
-                                            <UserGroupIcon className="w-5 h-5 text-green-600 dark:text-green-400" />
+                                            <UserGroupIcon className="w-5 h-5 text-green-700 dark:text-green-400" />
                                         </div>
                                         <div className="min-w-0 flex-1">
                                             <div className="flex items-baseline justify-between gap-2">
                                                 <p className="text-sm font-bold text-gray-900 dark:text-white truncate">{g.name || 'LINE Group'}</p>
                                                 {g.net !== 0 && (
                                                     <p className={`shrink-0 text-sm font-extrabold tabular-nums ${
-                                                        g.net > 0 ? 'text-green-600 dark:text-green-400' : 'text-rose-600 dark:text-rose-400'}`}>
+                                                        g.net > 0 ? 'text-green-700 dark:text-green-400' : 'text-rose-600 dark:text-rose-400'}`}>
                                                         {g.net > 0 ? '+' : '−'}{hide(fmt(g.net, g.currency))}
                                                     </p>
                                                 )}
                                             </div>
-                                            <p className="mt-0.5 text-[11.5px] font-medium text-gray-500 dark:text-gray-400 truncate">
+                                            <p className="mt-0.5 text-xs font-medium text-gray-500 dark:text-gray-400 truncate">
                                                 {g.failed
                                                     ? <span className="text-amber-700 dark:text-amber-300">⚠ {t('mobile.failedRow')}</span>
                                                     : g.counterparties.length === 0
@@ -223,7 +223,7 @@ export function MobileGroups() {
                                                     ].join(' · ')}
                                             </p>
                                         </div>
-                                        <ChevronRightIcon className="w-4 h-4 text-gray-400 shrink-0" />
+                                        <ChevronRightIcon className="w-4 h-4 text-gray-500 dark:text-gray-400 shrink-0" />
                                         </div>
                                         </Card>
                                     </Link>

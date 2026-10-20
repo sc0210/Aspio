@@ -47,7 +47,7 @@ export class ErrorBoundary extends Component<Props, State> {
         <div className="min-h-[400px] flex items-center justify-center p-4">
           <div className="text-center max-w-md">
             <div className="w-20 h-20 mx-auto mb-4 bg-red-100 rounded-full flex items-center justify-center">
-              <ExclamationTriangleIcon className="w-10 h-10 text-red-600" />
+              <ExclamationTriangleIcon className="w-10 h-10 text-red-700 dark:text-red-600" />
             </div>
 
             <h2 className="text-xl font-semibold text-gray-900 dark:text-white mb-2">
@@ -63,7 +63,7 @@ export class ErrorBoundary extends Component<Props, State> {
                 <summary className="cursor-pointer text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
                   Error Details (Development Only)
                 </summary>
-                <pre className="text-xs text-red-600 dark:text-red-400 whitespace-pre-wrap">
+                <pre className="text-xs text-red-700 dark:text-red-400 whitespace-pre-wrap">
                   {this.state.error.message}
                   {this.state.error.stack && '\n\n' + this.state.error.stack}
                 </pre>

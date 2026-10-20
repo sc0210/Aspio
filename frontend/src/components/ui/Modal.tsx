@@ -76,7 +76,7 @@ export function Modal({
               </DialogTitle>
               <button
                 onClick={onClose}
-                className="text-gray-400 hover:text-gray-600 dark:text-gray-500 dark:hover:text-gray-300 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-500 focus-visible:ring-offset-2 rounded-lg p-2.5 min-w-[44px] min-h-[44px] flex items-center justify-center"
+                className="text-gray-500 hover:text-gray-600 dark:text-gray-500 dark:hover:text-gray-300 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-500 focus-visible:ring-offset-2 rounded-lg p-2.5 min-w-[44px] min-h-[44px] flex items-center justify-center"
                 aria-label={t('common.close', 'Close modal')}
               >
                 <XMarkIcon className="w-6 h-6" aria-hidden="true" />

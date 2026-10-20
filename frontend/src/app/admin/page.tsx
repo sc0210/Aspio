@@ -154,7 +154,7 @@ export default function AdminPage() {
         <div className="flex items-center justify-center h-64">
           <div className="text-center space-y-3">
             <ShieldCheckIcon className="w-10 h-10 text-primary-500 dark:text-primary-400 mx-auto" />
-            <LoadingSpinner size="lg" className="mx-auto text-primary-600 dark:text-primary-400" />
+            <LoadingSpinner size="lg" className="mx-auto text-primary-700 dark:text-primary-400" />
             <p className="text-sm text-gray-500 dark:text-gray-400">{t('admin:loading')}</p>
           </div>
         </div>
@@ -162,13 +162,13 @@ export default function AdminPage() {
         <div className="flex items-center justify-center h-64">
           <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-sm border border-error-200 dark:border-error-800 p-8 max-w-md w-full text-center">
             <div className="w-14 h-14 mx-auto mb-4 rounded-2xl bg-error-100 dark:bg-error-900/30 flex items-center justify-center">
-              <ExclamationTriangleIcon className="w-7 h-7 text-error-600 dark:text-error-400" />
+              <ExclamationTriangleIcon className="w-7 h-7 text-error-700 dark:text-error-400" />
             </div>
             <h3 className="text-lg font-bold text-gray-900 dark:text-white mb-2">{t('admin:accessDenied')}</h3>
-            <p className="text-sm text-error-600 dark:text-error-400 mb-6">{error}</p>
+            <p className="text-sm text-error-700 dark:text-error-400 mb-6">{error}</p>
             <button
               onClick={() => router.push('/')}
-              className="px-5 py-2 bg-primary-600 hover:bg-primary-700 text-white rounded-lg text-sm font-semibold transition-colors"
+              className="px-5 py-2 bg-primary-700 hover:bg-primary-800 text-white rounded-lg text-sm font-semibold transition-colors"
             >
               {t('admin:returnToDashboard')}
             </button>
@@ -184,7 +184,7 @@ export default function AdminPage() {
           <div className="bg-gradient-to-r from-orange-50 to-amber-50 dark:from-orange-900/20 dark:to-amber-900/20 rounded-2xl p-4 border border-orange-200 dark:border-orange-800 shadow-sm">
             <div className="flex items-center gap-3">
               <div className="w-10 h-10 rounded-xl bg-orange-100 dark:bg-orange-900/40 flex items-center justify-center flex-shrink-0">
-                <BellAlertIcon className="w-5 h-5 text-orange-600 dark:text-orange-400 animate-pulse" />
+                <BellAlertIcon className="w-5 h-5 text-orange-700 dark:text-orange-400 animate-pulse" />
               </div>
               <div className="flex-1">
                 <p className="text-sm font-semibold text-orange-900 dark:text-orange-100">{t('admin:pendingBanner')}</p>
@@ -194,7 +194,7 @@ export default function AdminPage() {
               </div>
               <button
                 onClick={() => setActiveTab('pending')}
-                className="px-4 py-2 bg-orange-600 hover:bg-orange-700 dark:bg-orange-500 dark:hover:bg-orange-600 text-white text-sm font-semibold rounded-lg transition-colors shadow-sm"
+                className="px-4 py-2 bg-orange-700 hover:bg-orange-800 dark:bg-orange-500 dark:hover:bg-orange-600 text-white text-sm font-semibold rounded-lg transition-colors shadow-sm"
               >
                 {t('admin:reviewNow')}
               </button>
@@ -257,7 +257,7 @@ export default function AdminPage() {
               <div className="flex flex-col sm:flex-row gap-3 items-start sm:items-center justify-between">
                 <div className="flex flex-col sm:flex-row gap-3 flex-1">
                   <form onSubmit={handleSearchSubmit} className="relative flex-1 max-w-sm">
-                    <MagnifyingGlassIcon className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
+                    <MagnifyingGlassIcon className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-500 dark:text-gray-400" />
                     <input
                       type="text"
                       value={searchQuery}
@@ -275,7 +275,7 @@ export default function AdminPage() {
                         className={cn(
                           'px-3 py-1 text-xs font-semibold rounded-md transition-all duration-150',
                           statusFilter === f
-                            ? 'bg-primary-600 text-white shadow-sm'
+                            ? 'bg-primary-700 text-white shadow-sm'
                             : 'text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-700'
                         )}
                       >
@@ -309,7 +309,7 @@ export default function AdminPage() {
                         {t('admin:deleteSelected')}
                       </button>
                     )}
-                    <button onClick={clearSelectedUsers} className="text-xs text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200 px-2 py-1.5">
+                    <button onClick={clearSelectedUsers} className="text-xs text-gray-600 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200 px-2 py-1.5">
                       {t('admin:clear')}
                     </button>
                   </div>
@@ -320,7 +320,7 @@ export default function AdminPage() {
             {users.length === 0 ? (
               <div className="p-12 text-center">
                 <div className="w-16 h-16 mx-auto mb-4 rounded-2xl bg-gradient-to-br from-gray-100 to-gray-200 dark:from-gray-700 dark:to-gray-800 flex items-center justify-center">
-                  <UsersIcon className="w-8 h-8 text-gray-400 dark:text-gray-500" />
+                  <UsersIcon className="w-8 h-8 text-gray-500 dark:text-gray-500" />
                 </div>
                 <h3 className="text-lg font-bold text-gray-900 dark:text-white mb-2">{t('admin:noUsers')}</h3>
                 <p className="text-sm text-gray-500 dark:text-gray-400">
@@ -345,7 +345,7 @@ export default function AdminPage() {
                             type="checkbox"
                             checked={selectedUsers.size === users.length && users.length > 0}
                             onChange={() => toggleAllUsers('users')}
-                            className="w-4 h-4 rounded border-gray-300 dark:border-gray-600 text-primary-600 focus-visible:ring-primary-500"
+                            className="w-4 h-4 rounded border-gray-300 dark:border-gray-600 text-primary-700 dark:text-primary-600 focus-visible:ring-primary-500"
                           />
                         </th>
                         <th className="px-3 sm:px-6 py-3 text-left text-xs font-bold text-gray-600 dark:text-gray-400 uppercase tracking-wider">{t('admin:usersTable.user')}</th>
@@ -373,7 +373,7 @@ export default function AdminPage() {
                               type="checkbox"
                               checked={selectedUsers.has(user.id)}
                               onChange={() => toggleUserSelection(user.id, 'users')}
-                              className="w-4 h-4 rounded border-gray-300 dark:border-gray-600 text-primary-600 focus-visible:ring-primary-500"
+                              className="w-4 h-4 rounded border-gray-300 dark:border-gray-600 text-primary-700 dark:text-primary-600 focus-visible:ring-primary-500"
                             />
                           </td>
                           <td className="px-3 sm:px-6 py-3 whitespace-nowrap">
@@ -402,7 +402,7 @@ export default function AdminPage() {
                           <td className="hidden md:table-cell px-6 py-3 whitespace-nowrap text-sm text-gray-600 dark:text-gray-400 tabular-nums">
                             {user.last_login_at
                               ? <span title={new Date(user.last_login_at).toLocaleString()}>{formatTimeAgo(user.last_login_at)}</span>
-                              : <span className="text-gray-400 dark:text-gray-500 italic">{t('admin:never')}</span>
+                              : <span className="text-gray-500 dark:text-gray-500 italic">{t('admin:never')}</span>
                             }
                           </td>
                           <td className="px-3 sm:px-6 py-3 whitespace-nowrap text-right">
@@ -431,8 +431,8 @@ export default function AdminPage() {
                                   className={cn(
                                     'inline-flex items-center gap-1 px-2 sm:px-2.5 py-1.5 text-xs font-semibold rounded-lg transition-colors duration-150 disabled:opacity-50 disabled:cursor-not-allowed',
                                     user.is_active
-                                      ? 'text-orange-600 dark:text-orange-400 hover:bg-orange-50 dark:hover:bg-orange-900/30'
-                                      : 'text-success-600 dark:text-success-400 hover:bg-success-50 dark:hover:bg-success-900/30'
+                                      ? 'text-orange-700 dark:text-orange-400 hover:bg-orange-50 dark:hover:bg-orange-900/30'
+                                      : 'text-success-700 dark:text-success-400 hover:bg-success-50 dark:hover:bg-success-900/30'
                                   )}
                                 >
                                   {deactivating === user.id
@@ -447,7 +447,7 @@ export default function AdminPage() {
                                   onClick={() => setPendingDeleteId(user.id)}
                                   disabled={deleting || bulkProcessing}
                                   title={t('admin:deleteUser')}
-                                  className="inline-flex items-center gap-1 px-2 sm:px-2.5 py-1.5 text-xs font-semibold text-error-600 dark:text-error-400 hover:bg-error-50 dark:hover:bg-error-900/30 rounded-lg transition-colors duration-150 disabled:opacity-50 disabled:cursor-not-allowed"
+                                  className="inline-flex items-center gap-1 px-2 sm:px-2.5 py-1.5 text-xs font-semibold text-error-700 dark:text-error-400 hover:bg-error-50 dark:hover:bg-error-900/30 rounded-lg transition-colors duration-150 disabled:opacity-50 disabled:cursor-not-allowed"
                                 >
                                   <TrashIcon className="w-4 h-4" />
                                   <span className="hidden sm:inline">{t('admin:delete')}</span>
@@ -480,7 +480,7 @@ export default function AdminPage() {
                         }, [])
                         .map((p, idx) =>
                           p === '…' ? (
-                            <span key={`ellipsis-${idx}`} className="px-1 text-xs text-gray-400">…</span>
+                            <span key={`ellipsis-${idx}`} className="px-1 text-xs text-gray-500 dark:text-gray-400">…</span>
                           ) : (
                             <button
                               key={p}
@@ -488,7 +488,7 @@ export default function AdminPage() {
                               className={cn(
                                 'w-8 h-8 text-xs font-semibold rounded-lg transition-colors',
                                 page === p
-                                  ? 'bg-primary-600 text-white'
+                                  ? 'bg-primary-700 text-white'
                                   : 'text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-700'
                               )}
                             >{p}</button>
@@ -513,7 +513,7 @@ export default function AdminPage() {
             {pendingUsers.length === 0 ? (
               <div className="p-12 text-center">
                 <div className="w-16 h-16 mx-auto mb-4 rounded-2xl bg-gradient-to-br from-success-100 to-success-200 dark:from-success-900/30 dark:to-success-800/30 flex items-center justify-center">
-                  <CheckCircleIcon className="w-8 h-8 text-success-600 dark:text-success-400" />
+                  <CheckCircleIcon className="w-8 h-8 text-success-700 dark:text-success-400" />
                 </div>
                 <h3 className="text-lg font-bold text-gray-900 dark:text-white mb-2">{t('admin:allClear')}</h3>
                 <p className="text-sm text-gray-500 dark:text-gray-400">{t('admin:noPending')}</p>
@@ -524,7 +524,7 @@ export default function AdminPage() {
                   <div className="flex items-center justify-between gap-3">
                     <div className="flex items-center gap-3">
                       <div className="w-10 h-10 rounded-xl bg-orange-100 dark:bg-orange-900/40 flex items-center justify-center flex-shrink-0">
-                        <UserPlusIcon className="w-5 h-5 text-orange-600 dark:text-orange-400" />
+                        <UserPlusIcon className="w-5 h-5 text-orange-700 dark:text-orange-400" />
                       </div>
                       <div>
                         <h3 className="text-lg font-bold text-gray-900 dark:text-white">{t('admin:pendingApprovals')}</h3>
@@ -539,7 +539,7 @@ export default function AdminPage() {
                         <button
                           onClick={handleBulkApprove}
                           disabled={bulkProcessing}
-                          className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold text-white bg-success-600 hover:bg-success-700 rounded-lg transition-colors disabled:opacity-50"
+                          className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold text-white bg-success-700 hover:bg-success-800 rounded-lg transition-colors disabled:opacity-50"
                         >
                           <CheckCircleIcon className="w-3.5 h-3.5" />
                           {t('admin:approveAll')}
@@ -566,7 +566,7 @@ export default function AdminPage() {
                             {t('admin:deleteAll')}
                           </button>
                         )}
-                        <button onClick={clearSelectedPending} className="text-xs text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200 px-2 py-1.5">
+                        <button onClick={clearSelectedPending} className="text-xs text-gray-600 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200 px-2 py-1.5">
                           {t('admin:clear')}
                         </button>
                       </div>
@@ -583,7 +583,7 @@ export default function AdminPage() {
                             type="checkbox"
                             checked={selectedPending.size === pendingUsers.length && pendingUsers.length > 0}
                             onChange={() => toggleAllUsers('pending')}
-                            className="w-4 h-4 rounded border-gray-300 dark:border-gray-600 text-primary-600 focus-visible:ring-primary-500"
+                            className="w-4 h-4 rounded border-gray-300 dark:border-gray-600 text-primary-700 dark:text-primary-600 focus-visible:ring-primary-500"
                           />
                         </th>
                         <th className="px-3 sm:px-6 py-3 text-left text-xs font-bold text-gray-600 dark:text-gray-400 uppercase tracking-wider">{t('admin:usersTable.user')}</th>
@@ -607,7 +607,7 @@ export default function AdminPage() {
                               type="checkbox"
                               checked={selectedPending.has(user.id)}
                               onChange={() => toggleUserSelection(user.id, 'pending')}
-                              className="w-4 h-4 rounded border-gray-300 dark:border-gray-600 text-primary-600 focus-visible:ring-primary-500"
+                              className="w-4 h-4 rounded border-gray-300 dark:border-gray-600 text-primary-700 dark:text-primary-600 focus-visible:ring-primary-500"
                             />
                           </td>
                           <td className="px-3 sm:px-6 py-3 whitespace-nowrap">
@@ -667,7 +667,7 @@ export default function AdminPage() {
                                 <button
                                   onClick={() => setPendingRejectId(user.id)}
                                   disabled={approving === user.id || rejecting === user.id || bulkProcessing}
-                                  className="inline-flex items-center gap-1 sm:gap-1.5 px-2 sm:px-3 py-1.5 text-xs font-semibold text-error-600 dark:text-error-400 hover:bg-error-50 dark:hover:bg-error-900/30 rounded-lg transition-colors duration-150 disabled:opacity-50 disabled:cursor-not-allowed border border-error-200 dark:border-error-700"
+                                  className="inline-flex items-center gap-1 sm:gap-1.5 px-2 sm:px-3 py-1.5 text-xs font-semibold text-error-700 dark:text-error-400 hover:bg-error-50 dark:hover:bg-error-900/30 rounded-lg transition-colors duration-150 disabled:opacity-50 disabled:cursor-not-allowed border border-error-200 dark:border-error-700"
                                 >
                                   <XCircleIcon className="w-4 h-4" />
                                   <span className="hidden sm:inline">{rejecting === user.id ? 'Rejecting…' : 'Reject'}</span>
@@ -717,8 +717,8 @@ export default function AdminPage() {
                     : '—',
                   icon: CpuChipIcon,
                   color: (dbStats?.db_level?.buffer_hit_pct ?? 0) >= 95
-                    ? 'bg-success-100 dark:bg-success-900/30 text-success-600 dark:text-success-400'
-                    : 'bg-warning-100 dark:bg-warning-900/30 text-warning-600 dark:text-warning-400',
+                    ? 'bg-success-100 dark:bg-success-900/30 text-success-700 dark:text-success-400'
+                    : 'bg-warning-100 dark:bg-warning-900/30 text-warning-700 dark:text-warning-400',
                 },
               ].map(({ label, value, icon: Icon, color }) => (
                 <Card key={label} padding="md">
@@ -819,7 +819,7 @@ export default function AdminPage() {
                               <div className="flex items-center gap-2">
                                 <span className="text-sm font-mono font-medium text-gray-900 dark:text-white">{stat.table}</span>
                                 {bloatRisk && (
-                                  <span title={t('admin:db.highDeadRows')} className="text-warning-500">
+                                  <span title={t('admin:db.highDeadRows')} className="text-warning-700 dark:text-warning-500">
                                     <ExclamationCircleIcon className="w-3.5 h-3.5" />
                                   </span>
                                 )}
@@ -831,7 +831,7 @@ export default function AdminPage() {
                             <td className="px-4 py-3 whitespace-nowrap text-right">
                               <span className={cn(
                                 'text-sm tabular-nums',
-                                bloatRisk ? 'font-semibold text-warning-600 dark:text-warning-400' : 'text-gray-500 dark:text-gray-400'
+                                bloatRisk ? 'font-semibold text-warning-700 dark:text-warning-400' : 'text-gray-500 dark:text-gray-400'
                               )}>
                                 {(stat.dead_rows ?? 0).toLocaleString()}
                               </span>
@@ -840,13 +840,13 @@ export default function AdminPage() {
                             <td className="hidden lg:table-cell px-4 py-3 whitespace-nowrap text-sm text-gray-500 dark:text-gray-400 text-right tabular-nums">{(stat.seq_scans ?? 0).toLocaleString()}</td>
                             <td className="hidden xl:table-cell px-4 py-3 whitespace-nowrap text-xs text-gray-500 dark:text-gray-400">
                               {lastResult ? (
-                                <span className="text-success-600 dark:text-success-400 font-medium">
+                                <span className="text-success-700 dark:text-success-400 font-medium">
                                   ✓ took {lastResult.duration_s}s
                                 </span>
                               ) : stat.last_autovacuum ? (
                                 new Date(stat.last_autovacuum).toLocaleString(undefined, { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' })
                               ) : (
-                                <span className="italic text-gray-400 dark:text-gray-600">{t('admin:neverLower')}</span>
+                                <span className="italic text-gray-500 dark:text-gray-600">{t('admin:neverLower')}</span>
                               )}
                             </td>
                             <td className="px-4 py-3 whitespace-nowrap text-right">
@@ -916,7 +916,7 @@ export default function AdminPage() {
                             <td className="px-4 py-2.5 whitespace-nowrap">
                               <div className="flex items-center gap-1.5">
                                 <span className="text-xs font-mono text-gray-900 dark:text-white">{idx.index}</span>
-                                {unused && <span title={t('admin:db.neverUsed')} className="text-warning-500"><ExclamationCircleIcon className="w-3 h-3" /></span>}
+                                {unused && <span title={t('admin:db.neverUsed')} className="text-warning-700 dark:text-warning-500"><ExclamationCircleIcon className="w-3 h-3" /></span>}
                               </div>
                             </td>
                             <td className="px-4 py-2.5 whitespace-nowrap text-xs font-mono text-gray-500 dark:text-gray-400">{idx.table}</td>
@@ -927,7 +927,7 @@ export default function AdminPage() {
                             </td>
                             <td className="px-4 py-2.5 whitespace-nowrap text-xs text-gray-700 dark:text-gray-300 text-right tabular-nums">{idx.size}</td>
                             <td className="px-4 py-2.5 whitespace-nowrap text-right">
-                              <span className={cn('text-xs tabular-nums', unused ? 'text-warning-600 dark:text-warning-400 font-semibold' : 'text-gray-700 dark:text-gray-300')}>
+                              <span className={cn('text-xs tabular-nums', unused ? 'text-warning-700 dark:text-warning-400 font-semibold' : 'text-gray-700 dark:text-gray-300')}>
                                 {(idx.scans ?? 0).toLocaleString()}
                               </span>
                             </td>
@@ -987,7 +987,7 @@ export default function AdminPage() {
                                 <ConnectionStateBadge state={conn.state} waitEvent={conn.wait_event} />
                               </td>
                               <td className="px-4 py-2.5 whitespace-nowrap text-right">
-                                <span className={cn('text-xs tabular-nums font-mono', slow ? 'font-bold text-red-600 dark:text-red-400' : 'text-gray-600 dark:text-gray-400')}>
+                                <span className={cn('text-xs tabular-nums font-mono', slow ? 'font-bold text-red-700 dark:text-red-400' : 'text-gray-600 dark:text-gray-400')}>
                                   {conn.duration_s.toFixed(1)}s
                                 </span>
                               </td>
@@ -1096,7 +1096,7 @@ function CleanupPanel() {
       <div className="px-6 py-4 border-b border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-900/50 flex items-center justify-between">
         <div className="flex items-center gap-3">
           <div className="w-8 h-8 rounded-lg bg-red-100 dark:bg-red-900/30 flex items-center justify-center">
-            <TrashIcon className="w-4 h-4 text-red-600 dark:text-red-400" />
+            <TrashIcon className="w-4 h-4 text-red-700 dark:text-red-400" />
           </div>
           <div>
             <h3 className="text-base font-bold text-gray-900 dark:text-white">{t('admin:cleanup.title')}</h3>
@@ -1108,7 +1108,7 @@ function CleanupPanel() {
         {(previewState !== 'idle' || runState !== 'idle') && (
           <button
             onClick={reset}
-            className="text-xs text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200 hover:underline transition-colors"
+            className="text-xs text-gray-600 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200 hover:underline transition-colors"
           >
             {t('admin:cleanup.reset')}
           </button>
@@ -1139,7 +1139,7 @@ function CleanupPanel() {
         {/* Preview error */}
         {previewState === 'error' && (
           <div className="rounded-xl bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 px-4 py-3 flex items-start gap-2">
-            <XCircleIcon className="w-4 h-4 text-red-600 dark:text-red-400 mt-0.5 shrink-0" />
+            <XCircleIcon className="w-4 h-4 text-red-700 dark:text-red-400 mt-0.5 shrink-0" />
             <p className="text-sm text-red-700 dark:text-red-300">{previewError}</p>
           </div>
         )}
@@ -1195,7 +1195,7 @@ function CleanupPanel() {
             {runState === 'confirming' && (
               <div className="rounded-xl border border-red-200 dark:border-red-800 bg-red-50 dark:bg-red-900/20 p-4 space-y-3">
                 <div className="flex items-start gap-2">
-                  <ExclamationTriangleIcon className="w-4 h-4 text-red-600 dark:text-red-400 mt-0.5 shrink-0" />
+                  <ExclamationTriangleIcon className="w-4 h-4 text-red-700 dark:text-red-400 mt-0.5 shrink-0" />
                   <p className="text-sm text-red-700 dark:text-red-300">
                     This will permanently delete{' '}
                     <span className="font-bold">{dbTotal}</span> row{dbTotal !== 1 ? 's' : ''} and clear in-process caches. Are you sure?
@@ -1227,7 +1227,7 @@ function CleanupPanel() {
 
             {runState === 'error' && (
               <div className="rounded-xl bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 px-4 py-3 flex items-start gap-2">
-                <XCircleIcon className="w-4 h-4 text-red-600 dark:text-red-400 mt-0.5 shrink-0" />
+                <XCircleIcon className="w-4 h-4 text-red-700 dark:text-red-400 mt-0.5 shrink-0" />
                 <p className="text-sm text-red-700 dark:text-red-300">{runError}</p>
               </div>
             )}
@@ -1273,7 +1273,7 @@ function CleanupPanel() {
             </div>
             <button
               onClick={reset}
-              className="text-sm text-primary-600 dark:text-primary-400 hover:underline font-medium"
+              className="text-sm text-primary-700 dark:text-primary-400 hover:underline font-medium"
             >
               {t('admin:cleanup.runAgain')}
             </button>
@@ -1400,7 +1400,7 @@ function DevDbSyncPanel({ target }: { target: SyncTarget }) {
       <div className="px-6 py-4 border-b border-amber-200 dark:border-amber-800/60 flex items-center justify-between gap-3">
         <div className="flex items-center gap-3">
           <div className="w-8 h-8 rounded-lg bg-amber-100 dark:bg-amber-900/50 flex items-center justify-center">
-            <CommandLineIcon className="w-4 h-4 text-amber-600 dark:text-amber-400" />
+            <CommandLineIcon className="w-4 h-4 text-amber-700 dark:text-amber-400" />
           </div>
           <div>
             <h3 className="text-sm font-bold text-amber-900 dark:text-amber-200">{target.title}</h3>
@@ -1454,7 +1454,7 @@ function DevDbSyncPanel({ target }: { target: SyncTarget }) {
         {state === 'confirming' && pendingCmd && (
           <div className="rounded-xl border border-red-200 dark:border-red-800 bg-red-50 dark:bg-red-900/20 p-4 space-y-3">
             <div className="flex items-start gap-2">
-              <ExclamationTriangleIcon className="w-4 h-4 text-red-600 dark:text-red-400 mt-0.5 shrink-0" />
+              <ExclamationTriangleIcon className="w-4 h-4 text-red-700 dark:text-red-400 mt-0.5 shrink-0" />
               <p className="text-xs text-red-700 dark:text-red-300">{confirmLabel[pendingCmd]}</p>
             </div>
             <div className="flex gap-2">
@@ -1494,13 +1494,13 @@ function DevDbSyncPanel({ target }: { target: SyncTarget }) {
 
         {/* Result badge */}
         {state === 'done' && (
-          <div className="flex items-center gap-1.5 text-xs font-semibold text-success-600 dark:text-success-400">
+          <div className="flex items-center gap-1.5 text-xs font-semibold text-success-700 dark:text-success-400">
             <CheckCircleIcon className="w-4 h-4" />
             {t('admin:cleanup.completed')}
           </div>
         )}
         {state === 'error' && (
-          <div className="flex items-center gap-1.5 text-xs font-semibold text-red-600 dark:text-red-400">
+          <div className="flex items-center gap-1.5 text-xs font-semibold text-red-700 dark:text-red-400">
             <XCircleIcon className="w-4 h-4" />
             {t('admin:cleanup.exitedWithError')}
           </div>
@@ -1523,7 +1523,7 @@ function ConnectionStateBadge({ state, waitEvent }: { state: string; waitEvent?:
   return (
     <div className="flex flex-col gap-0.5">
       <span className={cn('inline-block px-1.5 py-0.5 text-xs font-semibold rounded', cls)}>{label}</span>
-      {waitEvent && <span className="text-xs text-gray-400 dark:text-gray-500">{waitEvent}</span>}
+      {waitEvent && <span className="text-xs text-gray-500 dark:text-gray-500">{waitEvent}</span>}
     </div>
   );
 }

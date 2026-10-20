@@ -179,7 +179,7 @@ function DesktopPortfolioPage() {
               disabled={priceOps.isRefreshing}
               aria-disabled={priceOps.isRefreshing}
               aria-label={priceOps.isRefreshing ? 'Retrying...' : 'Try again'}
-              className="px-4 py-2.5 min-h-[44px] text-white bg-primary-600 rounded-lg hover:bg-primary-700 disabled:opacity-50 touch-manipulation"
+              className="px-4 py-2.5 min-h-[44px] text-white bg-primary-700 rounded-lg hover:bg-primary-800 disabled:opacity-50 touch-manipulation"
             >
               {priceOps.isRefreshing ? 'Retrying...' : 'Try Again'}
             </button>

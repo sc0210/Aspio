@@ -205,7 +205,7 @@ export function BuyHoldingModal({ isOpen, onClose, onBuy, existingHoldings = [] 
                             type="button"
                             onClick={handleClose}
                             aria-label="Close dialog"
-                            className="text-gray-400 hover:text-gray-500 dark:hover:text-gray-300 transition-colors"
+                            className="text-gray-500 dark:text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 transition-colors"
                         >
                             <XMarkIcon className="w-6 h-6" aria-hidden="true" />
                         </button>
@@ -221,7 +221,7 @@ export function BuyHoldingModal({ isOpen, onClose, onBuy, existingHoldings = [] 
                                         {t('buy.searchLabel')}
                                     </label>
                                     <div className="relative">
-                                        <MagnifyingGlassIcon className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" />
+                                        <MagnifyingGlassIcon className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-500 dark:text-gray-400" />
                                         <input
                                             id="buyholding-field"
                                             type="text"

@@ -222,7 +222,7 @@ export default function SavingRecordsModal({
             <button
               type="button"
               onClick={() => { setShowAddForm(true); setEditState(null); setConfirmDeleteId(null); }}
-              className="flex items-center gap-1.5 px-3 py-1.5 bg-primary-600 text-white rounded-lg text-sm font-medium hover:bg-primary-700 transition-colors"
+              className="flex items-center gap-1.5 px-3 py-1.5 bg-primary-700 text-white rounded-lg text-sm font-medium hover:bg-primary-800 transition-colors"
             >
               <PlusIcon className="w-4 h-4" />
               {t('savings.records.add', 'Add')}
@@ -231,7 +231,7 @@ export default function SavingRecordsModal({
               type="button"
               onClick={onClose}
               aria-label={t('savings.records.close', 'Close')}
-              className="p-1.5 text-gray-400 hover:text-gray-600 dark:hover:text-gray-200 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors"
+              className="p-1.5 text-gray-500 dark:text-gray-400 hover:text-gray-600 dark:hover:text-gray-200 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors"
             >
               <XMarkIcon className="w-5 h-5" />
             </button>
@@ -241,7 +241,7 @@ export default function SavingRecordsModal({
         {/* Scrollable body */}
         <div className="overflow-y-auto flex-1 px-5 py-4 space-y-3">
           {error && (
-            <p role="alert" className="text-sm text-error-600 dark:text-error-400 bg-error-50 dark:bg-error-900/20 rounded-lg px-3 py-2">
+            <p role="alert" className="text-sm text-error-700 dark:text-error-400 bg-error-50 dark:bg-error-900/20 rounded-lg px-3 py-2">
               {error}
             </p>
           )}
@@ -300,7 +300,7 @@ export default function SavingRecordsModal({
                   type="button"
                   onClick={handleAdd}
                   disabled={addSaving}
-                  className="flex items-center gap-1.5 px-4 py-1.5 bg-primary-600 text-white rounded-lg text-sm font-medium hover:bg-primary-700 disabled:opacity-50 transition-colors"
+                  className="flex items-center gap-1.5 px-4 py-1.5 bg-primary-700 text-white rounded-lg text-sm font-medium hover:bg-primary-800 disabled:opacity-50 transition-colors"
                 >
                   <CheckIcon className="w-4 h-4" />
                   {addSaving ? t('savings.records.saving', 'Saving…') : saveLabel}
@@ -329,7 +329,7 @@ export default function SavingRecordsModal({
               <p className="text-gray-600 dark:text-gray-400 font-medium">
                 {t('savings.records.emptyTitle', 'No records yet')}
               </p>
-              <p className="text-gray-400 dark:text-gray-500 text-sm mt-1">
+              <p className="text-gray-500 dark:text-gray-500 text-sm mt-1">
                 {t('savings.records.emptyHint', 'Use “Add” to record your first saving deposit.')}
               </p>
             </div>
@@ -393,7 +393,7 @@ export default function SavingRecordsModal({
                               type="button"
                               onClick={handleEdit}
                               disabled={editSaving}
-                              className="inline-flex items-center gap-1 px-2 py-1 text-xs text-white bg-primary-600 rounded hover:bg-primary-700 disabled:opacity-50 mr-1"
+                              className="inline-flex items-center gap-1 px-2 py-1 text-xs text-white bg-primary-700 rounded hover:bg-primary-800 disabled:opacity-50 mr-1"
                             >
                               <CheckIcon className="w-3 h-3" />
                               {editSaving ? '…' : saveLabel}
@@ -401,7 +401,7 @@ export default function SavingRecordsModal({
                             <button
                               type="button"
                               onClick={() => setEditState(null)}
-                              className="text-xs text-gray-500 hover:text-gray-700 dark:hover:text-gray-300 px-2 py-1"
+                              className="text-xs text-gray-600 hover:text-gray-700 dark:hover:text-gray-300 px-2 py-1"
                             >
                               {cancelLabel}
                             </button>
@@ -414,7 +414,7 @@ export default function SavingRecordsModal({
                       return (
                         <tr key={rec.id} className="bg-error-50 dark:bg-error-900/20">
                           <td colSpan={5} className="py-2 px-1">
-                            <span className="text-xs text-error-600 dark:text-error-400 mr-3">
+                            <span className="text-xs text-error-700 dark:text-error-400 mr-3">
                               {t('savings.records.confirmDelete', 'Delete this record?')}
                             </span>
                             <button
@@ -428,7 +428,7 @@ export default function SavingRecordsModal({
                             <button
                               type="button"
                               onClick={() => setConfirmDeleteId(null)}
-                              className="text-xs text-gray-500 hover:text-gray-700 px-2 py-1"
+                              className="text-xs text-gray-600 hover:text-gray-700 px-2 py-1"
                             >
                               {cancelLabel}
                             </button>
@@ -452,7 +452,7 @@ export default function SavingRecordsModal({
                         <td className="py-2.5 pr-3 text-right font-semibold text-gray-900 dark:text-white whitespace-nowrap">
                           {fmt(rec.amount)}
                         </td>
-                        <td className="py-2.5 pr-3 text-gray-400 dark:text-gray-500 text-xs hidden sm:table-cell">
+                        <td className="py-2.5 pr-3 text-gray-500 dark:text-gray-500 text-xs hidden sm:table-cell">
                           {rec.note ?? '—'}
                         </td>
                         <td className="py-2.5 text-right whitespace-nowrap">
@@ -462,7 +462,7 @@ export default function SavingRecordsModal({
                                 type="button"
                                 onClick={() => startEdit(rec)}
                                 aria-label={t('savings.records.editAria', 'Edit record')}
-                                className="p-1.5 text-gray-400 hover:text-primary-600 dark:hover:text-primary-400 rounded hover:bg-primary-50 dark:hover:bg-primary-900/20 transition-colors"
+                                className="p-1.5 text-gray-500 dark:text-gray-400 hover:text-primary-600 dark:hover:text-primary-400 rounded hover:bg-primary-50 dark:hover:bg-primary-900/20 transition-colors"
                               >
                                 <PencilIcon className="w-3.5 h-3.5" />
                               </button>
@@ -470,7 +470,7 @@ export default function SavingRecordsModal({
                                 type="button"
                                 onClick={() => { setConfirmDeleteId(rec.id); setEditState(null); }}
                                 aria-label={t('savings.records.deleteAria', 'Delete record')}
-                                className="p-1.5 text-gray-400 hover:text-error-600 dark:hover:text-error-400 rounded hover:bg-error-50 dark:hover:bg-error-900/20 transition-colors"
+                                className="p-1.5 text-gray-500 dark:text-gray-400 hover:text-error-600 dark:hover:text-error-400 rounded hover:bg-error-50 dark:hover:bg-error-900/20 transition-colors"
                               >
                                 <TrashIcon className="w-3.5 h-3.5" />
                               </button>

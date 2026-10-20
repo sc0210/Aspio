@@ -156,7 +156,7 @@ function MoveRow({
             >
                 {maskValue(formatTWD(move.close))}
             </p>
-            <p className="text-xs text-gray-400 dark:text-gray-500">
+            <p className="text-xs text-gray-500 dark:text-gray-500">
                 {t('review.openedAt', 'opened at {{amount}}', {
                     amount: maskValue(formatTWD(move.open)),
                 })}

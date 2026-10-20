@@ -456,7 +456,7 @@ export default function GroupDetailPage() {
         {/* Back link */}
         <Link
           href="/groups"
-          className="inline-flex items-center gap-1.5 text-sm text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200 transition-colors"
+          className="inline-flex items-center gap-1.5 text-sm text-gray-600 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200 transition-colors"
         >
           <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
@@ -478,7 +478,7 @@ export default function GroupDetailPage() {
 
         {/* Error state */}
         {error && (
-          <div className="rounded-2xl bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 p-4 text-sm text-red-600 dark:text-red-400">
+          <div className="rounded-2xl bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 p-4 text-sm text-red-700 dark:text-red-400">
             {error}
           </div>
         )}
@@ -531,7 +531,7 @@ export default function GroupDetailPage() {
             </div>
 
             {isDemo && (
-              <p className="text-sm text-amber-600 dark:text-amber-400 text-center -mt-1">
+              <p className="text-sm text-amber-700 dark:text-amber-400 text-center -mt-1">
                 {t('demoNote')}
               </p>
             )}
@@ -594,7 +594,7 @@ export default function GroupDetailPage() {
                 <div className="px-4 sm:px-5 pb-4 pt-2 overflow-x-auto">
                   <table className="w-full text-sm min-w-[280px]">
                     <thead>
-                      <tr className="text-xs text-gray-400 uppercase">
+                      <tr className="text-xs text-gray-500 dark:text-gray-400 uppercase">
                         <th className="text-left pb-2 font-medium">{t('members')}</th>
                         <th className="text-right pb-2 font-medium">{t('paid')}</th>
                         <th className="text-right pb-2 font-medium">{t('owes')}</th>
@@ -617,7 +617,7 @@ export default function GroupDetailPage() {
                             </td>
                             <td
                               className={`py-2 text-right font-semibold ${
-                                net >= 0 ? 'text-green-600 dark:text-green-400' : 'text-red-500'
+                                net >= 0 ? 'text-green-700 dark:text-green-400' : 'text-red-500'
                               }`}
                             >
                               {net >= 0 ? '+' : ''}
@@ -641,7 +641,7 @@ export default function GroupDetailPage() {
               </div>
 
               {expenses.length === 0 ? (
-                <p className="px-4 pb-5 pt-2 text-sm text-gray-400 text-center">
+                <p className="px-4 pb-5 pt-2 text-sm text-gray-500 dark:text-gray-400 text-center">
                   {t('noExpenses')}
                 </p>
               ) : (
@@ -665,7 +665,7 @@ export default function GroupDetailPage() {
                               className="w-full flex items-center gap-3 px-4 py-3 text-left hover:bg-gray-50 dark:hover:bg-gray-800/60 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-[#06C755]"
                             >
                               <div className="w-9 text-center flex-shrink-0">
-                                <span className="text-xs font-medium text-gray-400">
+                                <span className="text-xs font-medium text-gray-500 dark:text-gray-400">
                                   {shortDate(e.created_at)}
                                 </span>
                               </div>
@@ -673,7 +673,7 @@ export default function GroupDetailPage() {
                                 <p className="text-sm font-medium text-gray-800 dark:text-gray-100 truncate">
                                   {e.description || '—'}
                                 </p>
-                                <p className="text-xs text-gray-400 mt-0.5">
+                                <p className="text-xs text-gray-500 dark:text-gray-400 mt-0.5">
                                   {t('paidBy')} {resolveName(e.payer_id)}
                                 </p>
                               </div>
@@ -691,7 +691,7 @@ export default function GroupDetailPage() {
                     <div className="px-4 pb-4 pt-2">
                       <button
                         onClick={() => setVisibleCount((c) => c + PAGE_SIZE)}
-                        className="w-full text-sm font-medium text-green-600 dark:text-green-400 hover:text-green-700 dark:hover:text-green-300 transition-colors py-2 rounded-xl border border-green-200 dark:border-green-700 hover:bg-green-50 dark:hover:bg-green-900/20"
+                        className="w-full text-sm font-medium text-green-700 dark:text-green-400 hover:text-green-800 dark:hover:text-green-300 transition-colors py-2 rounded-xl border border-green-200 dark:border-green-700 hover:bg-green-50 dark:hover:bg-green-900/20"
                       >
                         {t('loadMore')}
                       </button>
@@ -873,7 +873,7 @@ function ExpenseFormModal({
             </p>
           </div>
           {error && (
-            <p className="text-sm text-red-600 dark:text-red-400" role="alert">
+            <p className="text-sm text-red-700 dark:text-red-400" role="alert">
               {error}
             </p>
           )}
@@ -1008,7 +1008,7 @@ function ExpenseFormModal({
                   className={`font-semibold ${
                     Math.abs(remaining) > 0.01
                       ? 'text-red-500'
-                      : 'text-green-600 dark:text-green-400'
+                      : 'text-green-700 dark:text-green-400'
                   }`}
                 >
                   {formatCurrency(splitSum, currency, { precision: 0 })}
@@ -1020,7 +1020,7 @@ function ExpenseFormModal({
           )}
 
           {error && (
-            <p className="text-sm text-red-600 dark:text-red-400" role="alert">
+            <p className="text-sm text-red-700 dark:text-red-400" role="alert">
               {error}
             </p>
           )}
@@ -1142,7 +1142,7 @@ function SettleModal({ balance, currency, resolveName, onClose, onSettle }: Sett
         )}
 
         {error && (
-          <p className="text-sm text-red-600 dark:text-red-400" role="alert">
+          <p className="text-sm text-red-700 dark:text-red-400" role="alert">
             {error}
           </p>
         )}
