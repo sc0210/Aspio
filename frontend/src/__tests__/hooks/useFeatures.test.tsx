@@ -33,19 +33,19 @@ describe('useFeatures', () => {
     await waitFor(() => expect(result.current.lineBot).toBe(true));
   });
 
-  it('does not claim the bot is off when the request fails', async () => {
-    // A linked user opening /link-line during a backend restart must not be
-    // told the instance has no LINE bot.
+  it('reports a failed request as off, and flags it', async () => {
+    // Off, so the nav and Settings never offer what may not exist; the flag
+    // lets LineBotGate still render a page someone already opened.
     mockGet.mockRejectedValue(new Error('HTTP error! status: 502'));
     const { result } = renderHook(() => useFeatures(), { wrapper });
-    await waitFor(() => expect(result.current.isLoading).toBe(false));
-    expect(result.current.lineBot).toBe(true);
+    await waitFor(() => expect(result.current.isError).toBe(true));
+    expect(result.current.lineBot).toBe(false);
   });
 
   it('turns everything on in demo mode without asking the backend', () => {
     mockMode.isDemo = true;
     const { result } = renderHook(() => useFeatures(), { wrapper });
-    expect(result.current).toEqual({ lineBot: true, isLoading: false });
+    expect(result.current).toEqual({ lineBot: true, isLoading: false, isError: false });
     expect(mockGet).not.toHaveBeenCalled();
   });
 });

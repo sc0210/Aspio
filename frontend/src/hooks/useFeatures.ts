@@ -17,13 +17,12 @@ const ALL_ON: Features = { lineBot: true };
  * /line-bot routes at all, so every LINE surface (the /groups nav entry, the
  * Settings section, /link-line, /liff, the landing copy) hides off this.
  *
- * Off until the answer arrives. A failed request is not an answer, so it
- * counts as on: telling a linked user mid-flow that the instance has no LINE
- * bot would be a lie, while a LINE page on an unreachable backend shows its
- * own error. Demo mode has fixtures for all of it, so it reports everything
- * on without asking the backend.
+ * Off until the answer arrives, and off when the request fails, so the nav and
+ * Settings never offer what may not exist. `isError` lets LineBotGate decide
+ * differently for a page someone already opened (see there). Demo mode has
+ * fixtures for all of it, so it reports everything on without asking.
  */
-export function useFeatures(): Features & { isLoading: boolean } {
+export function useFeatures(): Features & { isLoading: boolean; isError: boolean } {
   const { isDemo } = useAppMode();
 
   const query = useQuery({
@@ -37,6 +36,6 @@ export function useFeatures(): Features & { isLoading: boolean } {
     staleTime: Infinity,
   });
 
-  if (isDemo || query.isError) return { ...ALL_ON, isLoading: false };
-  return { ...(query.data ?? ALL_OFF), isLoading: query.isLoading };
+  if (isDemo) return { ...ALL_ON, isLoading: false, isError: false };
+  return { ...(query.data ?? ALL_OFF), isLoading: query.isLoading, isError: query.isError };
 }

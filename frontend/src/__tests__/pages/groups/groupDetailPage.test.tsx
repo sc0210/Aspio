@@ -22,7 +22,7 @@ import { render, screen, fireEvent, waitFor, within } from '@testing-library/rea
 // itself; `import ... from '*.json'` is unreliable under next/jest, require() is
 // not.)
 // The LINE bot is configured: these suites exercise the pages it unlocks.
-jest.mock('@/hooks/useFeatures', () => ({ useFeatures: () => ({ lineBot: true, isLoading: false }) }));
+jest.mock('@/hooks/useFeatures', () => ({ useFeatures: () => ({ lineBot: true, isLoading: false, isError: false }) }));
 jest.mock('react-i18next', () => {
   // eslint-disable-next-line @typescript-eslint/no-require-imports
   const en = require('@/locales/en/groups.json') as Record<string, unknown>;

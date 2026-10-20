@@ -1,6 +1,6 @@
 import { render, screen } from '@testing-library/react';
 
-const mockFeatures = { lineBot: false, isLoading: false };
+const mockFeatures = { lineBot: false, isLoading: false, isError: false };
 jest.mock('@/hooks/useFeatures', () => ({ useFeatures: () => mockFeatures }));
 jest.mock('react-i18next', () => ({
   useTranslation: () => ({ t: (key: string) => key }),
@@ -17,6 +17,13 @@ describe('LineBotGate', () => {
   beforeEach(() => {
     mockFeatures.lineBot = false;
     mockFeatures.isLoading = false;
+    mockFeatures.isError = false;
+  });
+
+  it('renders the page when the answer failed, rather than claim the bot is off', () => {
+    mockFeatures.isError = true;
+    render(page);
+    expect(screen.getByText('group page')).toBeInTheDocument();
   });
 
   it('renders the page when the bot is configured', () => {

@@ -9,7 +9,7 @@ import { render, screen, fireEvent } from '@testing-library/react';
 import '@testing-library/jest-dom';
 
 let mockPathname = '/dashboard';
-const mockFeatures = { lineBot: true, isLoading: false };
+const mockFeatures = { lineBot: true, isLoading: false, isError: false };
 jest.mock('@/hooks/useFeatures', () => ({ useFeatures: () => mockFeatures }));
 jest.mock('next/navigation', () => ({
   usePathname: () => mockPathname,

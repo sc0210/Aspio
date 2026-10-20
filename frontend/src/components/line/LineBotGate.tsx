@@ -13,12 +13,16 @@ import { useFeatures } from '@/hooks/useFeatures';
  * The nav already hides these pages, but a bookmark or a stale LINE message can
  * still land on one, and without the bot every call it makes is a 404.
  * `standalone` pages (/link-line, /liff) render outside the app shell.
+ *
+ * A failed /features request renders the page anyway: someone who opened a
+ * link from LINE mid-flow must not be told the instance has no bot because of
+ * a restart, and the page shows its own error if the backend really is down.
  */
 export function LineBotGate({ children, standalone = false }: { children: ReactNode; standalone?: boolean }) {
   const { t } = useTranslation('common');
-  const { lineBot, isLoading } = useFeatures();
+  const { lineBot, isLoading, isError } = useFeatures();
 
-  if (lineBot) return <>{children}</>;
+  if (lineBot || isError) return <>{children}</>;
 
   const body = isLoading ? (
     <div className="flex justify-center py-16"><LoadingSpinner size="lg" /></div>
