@@ -687,6 +687,23 @@ class UserService:
             HTTPException: If callback processing fails
         """
         try:
+            # This route is reachable from the internet, so the body is only a claim.
+            # Google must confirm the token belongs to that account before anything
+            # is looked up — otherwise posting a victim's email returns their tokens.
+            identity = await google_oauth.verify_token_identity(callback_data.code)
+            if (
+                identity is None
+                or identity["sub"] != callback_data.id
+                or identity["email"].lower() != callback_data.email.lower()
+            ):
+                logger.warning("Google OAuth callback rejected: token did not verify for the claimed account")
+                raise HTTPException(
+                    status_code=status.HTTP_401_UNAUTHORIZED,
+                    detail="Google sign-in could not be verified"
+                )
+            # Google said the email is verified; the body's flag is not trusted.
+            callback_data.verified_email = True
+
             # Check if user exists by email or Google ID
             user = await self.user_repo.get_user_by_email(callback_data.email)
             is_new_user = False

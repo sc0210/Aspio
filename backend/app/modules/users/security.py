@@ -193,7 +193,8 @@ class GoogleOAuthManager:
     
     GOOGLE_TOKEN_URL = "https://oauth2.googleapis.com/token"
     GOOGLE_USERINFO_URL = "https://www.googleapis.com/oauth2/v2/userinfo"
-    
+    GOOGLE_TOKENINFO_URL = "https://oauth2.googleapis.com/tokeninfo"
+
     def __init__(self):
         self.client_id = settings.GOOGLE_CLIENT_ID
         self.client_secret = settings.GOOGLE_CLIENT_SECRET
@@ -287,10 +288,45 @@ class GoogleOAuthManager:
                     return response.json()
                 else:
                     return None
-                    
+
         except Exception:
             return None
-    
+
+    async def verify_token_identity(self, token: str) -> Optional[Dict[str, Any]]:
+        """
+        Ask Google who a NextAuth-supplied token belongs to.
+
+        The callback body's email and id are whatever the caller wrote, so they
+        prove nothing; only Google's answer about the token does. The token must
+        have been issued to this app's client (an access token another app holds
+        for the same person must not log in here) and carry a verified email.
+
+        Returns {"sub", "email"} or None, and None whenever Google OAuth is not
+        configured, so the check fails closed.
+        """
+        if not token or not self.client_id:
+            return None
+
+        # An ID token is a JWT; anything else is treated as an access token.
+        param = "id_token" if token.count(".") == 2 else "access_token"
+        try:
+            async with httpx.AsyncClient(timeout=10) as client:
+                response = await client.get(self.GOOGLE_TOKENINFO_URL, params={param: token})
+        except Exception:
+            return None
+        if response.status_code != 200:
+            return None
+
+        info = response.json()
+        if self.client_id not in (info.get("aud"), info.get("azp")):
+            return None
+        # tokeninfo reports this as the string "true".
+        if str(info.get("email_verified")).lower() != "true":
+            return None
+        if not info.get("sub") or not info.get("email"):
+            return None
+        return {"sub": info["sub"], "email": info["email"]}
+
 class PasswordValidator:
     """Password strength validation utilities"""
     

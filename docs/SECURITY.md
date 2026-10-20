@@ -27,6 +27,11 @@ environment.
 - JWT, `HS256`, access token 30 min (`ACCESS_TOKEN_EXPIRE_MINUTES`), refresh token 7 days
   (`REFRESH_TOKEN_EXPIRE_DAYS`).
 - Google OAuth 2.0 for social sign-in; `GoogleOAuthManager` in `users/security.py`.
+  `POST /auth/google/callback` is called by NextAuth's server, but nothing stops anyone else
+  from calling it, so its body is only a claim: `verify_token_identity` asks Google's tokeninfo
+  who the token belongs to (this app's client ID, verified email, matching `sub` and email)
+  before any account is looked up. Caddy also refuses the path from outside; NextAuth reaches
+  it over the Docker network. Never issue tokens from a body field the caller supplied.
 - `SECRET_KEY` signs tokens — generate with `openssl rand -hex 32`, never commit one.
 - Frontend sessions are NextAuth JWTs holding the backend's access/refresh pair. On refresh
   failure the client redirects to `/api/auth/destroy`, which clears cookies server-side;
