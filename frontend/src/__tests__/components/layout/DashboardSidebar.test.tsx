@@ -9,6 +9,8 @@ import { render, screen, fireEvent } from '@testing-library/react';
 import '@testing-library/jest-dom';
 
 let mockPathname = '/dashboard';
+const mockFeatures = { lineBot: true, isLoading: false, isError: false };
+jest.mock('@/hooks/useFeatures', () => ({ useFeatures: () => mockFeatures }));
 jest.mock('next/navigation', () => ({
   usePathname: () => mockPathname,
 }));
@@ -107,6 +109,22 @@ describe('DashboardSidebar sections', () => {
     // Otherwise the active item simply vanishes with no trace of where it went.
     expect(header(GOALS)).toHaveAttribute('aria-expanded', 'false');
     expect(container.querySelector('nav .bg-primary-500')).toBeInTheDocument();
+  });
+});
+
+describe('DashboardSidebar without the LINE bot', () => {
+  afterEach(() => {
+    mockFeatures.lineBot = true;
+  });
+
+  it('drops /groups, whose groups only the bot creates', () => {
+    mockFeatures.lineBot = false;
+    const { container } = renderSidebar(true);
+    const rail = container.firstElementChild as HTMLElement;
+    const hrefs = [...rail.querySelectorAll('nav a')].map((a) => a.getAttribute('href'));
+
+    expect(hrefs).toContain('/transactions');
+    expect(hrefs).not.toContain('/groups');
   });
 });
 

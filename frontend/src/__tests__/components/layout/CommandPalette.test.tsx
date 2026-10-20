@@ -9,8 +9,11 @@ import React from 'react';
 import { render, screen, fireEvent, act } from '@testing-library/react';
 import '@testing-library/jest-dom';
 import { getNavigationItems } from '@/lib/navigation';
+import { ALL_FEATURES } from '@/lib/features';
 
 const mockPush = jest.fn();
+// The LINE bot is configured: these suites exercise the pages it unlocks.
+jest.mock('@/hooks/useFeatures', () => ({ useFeatures: () => ({ lineBot: true, isLoading: false, isError: false }) }));
 jest.mock('next/navigation', () => ({
   useRouter: () => ({ push: mockPush }),
 }));
@@ -57,7 +60,7 @@ describe('CommandPalette', () => {
     // navigation itself: the literal 19 here fell out of date the first time a
     // page was added, and a palette missing a page is invisible until someone
     // searches for one.
-    expect(screen.getAllByRole('option')).toHaveLength(getNavigationItems(false).length + 6);
+    expect(screen.getAllByRole('option')).toHaveLength(getNavigationItems(false, ALL_FEATURES).length + 6);
   });
 
   it('opens for anyone who never tries the shortcut', () => {

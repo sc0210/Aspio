@@ -74,7 +74,9 @@ services:
       - GOOGLE_CLIENT_ID=${GOOGLE_CLIENT_ID}
       - GOOGLE_CLIENT_SECRET=${GOOGLE_CLIENT_SECRET}
       - GOOGLE_REDIRECT_URI=${GOOGLE_REDIRECT_URI:-http://localhost:3000/api/auth/callback/google}
-      # LINE Bot — pass credentials from backend/.env or shell environment
+      # LINE Bot (optional) — compose reads these from the ROOT .env or the shell,
+      # never backend/.env, and a blank value here overrides that file. Both unset
+      # = bot off: /line-bot routes unmounted and LINE UI hidden.
       - LINE_CHANNEL_SECRET=${LINE_CHANNEL_SECRET}
       - LINE_CHANNEL_ACCESS_TOKEN=${LINE_CHANNEL_ACCESS_TOKEN}
       # FRONTEND_URL is embedded in /link URLs sent to LINE users.

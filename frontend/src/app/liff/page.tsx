@@ -23,6 +23,7 @@ import { signIn } from 'next-auth/react';
 import { apiClient } from '@/lib/api-client';
 import { LoadingSpinner } from '@/components/ui/LoadingSpinner';
 import { useTranslation } from 'react-i18next';
+import { LineBotGate } from '@/components/line/LineBotGate';
 
 type Phase = 'starting' | 'not_linked' | 'redirecting' | 'error';
 
@@ -36,7 +37,9 @@ export default function LiffBootstrapPage() {
         </div>
       }
     >
-      <LiffBootstrap />
+      <LineBotGate standalone>
+        <LiffBootstrap />
+      </LineBotGate>
     </Suspense>
   );
 }

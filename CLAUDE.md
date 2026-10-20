@@ -121,7 +121,8 @@ Shared app-level infrastructure lives outside `modules/`: `app/common/` (base re
 **Demo mode**: A full client-side demo with fixture data, no backend required. Check `isDemo` from `useAppMode()` before making API calls. Demo-aware components guard with `canPersistData`.
 
 ### LINE Bot
-`backend/app/modules/line_bot/` is the largest module (~3800+ lines in `service.py`).
+`backend/app/modules/line_bot/` is the largest module (~4800 lines in `service.py`).
+- **Optional add-on.** Routes mount only when `settings.line_bot_enabled` (both `LINE_CHANNEL_SECRET` and `LINE_CHANNEL_ACCESS_TOKEN` set). The frontend reads the public `GET /api/v1/features` via `useFeatures()`; LINE pages wrap in `LineBotGate`, and nav items needing it carry `feature: 'lineBot'`.
 - `POST /line-bot/webhook` — unauthenticated; LINE signs requests with `X-Line-Signature` (verified in the handler).
 - Authenticated endpoints require JWT and are called by the frontend settings page.
 - Account linking flow: user runs `/link` in LINE → backend generates a token → user clicks link in Aspiro frontend → `POST /line-bot/link-confirm` completes the link.

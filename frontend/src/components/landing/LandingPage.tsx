@@ -4,6 +4,7 @@ import Link from 'next/link';
 import Image from 'next/image';
 import { useEffect, useRef } from 'react';
 import { useTranslation } from 'react-i18next';
+import { useFeatures } from '@/hooks/useFeatures';
 import {
   CreditCardIcon,
   ChartBarIcon,
@@ -58,6 +59,7 @@ function useReveal() {
 export function LandingPage() {
   const { enableDemo } = useDemo();
   const { t, i18n } = useTranslation('common');
+  const { lineBot } = useFeatures();
   const featuresRef = useReveal();
   const capabilitiesRef = useReveal();
   const asianRef = useReveal();
@@ -86,11 +88,12 @@ export function LandingPage() {
   ];
 
   // Capability statements, not testimonials — each one is something the app
-  // actually does and can be checked in the demo.
+  // actually does and can be checked in the demo. The LINE bot is an optional
+  // add-on, so it is only claimed where this instance has it configured.
   const capabilities = [
     { icon: WalletIcon,                       title: t('landing.capabilities.wallets.title'),  description: t('landing.capabilities.wallets.description') },
     { icon: GlobeAsiaAustraliaIcon,           title: t('landing.capabilities.markets.title'),  description: t('landing.capabilities.markets.description') },
-    { icon: ChatBubbleOvalLeftEllipsisIcon,   title: t('landing.capabilities.lineBot.title'),  description: t('landing.capabilities.lineBot.description') },
+    ...(lineBot ? [{ icon: ChatBubbleOvalLeftEllipsisIcon, title: t('landing.capabilities.lineBot.title'), description: t('landing.capabilities.lineBot.description') }] : []),
     { icon: DocumentArrowDownIcon,            title: t('landing.capabilities.csv.title'),      description: t('landing.capabilities.csv.description') },
   ];
 
@@ -300,7 +303,7 @@ export function LandingPage() {
             </p>
           </div>
 
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-5">
+          <div className={`grid grid-cols-1 sm:grid-cols-2 gap-5 ${capabilities.length === 4 ? 'lg:grid-cols-4' : 'lg:grid-cols-3'}`}>
             {capabilities.map((item, i) => {
               const color = FEATURE_COLORS[(i + 3) % FEATURE_COLORS.length];
               const Icon = item.icon;

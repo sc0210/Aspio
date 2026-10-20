@@ -26,6 +26,7 @@ import { useDemo } from '@/contexts/DemoContext';
 import { usePrivacy } from '@/contexts/PrivacyContext';
 import { useIsAdmin } from '@/hooks/useAdmin';
 import { getNavigationItems, type NavIcon } from '@/lib/navigation';
+import { useFeatures } from '@/hooks/useFeatures';
 import { languages } from '@/lib/i18n';
 import { changeAppLanguage, signOutCompletely } from '@/lib/session-actions';
 
@@ -61,6 +62,8 @@ export function CommandPalette() {
   const router = useRouter();
   const { t, i18n } = useTranslation('common');
   const { isAdmin } = useIsAdmin();
+  // Destructured so the memo below keys on a boolean, not a fresh object.
+  const { lineBot } = useFeatures();
   const { isDemoMode, disableDemo } = useDemo();
   const { isValueVisible, toggleValueVisibility } = usePrivacy();
 
@@ -88,14 +91,14 @@ export function CommandPalette() {
 
   const pages: Command[] = useMemo(
     () =>
-      getNavigationItems(isAdmin).map((item) => ({
+      getNavigationItems(isAdmin, { lineBot }).map((item) => ({
         id: item.href,
         label: t(item.nameKey),
         icon: item.icon,
         keywords: [item.href, item.nameKey, ...(item.keywords ?? [])],
         run: () => router.push(item.href),
       })),
-    [isAdmin, router, t],
+    [isAdmin, lineBot, router, t],
   );
 
   const actions: Command[] = useMemo(() => {

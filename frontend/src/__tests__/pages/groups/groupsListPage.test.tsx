@@ -33,6 +33,8 @@ function translate(key: string, opts?: Record<string, unknown>): string {
   return val.replace(/\{\{(\w+)\}\}/g, (_m, name) => (opts && opts[name] != null ? String(opts[name]) : ''));
 }
 
+// The LINE bot is configured: these suites exercise the pages it unlocks.
+jest.mock('@/hooks/useFeatures', () => ({ useFeatures: () => ({ lineBot: true, isLoading: false, isError: false }) }));
 jest.mock('react-i18next', () => ({
   // i18next calls .use(initReactI18next) at import time; a mock without it
   // makes lib/i18n throw and the whole suite dies before any test runs.

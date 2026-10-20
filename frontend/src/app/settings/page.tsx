@@ -27,6 +27,7 @@ import { useQueryClient } from '@tanstack/react-query';
 import { languages } from '@/lib/i18n';
 import { apiClient } from '@/lib/api-client';
 import { demoLineLinkStatus } from '@/data/demoData';
+import { useFeatures } from '@/hooks/useFeatures';
 import { QUERY_KEYS } from '@/hooks/useDataSynchronization';
 import { cn } from '@/utils/cn';
 import { Card } from '@/components/ui/Card';
@@ -366,6 +367,7 @@ function LineBotSection() {
 export default function SettingsPage() {
   const { t, i18n } = useTranslation('common');
   const { user, isDemo: isDemoMode } = useAppMode();
+  const { lineBot } = useFeatures();
   const { isValueVisible, setValueVisible } = usePrivacy();
   const { preferences, updatePreference, resetPreferences } = useAssetTrackingPreferences();
   const { theme, setTheme } = useTheme();
@@ -715,7 +717,7 @@ export default function SettingsPage() {
         </SectionCard>
 
         {/* ── Account ──────────────────────────────────────────────────── */}
-        <LineBotSection />
+        {lineBot && <LineBotSection />}
 
         <SectionCard title={t('settings.account', 'Account')} icon={ShieldCheckIcon}>
           <div className="flex items-center justify-between py-0.5">

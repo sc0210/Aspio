@@ -1,5 +1,6 @@
 'use client';
 
+import { LineBotGate } from '@/components/line/LineBotGate';
 import { useEffect, useState, Suspense } from 'react';
 import { signIn } from 'next-auth/react';
 import { useSearchParams } from 'next/navigation';
@@ -160,7 +161,9 @@ export default function LinkLinePage() {
         <LoadingSpinner size="lg" />
       </div>
     }>
-      <LinkLineContent />
+      <LineBotGate standalone>
+        <LinkLineContent />
+      </LineBotGate>
     </Suspense>
   );
 }

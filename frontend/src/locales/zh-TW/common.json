@@ -587,7 +587,9 @@
     "runSuffix": "以取得新的連結。",
     "signInHint": "請使用您在 Aspiro 使用的 Google 帳號登入以完成連結。",
     "tryOr": "或",
-    "tryPrefix": "回到 LINE 並試著輸入"
+    "tryPrefix": "回到 LINE 並試著輸入",
+    "unavailableTitle": "此站台尚未設定 LINE",
+    "unavailableBody": "這個 Aspiro 站台沒有設定 LINE 機器人，因此 LINE 綁定與群組分帳功能未啟用。管理員可新增 LINE 頻道來啟用。"
   },
   "loadingOverlay": {
     "hint": "正在從伺服器取得最新資料",

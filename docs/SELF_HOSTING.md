@@ -93,7 +93,9 @@ regenerates `SECRET_KEY` and `NEXTAUTH_SECRET` (everyone is signed out). For a s
 `--non-interactive --domain … --google-client-id … --google-client-secret …` plus
 `--tunnel-token …` or `--tailscale-authkey … [--funnel]`. `--force --funnel` / `--no-funnel`
 switches an existing Tailscale install between public and tailnet-only.
-LINE and SMTP settings are documented in `production.env.sample`.
+LINE and SMTP settings are documented in `production.env.sample`. The LINE bot is optional:
+with `LINE_CHANNEL_SECRET` and `LINE_CHANNEL_ACCESS_TOKEN` blank the app runs without it and
+hides LINE linking and group splitting. Set both and restart the backend to turn it on.
 
 Pass `--init` on the first install only. It is the only mode allowed to build the schema in
 an empty database, so a lost volume or a wrong `DATABASE_URL` later fails loudly instead of

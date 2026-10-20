@@ -43,6 +43,7 @@ from app.modules.users.enhanced_router import router as enhanced_users_router
 from app.modules.loans.router import router as loans_router
 from app.modules.peers.router import router as peers_router
 from app.modules.line_bot.router import router as line_bot_router
+from app.common.schemas import ApiResponse
 from app.core.scheduler import (
     start_scheduler,
     stop_scheduler,
@@ -240,7 +241,16 @@ def create_app() -> FastAPI:
     )
     app.include_router(loans_router, prefix=f"{api_prefix}/loans", tags=["Loans"])
     app.include_router(peers_router, prefix=f"{api_prefix}/peers", tags=["Peers"])
-    app.include_router(line_bot_router, prefix=f"{api_prefix}/line-bot", tags=["LINE Bot"])
+    if settings.line_bot_enabled:
+        app.include_router(line_bot_router, prefix=f"{api_prefix}/line-bot", tags=["LINE Bot"])
+    else:
+        logger.info("LINE bot not configured (LINE_CHANNEL_SECRET/ACCESS_TOKEN unset) — /line-bot routes off")
+
+    # Public and unauthenticated: the landing page asks before anyone signs in.
+    @app.get(f"{api_prefix}/features", tags=["Health"])
+    async def features():
+        """Optional add-ons this instance has configured, so the UI can hide the rest."""
+        return ApiResponse.success_response(data={"line_bot": settings.line_bot_enabled})
 
     # DB-sync routes TRUNCATE and replace whole databases and have no user auth,
     # so they need the full dev-tools gate (explicit DEV_TOOLS_TOKEN + local DB),
