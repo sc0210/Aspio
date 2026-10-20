@@ -77,7 +77,7 @@ export function Sparkline({
         style={{ width: `${width}px`, height: `${height}px` }}
         className="flex items-center justify-center"
       >
-        <span className="text-xs text-gray-400">—</span>
+        <span className="text-xs text-gray-500 dark:text-gray-400">—</span>
       </div>
     );
   }

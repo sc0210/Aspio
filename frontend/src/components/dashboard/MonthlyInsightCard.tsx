@@ -37,9 +37,9 @@ export function MonthlyInsightCard({ stats, dateRange, trendData }: MonthlyInsig
   const incomeBarWidth = (income / maxValue) * 100;
   const expenseBarWidth = (expenses / maxValue) * 100;
   const savingsRateColor =
-    savingsRate >= 20 ? 'text-prosperity-600 dark:text-prosperity-400' :
-    savingsRate >= 0  ? 'text-amber-600 dark:text-amber-400' :
-                        'text-error-600 dark:text-error-400';
+    savingsRate >= 20 ? 'text-prosperity-700 dark:text-prosperity-400' :
+    savingsRate >= 0  ? 'text-amber-700 dark:text-amber-400' :
+                        'text-error-700 dark:text-error-400';
 
   const periodLabel = useMemo(
     () => t(periodLabelKey(dateRange), PERIOD_FALLBACKS[dateRange ?? ''] ?? 'This Month'),
@@ -53,13 +53,13 @@ export function MonthlyInsightCard({ stats, dateRange, trendData }: MonthlyInsig
       <div className="flex items-center justify-between mb-4">
         <div className="flex items-center gap-2">
           <h3 className="text-sm font-semibold text-gray-700 dark:text-gray-300">{t('dashboard:sections.cashFlow', 'Cash Flow')}</h3>
-          <span className="text-xs font-medium text-gray-400 dark:text-gray-500 bg-gray-100 dark:bg-gray-700 px-2 py-0.5 rounded-full">
+          <span className="text-xs font-medium text-gray-600 dark:text-gray-500 bg-gray-100 dark:bg-gray-700 px-2 py-0.5 rounded-full">
             {periodLabel}
           </span>
         </div>
         <Link
           href="/transactions/monthly-summary"
-          className="text-xs text-primary-600 hover:text-primary-700 dark:text-primary-400 dark:hover:text-primary-300 font-medium transition-colors"
+          className="text-xs text-primary-700 hover:text-primary-800 dark:text-primary-400 dark:hover:text-primary-300 font-medium transition-colors"
         >
           {t('dashboard:todayStrip.details', 'Details')}
         </Link>
@@ -71,13 +71,13 @@ export function MonthlyInsightCard({ stats, dateRange, trendData }: MonthlyInsig
           <div className="flex items-center justify-between mb-1.5">
             <div className="flex items-center gap-2">
               <div className="p-1.5 bg-prosperity-50 dark:bg-prosperity-900/20 rounded-lg">
-                <ArrowTrendingUpIcon className="w-3.5 h-3.5 text-prosperity-500" />
+                <ArrowTrendingUpIcon className="w-3.5 h-3.5 text-prosperity-700 dark:text-prosperity-500" />
               </div>
               <span className="text-xs font-medium text-gray-500 dark:text-gray-400">
                 {t('dashboard:chart.income', 'Income')}
               </span>
             </div>
-            <span className="text-sm font-bold text-prosperity-600 dark:text-prosperity-400">
+            <span className="text-sm font-bold text-prosperity-700 dark:text-prosperity-400">
               {isValueVisible ? `+${formatTWD(income)}` : '•••••'}
             </span>
           </div>
@@ -99,18 +99,18 @@ export function MonthlyInsightCard({ stats, dateRange, trendData }: MonthlyInsig
           <div className="flex items-center justify-between mb-1.5">
             <div className="flex items-center gap-2">
               <div className="p-1.5 bg-error-50 dark:bg-error-900/20 rounded-lg">
-                <ArrowTrendingDownIcon className="w-3.5 h-3.5 text-error-500" />
+                <ArrowTrendingDownIcon className="w-3.5 h-3.5 text-error-700 dark:text-error-500" />
               </div>
               <span className="text-xs font-medium text-gray-500 dark:text-gray-400">
                 {t('dashboard:chart.expenses', 'Expenses')}
               </span>
             </div>
             <div className="text-right">
-              <span className="text-sm font-bold text-error-600 dark:text-error-400">
+              <span className="text-sm font-bold text-error-700 dark:text-error-400">
                 {isValueVisible ? `-${formatTWD(expenses)}` : '•••••'}
               </span>
               {income > 0 && (
-                <span className="ml-1.5 text-xs font-semibold text-error-500">
+                <span className="ml-1.5 text-xs font-semibold text-error-700 dark:text-error-500">
                   {expenseRatio.toFixed(0)}%
                 </span>
               )}
@@ -136,10 +136,10 @@ export function MonthlyInsightCard({ stats, dateRange, trendData }: MonthlyInsig
               'flex-1 rounded-xl px-3 py-2.5',
               net >= 0 ? 'bg-prosperity-50 dark:bg-prosperity-900/20' : 'bg-error-50 dark:bg-error-900/20'
             )}>
-              <p className="text-xs font-semibold uppercase tracking-wider text-gray-400 dark:text-gray-500 mb-0.5">
+              <p className="text-xs font-semibold uppercase tracking-wider text-gray-500 dark:text-gray-500 mb-0.5">
                 {t('dashboard:cashFlow.netSaved', 'Net Saved')}
               </p>
-              <p className={`text-lg font-bold leading-tight ${net >= 0 ? 'text-prosperity-600 dark:text-prosperity-400' : 'text-error-600 dark:text-error-400'}`}>
+              <p className={`text-lg font-bold leading-tight ${net >= 0 ? 'text-prosperity-700 dark:text-prosperity-400' : 'text-error-700 dark:text-error-400'}`}>
                 {isValueVisible ? `${net >= 0 ? '+' : ''}${formatTWD(net)}` : '•••••'}
               </p>
             </div>
@@ -151,7 +151,7 @@ export function MonthlyInsightCard({ stats, dateRange, trendData }: MonthlyInsig
                   ? 'bg-amber-50 dark:bg-amber-900/20'
                   : 'bg-error-50 dark:bg-error-900/20'
             )}>
-              <p className="text-xs font-semibold uppercase tracking-wider text-gray-400 dark:text-gray-500 mb-0.5">
+              <p className="text-xs font-semibold uppercase tracking-wider text-gray-500 dark:text-gray-500 mb-0.5">
                 {t('dashboard:cashFlow.savingsRate', 'Rate')}
               </p>
               <p className={`text-xl font-bold leading-tight ${savingsRateColor}`}>
@@ -166,36 +166,36 @@ export function MonthlyInsightCard({ stats, dateRange, trendData }: MonthlyInsig
       {cashFlow.hasData && (
         <div className="mt-4 pt-3 border-t border-gray-100 dark:border-gray-700/50 grid grid-cols-2 gap-x-4">
           <div className="min-w-0">
-            <p className="text-xs font-semibold uppercase tracking-wider text-prosperity-500 mb-1.5">
+            <p className="text-xs font-semibold uppercase tracking-wider text-prosperity-700 dark:text-prosperity-500 mb-1.5">
               {t('dashboard:cashFlow.topIncome', 'Top Income')}
             </p>
             <ul className="space-y-1">
               {cashFlow.topIncome.length > 0 ? cashFlow.topIncome.map((c) => (
                 <li key={c.name} className="flex items-center justify-between gap-2 text-xs">
                   <span className="truncate text-gray-600 dark:text-gray-300">{c.name}</span>
-                  <span className="flex-shrink-0 font-semibold tabular-nums text-prosperity-600 dark:text-prosperity-400">
+                  <span className="flex-shrink-0 font-semibold tabular-nums text-prosperity-700 dark:text-prosperity-400">
                     {isValueVisible ? `+${formatTWD(c.amount)}` : '•••'}
                   </span>
                 </li>
               )) : (
-                <li className="text-xs text-gray-400 dark:text-gray-500">—</li>
+                <li className="text-xs text-gray-500 dark:text-gray-500">—</li>
               )}
             </ul>
           </div>
           <div className="min-w-0">
-            <p className="text-xs font-semibold uppercase tracking-wider text-error-500 mb-1.5">
+            <p className="text-xs font-semibold uppercase tracking-wider text-error-700 dark:text-error-500 mb-1.5">
               {t('dashboard:cashFlow.topSpending', 'Top Spending')}
             </p>
             <ul className="space-y-1">
               {cashFlow.topExpense.length > 0 ? cashFlow.topExpense.map((c) => (
                 <li key={c.name} className="flex items-center justify-between gap-2 text-xs">
                   <span className="truncate text-gray-600 dark:text-gray-300">{c.name}</span>
-                  <span className="flex-shrink-0 font-semibold tabular-nums text-error-600 dark:text-error-400">
+                  <span className="flex-shrink-0 font-semibold tabular-nums text-error-700 dark:text-error-400">
                     {isValueVisible ? `-${formatTWD(c.amount)}` : '•••'}
                   </span>
                 </li>
               )) : (
-                <li className="text-xs text-gray-400 dark:text-gray-500">—</li>
+                <li className="text-xs text-gray-500 dark:text-gray-500">—</li>
               )}
             </ul>
           </div>
@@ -217,7 +217,7 @@ export function MonthlyInsightCard({ stats, dateRange, trendData }: MonthlyInsig
         if (!incomeHasSpark && !expenseHasSpark) return null;
         return (
           <div className="-mx-5 mt-3 border-t border-gray-100 dark:border-gray-700/50 pt-2 px-5">
-            <p className="text-xs font-semibold uppercase tracking-wider text-gray-400 dark:text-gray-500 mb-1">{t('dashboard:chart.trend', 'Trend')}</p>
+            <p className="text-xs font-semibold uppercase tracking-wider text-gray-500 dark:text-gray-500 mb-1">{t('dashboard:chart.trend', 'Trend')}</p>
             <div className="grid grid-cols-2 gap-2">
               {incomeHasSpark && (
                 <div>
@@ -227,7 +227,7 @@ export function MonthlyInsightCard({ stats, dateRange, trendData }: MonthlyInsig
               )}
               {expenseHasSpark && (
                 <div>
-                  <p className="text-xs text-rose-500 dark:text-rose-400 font-medium mb-0.5">{t('dashboard:chart.expenses', 'Expenses')}</p>
+                  <p className="text-xs text-rose-700 dark:text-rose-400 font-medium mb-0.5">{t('dashboard:chart.expenses', 'Expenses')}</p>
                   <SimpleSparkline data={expenseData} labels={labels} height={48} trend={expenseTrend} color="#f87171" showDot className="w-full" />
                 </div>
               )}

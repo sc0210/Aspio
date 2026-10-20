@@ -194,7 +194,7 @@ export function CommandPalette() {
             }}
           >
             <div className="flex items-center gap-3 border-b border-gray-100 px-4 dark:border-gray-700">
-              <MagnifyingGlassIcon className="w-5 h-5 flex-shrink-0 text-gray-400" />
+              <MagnifyingGlassIcon className="w-5 h-5 flex-shrink-0 text-gray-500 dark:text-gray-400" />
               <ComboboxInput
                 autoFocus
                 aria-label={t('navigation.commandPalette', 'Search pages and actions')}
@@ -203,26 +203,26 @@ export function CommandPalette() {
                 onChange={(event) => setQuery(event.target.value)}
                 value={query}
               />
-              <kbd className="hidden sm:block rounded border border-gray-200 px-1.5 py-0.5 text-xs text-gray-400 dark:border-gray-600">
+              <kbd className="hidden sm:block rounded border border-gray-200 px-1.5 py-0.5 text-xs text-gray-500 dark:text-gray-400 dark:border-gray-600">
                 ESC
               </kbd>
             </div>
 
             <ComboboxOptions static className="max-h-80 overflow-y-auto p-2">
               {nothingFound && (
-                <p className="px-3 py-6 text-center text-sm text-gray-400">
+                <p className="px-3 py-6 text-center text-sm text-gray-500 dark:text-gray-400">
                   {t('navigation.noResults', 'Nothing matches that')}
                 </p>
               )}
 
               {filteredPages.length > 0 && (
                 <>
-                  <p className="px-3 pb-1 pt-2 text-xs font-semibold uppercase tracking-wider text-gray-400">
+                  <p className="px-3 pb-1 pt-2 text-xs font-semibold uppercase tracking-wider text-gray-500 dark:text-gray-400">
                     {t('navigation.pages', 'Pages')}
                   </p>
                   {filteredPages.map((command) => (
                     <ComboboxOption key={command.id} value={command} className={optionClass}>
-                      <command.icon className="w-4 h-4 flex-shrink-0 text-gray-400" />
+                      <command.icon className="w-4 h-4 flex-shrink-0 text-gray-500 dark:text-gray-400" />
                       {command.label}
                     </ComboboxOption>
                   ))}
@@ -231,12 +231,12 @@ export function CommandPalette() {
 
               {filteredActions.length > 0 && (
                 <>
-                  <p className="px-3 pb-1 pt-3 text-xs font-semibold uppercase tracking-wider text-gray-400">
+                  <p className="px-3 pb-1 pt-3 text-xs font-semibold uppercase tracking-wider text-gray-500 dark:text-gray-400">
                     {t('navigation.actions', 'Actions')}
                   </p>
                   {filteredActions.map((command) => (
                     <ComboboxOption key={command.id} value={command} className={optionClass}>
-                      <command.icon className="w-4 h-4 flex-shrink-0 text-gray-400" />
+                      <command.icon className="w-4 h-4 flex-shrink-0 text-gray-500 dark:text-gray-400" />
                       {command.label}
                     </ComboboxOption>
                   ))}

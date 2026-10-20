@@ -180,7 +180,7 @@ export function SellHoldingModal({
                             type="button"
                             onClick={handleClose}
                             aria-label="Close dialog"
-                            className="text-gray-400 hover:text-gray-500 dark:hover:text-gray-300 transition-colors"
+                            className="text-gray-500 dark:text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 transition-colors"
                         >
                             <XMarkIcon className="w-6 h-6" aria-hidden="true" />
                         </button>
@@ -195,7 +195,7 @@ export function SellHoldingModal({
                                     {t('sell.searchLabel')}
                                 </label>
                                 <div className="relative">
-                                    <MagnifyingGlassIcon className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" />
+                                    <MagnifyingGlassIcon className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-500 dark:text-gray-400" />
                                     <input
                                         id="sellholdin-field"
                                         type="text"
@@ -263,13 +263,13 @@ export function SellHoldingModal({
                                                         <div className="text-right ml-4">
                                                             <div className={cn(
                                                                 'text-sm font-bold mb-1',
-                                                                isProfit ? 'text-prosperity-600 dark:text-prosperity-400' : 'text-error-600 dark:text-error-400'
+                                                                isProfit ? 'text-prosperity-700 dark:text-prosperity-400' : 'text-error-700 dark:text-error-400'
                                                             )}>
                                                                 {isProfit ? '+' : ''}{formatCurrency(gainLoss, h.currency)}
                                                             </div>
                                                             <div className={cn(
                                                                 'text-xs font-semibold',
-                                                                isProfit ? 'text-prosperity-600 dark:text-prosperity-400' : 'text-error-600 dark:text-error-400'
+                                                                isProfit ? 'text-prosperity-700 dark:text-prosperity-400' : 'text-error-700 dark:text-error-400'
                                                             )}>
                                                                 {gainLossPct >= 0 ? '+' : ''}{gainLossPct.toFixed(2)}%
                                                             </div>
@@ -362,7 +362,7 @@ export function SellHoldingModal({
                                     </Button>
                                 </div>
                                 {!isValidQuantity && quantity !== '' && holding && (
-                                    <p className="mt-1 text-sm text-error-600 dark:text-error-400">
+                                    <p className="mt-1 text-sm text-error-700 dark:text-error-400">
                                         {t('sell.quantityRange', { max: holding.quantity })}
                                     </p>
                                 )}
@@ -448,7 +448,7 @@ export function SellHoldingModal({
                             {quantityNum > 0 && holding && (
                                 <div className="bg-gradient-to-br from-prosperity-50 to-prosperity-50/80 dark:from-prosperity-900/20 dark:to-prosperity-900/20 rounded-xl p-4 space-y-2 border-2 border-prosperity-200 dark:border-prosperity-800">
                                     <h4 className="text-sm font-semibold text-gray-900 dark:text-white mb-3 flex items-center gap-2">
-                                        <CurrencyDollarIcon className="h-5 w-5 text-prosperity-600 dark:text-prosperity-400" />
+                                        <CurrencyDollarIcon className="h-5 w-5 text-prosperity-700 dark:text-prosperity-400" />
                                         {t('sell.summary')}
                                     </h4>
                                     <div className="space-y-2 text-sm">
@@ -466,7 +466,7 @@ export function SellHoldingModal({
                                         </div>
                                         <div className="flex justify-between pt-2 border-t border-prosperity-200 dark:border-prosperity-800">
                                             <span className="font-bold text-gray-900 dark:text-white">{t('sell.label.netProceeds')}</span>
-                                            <span className="font-bold text-xl text-prosperity-600 dark:text-prosperity-400">
+                                            <span className="font-bold text-xl text-prosperity-700 dark:text-prosperity-400">
                                                 {formatCurrency(netProceeds, holding.currency)}
                                             </span>
                                         </div>
@@ -474,7 +474,7 @@ export function SellHoldingModal({
                                             <span className="text-gray-600 dark:text-gray-400">{t('sell.label.estimatedPnl')}</span>
                                             <span className={cn(
                                                 "font-bold text-base",
-                                                estimatedGainLoss >= 0 ? "text-prosperity-600 dark:text-prosperity-400" : "text-error-600 dark:text-error-400"
+                                                estimatedGainLoss >= 0 ? "text-prosperity-700 dark:text-prosperity-400" : "text-error-700 dark:text-error-400"
                                             )}>
                                                 {estimatedGainLoss >= 0 ? '+' : ''}{formatCurrency(estimatedGainLoss, holding.currency)}
                                                 {' '}({estimatedGainLossPct >= 0 ? '+' : ''}{estimatedGainLossPct.toFixed(2)}%)
@@ -485,7 +485,7 @@ export function SellHoldingModal({
                                                 <BanknotesIcon className="h-4 w-4" />
                                                 {t('sell.label.newCashBalance')}
                                             </span>
-                                            <span className="font-bold text-primary-600 dark:text-primary-400">
+                                            <span className="font-bold text-primary-700 dark:text-primary-400">
                                                 {formatCurrency(newCashBalance, holding.currency)}
                                             </span>
                                         </div>
@@ -496,7 +496,7 @@ export function SellHoldingModal({
                             {/* Error Message */}
                             {error && (
                                 <div className="bg-error-50 dark:bg-error-900/20 border border-error-200 dark:border-error-800 rounded-lg p-3">
-                                    <p className="text-sm text-error-600 dark:text-error-400">{error}</p>
+                                    <p className="text-sm text-error-700 dark:text-error-400">{error}</p>
                                 </div>
                             )}
 

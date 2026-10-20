@@ -62,7 +62,7 @@ export function TransactionStats({
           role="status"
           className="flex flex-wrap items-center gap-x-2 gap-y-1 rounded-lg border border-warning-200/70 dark:border-warning-800/40 bg-warning-50 dark:bg-warning-900/20 px-3 py-2"
         >
-          <ExclamationTriangleIcon className="w-4 h-4 flex-shrink-0 text-warning-600 dark:text-warning-400" />
+          <ExclamationTriangleIcon className="w-4 h-4 flex-shrink-0 text-warning-700 dark:text-warning-400" />
           <span className="text-xs font-medium text-warning-800 dark:text-warning-200">
             {t('transactions:stats.loadFailed')}
           </span>
@@ -84,7 +84,7 @@ export function TransactionStats({
             role="switch"
             aria-checked={excludeTransfers}
             onClick={() => onToggleTransfers(!excludeTransfers)}
-            className="inline-flex items-center gap-1.5 text-xs font-medium text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200 rounded-md px-2 py-1 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-400"
+            className="inline-flex items-center gap-1.5 text-xs font-medium text-gray-600 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200 rounded-md px-2 py-1 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-400"
           >
             <span
               aria-hidden="true"
@@ -115,7 +115,7 @@ export function TransactionStats({
       <div className="grid grid-cols-2 lg:grid-cols-3 gap-3 sm:gap-4">
         <StatCard
           accent="green"
-          icon={<ArrowTrendingUpIcon className="w-4 h-4 text-success-500" />}
+          icon={<ArrowTrendingUpIcon className="w-4 h-4 text-success-700 dark:text-success-500" />}
           label={t('transactions:stats.totalIncome')}
           value={amount(stats.totalIncome)}
           title={amountTitle(stats.totalIncome)}
@@ -124,7 +124,7 @@ export function TransactionStats({
 
         <StatCard
           accent="rose"
-          icon={<ArrowTrendingDownIcon className="w-4 h-4 text-error-500" />}
+          icon={<ArrowTrendingDownIcon className="w-4 h-4 text-error-700 dark:text-error-500" />}
           label={t('transactions:stats.totalExpenses')}
           value={amount(stats.totalExpenses)}
           title={amountTitle(stats.totalExpenses)}
@@ -148,8 +148,8 @@ export function TransactionStats({
 }
 
 const TONES = {
-  income: 'text-success-600 dark:text-success-400',
-  expense: 'text-error-600 dark:text-error-400',
+  income: 'text-success-700 dark:text-success-400',
+  expense: 'text-error-700 dark:text-error-400',
   muted: 'text-gray-500 dark:text-gray-400',
 } as const;
 

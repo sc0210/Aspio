@@ -1,6 +1,6 @@
 'use client';
 
-import { useId, useMemo, useState } from 'react';
+import { useId, useMemo, useState, type CSSProperties } from 'react';
 import { PieChart, Pie, Cell, Tooltip, ResponsiveContainer } from 'recharts';
 import { cn } from '@/utils/cn';
 import { Button } from '@/components/ui/Button';
@@ -210,7 +210,7 @@ function PanelPlaceholder({
         <button
           type="button"
           onClick={onRetry}
-          className="text-xs font-semibold text-primary-600 dark:text-primary-400 underline underline-offset-2 hover:no-underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-500 rounded"
+          className="text-xs font-semibold text-primary-700 dark:text-primary-400 underline underline-offset-2 hover:no-underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-500 rounded"
         >
           {t('common:errorState.tryAgain')}
         </button>
@@ -360,9 +360,9 @@ export function ExpenseGroupSummary({
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-2">
             <FunnelIcon className="w-4 h-4 text-white" />
-            <h3 className="text-sm font-bold text-white">
+            <h2 className="text-sm font-bold text-white">
               {t('transactions:filters.filterAndAnalysis')}
-            </h3>
+            </h2>
           </div>
           <div className="flex items-center gap-1 px-2 py-0.5 bg-white/20 rounded-full">
             <span className="text-xs font-bold text-white">{totalTransactions}</span>
@@ -383,12 +383,12 @@ export function ExpenseGroupSummary({
                 placeholder={t('transactions:filters.searchPlaceholder')}
                 value={searchQuery}
                 onChange={(e) => onSearchChange(e.target.value)}
-                leftIcon={<MagnifyingGlassIcon className="w-4 h-4 text-gray-400 group-focus-within:text-primary-500 transition-colors" />}
+                leftIcon={<MagnifyingGlassIcon className="w-4 h-4 text-gray-500 dark:text-gray-400 group-focus-within:text-primary-500 transition-colors" />}
                 rightIcon={
                   searchQuery && (
                     <button
                       onClick={() => onSearchChange('')}
-                      className="text-gray-400 hover:text-error-500 dark:hover:text-error-400 transition-colors transform hover:scale-110"
+                      className="text-gray-500 dark:text-gray-400 hover:text-error-500 dark:hover:text-error-400 transition-colors transform hover:scale-110"
                       aria-label="Clear search"
                       type="button"
                     >
@@ -425,10 +425,10 @@ export function ExpenseGroupSummary({
 
         {/* Quick Category Filters - Enhanced */}
         <div className="space-y-3">
-          <h4 className="text-xs font-bold text-gray-700 dark:text-gray-300 uppercase tracking-wider flex items-center gap-2">
+          <h3 className="text-xs font-bold text-gray-700 dark:text-gray-300 uppercase tracking-wider flex items-center gap-2">
             <span className="w-1.5 h-5 bg-gradient-to-b from-amber-500 to-orange-500 rounded-full shadow-sm"></span>
             {t('transactions:filters.quickFilter')}
-          </h4>
+          </h3>
           <div className="flex flex-wrap gap-2">
             <button
               onClick={() => toggleCategory('all')}
@@ -492,10 +492,10 @@ export function ExpenseGroupSummary({
 
         {/* Expense Breakdown Section - Always visible so filters update it */}
         <div className="space-y-3">
-          <h4 className="text-xs font-bold text-gray-700 dark:text-gray-300 uppercase tracking-wider flex items-center gap-2">
+          <h3 className="text-xs font-bold text-gray-700 dark:text-gray-300 uppercase tracking-wider flex items-center gap-2">
             <span className="w-1.5 h-5 bg-gradient-to-b from-purple-500 to-pink-500 rounded-full shadow-sm"></span>
             {t('transactions:filters.expenseAnalysis')}
-          </h4>
+          </h3>
 
           {totalExpenses > 0 ? (() => {
             const pieData = (Object.keys(groupTotals) as Array<keyof typeof groupTotals>)
@@ -554,7 +554,7 @@ export function ExpenseGroupSummary({
                       <span className="text-xs text-gray-600 dark:text-gray-400 flex-1 truncate">
                         {g.icon} {t(g.labelKey)}
                       </span>
-                      <span className="text-xs font-semibold tabular-nums" style={{ color: g.color }}>
+                      <span className="text-xs font-semibold tabular-nums text-gray-700 dark:[color:var(--legend)]" style={{ '--legend': g.color } as CSSProperties}>
                         {g.percentage.toFixed(1)}%
                       </span>
                       <span className="text-xs font-bold text-gray-900 dark:text-white tabular-nums w-20 2xl:w-24 text-right">
@@ -586,10 +586,10 @@ export function ExpenseGroupSummary({
 
         {/* Filter Controls Section - Enhanced */}
         <div className="space-y-3">
-          <h4 className="text-xs font-bold text-gray-700 dark:text-gray-300 uppercase tracking-wider flex items-center gap-2">
+          <h3 className="text-xs font-bold text-gray-700 dark:text-gray-300 uppercase tracking-wider flex items-center gap-2">
             <span className="w-1.5 h-5 bg-gradient-to-b from-indigo-500 to-blue-500 rounded-full shadow-sm"></span>
             {t('transactions:filters.advancedFilters')}
-          </h4>
+          </h3>
 
           {/* Transaction Type + Wallet Type — side by side at lg */}
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-3">
@@ -730,10 +730,10 @@ export function ExpenseGroupSummary({
 
         {/* Top Expenses Ranking — biggest single expenses in the selected period + category */}
         <div className="space-y-3">
-          <h4 className="text-xs font-bold text-gray-700 dark:text-gray-300 uppercase tracking-wider flex items-center gap-2">
+          <h3 className="text-xs font-bold text-gray-700 dark:text-gray-300 uppercase tracking-wider flex items-center gap-2">
             <span className="w-1.5 h-5 bg-gradient-to-b from-rose-500 to-red-500 rounded-full shadow-sm"></span>
             {t('transactions:filters.topExpenses')}
-          </h4>
+          </h3>
 
           {topExpenses.length > 0 ? (
             <ol className="space-y-1.5">
@@ -743,7 +743,7 @@ export function ExpenseGroupSummary({
                     className={cn(
                       'flex-shrink-0 inline-flex items-center justify-center w-5 h-5 rounded-full text-xs font-bold tabular-nums',
                       index === 0
-                        ? 'bg-rose-500 text-white shadow-sm'
+                        ? 'bg-rose-700 dark:bg-rose-500 text-white shadow-sm'
                         : 'bg-gray-200 dark:bg-gray-700 text-gray-600 dark:text-gray-300'
                     )}
                   >
@@ -784,10 +784,10 @@ export function ExpenseGroupSummary({
 
         {/* Top Income Ranking — biggest single income items in the selected period + category */}
         <div className="space-y-3">
-          <h4 className="text-xs font-bold text-gray-700 dark:text-gray-300 uppercase tracking-wider flex items-center gap-2">
+          <h3 className="text-xs font-bold text-gray-700 dark:text-gray-300 uppercase tracking-wider flex items-center gap-2">
             <span className="w-1.5 h-5 bg-gradient-to-b from-prosperity-500 to-emerald-500 rounded-full shadow-sm"></span>
             {t('transactions:filters.topIncome')}
-          </h4>
+          </h3>
 
           {topIncome.length > 0 ? (
             <ol className="space-y-1.5">
@@ -797,7 +797,7 @@ export function ExpenseGroupSummary({
                     className={cn(
                       'flex-shrink-0 inline-flex items-center justify-center w-5 h-5 rounded-full text-xs font-bold tabular-nums',
                       index === 0
-                        ? 'bg-prosperity-500 text-white shadow-sm'
+                        ? 'bg-prosperity-700 dark:bg-prosperity-500 text-white shadow-sm'
                         : 'bg-gray-200 dark:bg-gray-700 text-gray-600 dark:text-gray-300'
                     )}
                   >
@@ -811,7 +811,7 @@ export function ExpenseGroupSummary({
                       {tx.category} · {formatDate(tx.date, 'MM/dd')}
                     </p>
                   </div>
-                  <span className="flex-shrink-0 text-xs font-bold text-prosperity-600 dark:text-prosperity-400 tabular-nums">
+                  <span className="flex-shrink-0 text-xs font-bold text-prosperity-700 dark:text-prosperity-400 tabular-nums">
                     {isValueVisible ? formatTWD(twd) : '•••••'}
                   </span>
                 </li>

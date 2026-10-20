@@ -128,7 +128,7 @@ export class DataSyncErrorBoundary extends Component<Props, State> {
           <div className="max-w-md w-full mx-4">
             <div className="bg-white dark:bg-gray-800 rounded-lg shadow-lg p-6">
               <div className="text-center">
-                <div className="text-red-500 mb-4">
+                <div className="text-red-700 dark:text-red-500 mb-4">
                   <svg
                     className="w-16 h-16 mx-auto"
                     fill="none"
@@ -171,7 +171,7 @@ export class DataSyncErrorBoundary extends Component<Props, State> {
                 
                 {process.env.NODE_ENV === 'development' && (
                   <details className="mt-6 text-left">
-                    <summary className="cursor-pointer text-sm text-gray-500 hover:text-gray-700">
+                    <summary className="cursor-pointer text-sm text-gray-600 hover:text-gray-700">
                       Debug Information
                     </summary>
                     <div className="mt-2 p-3 bg-gray-100 dark:bg-gray-700 rounded text-xs">

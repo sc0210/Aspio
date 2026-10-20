@@ -163,7 +163,7 @@ export function LeverageHistoryChart({
                         <ReferenceLine
                             y={1}
                             stroke="currentColor"
-                            className="text-gray-400 dark:text-gray-500"
+                            className="text-gray-500 dark:text-gray-500"
                             strokeDasharray="4 4"
                             label={{ value: labels.noDebt, position: 'insideBottomRight', fontSize: 10, fill: 'currentColor' }}
                         />

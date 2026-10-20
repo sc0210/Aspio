@@ -89,7 +89,7 @@ function ResetPasswordForm() {
         <div className="px-6 py-7 text-center">
           <div className="flex justify-center mb-5">
             <div className="w-14 h-14 bg-red-100 rounded-full flex items-center justify-center">
-              <svg className="w-7 h-7 text-red-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <svg className="w-7 h-7 text-red-700 dark:text-red-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.964-.833-2.732 0L4.082 16.5c-.77.833.192 2.5 1.732 2.5z" />
               </svg>
             </div>
@@ -116,7 +116,7 @@ function ResetPasswordForm() {
         <div className="px-6 py-7 text-center">
           <div className="flex justify-center mb-5">
             <div className="w-14 h-14 bg-green-100 rounded-full flex items-center justify-center">
-              <svg className="w-7 h-7 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <svg className="w-7 h-7 text-green-700 dark:text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
               </svg>
             </div>
@@ -155,12 +155,12 @@ function ResetPasswordForm() {
             error={errors.new_password?.message}
             placeholder={t('auth:resetPassword.passwordPlaceholder')}
             autoComplete="new-password"
-            leftIcon={<LockClosedIcon className="w-4 h-4 text-gray-400" />}
+            leftIcon={<LockClosedIcon className="w-4 h-4 text-gray-500 dark:text-gray-400" />}
             rightIcon={
               <button
                 type="button"
                 onClick={() => setShowPassword(p => !p)}
-                className="text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 transition-colors"
+                className="text-gray-500 dark:text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 transition-colors"
                 aria-label={showPassword ? 'Hide password' : 'Show password'}
               >
                 {showPassword ? <EyeSlashIcon className="w-4 h-4" /> : <EyeIcon className="w-4 h-4" />}
@@ -175,12 +175,12 @@ function ResetPasswordForm() {
             error={errors.confirm_password?.message}
             placeholder={t('auth:resetPassword.confirmPlaceholder')}
             autoComplete="new-password"
-            leftIcon={<LockClosedIcon className="w-4 h-4 text-gray-400" />}
+            leftIcon={<LockClosedIcon className="w-4 h-4 text-gray-500 dark:text-gray-400" />}
             rightIcon={
               <button
                 type="button"
                 onClick={() => setShowConfirm(p => !p)}
-                className="text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 transition-colors"
+                className="text-gray-500 dark:text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 transition-colors"
                 aria-label={showConfirm ? 'Hide password' : 'Show password'}
               >
                 {showConfirm ? <EyeSlashIcon className="w-4 h-4" /> : <EyeIcon className="w-4 h-4" />}

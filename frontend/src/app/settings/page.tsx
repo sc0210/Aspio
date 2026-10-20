@@ -265,7 +265,7 @@ function LineBotSection() {
                     <button
                       onClick={handleUnlink}
                       disabled={unlinking}
-                      className="text-xs px-3 py-2 min-h-[44px] rounded-lg bg-red-500 hover:bg-red-600 text-white font-medium transition-colors disabled:opacity-50 touch-manipulation"
+                      className="text-xs px-3 py-2 min-h-[44px] rounded-lg bg-red-600 hover:bg-red-700 dark:bg-red-500 dark:hover:bg-red-600 text-white font-medium transition-colors disabled:opacity-50 touch-manipulation"
                     >
                       {unlinking ? '…' : t('settings.lineBot.yes')}
                     </button>
@@ -277,7 +277,7 @@ function LineBotSection() {
                     </button>
                   </div>
                   {unlinkError && (
-                    <span className="text-xs text-red-500 dark:text-red-400">{t('settings.lineBot.unlinkFailed')}</span>
+                    <span className="text-xs text-red-700 dark:text-red-400">{t('settings.lineBot.unlinkFailed')}</span>
                   )}
                 </div>
               ) : (
@@ -454,7 +454,7 @@ export default function SettingsPage() {
         <div className="md:hidden rounded-2xl bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-700 shadow-sm overflow-hidden animate-fade-in">
           <div className="h-px bg-gradient-to-r from-slate-400/60 via-gray-400/60 to-blue-400/60" />
           <div className="px-4 py-3">
-            <p className="text-sm font-semibold text-gray-900 dark:text-white">{t('settings.title', 'Settings')}</p>
+            <h1 className="text-sm font-semibold text-gray-900 dark:text-white">{t('settings.title', 'Settings')}</h1>
             <p className="text-xs text-gray-500 dark:text-gray-400 mt-0.5">
               {t('settings.subtitle', 'Manage your account, preferences, and appearance')}
             </p>
@@ -518,12 +518,12 @@ export default function SettingsPage() {
             <div>
               <label htmlFor="settings-username" className="block text-xs font-medium text-gray-600 dark:text-gray-400 mb-1">
                 {t('settings.username', 'Username')}
-                <span className="ml-1.5 text-gray-400 font-normal">
+                <span className="ml-1.5 text-gray-500 dark:text-gray-400 font-normal">
                   ({t('settings.usernameHint', 'used for peer invites')})
                 </span>
               </label>
               <div className="relative">
-                <span className="absolute left-3 top-1/2 -translate-y-1/2 text-sm text-gray-400">@</span>
+                <span className="absolute left-3 top-1/2 -translate-y-1/2 text-sm text-gray-500 dark:text-gray-400">@</span>
                 <input
                   id="settings-username"
                   type="text"
@@ -535,7 +535,7 @@ export default function SettingsPage() {
                   className="w-full pl-7 pr-3 py-2 text-sm border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white placeholder-gray-400 focus:outline-none focus-visible:ring-2 focus-visible:ring-primary-500 disabled:opacity-50 disabled:cursor-not-allowed"
                 />
               </div>
-              <p className="mt-0.5 text-xs text-gray-400">{t('settings.usernameRules')}</p>
+              <p className="mt-0.5 text-xs text-gray-500 dark:text-gray-400">{t('settings.usernameRules')}</p>
             </div>
 
             {profileMsg && (
@@ -543,7 +543,7 @@ export default function SettingsPage() {
                 'flex items-center gap-2 text-xs px-3 py-2 rounded-lg',
                 profileMsg.type === 'ok'
                   ? 'bg-prosperity-50 text-prosperity-700 dark:bg-prosperity-900/20 dark:text-prosperity-400'
-                  : 'bg-error-50 text-error-600 dark:bg-error-900/20 dark:text-error-400'
+                  : 'bg-error-50 text-error-700 dark:bg-error-900/20 dark:text-error-400'
               )}>
                 {profileMsg.type === 'ok' ? <CheckIcon className="w-3.5 h-3.5" /> : <XMarkIcon className="w-3.5 h-3.5" />}
                 {profileMsg.text}
@@ -553,7 +553,7 @@ export default function SettingsPage() {
             <button
               onClick={handleProfileSave}
               disabled={isDemoMode || profileSaving || !profileDirty}
-              className="w-full py-2.5 min-h-[44px] text-sm font-medium rounded-lg bg-primary-600 text-white hover:bg-primary-700 disabled:opacity-40 disabled:cursor-not-allowed transition-colors touch-manipulation"
+              className="w-full py-2.5 min-h-[44px] text-sm font-medium rounded-lg bg-primary-700 text-white hover:bg-primary-800 disabled:opacity-40 disabled:cursor-not-allowed transition-colors touch-manipulation"
             >
               {profileSaving ? t('settings.saving', 'Saving…') : t('settings.saveProfile', 'Save Profile')}
             </button>
@@ -623,7 +623,7 @@ export default function SettingsPage() {
                   {PREFERRED_CURRENCIES.map((c) => <option key={c} value={c}>{c}</option>)}
                 </select>
                 {currencyMsg && (
-                  <span className={cn('text-xs', currencyMsg.type === 'ok' ? 'text-prosperity-600 dark:text-prosperity-400' : 'text-error-600 dark:text-error-400')}>
+                  <span className={cn('text-xs', currencyMsg.type === 'ok' ? 'text-prosperity-700 dark:text-prosperity-400' : 'text-error-700 dark:text-error-400')}>
                     {currencyMsg.text}
                   </span>
                 )}
@@ -669,7 +669,7 @@ export default function SettingsPage() {
           <div className="flex justify-end pt-1">
             <button
               onClick={resetPreferences}
-              className="flex items-center gap-1.5 text-xs text-gray-400 hover:text-gray-600 dark:hover:text-gray-200 transition-colors"
+              className="flex items-center gap-1.5 text-xs text-gray-500 dark:text-gray-400 hover:text-gray-600 dark:hover:text-gray-200 transition-colors"
             >
               <ArrowPathIcon className="w-3.5 h-3.5" />
               {t('settings.resetDefaults', 'Reset to defaults')}
@@ -709,7 +709,7 @@ export default function SettingsPage() {
               <Toggle checked={notif.transactionSummary} onChange={v => setNotif('transactionSummary', v)} label={t('settings.notifTransactions', 'Weekly transaction summary')} />
             </SettingRow>
           </div>
-          <p className="text-xs text-gray-400 dark:text-gray-500 pt-1">
+          <p className="text-xs text-gray-500 dark:text-gray-500 pt-1">
             {t('settings.notifNote', 'Push notifications require browser permission. In-app alerts are always on.')}
           </p>
         </SectionCard>
@@ -725,7 +725,7 @@ export default function SettingsPage() {
                 {isDemoMode ? 'alex.chen@example.com' : (user?.email || '—')}
               </p>
             </div>
-            <span className="text-xs text-gray-400 bg-gray-100 dark:bg-gray-700 px-2 py-0.5 rounded">
+            <span className="text-xs text-gray-600 dark:text-gray-400 bg-gray-100 dark:bg-gray-700 px-2 py-0.5 rounded">
               {t('settings.readOnly', 'Read-only')}
             </span>
           </div>
@@ -737,14 +737,14 @@ export default function SettingsPage() {
             </div>
             <button
               disabled
-              className="text-xs px-3 py-1.5 rounded-lg border border-gray-300 dark:border-gray-600 text-gray-400 cursor-not-allowed"
+              className="text-xs px-3 py-1.5 rounded-lg border border-gray-300 dark:border-gray-600 text-gray-500 dark:text-gray-400 cursor-not-allowed"
             >
               {t('settings.comingSoon.title', 'Soon')}
             </button>
           </div>
 
           <div className="border-t border-red-100 dark:border-red-900/30 pt-4">
-            <p className="text-xs font-semibold text-error-500 uppercase tracking-wide mb-2">
+            <p className="text-xs font-semibold text-error-700 dark:text-error-400 uppercase tracking-wide mb-2">
               {t('settings.dangerZone', 'Danger Zone')}
             </p>
             <div className="flex items-center justify-between">

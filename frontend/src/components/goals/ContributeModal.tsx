@@ -113,7 +113,7 @@ export function ContributeModal({
                                     </div>
                                     <div className="flex justify-between items-baseline pt-2 border-t border-gray-200 dark:border-gray-600">
                                         <span className="text-sm font-medium text-gray-700 dark:text-gray-300">Remaining</span>
-                                        <span className="text-lg font-bold text-primary-600 dark:text-primary-400">
+                                        <span className="text-lg font-bold text-primary-700 dark:text-primary-400">
                                             {isValueVisible ? formatCurrency(remainingAmount, currency) : '•••••'}
                                         </span>
                                     </div>
@@ -167,7 +167,7 @@ export function ContributeModal({
                                             />
                                         </div>
                                         {willComplete && (
-                                            <p className="mt-2 text-sm text-success-600 dark:text-success-400 flex items-center gap-1">
+                                            <p className="mt-2 text-sm text-success-700 dark:text-success-400 flex items-center gap-1">
                                                 <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 20 20">
                                                     <path
                                                         fillRule="evenodd"
@@ -220,7 +220,7 @@ export function ContributeModal({
                                                 <span className="text-sm font-medium text-gray-700 dark:text-gray-300">
                                                     New Total
                                                 </span>
-                                                <span className="text-xl font-bold text-primary-600 dark:text-primary-400">
+                                                <span className="text-xl font-bold text-primary-700 dark:text-primary-400">
                                                     {isValueVisible ? formatCurrency(newTotal, currency) : '•••••'}
                                                 </span>
                                             </div>
@@ -242,7 +242,7 @@ export function ContributeModal({
                                         <button
                                             type="submit"
                                             disabled={addContribution.isPending || formData.amount <= 0}
-                                            className="px-6 py-2.5 min-h-[44px] bg-primary-600 hover:bg-primary-700 text-white rounded-lg transition-colors font-medium disabled:opacity-50 disabled:cursor-not-allowed"
+                                            className="px-6 py-2.5 min-h-[44px] bg-primary-700 hover:bg-primary-800 text-white rounded-lg transition-colors font-medium disabled:opacity-50 disabled:cursor-not-allowed"
                                         >
                                             {addContribution.isPending ? 'Adding...' : 'Add Contribution'}
                                         </button>

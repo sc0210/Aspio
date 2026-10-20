@@ -397,7 +397,7 @@ export function GrowthForecastCard({ stats, loading = false }: GrowthForecastCar
                                     'px-2.5 py-1 text-xs font-semibold rounded-md transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-400',
                                     horizonMonths === h
                                         ? 'bg-white dark:bg-gray-800 text-indigo-600 dark:text-indigo-300 shadow-sm'
-                                        : 'text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200'
+                                        : 'text-gray-600 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200'
                                 )}
                             >
                                 {h === 6 ? t('growthForecast.6mo', '6mo') : h === 12 ? t('growthForecast.1yr', '1yr') : t('growthForecast.3yr', '3yr')}
@@ -407,7 +407,7 @@ export function GrowthForecastCard({ stats, loading = false }: GrowthForecastCar
                     {isDirty && (
                         <button
                             onClick={handleReset}
-                            className="flex items-center gap-1 text-xs text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200 transition-colors"
+                            className="flex items-center gap-1 text-xs text-gray-600 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200 transition-colors"
                             aria-label={t('growthForecast.reset', 'Reset to actual')}
                         >
                             <ArrowPathIcon className="w-3.5 h-3.5" />
@@ -424,7 +424,7 @@ export function GrowthForecastCard({ stats, loading = false }: GrowthForecastCar
 
             {/* Headline projection */}
             <div className="flex flex-wrap items-end gap-x-3 gap-y-1 mb-1">
-                <span className="text-xs text-gray-400 dark:text-gray-500 font-medium">{horizonLabel}</span>
+                <span className="text-xs text-gray-500 dark:text-gray-500 font-medium">{horizonLabel}</span>
                 <span className="text-2xl font-bold text-gray-900 dark:text-white tabular-nums">
                     {isValueVisible ? formatTWD(projectedTotal) : '••••••'}
                 </span>
@@ -488,7 +488,7 @@ export function GrowthForecastCard({ stats, loading = false }: GrowthForecastCar
                         <XAxis dataKey="label" tick={{ fill: 'currentColor', fontSize: 12, fontWeight: 500 }} className="text-gray-500 dark:text-gray-400" tickLine={false} interval="preserveStartEnd" />
                         <YAxis tick={{ fill: 'currentColor', fontSize: 12, fontWeight: 500 }} className="text-gray-500 dark:text-gray-400" tickLine={false} tickFormatter={(v) => isValueVisible ? formatTWDCompact(v) : '•••'} width={80} tickMargin={4} domain={yAxis.domain} ticks={yAxis.ticks} />
                         {hasHistory && (
-                            <ReferenceLine x={nowLabel} stroke="currentColor" className="text-gray-400 dark:text-gray-500" strokeDasharray="3 3" label={{ value: t('growthForecast.now', 'Now'), position: 'insideTopRight', fontSize: 10, fill: 'currentColor' }} />
+                            <ReferenceLine x={nowLabel} stroke="currentColor" className="text-gray-500 dark:text-gray-500" strokeDasharray="3 3" label={{ value: t('growthForecast.now', 'Now'), position: 'insideTopRight', fontSize: 10, fill: 'currentColor' }} />
                         )}
                         {/* Goal target lines — where the projection crosses = when it's affordable */}
                         {chartGoals.map(g => (
@@ -575,12 +575,12 @@ export function GrowthForecastCard({ stats, loading = false }: GrowthForecastCar
                                 <span className="font-medium truncate max-w-[8rem]">{g.title}</span>
                                 <span className="tabular-nums text-gray-500 dark:text-gray-400">{etaText}</span>
                                 {g.status === 'short' && g.requiredExtraPerMonth != null && (
-                                    <span className="font-semibold text-error-600 dark:text-error-400 tabular-nums">
+                                    <span className="font-semibold text-error-700 dark:text-error-400 tabular-nums">
                                         {t('growthForecast.shortBy', 'short {{amount}}/mo', { amount: isValueVisible ? formatTWDCompact(g.requiredExtraPerMonth) : '•••' })}
                                     </span>
                                 )}
                                 {(g.status === 'onTrack' || g.status === 'affordable') && (
-                                    <span className="font-semibold text-prosperity-600 dark:text-prosperity-400">
+                                    <span className="font-semibold text-prosperity-700 dark:text-prosperity-400">
                                         {t('growthForecast.onTrack', 'on track')}
                                     </span>
                                 )}
@@ -602,9 +602,9 @@ export function GrowthForecastCard({ stats, loading = false }: GrowthForecastCar
                                 id="growthfore-growthforecast-annualreturn"
                                 type="range" min={0} max={30} step={0.5} value={annualReturnPct}
                                 onChange={(e) => setReturnOverride(parseFloat(e.target.value))}
-                                className="w-full h-1.5 bg-gray-200 dark:bg-gray-700 rounded-lg appearance-none cursor-pointer accent-indigo-600"
+                                className="w-full h-11 sm:h-6 cursor-pointer accent-indigo-600"
                             />
-                            <p className="mt-1 text-sm text-gray-400 dark:text-gray-500">
+                            <p className="mt-1 text-sm text-gray-500 dark:text-gray-500">
                                 {hasCagr && returnOverride === null
                                     ? t('growthForecast.fromCagr', 'from your portfolio (CAGR)')
                                     : t('growthForecast.returnHint', 'expected yearly growth')}
@@ -620,9 +620,9 @@ export function GrowthForecastCard({ stats, loading = false }: GrowthForecastCar
                                 id="growthfore-growthforecast-percentinvested"
                                 type="range" min={0} max={100} step={5} value={investedPct}
                                 onChange={(e) => setInvestedOverride(parseFloat(e.target.value))}
-                                className="w-full h-1.5 bg-gray-200 dark:bg-gray-700 rounded-lg appearance-none cursor-pointer accent-indigo-600"
+                                className="w-full h-11 sm:h-6 cursor-pointer accent-indigo-600"
                             />
-                            <p className="mt-1 text-sm text-gray-400 dark:text-gray-500">
+                            <p className="mt-1 text-sm text-gray-500 dark:text-gray-500">
                                 {t('growthForecast.investedHint', 'rest stays as cash')}
                             </p>
                         </div>
@@ -634,11 +634,11 @@ export function GrowthForecastCard({ stats, loading = false }: GrowthForecastCar
                         <div className="mt-3">
                             <div className="flex items-baseline justify-between gap-2">
                                 <span className="text-xs font-medium text-gray-600 dark:text-gray-400">{t('growthForecast.monthlySavings', 'Net savings / mo')}</span>
-                                <span className={cn('text-sm font-bold tabular-nums', monthlySavings >= 0 ? 'text-gray-900 dark:text-white' : 'text-error-500')}>
+                                <span className={cn('text-sm font-bold tabular-nums', monthlySavings >= 0 ? 'text-gray-900 dark:text-white' : 'text-error-700 dark:text-error-500')}>
                                     {isValueVisible ? formatTWD(monthlySavings) : '•••'}
                                 </span>
                             </div>
-                            <p className="mt-0.5 text-sm text-gray-400 dark:text-gray-500">
+                            <p className="mt-0.5 text-sm text-gray-500 dark:text-gray-500">
                                 {t('growthForecast.realSavings', 'your real income − expense')}
                             </p>
                         </div>
@@ -658,18 +658,18 @@ export function GrowthForecastCard({ stats, loading = false }: GrowthForecastCar
                                     aria-label={t('growthForecast.monthlyIncome', 'Monthly income')}
                                     onWheel={(e) => e.currentTarget.blur()}
                                     onChange={(e) => setIncomeOverride(Math.max(0, Math.round(Number(e.target.value) || 0)))}
-                                    className="w-28 text-right tabular-nums bg-transparent border-b border-gray-200 dark:border-gray-600 focus-visible:border-indigo-500 focus-visible:outline-none px-1 py-0.5"
+                                    className="w-28 text-right tabular-nums bg-transparent border-b border-gray-200 dark:border-gray-600 focus-visible:border-indigo-500 focus-visible:outline-none px-1 py-1"
                                 />
                             ) : (
-                                <span className="w-28 text-right tabular-nums text-gray-400 dark:text-gray-500">•••</span>
+                                <span className="w-28 text-right tabular-nums text-gray-500 dark:text-gray-500">•••</span>
                             )}
                         </div>
-                        <p className="text-sm text-gray-400 dark:text-gray-500 pt-1">
+                        <p className="text-sm text-gray-500 dark:text-gray-500 pt-1">
                             {incomeOverride !== null
                                 ? t('growthForecast.incomeManual', 'manually set')
                                 : t('growthForecast.incomeHint', 'recurring earned avg — salary, freelance')}
                         </p>
-                        <p className="text-sm text-gray-400 dark:text-gray-500 pt-2 pb-1">
+                        <p className="text-sm text-gray-500 dark:text-gray-500 pt-2 pb-1">
                             {t('growthForecast.expensesTitle', 'Monthly expenses — {{months}}-month average (tap to edit)', { months: breakdown.monthsAveraged })}
                         </p>
                         <div className="space-y-1.5 overflow-y-auto max-h-64 lg:max-h-80 pr-1 -mr-1">
@@ -677,15 +677,18 @@ export function GrowthForecastCard({ stats, loading = false }: GrowthForecastCar
                                 const included = isIncluded(c);
                                 return (
                                     <div key={c.key} className={cn('flex items-center gap-2 text-xs', !included && 'opacity-50')}>
-                                        <input
-                                            type="checkbox" checked={included}
-                                            onChange={() => setIncludeOverrides(prev => ({ ...prev, [c.key]: !included }))}
-                                            className="rounded border-gray-300 dark:border-gray-600 text-indigo-600 focus-visible:ring-indigo-500 cursor-pointer"
-                                            aria-label={groupLabel(c)}
-                                        />
-                                        <span className="flex-1 truncate text-gray-600 dark:text-gray-300">
-                                            <span className="mr-1">{c.icon}</span>{groupLabel(c)}
-                                        </span>
+                                        {/* The name toggles the box too, so the target is the row, not a 13px square */}
+                                        <label className="flex flex-1 min-w-0 min-h-[28px] items-center gap-2 cursor-pointer">
+                                            <input
+                                                type="checkbox" checked={included}
+                                                onChange={() => setIncludeOverrides(prev => ({ ...prev, [c.key]: !included }))}
+                                                className="rounded border-gray-300 dark:border-gray-600 text-indigo-600 focus-visible:ring-indigo-500 cursor-pointer"
+                                                aria-label={groupLabel(c)}
+                                            />
+                                            <span className="flex-1 truncate text-gray-600 dark:text-gray-300">
+                                                <span className="mr-1" aria-hidden="true">{c.icon}</span>{groupLabel(c)}
+                                            </span>
+                                        </label>
                                         {isValueVisible ? (
                                             <input
                                                 type="number" min={0} value={catAmount(c)} disabled={!included}
@@ -693,23 +696,23 @@ export function GrowthForecastCard({ stats, loading = false }: GrowthForecastCar
                                                 aria-label={groupLabel(c)}
                                                 onWheel={(e) => e.currentTarget.blur()}
                                                 onChange={(e) => setExpenseOverrides(prev => ({ ...prev, [c.key]: Math.max(0, Math.round(Number(e.target.value) || 0)) }))}
-                                                className="w-24 text-right tabular-nums bg-transparent border-b border-gray-200 dark:border-gray-600 focus-visible:border-indigo-500 focus-visible:outline-none px-1 py-0.5 disabled:opacity-40"
+                                                className="w-24 text-right tabular-nums bg-transparent border-b border-gray-200 dark:border-gray-600 focus-visible:border-indigo-500 focus-visible:outline-none px-1 py-1 disabled:opacity-40"
                                             />
                                         ) : (
-                                            <span className="w-24 text-right tabular-nums text-gray-400 dark:text-gray-500">•••</span>
+                                            <span className="w-24 text-right tabular-nums text-gray-500 dark:text-gray-500">•••</span>
                                         )}
                                     </div>
                                 );
                             })}
                         </div>
                         <div className="mt-auto pt-2 space-y-1">
-                            <div className="flex items-center justify-between text-xs text-gray-400 dark:text-gray-500">
+                            <div className="flex items-center justify-between text-xs text-gray-500 dark:text-gray-500">
                                 <span>{t('growthForecast.expensesSubtotal', 'Total expenses / mo')}</span>
                                 <span className="tabular-nums">− {isValueVisible ? formatTWDCompact(includedExpense) : '•••'}</span>
                             </div>
                             <div className="flex items-center justify-between text-xs font-semibold pt-1.5 border-t border-gray-100 dark:border-gray-700">
                                 <span className="text-gray-700 dark:text-gray-200">{t('growthForecast.monthlySavings', 'Net savings / mo')}</span>
-                                <span className={cn('tabular-nums', monthlySavings >= 0 ? 'text-prosperity-600 dark:text-prosperity-400' : 'text-error-500')}>
+                                <span className={cn('tabular-nums', monthlySavings >= 0 ? 'text-prosperity-700 dark:text-prosperity-400' : 'text-error-700 dark:text-error-500')}>
                                     {isValueVisible ? formatTWD(monthlySavings) : '•••'}
                                 </span>
                             </div>
@@ -727,7 +730,7 @@ export function GrowthForecastCard({ stats, loading = false }: GrowthForecastCar
                         ok: 'bg-prosperity-50 dark:bg-prosperity-900/20 border-prosperity-200 dark:border-prosperity-700 text-prosperity-700 dark:text-prosperity-300',
                         warn: 'bg-warning-50 dark:bg-warning-900/20 border-warning-200 dark:border-warning-700 text-warning-700 dark:text-warning-300',
                         todo: 'bg-error-50 dark:bg-error-900/20 border-error-200 dark:border-error-700 text-error-700 dark:text-error-300',
-                        none: 'bg-gray-50 dark:bg-gray-800 border-gray-200 dark:border-gray-700 text-gray-400 dark:text-gray-500',
+                        none: 'bg-gray-50 dark:bg-gray-800 border-gray-200 dark:border-gray-700 text-gray-500 dark:text-gray-500',
                     }[s.state];
                     const dot = { ok: '✅', warn: '⚠️', todo: '🔴', none: '○' }[s.state];
                     return (
@@ -735,7 +738,7 @@ export function GrowthForecastCard({ stats, loading = false }: GrowthForecastCar
                             <div className="flex items-center gap-1 font-medium mb-0.5">
                                 <span aria-hidden="true">{dot}</span>
                                 <span>{t(`growthForecast.stage_${s.key}`, s.label)}</span>
-                                {i < stages.length - 1 && <span className="ml-auto text-gray-300 dark:text-gray-600">›</span>}
+                                {i < stages.length - 1 && <span aria-hidden="true" className="ml-auto text-gray-300 dark:text-gray-600">›</span>}
                             </div>
                             <div className="tabular-nums opacity-80">{isValueVisible ? s.metric : '•••'}</div>
                         </div>
@@ -744,7 +747,7 @@ export function GrowthForecastCard({ stats, loading = false }: GrowthForecastCar
             </div>
 
             {/* Disclaimer */}
-            <div className="mt-4 flex items-start gap-1.5 text-xs text-gray-400 dark:text-gray-500">
+            <div className="mt-4 flex items-start gap-1.5 text-xs text-gray-500 dark:text-gray-500">
                 <InformationCircleIcon className="w-3.5 h-3.5 flex-shrink-0 mt-px" />
                 <p>
                     {hasHistory

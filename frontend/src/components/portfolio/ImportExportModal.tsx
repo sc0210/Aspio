@@ -290,7 +290,7 @@ export function ImportExportModal({ holdings = [], onClose, onImport, onImportSu
             </div>
             <button
               onClick={onClose}
-              className="p-2 text-gray-400 dark:text-gray-500 hover:text-gray-600 dark:hover:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-800 rounded-lg transition-all"
+              className="p-2 text-gray-500 dark:text-gray-500 hover:text-gray-600 dark:hover:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-800 rounded-lg transition-all"
               aria-label="Close"
             >
               <XMarkIcon className="w-6 h-6" />
@@ -383,7 +383,7 @@ export function ImportExportModal({ holdings = [], onClose, onImport, onImportSu
           <div className="p-6 bg-green-50 dark:bg-green-900/20 border-2 border-green-200 dark:border-green-800 rounded-xl">
             <div className="flex items-start gap-4">
               <div className="p-3 bg-green-100 dark:bg-green-900/40 rounded-lg">
-                <ArrowUpTrayIcon className="w-6 h-6 text-green-600 dark:text-green-400" />
+                <ArrowUpTrayIcon className="w-6 h-6 text-green-700 dark:text-green-400" />
               </div>
               <div className="flex-1">
                 <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-2">
@@ -411,7 +411,7 @@ export function ImportExportModal({ holdings = [], onClose, onImport, onImportSu
                         value="append"
                         checked={importMode === 'append'}
                         onChange={(e) => setImportMode(e.target.value as 'append' | 'replace')}
-                        className="w-4 h-4 text-green-600"
+                        className="w-4 h-4 text-green-700 dark:text-green-600"
                       />
                       <div className="flex-1">
                         <div className="text-sm font-semibold text-gray-900 dark:text-white">
@@ -435,7 +435,7 @@ export function ImportExportModal({ holdings = [], onClose, onImport, onImportSu
                         value="replace"
                         checked={importMode === 'replace'}
                         onChange={(e) => setImportMode(e.target.value as 'append' | 'replace')}
-                        className="w-4 h-4 text-orange-600"
+                        className="w-4 h-4 text-orange-700 dark:text-orange-600"
                       />
                       <div className="flex-1">
                         <div className="text-sm font-semibold text-gray-900 dark:text-white">
@@ -487,14 +487,14 @@ export function ImportExportModal({ holdings = [], onClose, onImport, onImportSu
                     Columns (CSV or XLSX trade log format):
                   </p>
                   <div className="grid grid-cols-2 gap-2 text-xs mb-2">
-                    <span className="text-gray-600 dark:text-gray-400">• Date <span className="text-gray-400">(YYYY/MM/DD)</span></span>
-                    <span className="text-gray-600 dark:text-gray-400">• Type <span className="text-gray-400">(買入 / 賣出)</span></span>
+                    <span className="text-gray-600 dark:text-gray-400">• Date <span className="text-gray-500 dark:text-gray-400">(YYYY/MM/DD)</span></span>
+                    <span className="text-gray-600 dark:text-gray-400">• Type <span className="text-gray-500 dark:text-gray-400">(買入 / 賣出)</span></span>
                     <span className="text-gray-600 dark:text-gray-400">• StockID</span>
-                    <span className="text-gray-600 dark:text-gray-400">• Currency <span className="text-gray-400">(TWD / USD)</span></span>
+                    <span className="text-gray-600 dark:text-gray-400">• Currency <span className="text-gray-500 dark:text-gray-400">(TWD / USD)</span></span>
                     <span className="text-gray-600 dark:text-gray-400">• Shares</span>
-                    <span className="text-gray-600 dark:text-gray-400">• Price per shares <span className="text-gray-400">(plain number)</span></span>
+                    <span className="text-gray-600 dark:text-gray-400">• Price per shares <span className="text-gray-500 dark:text-gray-400">(plain number)</span></span>
                   </div>
-                  <p className="text-xs text-gray-400 dark:text-gray-500">Net income is optional and ignored on import. Sell rows are skipped.</p>
+                  <p className="text-xs text-gray-500 dark:text-gray-500">Net income is optional and ignored on import. Sell rows are skipped.</p>
                 </div>
               </div>
             </div>
@@ -513,7 +513,7 @@ export function ImportExportModal({ holdings = [], onClose, onImport, onImportSu
               {importErrors.length > 0 && (
                 <div className="p-4 bg-red-50 dark:bg-red-900/20 border-b border-red-200 dark:border-red-800">
                   <div className="flex items-start gap-3">
-                    <ExclamationTriangleIcon className="w-5 h-5 text-red-600 dark:text-red-400 flex-shrink-0 mt-0.5" />
+                    <ExclamationTriangleIcon className="w-5 h-5 text-red-700 dark:text-red-400 flex-shrink-0 mt-0.5" />
                     <div className="flex-1">
                       <p className="text-sm font-semibold text-red-800 dark:text-red-300 mb-2">
                         {importErrors.length} Validation Error{importErrors.length > 1 ? 's' : ''}:
@@ -535,7 +535,7 @@ export function ImportExportModal({ holdings = [], onClose, onImport, onImportSu
               {importPreview.length > 0 && (
                 <div className="p-4">
                   <div className="flex items-center gap-2 mb-3">
-                    <CheckCircleIcon className="w-5 h-5 text-green-600 dark:text-green-400" />
+                    <CheckCircleIcon className="w-5 h-5 text-green-700 dark:text-green-400" />
                     <p className="text-sm font-semibold text-green-800 dark:text-green-300">
                       {importPreview.length} valid lot{importPreview.length > 1 ? 's' : ''} ready to import
                       {(() => {
@@ -599,7 +599,7 @@ export function ImportExportModal({ holdings = [], onClose, onImport, onImportSu
                                   <td className="px-3 py-2">{row.currency}</td>
                                   <td className="px-3 py-2 text-right">{row.quantity}</td>
                                   <td className="px-3 py-2 text-right">{row.averageCost}</td>
-                                  <td className="px-3 py-2 text-right text-red-600 dark:text-red-400">
+                                  <td className="px-3 py-2 text-right text-red-700 dark:text-red-400">
                                     {`-${formatCurrency(row.quantity * row.averageCost, row.currency)}`}
                                   </td>
                                   <td className="px-3 py-2 text-center">

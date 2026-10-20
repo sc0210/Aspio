@@ -46,7 +46,7 @@ export default function SharedGoalCard({ goal, onViewRecords, onDelete, deleting
       <div className="flex items-start justify-between gap-2 mb-3">
         <div className="flex items-center gap-2 flex-1 min-w-0">
           {isCompleted && (
-            <CheckCircleIcon className="w-5 h-5 text-prosperity-500 shrink-0" />
+            <CheckCircleIcon className="w-5 h-5 text-prosperity-700 dark:text-prosperity-500 shrink-0" />
           )}
           <h3 className="text-sm font-semibold text-gray-900 dark:text-white truncate">
             {goal.title}
@@ -63,7 +63,7 @@ export default function SharedGoalCard({ goal, onViewRecords, onDelete, deleting
             onClick={() => onViewRecords(goal)}
             title={t('savings.card.viewRecords', 'View saving records')}
             aria-label={t('savings.card.viewRecordsFor', 'View saving records for {{title}}', { title: goal.title })}
-            className="p-1.5 min-w-[44px] min-h-[44px] flex items-center justify-center text-gray-400 hover:text-primary-600 dark:hover:text-primary-400 rounded-lg hover:bg-primary-50 dark:hover:bg-primary-900/20 transition-colors"
+            className="p-1.5 min-w-[44px] min-h-[44px] flex items-center justify-center text-gray-500 dark:text-gray-400 hover:text-primary-600 dark:hover:text-primary-400 rounded-lg hover:bg-primary-50 dark:hover:bg-primary-900/20 transition-colors"
           >
             <ListBulletIcon className="w-4 h-4" aria-hidden="true" />
           </button>
@@ -73,7 +73,7 @@ export default function SharedGoalCard({ goal, onViewRecords, onDelete, deleting
               onClick={() => onDelete(goal.id)}
               disabled={deleting}
               aria-label={t('savings.deleteGoal', 'Delete goal {{title}}', { title: goal.title })}
-              className="p-1.5 min-w-[44px] min-h-[44px] flex items-center justify-center text-gray-400 hover:text-error-600 dark:hover:text-error-400 rounded-lg hover:bg-error-50 dark:hover:bg-error-900/20 transition-colors disabled:opacity-40"
+              className="p-1.5 min-w-[44px] min-h-[44px] flex items-center justify-center text-gray-500 dark:text-gray-400 hover:text-error-600 dark:hover:text-error-400 rounded-lg hover:bg-error-50 dark:hover:bg-error-900/20 transition-colors disabled:opacity-40"
             >
               <TrashIcon className="w-4 h-4" aria-hidden="true" />
             </button>
@@ -86,9 +86,9 @@ export default function SharedGoalCard({ goal, onViewRecords, onDelete, deleting
         <div className="flex justify-between items-baseline text-xs mb-1.5">
           <span className="font-semibold text-gray-700 dark:text-gray-200">
             {formatCurrency(goal.total_amount)}
-            <span className="font-normal text-gray-400 dark:text-gray-500"> / {formatCurrency(goal.target_amount)}</span>
+            <span className="font-normal text-gray-500 dark:text-gray-500"> / {formatCurrency(goal.target_amount)}</span>
           </span>
-          <span className={`font-bold text-sm ${isCompleted ? 'text-prosperity-600 dark:text-prosperity-400' : 'text-primary-600 dark:text-primary-400'}`}>
+          <span className={`font-bold text-sm ${isCompleted ? 'text-prosperity-700 dark:text-prosperity-400' : 'text-primary-700 dark:text-primary-400'}`}>
             {goal.progress_pct.toFixed(1)}%
           </span>
         </div>
@@ -117,17 +117,17 @@ export default function SharedGoalCard({ goal, onViewRecords, onDelete, deleting
 
         {/* Motivational text + deadline */}
         <div className="flex items-center justify-between mt-1.5">
-          <span className="text-xs text-gray-400 dark:text-gray-500 leading-tight">
+          <span className="text-xs text-gray-500 dark:text-gray-500 leading-tight">
             {motivation}
           </span>
           {daysLeft !== null && !isCompleted && (
             <span
               className={`text-xs font-semibold shrink-0 ml-2 ${
                 daysLeft < 0
-                  ? 'text-error-500 dark:text-error-400'
+                  ? 'text-error-700 dark:text-error-400'
                   : daysLeft <= 14
                   ? 'text-amber-500 dark:text-amber-400'
-                  : 'text-gray-400 dark:text-gray-500'
+                  : 'text-gray-500 dark:text-gray-500'
               }`}
             >
               {daysLeft < 0
@@ -144,29 +144,29 @@ export default function SharedGoalCard({ goal, onViewRecords, onDelete, deleting
       <div className="pt-3 border-t border-gray-100 dark:border-gray-700 space-y-2.5">
         <div className="grid grid-cols-2 gap-3">
           <div className="bg-primary-50 dark:bg-primary-900/20 rounded-lg p-2.5">
-            <p className="text-xs text-primary-600 dark:text-primary-400 font-medium mb-0.5">
+            <p className="text-xs text-primary-700 dark:text-primary-400 font-medium mb-0.5">
               {t('savings.yourContribution', 'Your contribution')}
             </p>
             <p className="text-sm font-bold text-primary-700 dark:text-primary-300">
               {formatCurrency(goal.your_amount)}
             </p>
-            <p className="text-xs text-primary-500 dark:text-primary-400 truncate">{goal.your_name}</p>
+            <p className="text-xs text-primary-700 dark:text-primary-400 truncate">{goal.your_name}</p>
           </div>
           <div className="bg-prosperity-50 dark:bg-prosperity-900/20 rounded-lg p-2.5">
-            <p className="text-xs text-prosperity-600 dark:text-prosperity-400 font-medium mb-0.5 truncate">
+            <p className="text-xs text-prosperity-700 dark:text-prosperity-400 font-medium mb-0.5 truncate">
               {t('savings.peerContribution', "{{name}}'s contribution", { name: goal.peer_name })}
             </p>
             <p className="text-sm font-bold text-prosperity-700 dark:text-prosperity-300">
               {formatCurrency(goal.peer_amount)}
             </p>
-            <p className="text-xs text-prosperity-500 dark:text-prosperity-400 truncate">{goal.peer_name}</p>
+            <p className="text-xs text-prosperity-700 dark:text-prosperity-400 truncate">{goal.peer_name}</p>
           </div>
         </div>
 
         {/* Contribution split bar */}
         {totalContributed > 0 && (
           <div>
-            <div className="flex justify-between text-xs text-gray-400 dark:text-gray-500 mb-1">
+            <div className="flex justify-between text-xs text-gray-500 dark:text-gray-500 mb-1">
               <span>{goal.your_name}: {yourSplitPct.toFixed(0)}%</span>
               <span>{peerSplitPct.toFixed(0)}%: {goal.peer_name}</span>
             </div>

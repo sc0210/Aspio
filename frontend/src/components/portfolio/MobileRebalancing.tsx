@@ -22,8 +22,8 @@ function splitLabel(asset: string): [string, string | null] {
 
 function driftTone(points: number) {
     if (isOffTarget(points)) return { bar: 'bg-rose-500', text: 'text-rose-600 dark:text-rose-400' };
-    if (isNearTarget(points)) return { bar: 'bg-amber-500', text: 'text-amber-600 dark:text-amber-400' };
-    return { bar: 'bg-emerald-500', text: 'text-emerald-600 dark:text-emerald-400' };
+    if (isNearTarget(points)) return { bar: 'bg-amber-500', text: 'text-amber-700 dark:text-amber-400' };
+    return { bar: 'bg-emerald-500', text: 'text-emerald-700 dark:text-emerald-400' };
 }
 
 /** Only what this view reads, so the demo fixtures (no assetName) fit too. */
@@ -104,7 +104,7 @@ export function MobileRebalancing({ allocations, actions, onBack }: MobileRebala
                         </>
                     ) : (
                         <>
-                            <p className="text-[13px] font-bold text-emerald-600 dark:text-emerald-400">✓ {t('rebalancing.balanced.title')}</p>
+                            <p className="text-[13px] font-bold text-emerald-700 dark:text-emerald-400">✓ {t('rebalancing.balanced.title')}</p>
                             <p className="mt-2 text-[13px] text-gray-500 dark:text-gray-400">{t('rebalancing.balanced.description')}</p>
                         </>
                     )}
@@ -114,7 +114,7 @@ export function MobileRebalancing({ allocations, actions, onBack }: MobileRebala
                 {allocations.length > 0 && <section className="rounded-3xl bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 shadow-sm p-5">
                     <div className="flex items-baseline justify-between">
                         <h2 className="text-[15px] font-extrabold text-gray-900 dark:text-white">{t('allocation.title')}</h2>
-                        <span className="text-[11.5px] font-semibold text-gray-400 dark:text-gray-500">
+                        <span className="text-xs font-semibold text-gray-500 dark:text-gray-500">
                             {t('mobile.rebalance.legend', 'Bar = now · Line = target')}
                         </span>
                     </div>
@@ -128,7 +128,7 @@ export function MobileRebalancing({ allocations, actions, onBack }: MobileRebala
                                     <div className="flex items-baseline justify-between gap-3">
                                         <p className="min-w-0 truncate text-[14px] font-bold text-gray-900 dark:text-white">
                                             {code}
-                                            {name && <span className="ml-1.5 text-[12px] font-semibold text-gray-400 dark:text-gray-500">{name}</span>}
+                                            {name && <span className="ml-1.5 text-[12px] font-semibold text-gray-500 dark:text-gray-500">{name}</span>}
                                         </p>
                                         <span className={`shrink-0 text-[12.5px] font-extrabold tabular-nums ${tone.text}`}>
                                             {d > 0 ? '+' : ''}{d.toFixed(1)} {t('mobile.rebalance.points', 'pp')}
@@ -144,7 +144,7 @@ export function MobileRebalancing({ allocations, actions, onBack }: MobileRebala
                                         <div className="absolute -top-1 -bottom-1 w-0.5 rounded bg-gray-900 dark:bg-white"
                                             style={{ left: `${Math.min(100, (tgt(a) / scale) * 100)}%` }} />
                                     </div>
-                                    <div className="mt-1 flex justify-between text-[11.5px] font-semibold tabular-nums text-gray-500 dark:text-gray-400">
+                                    <div className="mt-1 flex justify-between text-xs font-semibold tabular-nums text-gray-500 dark:text-gray-400">
                                         <span>{cur(a).toFixed(1)}% · {hide(fmt(a.currentValue || 0))}</span>
                                         <span>{t('mobile.rebalance.target', { pct: tgt(a).toFixed(1), defaultValue: 'Target {{pct}}%' })}</span>
                                     </div>
@@ -164,7 +164,7 @@ export function MobileRebalancing({ allocations, actions, onBack }: MobileRebala
                                 const [code] = splitLabel(a.asset);
                                 return (
                                     <li key={`${a.action}-${a.asset}`} className="flex items-center gap-3 py-3">
-                                        <span className={`shrink-0 rounded-lg px-2 py-1 text-[11.5px] font-extrabold ${sell
+                                        <span className={`shrink-0 rounded-lg px-2 py-1 text-xs font-extrabold ${sell
                                             ? 'bg-rose-50 text-rose-700 dark:bg-rose-900/30 dark:text-rose-300'
                                             : 'bg-emerald-50 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-300'}`}>
                                             {sell ? t('allocation.action.sell') : t('allocation.action.buy')}
@@ -174,7 +174,7 @@ export function MobileRebalancing({ allocations, actions, onBack }: MobileRebala
                                             {/* Hidden with the amount: shares × price gives it back.
                                                 Formatted as RebalancingPlanCard does on desktop. */}
                                             {isValueVisible && a.shares != null && a.shares > 0 && a.currentPrice != null && a.currentPrice > 0 ? (
-                                                <p className="text-[11.5px] font-semibold text-gray-500 dark:text-gray-400 tabular-nums">
+                                                <p className="text-xs font-semibold text-gray-500 dark:text-gray-400 tabular-nums">
                                                     {t('rebalancing.plan.shareEstimate', {
                                                         shares: a.shares.toFixed(0),
                                                         price: fmt(a.currentPrice),
@@ -192,10 +192,10 @@ export function MobileRebalancing({ allocations, actions, onBack }: MobileRebala
                     </section>
                 )}
 
-                <p className="text-center px-4 pt-1 text-xs font-semibold leading-relaxed text-gray-400 dark:text-gray-500">
+                <p className="text-center px-4 pt-1 text-xs font-semibold leading-relaxed text-gray-500 dark:text-gray-500">
                     {t('mobile.fullRebalancing', 'Edit targets, FX tracker & What-If')}
                     <br />
-                    <span className="text-primary-600 dark:text-primary-400">→ {t('mobile.onLargerScreen', 'on tablet / desktop')}</span>
+                    <span className="text-primary-700 dark:text-primary-400">→ {t('mobile.onLargerScreen', 'on tablet / desktop')}</span>
                 </p>
             </div>
         </DashboardLayout>

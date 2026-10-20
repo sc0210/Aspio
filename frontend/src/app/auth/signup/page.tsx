@@ -222,7 +222,7 @@ function SignUpForm() {
             <h2 className="text-2xl font-bold text-gray-900 dark:text-white">{t('auth:signUp.createTitle')}</h2>
             <p className="mt-1 text-sm text-gray-500 dark:text-gray-400">
               {t('auth:signUp.haveAccount')}{' '}
-              <Link href="/auth/signin" className="font-semibold text-primary-600 dark:text-primary-400 hover:text-primary-700">
+              <Link href="/auth/signin" className="font-semibold text-primary-700 dark:text-primary-400 hover:text-primary-800">
                 {t('auth:signUp.signInInstead')}
               </Link>
             </p>
@@ -249,7 +249,7 @@ function SignUpForm() {
                   <div className="w-full border-t border-gray-200 dark:border-gray-600" />
                 </div>
                 <div className="relative flex justify-center text-xs">
-                  <span className="px-3 bg-white dark:bg-gray-800 text-gray-400 font-medium">{t('auth:signUp.orSignUpWithEmail')}</span>
+                  <span className="px-3 bg-white dark:bg-gray-800 text-gray-500 dark:text-gray-400 font-medium">{t('auth:signUp.orSignUpWithEmail')}</span>
                 </div>
               </div>
 
@@ -261,7 +261,7 @@ function SignUpForm() {
                   error={errors.name?.message}
                   placeholder={t('auth:signUp.namePlaceholder')}
                   autoComplete="name"
-                  leftIcon={<UserIcon className="w-4 h-4 text-gray-400" />}
+                  leftIcon={<UserIcon className="w-4 h-4 text-gray-500 dark:text-gray-400" />}
                 />
 
                 <Input
@@ -271,7 +271,7 @@ function SignUpForm() {
                   error={errors.email?.message}
                   placeholder={t('auth:signUp.emailPlaceholder')}
                   autoComplete="email"
-                  leftIcon={<EnvelopeIcon className="w-4 h-4 text-gray-400" />}
+                  leftIcon={<EnvelopeIcon className="w-4 h-4 text-gray-500 dark:text-gray-400" />}
                 />
 
                 <div>
@@ -282,13 +282,13 @@ function SignUpForm() {
                     error={errors.password?.message}
                     placeholder={t('auth:signUp.passwordPlaceholder')}
                     autoComplete="new-password"
-                    leftIcon={<LockClosedIcon className="w-4 h-4 text-gray-400" />}
+                    leftIcon={<LockClosedIcon className="w-4 h-4 text-gray-500 dark:text-gray-400" />}
                     rightIcon={
                       <button
                         type="button"
                         tabIndex={-1}
                         onClick={() => setShowPassword(v => !v)}
-                        className="text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 transition-colors"
+                        className="text-gray-500 dark:text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 transition-colors"
                         aria-label={showPassword ? 'Hide password' : 'Show password'}
                       >
                         {showPassword ? <EyeSlashIcon className="w-4 h-4" /> : <EyeIcon className="w-4 h-4" />}
@@ -310,9 +310,9 @@ function SignUpForm() {
                         ))}
                       </div>
                       <span className={cn('text-xs font-semibold flex-shrink-0', {
-                        'text-red-500':     strength.score <= 1,
+                        'text-red-700 dark:text-red-500':     strength.score <= 1,
                         'text-amber-500':   strength.score === 2,
-                        'text-yellow-500':  strength.score === 3,
+                        'text-yellow-700 dark:text-yellow-500':  strength.score === 3,
                         'text-emerald-500': strength.score >= 4,
                       })}>
                         {strength.label}
@@ -328,13 +328,13 @@ function SignUpForm() {
                   error={errors.confirmPassword?.message}
                   placeholder={t('auth:signUp.confirmPasswordPlaceholder')}
                   autoComplete="new-password"
-                  leftIcon={<LockClosedIcon className="w-4 h-4 text-gray-400" />}
+                  leftIcon={<LockClosedIcon className="w-4 h-4 text-gray-500 dark:text-gray-400" />}
                   rightIcon={
                     <button
                       type="button"
                       tabIndex={-1}
                       onClick={() => setShowConfirm(v => !v)}
-                      className="text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 transition-colors"
+                      className="text-gray-500 dark:text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 transition-colors"
                       aria-label={showConfirm ? 'Hide password' : 'Show password'}
                     >
                       {showConfirm ? <EyeSlashIcon className="w-4 h-4" /> : <EyeIcon className="w-4 h-4" />}
@@ -348,20 +348,20 @@ function SignUpForm() {
                       {...register('terms')}
                       id="terms"
                       type="checkbox"
-                      className="h-4 w-4 mt-0.5 text-primary-600 focus-visible:ring-primary-500 border-gray-300 dark:border-gray-600 rounded flex-shrink-0"
+                      className="h-4 w-4 mt-0.5 text-primary-700 dark:text-primary-600 focus-visible:ring-primary-500 border-gray-300 dark:border-gray-600 rounded flex-shrink-0"
                     />
                     <label htmlFor="terms" className="text-xs text-gray-600 dark:text-gray-400 leading-snug">
                       {/* Split into parts rather than one interpolated string:
                           two links sit inside the sentence, and the pieces
                           reorder cleanly in Chinese (我同意 + 服務條款 + 與 + 隱私政策). */}
                       {t('auth:signUp.agreePrefix')}{' '}
-                      <Link href="/terms" className="text-primary-600 dark:text-primary-400 hover:underline">{t('auth:signUp.termsLink')}</Link>
+                      <Link href="/terms" className="text-primary-700 dark:text-primary-400 hover:underline">{t('auth:signUp.termsLink')}</Link>
                       {' '}{t('auth:signUp.agreeAnd')}{' '}
-                      <Link href="/privacy" className="text-primary-600 dark:text-primary-400 hover:underline">{t('auth:signUp.privacyLink')}</Link>
+                      <Link href="/privacy" className="text-primary-700 dark:text-primary-400 hover:underline">{t('auth:signUp.privacyLink')}</Link>
                     </label>
                   </div>
                   {errors.terms && (
-                    <p className="text-xs text-red-600 dark:text-red-400 ml-6">{errors.terms.message}</p>
+                    <p className="text-xs text-red-700 dark:text-red-400 ml-6">{errors.terms.message}</p>
                   )}
                 </div>
 

@@ -320,7 +320,7 @@ export function CreateGoalModal({ isOpen, onClose, defaults, returnToPortfolio }
                                             type="submit"
                                             disabled={createGoal.isPending}
                                             aria-disabled={createGoal.isPending}
-                                            className="px-6 py-2.5 min-h-[44px] bg-primary-600 hover:bg-primary-700 text-white rounded-lg transition-colors font-medium disabled:opacity-50 disabled:cursor-not-allowed focus:outline-none focus-visible:ring-2 focus-visible:ring-primary-500 focus-visible:ring-offset-2"
+                                            className="px-6 py-2.5 min-h-[44px] bg-primary-700 hover:bg-primary-800 text-white rounded-lg transition-colors font-medium disabled:opacity-50 disabled:cursor-not-allowed focus:outline-none focus-visible:ring-2 focus-visible:ring-primary-500 focus-visible:ring-offset-2"
                                         >
                                             {createGoal.isPending ? t('common:common.loading') : t('goals:create')}
                                         </button>

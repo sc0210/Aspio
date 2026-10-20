@@ -22,7 +22,7 @@ export function WhatsNewButton() {
                 : t('navigation.whatsNew', "What's New")}
             // p-2 alone measured 40x40 on a phone; hold a 44px floor on touch
             // screens and fall back to the tighter box once a pointer is likely.
-            className="relative p-2 min-w-[44px] min-h-[44px] sm:min-w-0 sm:min-h-0 rounded-lg text-gray-500 hover:text-gray-700 hover:bg-gray-100 dark:text-gray-400 dark:hover:text-gray-200 dark:hover:bg-gray-700 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-400 flex items-center justify-center"
+            className="relative p-2 min-w-[44px] min-h-[44px] sm:min-w-0 sm:min-h-0 rounded-lg text-gray-600 hover:text-gray-700 hover:bg-gray-100 dark:text-gray-400 dark:hover:text-gray-200 dark:hover:bg-gray-700 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-400 flex items-center justify-center"
         >
             <SparklesIcon className="w-6 h-6 md:w-5 md:h-5" />
             {hasUnseen && (

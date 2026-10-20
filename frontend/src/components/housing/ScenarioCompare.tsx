@@ -112,7 +112,7 @@ export function ScenarioCompare({ current, onLoad }: Props) {
                 <div className="mt-3 overflow-x-auto -mx-1 px-1">
                     <table className="w-full min-w-[560px] text-xs">
                         <thead>
-                            <tr className="text-left text-gray-400 dark:text-gray-500">
+                            <tr className="text-left text-gray-500 dark:text-gray-500">
                                 <th className="py-1.5 font-medium">{t('housing.scenarios.colName', 'Scenario')}</th>
                                 <th className="py-1.5 font-medium text-right">{t('housing.sim.housePrice', 'House price')}</th>
                                 <th className="py-1.5 font-medium text-right">{t('housing.sim.downPct', 'Down payment')}</th>
@@ -142,9 +142,9 @@ export function ScenarioCompare({ current, onLoad }: Props) {
                                         <td className="py-2 text-right tabular-nums text-gray-700 dark:text-gray-300">{r.inputs.downPaymentPct}%</td>
                                         <td className="py-2 text-right tabular-nums text-gray-700 dark:text-gray-300">{r.inputs.mortgageRatePct}%</td>
                                         <td className="py-2 text-right tabular-nums text-gray-700 dark:text-gray-300">{money(r.result.monthlyPayment)}</td>
-                                        <td className={cn('py-2 text-right tabular-nums font-semibold', buyWins ? 'text-indigo-600 dark:text-indigo-300' : 'text-amber-600 dark:text-amber-400')}>
+                                        <td className={cn('py-2 text-right tabular-nums font-semibold', buyWins ? 'text-indigo-600 dark:text-indigo-300' : 'text-amber-700 dark:text-amber-400')}>
                                             {buyWins ? t('housing.sim.buy', 'Buy') : t('housing.sim.rent', 'Rent')} +{money(Math.abs(r.result.finalAdvantage))}
-                                            <span className="ml-1 font-normal text-gray-400">· {r.inputs.holdingYears}{t('housing.sim.yearShort', 'y')}</span>
+                                            <span className="ml-1 font-normal text-gray-500 dark:text-gray-400">· {r.inputs.holdingYears}{t('housing.sim.yearShort', 'y')}</span>
                                         </td>
                                         <td className="py-2 text-right tabular-nums text-gray-700 dark:text-gray-300">
                                             {r.result.breakEvenYear === null ? '—' : t('housing.scenarios.yearN', 'Year {{y}}', { y: r.result.breakEvenYear })}
@@ -153,7 +153,7 @@ export function ScenarioCompare({ current, onLoad }: Props) {
                                             {!isCurrent && (
                                                 <button type="button" onClick={() => update(saved.filter((s) => s.id !== r.id))}
                                                     aria-label={t('housing.scenarios.remove', 'Remove {{name}}', { name: r.name })}
-                                                    className="p-1 rounded text-gray-400 hover:text-gray-700 dark:hover:text-gray-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-400">
+                                                    className="p-1 rounded text-gray-600 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-400">
                                                     <XMarkIcon className="w-3.5 h-3.5" />
                                                 </button>
                                             )}

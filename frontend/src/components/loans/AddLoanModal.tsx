@@ -261,7 +261,7 @@ export function AddLoanModal({ onClose }: Props) {
             <button
               type="submit"
               disabled={createLoan.isPending}
-              className="flex-1 py-2.5 rounded-xl bg-primary-600 hover:bg-primary-700 text-sm font-medium text-white transition-colors disabled:opacity-50"
+              className="flex-1 py-2.5 rounded-xl bg-primary-700 hover:bg-primary-800 text-sm font-medium text-white transition-colors disabled:opacity-50"
             >
               {createLoan.isPending ? t('addModal.creating') : t('addModal.add')}
             </button>

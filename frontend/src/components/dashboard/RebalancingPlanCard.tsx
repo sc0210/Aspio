@@ -96,12 +96,12 @@ export function RebalancingPlanCard({
           </p>
         </div>
         {availableFunds >= totalDeficit ? (
-          <div className="flex items-center text-green-600 dark:text-green-400">
+          <div className="flex items-center text-green-700 dark:text-green-400">
             <CheckCircleIcon className="w-5 h-5 mr-2" />
             <span className="text-sm font-medium">{t('rebalancing.plan.fundsSufficient')}</span>
           </div>
         ) : (
-          <div className="flex items-center text-orange-600 dark:text-orange-400">
+          <div className="flex items-center text-orange-700 dark:text-orange-400">
             <InformationCircleIcon className="w-5 h-5 mr-2" />
             <span className="text-sm font-medium">{t('rebalancing.plan.fundsShort')}</span>
           </div>
@@ -125,7 +125,7 @@ export function RebalancingPlanCard({
 
         <div className="bg-orange-50 dark:bg-orange-900/20 rounded-lg p-4">
           <div className="flex items-center mb-2">
-            <BanknotesIcon className="w-5 h-5 text-orange-600 dark:text-orange-400 mr-2" />
+            <BanknotesIcon className="w-5 h-5 text-orange-700 dark:text-orange-400 mr-2" />
             <p className="text-sm text-orange-900 dark:text-orange-300 font-medium">{t('rebalancing.plan.totalSell')}</p>
           </div>
           <p className="text-2xl font-bold text-orange-900 dark:text-orange-100">
@@ -189,7 +189,7 @@ export function RebalancingPlanCard({
                           {action.reason}
                         </p>
                         <div className="flex items-center gap-4 text-sm">
-                          <span className="text-orange-600 dark:text-orange-400 font-medium">
+                          <span className="text-orange-700 dark:text-orange-400 font-medium">
                             {formatCurrency(action.amount)}
                           </span>
                           {action.shares != null && action.shares > 0 && action.currentPrice != null && action.currentPrice > 0 && (
@@ -206,7 +206,7 @@ export function RebalancingPlanCard({
                       </div>
                       <ChevronRightIcon className={cn(
                         'w-5 h-5 transition-transform',
-                        isSelected ? 'rotate-90 text-orange-600' : 'text-gray-400'
+                        isSelected ? 'rotate-90 text-orange-700 dark:text-orange-600' : 'text-gray-500 dark:text-gray-400'
                       )} />
                     </div>
                   </div>
@@ -270,7 +270,7 @@ export function RebalancingPlanCard({
                       </div>
                       <ChevronRightIcon className={cn(
                         'w-5 h-5 transition-transform',
-                        isSelected ? 'rotate-90 text-blue-600' : 'text-gray-400'
+                        isSelected ? 'rotate-90 text-blue-600' : 'text-gray-500 dark:text-gray-400'
                       )} />
                     </div>
                   </div>

@@ -99,7 +99,7 @@ export function AchievementDetailModal({ achievement, onClose }: AchievementDeta
                         type="button"
                         onClick={onClose}
                         aria-label="Close"
-                        className="absolute right-3 top-3 flex h-9 w-9 items-center justify-center rounded-full text-gray-400 hover:bg-black/5 dark:hover:bg-white/10 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-500/60"
+                        className="absolute right-3 top-3 flex h-9 w-9 items-center justify-center rounded-full text-gray-500 dark:text-gray-400 hover:bg-black/5 dark:hover:bg-white/10 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-500/60"
                       >
                         <span className="text-xl leading-none">×</span>
                       </button>

@@ -336,7 +336,7 @@ function StreakStrip({ streak, longest }: { streak: number; longest: number }) {
             >
               {d.active ? '🔥' : '·'}
             </div>
-            <span className="text-xs font-medium uppercase text-gray-400 dark:text-gray-500">
+            <span className="text-xs font-medium uppercase text-gray-500 dark:text-gray-500">
               {d.label}
             </span>
           </div>
@@ -378,7 +378,7 @@ function AchievementCard({ a, onSelect }: { a: AchievementProgress; onSelect: (a
       </div>
 
       {a.is_unlocked ? (
-        <p className="text-xs text-prosperity-600 dark:text-prosperity-400 font-medium">
+        <p className="text-xs text-prosperity-700 dark:text-prosperity-400 font-medium">
           {t('goals:achievements.earnedOn', { when: a.unlocked_at ? relativeTime(a.unlocked_at, t) : '' })}
         </p>
       ) : (
@@ -403,7 +403,7 @@ function AchievementCard({ a, onSelect }: { a: AchievementProgress; onSelect: (a
         </div>
       )}
 
-      <p className="text-xs text-primary-600 dark:text-primary-400 font-medium">+{a.points_reward} XP</p>
+      <p className="text-xs text-primary-700 dark:text-primary-400 font-medium">+{a.points_reward} XP</p>
     </button>
   );
 }
@@ -564,7 +564,7 @@ export default function AchievementsPage() {
                     <span className="text-sm font-medium text-gray-700 dark:text-gray-300">
                       {stats.experience_points.toLocaleString()} XP
                     </span>
-                    <span className="text-xs text-gray-400 dark:text-gray-500">
+                    <span className="text-xs text-gray-500 dark:text-gray-500">
                       {stats.experience_to_next_level.toLocaleString()} to next level
                     </span>
                   </div>
@@ -596,7 +596,7 @@ export default function AchievementsPage() {
                   type="button"
                   onClick={handleCheck}
                   disabled={checkAchievements.isPending}
-                  className="ml-auto inline-flex items-center gap-2 rounded-lg bg-primary-600 px-4 py-2.5 min-h-[44px] text-sm font-medium text-white shadow-sm transition-colors hover:bg-primary-700 disabled:opacity-60 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-500/60 focus-visible:ring-offset-2 dark:focus-visible:ring-offset-gray-800"
+                  className="ml-auto inline-flex items-center gap-2 rounded-lg bg-primary-700 px-4 py-2.5 min-h-[44px] text-sm font-medium text-white shadow-sm transition-colors hover:bg-primary-800 disabled:opacity-60 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-500/60 focus-visible:ring-offset-2 dark:focus-visible:ring-offset-gray-800"
                 >
                   <span className={cn('text-base', checkAchievements.isPending && 'animate-spin')} aria-hidden>
                     {checkAchievements.isPending ? '⏳' : '🔄'}
@@ -638,10 +638,10 @@ export default function AchievementsPage() {
                     ))}
                   </div>
                 )}
-                <p className="text-center px-4 pt-1 text-xs font-semibold leading-relaxed text-gray-400 dark:text-gray-500">
+                <p className="text-center px-4 pt-1 text-xs font-semibold leading-relaxed text-gray-500 dark:text-gray-500">
                   {t('dashboard:mobile.fullAchievements', 'Every badge, scores, search & filters')}
                   <br />
-                  <span className="text-primary-600 dark:text-primary-400">→ {t('dashboard:mobile.onLargerScreen', 'on tablet / desktop')}</span>
+                  <span className="text-primary-700 dark:text-primary-400">→ {t('dashboard:mobile.onLargerScreen', 'on tablet / desktop')}</span>
                 </p>
               </section>
             )}
@@ -676,7 +676,7 @@ export default function AchievementsPage() {
                       className={cn(
                         'px-4 py-2.5 min-h-[44px] text-xs font-medium capitalize transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-primary-500/60',
                         tab === tabKey
-                          ? 'bg-primary-600 text-white'
+                          ? 'bg-primary-700 text-white'
                           : 'bg-white dark:bg-gray-800 text-gray-600 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-gray-700'
                       )}
                     >
@@ -689,7 +689,7 @@ export default function AchievementsPage() {
               {/* Toolbar: search + category + sort */}
               <div className="flex flex-wrap items-center gap-2 mb-4">
                 <div className="relative flex-1 min-w-[180px]">
-                  <span className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" aria-hidden>🔍</span>
+                  <span className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-gray-500 dark:text-gray-400" aria-hidden>🔍</span>
                   <input
                     type="search"
                     value={search}

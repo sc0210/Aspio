@@ -451,7 +451,7 @@ export default function AssetDetailPage() {
                     <div className="flex items-center justify-between">
                         <Link
                             href="/portfolio"
-                            className="inline-flex items-center gap-1.5 text-sm text-gray-500 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white transition-colors"
+                            className="inline-flex items-center gap-1.5 text-sm text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white transition-colors"
                         >
                             <ArrowLeftIcon className="w-4 h-4" />
                             {t('portfolio:holdingDetail.backToPortfolio')}
@@ -477,7 +477,7 @@ export default function AssetDetailPage() {
                                     {prevSymbol ?? '—'}
                                 </button>
 
-                                <span className="text-xs text-gray-400 dark:text-gray-500 px-1 tabular-nums">
+                                <span className="text-xs text-gray-500 dark:text-gray-500 px-1 tabular-nums">
                                     {currentIndex + 1} / {tradableSymbols.length}
                                 </span>
 
@@ -526,7 +526,7 @@ export default function AssetDetailPage() {
                                     </div>
                                     {holding
                                         ? <p className="mt-1 text-sm text-gray-500 dark:text-gray-400">{holding.name}</p>
-                                        : <p className="mt-1 text-sm text-gray-400 dark:text-gray-500">{t('portfolio:holdingDetail.notInPortfolio')}</p>
+                                        : <p className="mt-1 text-sm text-gray-500 dark:text-gray-500">{t('portfolio:holdingDetail.notInPortfolio')}</p>
                                     }
                                 </>
                             )}
@@ -543,8 +543,8 @@ export default function AssetDetailPage() {
                                         className={cn(
                                             'flex-1 sm:flex-none px-3 py-1.5 text-xs font-semibold rounded-md transition-colors whitespace-nowrap focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-500/60',
                                             period === opt.value
-                                                ? 'bg-primary-600 text-white shadow-sm'
-                                                : 'text-gray-500 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white hover:bg-gray-100 dark:hover:bg-gray-700'
+                                                ? 'bg-primary-700 text-white shadow-sm'
+                                                : 'text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white hover:bg-gray-100 dark:hover:bg-gray-700'
                                         )}
                                     >
                                         {opt.label}
@@ -554,7 +554,7 @@ export default function AssetDetailPage() {
                             <button
                                 onClick={handleSync}
                                 disabled={isSyncing || isFetching}
-                                className="shrink-0 p-2 text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 rounded-lg bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors disabled:opacity-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-500/60"
+                                className="shrink-0 p-2 text-gray-500 dark:text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 rounded-lg bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors disabled:opacity-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-500/60"
                                 title={t('portfolio:holdingDetail.syncPrices')}
                                 aria-label={t('portfolio:holdingDetail.syncPrices')}
                             >
@@ -593,8 +593,8 @@ export default function AssetDetailPage() {
                             )}>
                                 <div className="flex items-center gap-1.5 mb-1">
                                     {isPositiveReturn
-                                        ? <ArrowTrendingUpIcon className="w-3.5 h-3.5 text-success-600 dark:text-success-400" />
-                                        : <ArrowTrendingDownIcon className="w-3.5 h-3.5 text-error-600 dark:text-error-400" />}
+                                        ? <ArrowTrendingUpIcon className="w-3.5 h-3.5 text-success-700 dark:text-success-400" />
+                                        : <ArrowTrendingDownIcon className="w-3.5 h-3.5 text-error-700 dark:text-error-400" />}
                                     <p className={cn('text-xs font-bold uppercase tracking-wider',
                                         isPositiveReturn ? 'text-success-700 dark:text-success-300' : 'text-error-700 dark:text-error-300'
                                     )}>{t('portfolio:holdingDetail.totalReturn')}</p>
@@ -634,7 +634,7 @@ export default function AssetDetailPage() {
                                         </p>
                                     </>
                                 ) : (
-                                    <p className="text-lg font-bold text-gray-400 dark:text-gray-500">—</p>
+                                    <p className="text-lg font-bold text-gray-500 dark:text-gray-500">—</p>
                                 )}
                             </div>
                         </div>
@@ -715,7 +715,7 @@ export default function AssetDetailPage() {
                             <div className="h-72 flex flex-col items-center justify-center">
                                 <div className="text-center max-w-sm">
                                     <div className="w-16 h-16 mx-auto mb-4 rounded-xl bg-gray-100 dark:bg-gray-800 flex items-center justify-center">
-                                        <ChartBarSquareIcon className="w-8 h-8 text-gray-400 dark:text-gray-600" />
+                                        <ChartBarSquareIcon className="w-8 h-8 text-gray-500 dark:text-gray-600" />
                                     </div>
                                     <p className="text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">{t('portfolio:holdingDetail.noHistory')}</p>
                                     <p className="text-xs text-gray-500 dark:text-gray-400 mb-4">
@@ -726,7 +726,7 @@ export default function AssetDetailPage() {
                                     <button
                                         onClick={handleSync}
                                         disabled={isSyncing}
-                                        className="inline-flex items-center gap-2 px-4 py-2 bg-primary-600 hover:bg-primary-700 text-white text-sm font-semibold rounded-lg transition-colors disabled:opacity-50"
+                                        className="inline-flex items-center gap-2 px-4 py-2 bg-primary-700 hover:bg-primary-800 text-white text-sm font-semibold rounded-lg transition-colors disabled:opacity-50"
                                     >
                                         <ArrowPathIcon className={cn('w-4 h-4', isSyncing && 'animate-spin')} />
                                         {isSyncing ? 'Syncing…' : 'Sync Historical Data'}
@@ -760,7 +760,7 @@ export default function AssetDetailPage() {
                             <div className="px-4 sm:px-6 py-4 border-b border-gray-200 dark:border-gray-700">
                                 <h2 className="text-sm font-semibold text-gray-900 dark:text-white">
                                     {t('portfolio:holdingDetail.purchaseLots')}
-                                    <span className="ml-2 text-xs font-normal text-gray-400 dark:text-gray-500">
+                                    <span className="ml-2 text-xs font-normal text-gray-500 dark:text-gray-500">
                                         {t('portfolio:holdingDetail.lotCount', { count: lots.length, defaultValue: '{{count}} lots' })}
                                     </span>
                                 </h2>
@@ -806,11 +806,11 @@ export default function AssetDetailPage() {
                                                     <td className="px-4 sm:px-6 py-3 text-sm text-right whitespace-nowrap">
                                                         {isValueVisible ? (
                                                             <div>
-                                                                <span className={cn('font-medium', isLotUp ? 'text-success-600 dark:text-success-400' : 'text-error-600 dark:text-error-400')}>
+                                                                <span className={cn('font-medium', isLotUp ? 'text-success-700 dark:text-success-400' : 'text-error-700 dark:text-error-400')}>
                                                                     {isLotUp ? '+' : ''}{formatCurrency(lotGain, currency)}
                                                                 </span>
                                                                 {lotGainPct != null && (
-                                                                    <span className={cn('block text-xs', isLotUp ? 'text-success-500 dark:text-success-400' : 'text-error-500 dark:text-error-400')}>
+                                                                    <span className={cn('block text-xs', isLotUp ? 'text-success-700 dark:text-success-400' : 'text-error-700 dark:text-error-400')}>
                                                                         {isLotUp ? '+' : ''}{lotGainPct.toFixed(2)}%
                                                                     </span>
                                                                 )}
@@ -841,7 +841,7 @@ export default function AssetDetailPage() {
                                                             {baseRate !== undefined && (
                                                                 // Same rule as the holdings list: absent when the
                                                                 // pair cannot be priced, never a guess.
-                                                                <div className="text-xs font-normal text-gray-400 dark:text-gray-500 tabular-nums">
+                                                                <div className="text-xs font-normal text-gray-500 dark:text-gray-500 tabular-nums">
                                                                     ≈ {formatCurrency(holding.totalValue * baseRate, BASE_CURRENCY)}
                                                                 </div>
                                                             )}
@@ -852,10 +852,10 @@ export default function AssetDetailPage() {
                                                     {isValueVisible ? (
                                                         <div>
                                                             {/* The holding's own sign, as on the phone's Total card */}
-                                                            <span className={cn('font-medium', (holding.gainLoss ?? 0) >= 0 ? 'text-success-600 dark:text-success-400' : 'text-error-600 dark:text-error-400')}>
+                                                            <span className={cn('font-medium', (holding.gainLoss ?? 0) >= 0 ? 'text-success-700 dark:text-success-400' : 'text-error-700 dark:text-error-400')}>
                                                                 {(holding.gainLoss ?? 0) >= 0 ? '+' : ''}{formatCurrency(holding.gainLoss, currency)}
                                                             </span>
-                                                            <span className={cn('block text-xs', (holding.gainLoss ?? 0) >= 0 ? 'text-success-500' : 'text-error-500')}>
+                                                            <span className={cn('block text-xs', (holding.gainLoss ?? 0) >= 0 ? 'text-success-700 dark:text-success-500' : 'text-error-700 dark:text-error-500')}>
                                                                 {(holding.gainLoss ?? 0) >= 0 ? '+' : ''}{(holding.gainLossPercentage ?? 0).toFixed(2)}%
                                                             </span>
                                                         </div>

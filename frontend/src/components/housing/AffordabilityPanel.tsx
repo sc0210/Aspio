@@ -91,9 +91,9 @@ function WanField({
                         aria-label={label}
                     />
                 ) : (
-                    <span className="w-full text-right tabular-nums text-gray-400 dark:text-gray-500 text-sm">•••</span>
+                    <span className="w-full text-right tabular-nums text-gray-500 dark:text-gray-500 text-sm">•••</span>
                 )}
-                <span className="text-xs text-gray-400 dark:text-gray-500">{t('housing.unitWan')}</span>
+                <span className="text-xs text-gray-500 dark:text-gray-500">{t('housing.unitWan')}</span>
             </div>
         </div>
     );
@@ -115,7 +115,7 @@ function RawField({
                     aria-label={label}
                 />
             ) : (
-                <span className="w-full block text-right tabular-nums text-gray-400 dark:text-gray-500 text-sm">•••</span>
+                <span className="w-full block text-right tabular-nums text-gray-500 dark:text-gray-500 text-sm">•••</span>
             )}
         </div>
     );
@@ -133,14 +133,14 @@ function Slider({
         <div>
             <div className="flex items-baseline justify-between mb-1">
                 <label className="text-sm font-medium text-gray-500 dark:text-gray-400">{label}</label>
-                <span className="text-sm font-bold text-emerald-600 dark:text-emerald-300 tabular-nums">
+                <span className="text-sm font-bold text-emerald-700 dark:text-emerald-300 tabular-nums">
                     {value}{suffix}
                 </span>
             </div>
             <input
                 type="range" min={min} max={max} step={step} value={value}
                 onChange={(e) => onChange(parseFloat(e.target.value), step)}
-                className="w-full h-1.5 bg-gray-200 dark:bg-gray-700 rounded-lg appearance-none cursor-pointer accent-emerald-500 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-400"
+                className="w-full h-11 sm:h-6 cursor-pointer accent-emerald-500 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-400"
                 aria-label={label}
             />
         </div>
@@ -174,7 +174,7 @@ function Fold({
                     {title}
                 </span>
                 <ChevronDownIcon
-                    className={cn('w-4 h-4 shrink-0 text-gray-400 transition-transform', open && 'rotate-180')}
+                    className={cn('w-4 h-4 shrink-0 text-gray-500 dark:text-gray-400 transition-transform', open && 'rotate-180')}
                 />
             </button>
             {open && <div className="mt-2">{children}</div>}
@@ -199,7 +199,7 @@ function LimitRow({
             )}>
                 {label}
                 {binds && (
-                    <span className="ml-1 text-xs uppercase tracking-wide text-emerald-600 dark:text-emerald-300">
+                    <span className="ml-1 text-xs uppercase tracking-wide text-emerald-700 dark:text-emerald-300">
                         {bindsLabel}
                     </span>
                 )}
@@ -293,7 +293,7 @@ export function AffordabilityPanel({ inputs, cashFlowBasisMonths }: Props) {
                         <BanknotesIcon className="w-4 h-4 text-emerald-500" />
                         {t('housing.afford.title', 'What can you afford right now?')}
                     </h3>
-                    <p className="text-sm text-gray-400 dark:text-gray-500 mt-1">
+                    <p className="text-sm text-gray-500 dark:text-gray-500 mt-1">
                         {dirty
                             ? t('housing.afford.subtitleAdjusted', 'Showing an adjusted scenario — not your live figures.')
                             : cashFlowBasisMonths > 0
@@ -387,7 +387,7 @@ export function AffordabilityPanel({ inputs, cashFlowBasisMonths }: Props) {
                                 type="checkbox"
                                 checked={withRaises}
                                 onChange={(e) => setWithRaises(e.target.checked)}
-                                className="rounded border-gray-300 dark:border-gray-600 text-primary-600 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-400"
+                                className="rounded border-gray-300 dark:border-gray-600 text-primary-700 dark:text-primary-600 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-400"
                             />
                             {t('housing.afford.withRaises', { defaultValue: 'with {{pct}}%/yr raises', pct: RAISE_PCT })}
                         </label>
@@ -397,7 +397,7 @@ export function AffordabilityPanel({ inputs, cashFlowBasisMonths }: Props) {
                                 <div className="grid grid-cols-4 gap-2">
                                     {projection.milestones.map((m) => (
                                         <div key={m.year} className="rounded-lg bg-gray-50 dark:bg-gray-700/40 p-2.5 text-center">
-                                            <div className="text-xs text-gray-400 dark:text-gray-500">
+                                            <div className="text-xs text-gray-500 dark:text-gray-500">
                                                 {t('housing.afford.inYears', { defaultValue: '+{{n}}y', n: m.year })}
                                             </div>
                                             <div className="mt-0.5 text-sm font-bold text-gray-800 dark:text-gray-100 tabular-nums">
@@ -437,7 +437,7 @@ export function AffordabilityPanel({ inputs, cashFlowBasisMonths }: Props) {
                         title={t('housing.afford.adjustTitle', 'Try a different situation')}
                         icon={<AdjustmentsHorizontalIcon className="w-3.5 h-3.5 text-emerald-500" />}
                     >
-                    <p className="text-xs text-gray-400 dark:text-gray-500 mb-2">
+                    <p className="text-xs text-gray-500 dark:text-gray-500 mb-2">
                         {t('housing.afford.adjustHint', 'Change anything below to see how the ceiling moves.')}
                     </p>
 
@@ -476,7 +476,7 @@ export function AffordabilityPanel({ inputs, cashFlowBasisMonths }: Props) {
                             value={returnPct} min={0} max={12} step={0.5} suffix="%/yr"
                             onChange={(v) => setReturnPct(v)}
                         />
-                        <p className="mt-1 text-xs text-gray-400 dark:text-gray-500">
+                        <p className="mt-1 text-xs text-gray-500 dark:text-gray-500">
                             {t('housing.afford.returnHint', 'Affects the projection only — today’s ceiling uses what you already hold.')}
                         </p>
                     </div>
@@ -504,7 +504,7 @@ export function AffordabilityPanel({ inputs, cashFlowBasisMonths }: Props) {
                     <div className="pt-2 border-t border-gray-200 dark:border-gray-600">
                         <Fold
                             title={t('housing.afford.breakdownTitle', 'Three limits — the lowest wins')}
-                            icon={<BanknotesIcon className="w-3.5 h-3.5 text-gray-400" />}
+                            icon={<BanknotesIcon className="w-3.5 h-3.5 text-gray-500 dark:text-gray-400" />}
                         >
                         <div className="space-y-0.5">
                             <LimitRow
@@ -540,7 +540,7 @@ export function AffordabilityPanel({ inputs, cashFlowBasisMonths }: Props) {
                 </div>
             </div>
 
-            <p className="mt-3 text-xs leading-relaxed text-gray-400 dark:text-gray-500">
+            <p className="mt-3 text-xs leading-relaxed text-gray-500 dark:text-gray-500">
                 {t(
                     'housing.afford.disclaimer',
                     'Assumes a safety buffer of six months of your own expenses after buying, and that you keep at least a tenth of your income spare each month. Projections hold your spending flat and are an estimate, not advice.',

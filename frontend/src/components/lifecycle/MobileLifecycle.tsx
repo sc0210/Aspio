@@ -42,10 +42,10 @@ export function MobileLifecycle() {
                     </>
                 )}
 
-                <p className="text-center px-4 pt-1 text-xs font-semibold leading-relaxed text-gray-400 dark:text-gray-500">
+                <p className="text-center px-4 pt-1 text-xs font-semibold leading-relaxed text-gray-500 dark:text-gray-500">
                     {t('dashboard:mobile.fullLifecycle', 'Leverage history, glidepath, spread & loan picker')}
                     <br />
-                    <span className="text-primary-600 dark:text-primary-400">→ {t('dashboard:mobile.onLargerScreen', 'on tablet / desktop')}</span>
+                    <span className="text-primary-700 dark:text-primary-400">→ {t('dashboard:mobile.onLargerScreen', 'on tablet / desktop')}</span>
                 </p>
             </div>
         </DashboardLayout>

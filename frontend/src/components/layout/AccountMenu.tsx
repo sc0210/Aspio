@@ -72,10 +72,10 @@ export function AccountMenu({ collapsed, onNavigate }: AccountMenuProps) {
     cn(
       'flex w-full items-center gap-3 px-3 py-2.5 text-sm font-medium rounded-lg transition-colors text-left',
       tone === 'danger'
-        ? 'text-error-500 dark:text-error-400'
+        ? 'text-error-700 dark:text-error-400'
         : 'text-gray-600 dark:text-gray-300',
       active && (tone === 'danger'
-        ? 'bg-error-50 text-error-600 dark:bg-error-900/20 dark:text-error-300'
+        ? 'bg-error-50 text-error-700 dark:bg-error-900/20 dark:text-error-300'
         : 'bg-gray-100 text-gray-900 dark:bg-gray-700/60 dark:text-white'),
     );
 
@@ -109,11 +109,11 @@ export function AccountMenu({ collapsed, onNavigate }: AccountMenuProps) {
           <>
             <span className="min-w-0 flex-1 text-left">
               <span className="block truncate text-sm font-semibold text-gray-900 dark:text-white">{name}</span>
-              <span className="block text-xs font-medium text-primary-600 dark:text-primary-400">
+              <span className="block text-xs font-medium text-primary-700 dark:text-primary-400">
                 {isDemoMode ? '✨ Premium' : '🔰 Basic'}
               </span>
             </span>
-            <ChevronUpDownIcon className="w-4 h-4 flex-shrink-0 text-gray-400" />
+            <ChevronUpDownIcon className="w-4 h-4 flex-shrink-0 text-gray-500 dark:text-gray-400" />
           </>
         )}
       </MenuButton>
@@ -125,7 +125,7 @@ export function AccountMenu({ collapsed, onNavigate }: AccountMenuProps) {
         {/* Language — buttons rather than menu items, so picking one does not
             close the menu out from under a reader comparing the two. */}
         <div className="flex items-center gap-2 px-3 py-2">
-          <GlobeAltIcon className="w-4 h-4 flex-shrink-0 text-gray-400" />
+          <GlobeAltIcon className="w-4 h-4 flex-shrink-0 text-gray-500 dark:text-gray-400" />
           <span className="flex-1 text-sm text-gray-600 dark:text-gray-400">
             {t('navigation.language', 'Language')}
           </span>
@@ -139,7 +139,7 @@ export function AccountMenu({ collapsed, onNavigate }: AccountMenuProps) {
                   'rounded-md px-2 py-0.5 text-xs font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-400',
                   i18n.language === lang.code
                     ? 'bg-primary-100 text-primary-700 dark:bg-primary-900/40 dark:text-primary-300'
-                    : 'text-gray-500 hover:bg-gray-100 hover:text-gray-700 dark:text-gray-400 dark:hover:bg-gray-700 dark:hover:text-gray-200',
+                    : 'text-gray-600 hover:bg-gray-100 hover:text-gray-700 dark:text-gray-400 dark:hover:bg-gray-700 dark:hover:text-gray-200',
                 )}
               >
                 {lang.flag} {lang.code === 'zh-TW' ? '繁中' : 'EN'}
@@ -152,8 +152,8 @@ export function AccountMenu({ collapsed, onNavigate }: AccountMenuProps) {
           {({ focus }) => (
             <button type="button" onClick={toggleValueVisibility} className={itemClass(focus)}>
               {isValueVisible
-                ? <EyeSlashIcon className="w-4 h-4 flex-shrink-0 text-gray-400" />
-                : <EyeIcon className="w-4 h-4 flex-shrink-0 text-warning-500 dark:text-warning-400" />}
+                ? <EyeSlashIcon className="w-4 h-4 flex-shrink-0 text-gray-500 dark:text-gray-400" />
+                : <EyeIcon className="w-4 h-4 flex-shrink-0 text-warning-700 dark:text-warning-400" />}
               {isValueVisible
                 ? t('navigation.hideValues', 'Hide values')
                 : t('navigation.showValues', 'Show values')}
@@ -169,11 +169,11 @@ export function AccountMenu({ collapsed, onNavigate }: AccountMenuProps) {
               aria-current={pathname.startsWith('/changelog') ? 'page' : undefined}
               className={itemClass(focus)}
             >
-              <MegaphoneIcon className="w-4 h-4 flex-shrink-0 text-gray-400" />
+              <MegaphoneIcon className="w-4 h-4 flex-shrink-0 text-gray-500 dark:text-gray-400" />
               <span className="flex items-center gap-2">
                 {t('navigation.whatsNew', "What's New")}
                 {hasWhatsNew && (
-                  <span className="rounded-full bg-primary-50 px-1.5 py-0.5 text-xs font-semibold text-primary-600 dark:bg-primary-900/30 dark:text-primary-400">
+                  <span className="rounded-full bg-primary-50 px-1.5 py-0.5 text-xs font-semibold text-primary-700 dark:bg-primary-900/30 dark:text-primary-400">
                     {t('navigation.new', 'New')}
                   </span>
                 )}
@@ -190,7 +190,7 @@ export function AccountMenu({ collapsed, onNavigate }: AccountMenuProps) {
               aria-current={pathname.startsWith('/settings') ? 'page' : undefined}
               className={itemClass(focus)}
             >
-              <Cog6ToothIcon className="w-4 h-4 flex-shrink-0 text-gray-400" />
+              <Cog6ToothIcon className="w-4 h-4 flex-shrink-0 text-gray-500 dark:text-gray-400" />
               {t('navigation.settings')}
             </Link>
           )}
@@ -216,7 +216,7 @@ export function AccountMenu({ collapsed, onNavigate }: AccountMenuProps) {
             <span className="rounded-full bg-primary-100 px-2 py-0.5 text-xs font-semibold text-primary-700 dark:bg-primary-900/40 dark:text-primary-300">
               Lv {level}
             </span>
-            <span className="text-xs text-gray-400 dark:text-gray-500">{xp} XP</span>
+            <span className="text-xs text-gray-500 dark:text-gray-500">{xp} XP</span>
           </div>
           <div
             role="progressbar"

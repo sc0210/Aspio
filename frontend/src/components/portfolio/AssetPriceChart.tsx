@@ -79,7 +79,7 @@ function CustomTooltip({ active, payload, currency, isValueVisible, avgCost }: C
                     <span className="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider">Day Change</span>
                     <span className={cn(
                         'text-xs font-bold tabular-nums',
-                        isUp ? 'text-success-600 dark:text-success-400' : 'text-error-600 dark:text-error-400'
+                        isUp ? 'text-success-700 dark:text-success-400' : 'text-error-700 dark:text-error-400'
                     )}>
                         {isValueVisible ? `${isUp ? '+' : ''}${formatCurrency(d.change, currency)} (${d.changePercent.toFixed(2)}%)` : '•••'}
                     </span>
@@ -89,7 +89,7 @@ function CustomTooltip({ active, payload, currency, isValueVisible, avgCost }: C
                         <span className="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider">vs Avg Cost</span>
                         <span className={cn(
                             'text-xs font-bold tabular-nums',
-                            d.returnAmount >= 0 ? 'text-success-600 dark:text-success-400' : 'text-error-600 dark:text-error-400'
+                            d.returnAmount >= 0 ? 'text-success-700 dark:text-success-400' : 'text-error-700 dark:text-error-400'
                         )}>
                             {isValueVisible
                                 ? `${d.returnAmount >= 0 ? '+' : ''}${formatCurrency(d.returnAmount, currency)} (${d.returnPercent.toFixed(2)}%)`

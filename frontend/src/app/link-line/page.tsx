@@ -75,7 +75,7 @@ function LinkLineContent() {
         {/* Header */}
         <div className="flex items-center justify-center gap-3 mb-6">
           {LineLogo}
-          <span className="text-gray-400 text-2xl font-light">×</span>
+          <span className="text-gray-500 dark:text-gray-400 text-2xl font-light">×</span>
           <span className="text-xl font-bold text-gray-900 dark:text-white">Aspiro</span>
         </div>
 
@@ -114,7 +114,7 @@ function LinkLineContent() {
         {state === 'success' && (
           <div className="flex flex-col items-center gap-4 py-4">
             <div className="w-14 h-14 rounded-full bg-green-100 dark:bg-green-900/30 flex items-center justify-center">
-              <svg className="w-7 h-7 text-green-600 dark:text-green-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <svg className="w-7 h-7 text-green-700 dark:text-green-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
               </svg>
             </div>
@@ -127,7 +127,7 @@ function LinkLineContent() {
               )}
             </div>
             <p className="text-sm text-center text-gray-500 dark:text-gray-400">
-              {t('common:lineLink.tryPrefix')} <span className="font-mono bg-gray-100 dark:bg-gray-700 px-1 rounded">/balance</span> {t('common:lineLink.tryOr')} <span className="font-mono bg-gray-100 dark:bg-gray-700 px-1 rounded">/add 150 coffee</span>
+              {t('common:lineLink.tryPrefix')} <span className="font-mono bg-gray-100 dark:bg-gray-700 px-1 rounded text-gray-700 dark:text-inherit">/balance</span> {t('common:lineLink.tryOr')} <span className="font-mono bg-gray-100 dark:bg-gray-700 px-1 rounded text-gray-700 dark:text-inherit">/add 150 coffee</span>
             </p>
           </div>
         )}
@@ -135,7 +135,7 @@ function LinkLineContent() {
         {state === 'error' && (
           <div className="flex flex-col items-center gap-4 py-4">
             <div className="w-14 h-14 rounded-full bg-red-100 dark:bg-red-900/30 flex items-center justify-center">
-              <svg className="w-7 h-7 text-red-600 dark:text-red-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <svg className="w-7 h-7 text-red-700 dark:text-red-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
               </svg>
             </div>
@@ -144,7 +144,7 @@ function LinkLineContent() {
               <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">{errorMsg}</p>
             </div>
             <p className="text-sm text-center text-gray-500 dark:text-gray-400">
-              {t('common:lineLink.runPrefix')} <span className="font-mono bg-gray-100 dark:bg-gray-700 px-1 rounded">/link</span> {t('common:lineLink.runSuffix')}
+              {t('common:lineLink.runPrefix')} <span className="font-mono bg-gray-100 dark:bg-gray-700 px-1 rounded text-gray-700 dark:text-inherit">/link</span> {t('common:lineLink.runSuffix')}
             </p>
           </div>
         )}

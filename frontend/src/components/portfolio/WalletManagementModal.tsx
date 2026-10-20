@@ -140,7 +140,7 @@ export function WalletManagementModal({
                         </DialogTitle>
                         <button
                             onClick={handleClose}
-                            className="text-gray-400 hover:text-gray-500 dark:hover:text-gray-300 transition-colors"
+                            className="text-gray-500 dark:text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 transition-colors"
                         >
                             <XMarkIcon className="w-6 h-6" />
                         </button>
@@ -166,7 +166,7 @@ export function WalletManagementModal({
                                 >
                                     <PlusCircleIcon className={cn(
                                         'w-8 h-8 mx-auto mb-2',
-                                        action === 'deposit' ? 'text-green-600 dark:text-green-400' : 'text-gray-400'
+                                        action === 'deposit' ? 'text-green-700 dark:text-green-400' : 'text-gray-500 dark:text-gray-400'
                                     )} />
                                     <div className={cn(
                                         'font-semibold text-sm',
@@ -190,7 +190,7 @@ export function WalletManagementModal({
                                 >
                                     <MinusCircleIcon className={cn(
                                         'w-8 h-8 mx-auto mb-2',
-                                        action === 'withdraw' ? 'text-red-600 dark:text-red-400' : 'text-gray-400'
+                                        action === 'withdraw' ? 'text-red-700 dark:text-red-400' : 'text-gray-500 dark:text-gray-400'
                                     )} />
                                     <div className={cn(
                                         'font-semibold text-sm',

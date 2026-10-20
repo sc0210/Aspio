@@ -137,7 +137,7 @@ export function LanguageSwitcher({
                 onClick={() => handleLanguageChange(language.code)}
                 className={cn(
                   "w-full px-4 py-2 min-h-[44px] text-left hover:bg-gray-50 dark:hover:bg-gray-700 flex items-center space-x-3 transition-colors focus:outline-none focus:bg-gray-50 dark:focus:bg-gray-700",
-                  language.code === i18n.language && "bg-primary-50 dark:bg-primary-900/20 text-primary-600 dark:text-primary-300"
+                  language.code === i18n.language && "bg-primary-50 dark:bg-primary-900/20 text-primary-700 dark:text-primary-300"
                 )}
               >
                 <span className="text-lg">{language.flag}</span>

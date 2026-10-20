@@ -127,7 +127,7 @@ function VerifyEmailContent() {
       case 'success':
         return (
           <div className="w-14 h-14 bg-green-100 rounded-full flex items-center justify-center">
-            <svg className="w-7 h-7 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <svg className="w-7 h-7 text-green-700 dark:text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
             </svg>
           </div>
@@ -145,7 +145,7 @@ function VerifyEmailContent() {
       default:
         return (
           <div className="w-14 h-14 bg-red-100 rounded-full flex items-center justify-center">
-            <svg className="w-7 h-7 text-red-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <svg className="w-7 h-7 text-red-700 dark:text-red-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.964-.833-2.732 0L4.082 16.5c-.77.833.192 2.5 1.732 2.5z" />
             </svg>
           </div>
@@ -176,7 +176,7 @@ function VerifyEmailContent() {
             >
               <Link href="/auth/signin">{t('auth:verification.continueToSignIn')}</Link>
             </Button>
-            <p className="text-xs text-gray-400 dark:text-gray-500 text-center">
+            <p className="text-xs text-gray-500 dark:text-gray-500 text-center">
               {t('auth:verification.redirecting')}
             </p>
           </div>
@@ -244,7 +244,7 @@ function VerifyEmailContent() {
             </p>
 
             {verificationState.userEmail && verificationState.status !== 'loading' && (
-              <p className="text-xs text-gray-400 dark:text-gray-500 mb-5">
+              <p className="text-xs text-gray-500 dark:text-gray-500 mb-5">
                 {t('auth:verification.emailLabel')} <strong className="text-gray-600 dark:text-gray-300">{verificationState.userEmail}</strong>
               </p>
             )}
@@ -253,11 +253,11 @@ function VerifyEmailContent() {
 
             {(verificationState.status === 'expired' || verificationState.status === 'invalid' || verificationState.status === 'error') && (
               <div className="mt-5 pt-5 border-t border-gray-100 dark:border-gray-700">
-                <p className="text-xs text-gray-400 dark:text-gray-500">
+                <p className="text-xs text-gray-500 dark:text-gray-500">
                   Still having trouble?{' '}
                   <a
                     href="mailto:support@aspiro.app"
-                    className="text-primary-600 dark:text-primary-400 hover:text-primary-500 font-medium"
+                    className="text-primary-700 dark:text-primary-400 hover:text-primary-800 font-medium"
                   >
                     {t('auth:verification.contactSupport')}
                   </a>

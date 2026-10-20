@@ -182,7 +182,7 @@ export function DashboardSidebar({ open, collapsed, onToggleCollapsed, onClose }
           >
             <Icon className={cn(
               'w-5 h-5 flex-shrink-0',
-              isActive ? 'text-primary-500 dark:text-primary-400' : 'text-gray-400 dark:text-gray-500',
+              isActive ? 'text-primary-500 dark:text-primary-400' : 'text-gray-500 dark:text-gray-500',
             )} />
             {!isCollapsed && <span className="truncate">{label}</span>}
           </Link>
@@ -209,7 +209,7 @@ export function DashboardSidebar({ open, collapsed, onToggleCollapsed, onClose }
             onClick={onToggleCollapsed}
             aria-label={isCollapsed ? t('navigation.expandSidebar') : t('navigation.collapseSidebar')}
             className={cn(
-              'hidden md:flex items-center justify-center p-2 rounded-lg text-gray-400 hover:text-gray-600 hover:bg-gray-100 dark:hover:text-gray-200 dark:hover:bg-gray-700 transition-colors min-w-[44px] min-h-[44px]',
+              'hidden md:flex items-center justify-center p-2 rounded-lg text-gray-500 dark:text-gray-400 hover:text-gray-600 hover:bg-gray-100 dark:hover:text-gray-200 dark:hover:bg-gray-700 transition-colors min-w-[44px] min-h-[44px]',
               isCollapsed && 'mx-auto',
             )}
           >
@@ -219,7 +219,7 @@ export function DashboardSidebar({ open, collapsed, onToggleCollapsed, onClose }
           <button
             onClick={onClose}
             aria-label={t('navigation.closeSidebar')}
-            className="md:hidden flex items-center justify-center p-2 rounded-lg text-gray-400 hover:text-gray-600 hover:bg-gray-100 dark:hover:text-gray-200 dark:hover:bg-gray-700 min-w-[44px] min-h-[44px] touch-manipulation transition-colors"
+            className="md:hidden flex items-center justify-center p-2 rounded-lg text-gray-500 dark:text-gray-400 hover:text-gray-600 hover:bg-gray-100 dark:hover:text-gray-200 dark:hover:bg-gray-700 min-w-[44px] min-h-[44px] touch-manipulation transition-colors"
           >
             <XMarkIcon className="w-5 h-5" />
           </button>
@@ -233,7 +233,7 @@ export function DashboardSidebar({ open, collapsed, onToggleCollapsed, onClose }
             onClick={() => { onClose(); openCommandPalette(); }}
             aria-label={t('navigation.search', 'Search')}
             className={cn(
-              'group relative flex w-full items-center gap-3 rounded-lg border border-gray-200 px-3 py-2 text-sm text-gray-400 transition-colors hover:border-primary-300 hover:text-gray-600 dark:border-gray-700 dark:hover:border-primary-600 dark:hover:text-gray-300',
+              'group relative flex w-full items-center gap-3 rounded-lg border border-gray-200 px-3 py-2 text-sm text-gray-500 dark:text-gray-400 transition-colors hover:border-primary-300 hover:text-gray-600 dark:border-gray-700 dark:hover:border-primary-600 dark:hover:text-gray-300',
               'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-400',
               isCollapsed && 'justify-center px-2',
             )}
@@ -280,7 +280,7 @@ export function DashboardSidebar({ open, collapsed, onToggleCollapsed, onClose }
                   type="button"
                   onClick={() => setSectionOpen(section.titleKey!, !sectionOpen)}
                   aria-expanded={sectionOpen}
-                  className="flex w-full items-center gap-1.5 rounded-md px-3 py-1 text-xs font-semibold uppercase tracking-wider text-gray-400 transition-colors hover:text-gray-600 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-400 dark:text-gray-500 dark:hover:text-gray-300"
+                  className="flex w-full items-center gap-1.5 rounded-md px-3 py-1 text-xs font-semibold uppercase tracking-wider text-gray-500 transition-colors hover:text-gray-600 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-400 dark:text-gray-500 dark:hover:text-gray-300"
                 >
                   <ChevronDownIcon
                     className={cn('w-3.5 h-3.5 flex-shrink-0 transition-transform duration-150', !sectionOpen && '-rotate-90')}

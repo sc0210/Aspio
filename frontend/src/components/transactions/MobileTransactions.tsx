@@ -100,7 +100,7 @@ export function MobileTransactions() {
                             <CameraIcon className="w-5 h-5" />
                         </Link>
                         <Link href="/transactions/add" aria-label={t('transactions:add', 'Add transaction')}
-                            className="grid place-items-center w-11 h-11 rounded-full bg-primary-600 hover:bg-primary-700 text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-400">
+                            className="grid place-items-center w-11 h-11 rounded-full bg-primary-700 hover:bg-primary-800 text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-400">
                             <PlusIcon className="w-5 h-5" />
                         </Link>
                     </div>
@@ -110,13 +110,13 @@ export function MobileTransactions() {
 
                 {/* HERO — spent vs income this month */}
                 <section className="rounded-3xl bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 shadow-sm p-5">
-                    <p className="text-xs font-bold tracking-wide text-gray-400 dark:text-gray-500">
+                    <p className="text-xs font-bold tracking-wide text-gray-500 dark:text-gray-500">
                         {t('dashboard:mobile.cashFlow', 'Cash flow this month')}
                     </p>
-                    <p className={cn('mt-1.5 text-[34px] leading-none font-extrabold tracking-tight tabular-nums', netUp ? 'text-prosperity-600 dark:text-prosperity-400' : 'text-error-500')}>
+                    <p className={cn('mt-1.5 text-[34px] leading-none font-extrabold tracking-tight tabular-nums', netUp ? 'text-prosperity-700 dark:text-prosperity-400' : 'text-error-700 dark:text-error-500')}>
                         {netUp ? '+' : '−'}{isValueVisible ? formatTWD(Math.abs(model.net)) : hidden}
                     </p>
-                    <p className="mt-1 text-xs font-semibold text-gray-400 dark:text-gray-500">
+                    <p className="mt-1 text-xs font-semibold text-gray-500 dark:text-gray-500">
                         {t('dashboard:mobile.netThisMonth', 'net this month')}
                     </p>
 
@@ -128,14 +128,14 @@ export function MobileTransactions() {
                         <div className="flex items-center gap-2">
                             <span className="w-2.5 h-2.5 rounded-sm bg-prosperity-500 flex-shrink-0" />
                             <div className="min-w-0">
-                                <p className="text-sm font-semibold text-gray-400 dark:text-gray-500">{t('dashboard:mobile.income', 'Income')}</p>
+                                <p className="text-sm font-semibold text-gray-500 dark:text-gray-500">{t('dashboard:mobile.income', 'Income')}</p>
                                 <p className="text-[15px] font-extrabold tabular-nums text-gray-900 dark:text-white">{isValueVisible ? formatTWDCompact(model.income) : '•••'}</p>
                             </div>
                         </div>
                         <div className="flex items-center gap-2">
                             <span className="w-2.5 h-2.5 rounded-sm bg-error-400 flex-shrink-0" />
                             <div className="min-w-0">
-                                <p className="text-sm font-semibold text-gray-400 dark:text-gray-500">{t('dashboard:mobile.expense', 'Spent')}</p>
+                                <p className="text-sm font-semibold text-gray-500 dark:text-gray-500">{t('dashboard:mobile.expense', 'Spent')}</p>
                                 <p className="text-[15px] font-extrabold tabular-nums text-gray-900 dark:text-white">{isValueVisible ? formatTWDCompact(model.expense) : '•••'}</p>
                             </div>
                         </div>
@@ -147,13 +147,13 @@ export function MobileTransactions() {
                     <p className="px-1 mb-2.5 text-[13px] font-extrabold tracking-tight text-gray-900 dark:text-white">{t('transactions:recent', 'Recent')}</p>
                     {model.groups.length === 0 ? (
                         <Card padding="xl" shadow="none" className="text-center">
-                            <p className="text-sm text-gray-400 dark:text-gray-500">{t('transactions:empty.title', 'No transactions yet')}</p>
+                            <p className="text-sm text-gray-500 dark:text-gray-500">{t('transactions:empty.title', 'No transactions yet')}</p>
                         </Card>
                     ) : (
                         <div className="space-y-4">
                             {model.groups.map(([iso, txs]) => (
                                 <div key={iso}>
-                                    <p className="px-1 mb-1.5 text-[11.5px] font-bold uppercase tracking-wide text-gray-400 dark:text-gray-500">{dayLabel(iso)}</p>
+                                    <p className="px-1 mb-1.5 text-xs font-bold uppercase tracking-wide text-gray-500 dark:text-gray-500">{dayLabel(iso)}</p>
                                     <Card padding="none" shadow="none" clip className="divide-y divide-gray-100 dark:divide-gray-700">
                                         {txs.map((tx) => {
                                             const isIncome = tx.type === 'income';
@@ -165,10 +165,10 @@ export function MobileTransactions() {
                                                     </span>
                                                     <div className="min-w-0 flex-1">
                                                         <p className="text-sm font-bold text-gray-900 dark:text-white truncate">{tx.description || tx.category}</p>
-                                                        <p className="text-[11.5px] font-medium text-gray-400 dark:text-gray-500 truncate">{tx.category}</p>
+                                                        <p className="text-xs font-medium text-gray-500 dark:text-gray-500 truncate">{tx.category}</p>
                                                     </div>
                                                     <p className={cn('text-[14.5px] font-extrabold tabular-nums flex-shrink-0',
-                                                        isTransfer ? 'text-gray-500 dark:text-gray-400' : isIncome ? 'text-prosperity-600 dark:text-prosperity-400' : 'text-gray-900 dark:text-white')}>
+                                                        isTransfer ? 'text-gray-500 dark:text-gray-400' : isIncome ? 'text-prosperity-700 dark:text-prosperity-400' : 'text-gray-900 dark:text-white')}>
                                                         {isTransfer ? '' : isIncome ? '+' : '−'}{isValueVisible ? formatTWDCompact(toTWD(tx.amount || 0, tx.currency || 'TWD')) : '•••'}
                                                     </p>
                                                 </Link>
@@ -181,10 +181,10 @@ export function MobileTransactions() {
                     )}
                 </section>
 
-                <p className="text-center px-4 pt-1 text-xs font-semibold leading-relaxed text-gray-400 dark:text-gray-500">
+                <p className="text-center px-4 pt-1 text-xs font-semibold leading-relaxed text-gray-500 dark:text-gray-500">
                     {t('dashboard:mobile.fullTransactions', 'Filters, search, heatmap & bulk import')}
                     <br />
-                    <span className="text-primary-600 dark:text-primary-400">→ {t('dashboard:mobile.onLargerScreen', 'on tablet / desktop')}</span>
+                    <span className="text-primary-700 dark:text-primary-400">→ {t('dashboard:mobile.onLargerScreen', 'on tablet / desktop')}</span>
                 </p>
             </div>
         </DashboardLayout>

@@ -86,7 +86,7 @@ export function MobileGoals() {
                 <div className="flex items-center justify-between pt-1">
                     <h1 className="text-xl font-extrabold tracking-tight text-gray-900 dark:text-white">{t('goals:title', 'Goals')}</h1>
                     <button type="button" onClick={goCreate} aria-label={t('goals:create', 'New goal')}
-                        className="grid place-items-center w-11 h-11 rounded-full bg-primary-600 hover:bg-primary-700 text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-400">
+                        className="grid place-items-center w-11 h-11 rounded-full bg-primary-700 hover:bg-primary-800 text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-400">
                         <PlusIcon className="w-5 h-5" />
                     </button>
                 </div>
@@ -98,7 +98,7 @@ export function MobileGoals() {
                         <p className="text-4xl" aria-hidden="true">🎯</p>
                         <p className="text-sm text-gray-500 dark:text-gray-400">{t('goals:empty.title', 'No goals yet')}</p>
                         <button type="button" onClick={goCreate}
-                            className="inline-flex items-center gap-1.5 rounded-xl bg-primary-600 hover:bg-primary-700 px-4 py-2.5 text-sm font-semibold text-white">
+                            className="inline-flex items-center gap-1.5 rounded-xl bg-primary-700 hover:bg-primary-800 px-4 py-2.5 text-sm font-semibold text-white">
                             <PlusIcon className="w-4 h-4" /> {t('goals:createFirst', 'Create your first goal')}
                         </button>
                     </div>
@@ -126,7 +126,7 @@ export function MobileGoals() {
                                         <p className="mt-1.5 text-[12.5px] font-semibold text-gray-500 dark:text-gray-400 tabular-nums">
                                             {isValueVisible ? formatTWD(g.currentAmount || 0) : hidden} / {isValueVisible ? formatTWDCompact(g.targetAmount || 0) : '•••'}
                                         </p>
-                                        {eta && <p className="mt-0.5 text-[11.5px] font-medium text-gray-400 dark:text-gray-500">🗓 {eta}</p>}
+                                        {eta && <p className="mt-0.5 text-xs font-medium text-gray-500 dark:text-gray-500">🗓 {eta}</p>}
                                     </div>
                                 </section>
                             );
@@ -145,11 +145,11 @@ export function MobileGoals() {
                                                 <span className="grid place-items-center w-9 h-9 rounded-xl bg-gray-100 dark:bg-gray-700 text-[17px] flex-shrink-0" aria-hidden="true">{meta.icon}</span>
                                                 <div className="min-w-0 flex-1">
                                                     <p className="text-sm font-bold text-gray-900 dark:text-white truncate">{g.title}</p>
-                                                    <p className="text-[11.5px] font-medium text-gray-400 dark:text-gray-500 tabular-nums">
+                                                    <p className="text-xs font-medium text-gray-500 dark:text-gray-500 tabular-nums">
                                                         {isValueVisible ? formatTWDCompact(g.currentAmount || 0) : '•••'} / {isValueVisible ? formatTWDCompact(g.targetAmount || 0) : '•••'}
                                                     </p>
                                                 </div>
-                                                <span className="text-[15px] font-extrabold tabular-nums text-prosperity-600 dark:text-prosperity-400 flex-shrink-0">{Math.round(p)}%</span>
+                                                <span className="text-[15px] font-extrabold tabular-nums text-prosperity-700 dark:text-prosperity-400 flex-shrink-0">{Math.round(p)}%</span>
                                             </div>
                                             <div className="mt-3 h-2 rounded-full bg-gray-100 dark:bg-gray-700 overflow-hidden">
                                                 <div className="h-full rounded-full transition-all" style={{ width: `${p}%`, background: RING }} />
@@ -162,10 +162,10 @@ export function MobileGoals() {
                     </>
                 )}
 
-                <p className="text-center px-4 pt-1 text-xs font-semibold leading-relaxed text-gray-400 dark:text-gray-500">
+                <p className="text-center px-4 pt-1 text-xs font-semibold leading-relaxed text-gray-500 dark:text-gray-500">
                     {t('dashboard:mobile.fullGoals', 'Milestones, contributions & achievements')}
                     <br />
-                    <span className="text-primary-600 dark:text-primary-400">→ {t('dashboard:mobile.onLargerScreen', 'on tablet / desktop')}</span>
+                    <span className="text-primary-700 dark:text-primary-400">→ {t('dashboard:mobile.onLargerScreen', 'on tablet / desktop')}</span>
                 </p>
             </div>
 

@@ -113,7 +113,7 @@ export function RetirementProgressTracker({
                             <span className="text-sm font-semibold text-gray-900 dark:text-gray-100 leading-none">
                                 {t('portfolio:retirement.title')}
                             </span>
-                            <span className="text-xs font-medium px-1.5 py-0.5 rounded bg-gray-100 dark:bg-gray-700 text-gray-500 dark:text-gray-400">
+                            <span className="text-xs font-medium px-1.5 py-0.5 rounded bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-400">
                                 {t(`portfolio:retirement.stages.${stage.key}.label`, stage.label)} · {stageIndex + 1}/{FINANCIAL_STAGES.length}
                             </span>
                         </div>
@@ -126,7 +126,7 @@ export function RetirementProgressTracker({
                     {onSetGoal ? (
                         <button
                             onClick={onSetGoal}
-                            className="flex-shrink-0 inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium rounded-md bg-primary-600 hover:bg-primary-700 text-white transition-colors"
+                            className="flex-shrink-0 inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium rounded-md bg-primary-700 hover:bg-primary-800 text-white transition-colors"
                         >
                             {hasRetirementGoal
                                 ? <><PencilSquareIcon className="w-3.5 h-3.5" />{t('portfolio:retirement.editGoal')}</>
@@ -136,7 +136,7 @@ export function RetirementProgressTracker({
                     ) : (
                         <Link
                             href="/goals"
-                            className="flex-shrink-0 inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium rounded-md bg-primary-600 hover:bg-primary-700 text-white transition-colors"
+                            className="flex-shrink-0 inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium rounded-md bg-primary-700 hover:bg-primary-800 text-white transition-colors"
                         >
                             <PlusIcon className="w-3.5 h-3.5" />Set Goal
                         </Link>
@@ -212,18 +212,18 @@ export function RetirementProgressTracker({
                 <div className="flex items-stretch gap-2">
                     {/* Save / month */}
                     <div className="flex-1 bg-gray-50 dark:bg-gray-700/50 rounded-lg px-3 py-2 border border-gray-100 dark:border-gray-700">
-                        <p className="text-xs font-medium text-gray-400 dark:text-gray-500 uppercase tracking-wide mb-0.5">
+                        <p className="text-xs font-medium text-gray-500 dark:text-gray-500 uppercase tracking-wide mb-0.5">
                             {t('portfolio:retirement.savePerMonth')}
                         </p>
                         <p className="text-sm font-bold text-gray-900 dark:text-gray-100 tabular-nums leading-tight">
                             {monthlyRequired === null
-                                ? <span className="text-gray-400">—</span>
+                                ? <span className="text-gray-500 dark:text-gray-400">—</span>
                                 : monthlyRequired === 0
-                                    ? <span className="text-emerald-600 dark:text-emerald-400 text-xs">{t('portfolio:retirement.onTrack')}</span>
+                                    ? <span className="text-emerald-700 dark:text-emerald-400 text-xs">{t('portfolio:retirement.onTrack')}</span>
                                     : isValueVisible ? fmt(monthlyRequired, currency) : masked
                             }
                         </p>
-                        <p className="text-xs text-gray-400 dark:text-gray-500 leading-tight mt-0.5">
+                        <p className="text-xs text-gray-500 dark:text-gray-500 leading-tight mt-0.5">
                             {monthlyRequired === null
                                 ? t('portfolio:retirement.setTargetDate')
                                 : monthlyRequired === 0
@@ -235,18 +235,18 @@ export function RetirementProgressTracker({
 
                     {/* Time to goal */}
                     <div className="flex-1 bg-gray-50 dark:bg-gray-700/50 rounded-lg px-3 py-2 border border-gray-100 dark:border-gray-700">
-                        <p className="text-xs font-medium text-gray-400 dark:text-gray-500 uppercase tracking-wide mb-0.5">
+                        <p className="text-xs font-medium text-gray-500 dark:text-gray-500 uppercase tracking-wide mb-0.5">
                             {t('portfolio:retirement.timeLeft')}
                         </p>
                         <p className="text-sm font-bold text-gray-900 dark:text-gray-100 tabular-nums leading-tight">
                             {yearsToTarget === 0
-                                ? <span className="text-emerald-600 dark:text-emerald-400 text-xs">{t('portfolio:retirement.done')}</span>
+                                ? <span className="text-emerald-700 dark:text-emerald-400 text-xs">{t('portfolio:retirement.done')}</span>
                                 : yearsToTarget !== null
-                                    ? <>{yearsToTarget}<span className="text-xs font-medium text-gray-400 ml-0.5">{t('portfolio:retirement.years', { count: yearsToTarget })}</span></>
-                                    : <span className="text-gray-400">—</span>
+                                    ? <>{yearsToTarget}<span className="text-xs font-medium text-gray-500 dark:text-gray-400 ml-0.5">{t('portfolio:retirement.years', { count: yearsToTarget })}</span></>
+                                    : <span className="text-gray-500 dark:text-gray-400">—</span>
                             }
                         </p>
-                        <p className="text-xs text-gray-400 dark:text-gray-500 leading-tight mt-0.5">
+                        <p className="text-xs text-gray-500 dark:text-gray-500 leading-tight mt-0.5">
                             {yearsToTarget !== null && yearsToTarget > 0
                                 ? t('portfolio:retirement.estimatedYear', { year: targetYear })
                                 : yearsToTarget === 0
@@ -258,13 +258,13 @@ export function RetirementProgressTracker({
 
                     {/* Still needed */}
                     <div className="flex-1 bg-gray-50 dark:bg-gray-700/50 rounded-lg px-3 py-2 border border-gray-100 dark:border-gray-700">
-                        <p className="text-xs font-medium text-gray-400 dark:text-gray-500 uppercase tracking-wide mb-0.5">
+                        <p className="text-xs font-medium text-gray-500 dark:text-gray-500 uppercase tracking-wide mb-0.5">
                             {t('portfolio:retirement.stillNeed')}
                         </p>
                         <p className={cn(
                             "text-sm font-bold tabular-nums leading-tight",
                             progressPercent >= 100
-                                ? "text-emerald-600 dark:text-emerald-400"
+                                ? "text-emerald-700 dark:text-emerald-400"
                                 : "text-gray-900 dark:text-gray-100"
                         )}>
                             {progressPercent >= 100
@@ -272,7 +272,7 @@ export function RetirementProgressTracker({
                                 : isValueVisible ? fmt(gap, currency) : masked
                             }
                         </p>
-                        <p className="text-xs text-gray-400 dark:text-gray-500 leading-tight mt-0.5">
+                        <p className="text-xs text-gray-500 dark:text-gray-500 leading-tight mt-0.5">
                             {progressPercent >= 100
                                 ? t('portfolio:retirement.enjoy')
                                 : t('portfolio:retirement.percentComplete', { percent: Math.min(progressPercent, 100).toFixed(0) })
@@ -283,7 +283,7 @@ export function RetirementProgressTracker({
                     {/* Expand toggle */}
                     <button
                         onClick={() => setIsExpanded(v => !v)}
-                        className="flex-shrink-0 self-center p-1.5 rounded-md text-gray-400 hover:text-gray-600 dark:hover:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors"
+                        className="flex-shrink-0 self-center p-1.5 rounded-md text-gray-500 dark:text-gray-400 hover:text-gray-600 dark:hover:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors"
                         aria-label={isExpanded ? t('portfolio:retirement.collapse') : t('portfolio:retirement.expand')}
                     >
                         {isExpanded
@@ -300,18 +300,18 @@ export function RetirementProgressTracker({
                         {/* Passive income + milestones */}
                         <div className="grid grid-cols-2 gap-2">
                             <div className="bg-gray-50 dark:bg-gray-700/50 rounded-lg px-3 py-2 border border-gray-100 dark:border-gray-700">
-                                <p className="text-xs font-medium text-gray-400 dark:text-gray-500 uppercase tracking-wide mb-0.5">{t('portfolio:retirement.passiveIncome')}</p>
-                                <p className="text-sm font-bold text-emerald-600 dark:text-emerald-400 tabular-nums">
+                                <p className="text-xs font-medium text-gray-500 dark:text-gray-500 uppercase tracking-wide mb-0.5">{t('portfolio:retirement.passiveIncome')}</p>
+                                <p className="text-sm font-bold text-emerald-700 dark:text-emerald-400 tabular-nums">
                                     {isValueVisible ? `${fmtFull(monthlyPassiveIncome, currency)}/mo` : masked}
                                 </p>
-                                <p className="text-xs text-gray-400 mt-0.5">{t('portfolio:retirement.withdrawalRule')}</p>
+                                <p className="text-xs text-gray-500 dark:text-gray-400 mt-0.5">{t('portfolio:retirement.withdrawalRule')}</p>
                             </div>
                             <div className="bg-gray-50 dark:bg-gray-700/50 rounded-lg px-3 py-2 border border-gray-100 dark:border-gray-700">
-                                <p className="text-xs font-medium text-gray-400 dark:text-gray-500 uppercase tracking-wide mb-0.5">{t('portfolio:retirement.milestonesLabel')}</p>
+                                <p className="text-xs font-medium text-gray-500 dark:text-gray-500 uppercase tracking-wide mb-0.5">{t('portfolio:retirement.milestonesLabel')}</p>
                                 <p className="text-sm font-bold text-gray-900 dark:text-gray-100 tabular-nums">
                                     {reachedMilestones}/{milestones.length}
                                 </p>
-                                <p className="text-xs text-gray-400 mt-0.5">
+                                <p className="text-xs text-gray-500 dark:text-gray-400 mt-0.5">
                                     {nextMilestone
                                         ? t('portfolio:retirement.nextMilestone', {
                                             milestone: `${nextMilestone.emoji} ${t(`portfolio:retirement.milestones.${nextMilestone.key}`, nextMilestone.label)}`,

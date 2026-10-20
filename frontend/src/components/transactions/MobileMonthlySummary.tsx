@@ -93,7 +93,7 @@ export function MobileMonthlySummary({ year, yearOptions, onYearChange, months, 
                                 {t('transactions:monthlySummaryPage.netRemaining', { year })}
                             </p>
                             <p className={cn('mt-1 text-[32px] leading-none font-extrabold tracking-tight tabular-nums',
-                                net >= 0 ? 'text-income-600 dark:text-income-400' : 'text-expense-600 dark:text-expense-400')}>
+                                net >= 0 ? 'text-income-700 dark:text-income-400' : 'text-expense-700 dark:text-expense-400')}>
                                 {hide(formatTWD(net))}
                             </p>
                             {saved !== null && (
@@ -106,8 +106,8 @@ export function MobileMonthlySummary({ year, yearOptions, onYearChange, months, 
                                 <div className="h-full rounded-full bg-expense-500" style={{ width: `${spentShare}%` }} />
                             </div>
                             <div className="mt-2 flex justify-between text-[12.5px] font-bold tabular-nums">
-                                <span className="text-expense-600 dark:text-expense-400">{label('expenses')} {hide(formatTWD(spending))}</span>
-                                <span className="text-income-600 dark:text-income-400">{label('income')} {hide(formatTWD(income))}</span>
+                                <span className="text-expense-700 dark:text-expense-400">{label('expenses')} {hide(formatTWD(spending))}</span>
+                                <span className="text-income-700 dark:text-income-400">{label('income')} {hide(formatTWD(income))}</span>
                             </div>
                             {moved > 0 && (
                                 <p className="mt-2 text-[12px] font-semibold text-gray-500 dark:text-gray-400">
@@ -160,7 +160,7 @@ export function MobileMonthlySummary({ year, yearOptions, onYearChange, months, 
                                                         <div className="flex items-baseline justify-between gap-2">
                                                             <span className="text-[14px] font-bold text-gray-900 dark:text-white">{monthName(m.month)}</span>
                                                             <span className={cn('text-[14px] font-extrabold tabular-nums',
-                                                                remaining >= 0 ? 'text-income-600 dark:text-income-400' : 'text-expense-600 dark:text-expense-400')}>
+                                                                remaining >= 0 ? 'text-income-700 dark:text-income-400' : 'text-expense-700 dark:text-expense-400')}>
                                                                 {remaining > 0 ? '+' : ''}{hide(formatTWD(remaining))}
                                                             </span>
                                                         </div>
@@ -168,12 +168,12 @@ export function MobileMonthlySummary({ year, yearOptions, onYearChange, months, 
                                                             <div className="h-full rounded-full bg-expense-400" style={{ width: `${share}%` }} />
                                                         </div>
                                                     </div>
-                                                    <ChevronDownIcon className="w-4 h-4 shrink-0 text-gray-400 transition-transform group-open:rotate-180" />
+                                                    <ChevronDownIcon className="w-4 h-4 shrink-0 text-gray-500 dark:text-gray-400 transition-transform group-open:rotate-180" />
                                                 </summary>
                                                 <dl className="grid grid-cols-2 gap-x-4 gap-y-1.5 pb-3 text-[12.5px]">
                                                     <div className="col-span-2 flex justify-between font-bold">
                                                         <dt className="text-gray-500 dark:text-gray-400">{label('income')}</dt>
-                                                        <dd className="tabular-nums text-income-600 dark:text-income-400">{hide(formatTWD(m.income || 0))}</dd>
+                                                        <dd className="tabular-nums text-income-700 dark:text-income-400">{hide(formatTWD(m.income || 0))}</dd>
                                                     </div>
                                                     {SUMMARY_BUCKETS.filter((b) => (m[b.key] || 0) > 0).map((b) => (
                                                         <div key={b.key} className="flex justify-between gap-2">
@@ -194,10 +194,10 @@ export function MobileMonthlySummary({ year, yearOptions, onYearChange, months, 
                     </>
                 )}
 
-                <p className="text-center px-4 pt-1 text-xs font-semibold leading-relaxed text-gray-400 dark:text-gray-500">
+                <p className="text-center px-4 pt-1 text-xs font-semibold leading-relaxed text-gray-500 dark:text-gray-500">
                     {t('dashboard:mobile.fullMonthlySummary', 'Trend charts & the full table')}
                     <br />
-                    <span className="text-primary-600 dark:text-primary-400">→ {t('dashboard:mobile.onLargerScreen', 'on tablet / desktop')}</span>
+                    <span className="text-primary-700 dark:text-primary-400">→ {t('dashboard:mobile.onLargerScreen', 'on tablet / desktop')}</span>
                 </p>
             </div>
         </DashboardLayout>

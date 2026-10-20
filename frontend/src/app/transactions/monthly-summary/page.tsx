@@ -223,7 +223,7 @@ export default function MonthlySummaryPage() {
                         <div className="text-xs font-medium text-gray-600 dark:text-gray-400 mb-1.5">
                             {t('transactions:monthlySummaryPage.totalIncome', 'Total Income {{year}}', { year: selectedYear })}
                         </div>
-                        <div className="text-2xl font-bold text-income-600 dark:text-income-400 tabular-nums truncate">
+                        <div className="text-2xl font-bold text-income-700 dark:text-income-400 tabular-nums truncate">
                             {isValueVisible ? formatTWD(completeYearlyFinancials.income) : '•••••'}
                         </div>
                     </div>
@@ -238,7 +238,7 @@ export default function MonthlySummaryPage() {
                         <div className="text-xs font-medium text-gray-600 dark:text-gray-400 mb-1.5">
                             {t('transactions:monthlySummaryPage.totalExpenses', 'Total Expenses {{year}}', { year: selectedYear })}
                         </div>
-                        <div className="text-2xl font-bold text-expense-600 dark:text-expense-400 tabular-nums truncate">
+                        <div className="text-2xl font-bold text-expense-700 dark:text-expense-400 tabular-nums truncate">
                             {isValueVisible ? formatTWD(completeYearlyFinancials.expenses) : '•••••'}
                         </div>
                         {completeYearlyFinancials.moved > 0 && (
@@ -260,7 +260,7 @@ export default function MonthlySummaryPage() {
                         <div className="text-xs font-medium text-gray-600 dark:text-gray-400 mb-1.5">
                             {t('transactions:monthlySummaryPage.totalInvested', 'Total Invested {{year}}', { year: selectedYear })}
                         </div>
-                        <div className="text-2xl font-bold text-prosperity-600 dark:text-prosperity-400 tabular-nums truncate">
+                        <div className="text-2xl font-bold text-prosperity-700 dark:text-prosperity-400 tabular-nums truncate">
                             {isValueVisible ? formatTWD(yearlyTotals.investment) : '•••••'}
                         </div>
                     </div>
@@ -290,8 +290,8 @@ export default function MonthlySummaryPage() {
                         <div className={cn(
                             "text-2xl font-bold tabular-nums truncate",
                             completeYearlyFinancials.remaining >= 0
-                                ? "text-primary-600 dark:text-primary-400"
-                                : "text-warning-600 dark:text-warning-400"
+                                ? "text-primary-700 dark:text-primary-400"
+                                : "text-warning-700 dark:text-warning-400"
                         )}>
                             {isValueVisible ? formatTWD(completeYearlyFinancials.remaining) : '•••••'}
                         </div>
@@ -384,7 +384,7 @@ export default function MonthlySummaryPage() {
                                                     {formatMonth(month.month)}
                                                 </td>
                                                 <td className="px-3 sm:px-6 py-3 text-sm text-right">
-                                                    <span className="font-semibold text-income-600 dark:text-income-400">
+                                                    <span className="font-semibold text-income-700 dark:text-income-400">
                                                         {isValueVisible ? formatTWD(monthIncome) : '•••••'}
                                                     </span>
                                                 </td>
@@ -402,7 +402,7 @@ export default function MonthlySummaryPage() {
                                                 </td>
                                                 <td className="px-3 sm:px-6 py-3 text-sm text-right">
                                                     <div className="flex flex-col items-end gap-1.5">
-                                                        <span className="font-semibold text-amber-600 dark:text-amber-400">
+                                                        <span className="font-semibold text-amber-700 dark:text-amber-400">
                                                             {isValueVisible ? formatTWD(month.eat) : '•••••'}
                                                         </span>
                                                         {spent > 0 && (
@@ -414,7 +414,7 @@ export default function MonthlySummaryPage() {
                                                 </td>
                                                 <td className="px-3 sm:px-6 py-3 text-sm text-right">
                                                     <div className="flex flex-col items-end gap-1.5">
-                                                        <span className="font-semibold text-prosperity-600 dark:text-prosperity-400">
+                                                        <span className="font-semibold text-prosperity-700 dark:text-prosperity-400">
                                                             {isValueVisible ? formatTWD(month.investment || 0) : '•••••'}
                                                         </span>
                                                         {spent > 0 && (month.investment || 0) > 0 && (
@@ -426,7 +426,7 @@ export default function MonthlySummaryPage() {
                                                 </td>
                                                 <td className="px-3 sm:px-6 py-3 text-sm text-right">
                                                     <div className="flex flex-col items-end gap-1.5">
-                                                        <span className="font-semibold text-expense-600 dark:text-expense-400">
+                                                        <span className="font-semibold text-expense-700 dark:text-expense-400">
                                                             {isValueVisible ? formatTWD(month.debt || 0) : '•••••'}
                                                         </span>
                                                         {spent > 0 && (month.debt || 0) > 0 && (
@@ -452,8 +452,8 @@ export default function MonthlySummaryPage() {
                                                     <span className={cn(
                                                         "font-bold text-base",
                                                         remaining >= 0
-                                                            ? "text-income-600 dark:text-income-400"
-                                                            : "text-expense-600 dark:text-expense-400"
+                                                            ? "text-income-700 dark:text-income-400"
+                                                            : "text-expense-700 dark:text-expense-400"
                                                     )}>
                                                         {isValueVisible ? formatTWD(remaining) : '•••••'}
                                                     </span>

@@ -364,9 +364,9 @@ export function TransactionList({ transactions, isLoading, isFetching, isSearchi
         <div className="w-16 h-16 bg-gray-100 rounded-full flex items-center justify-center mx-auto mb-4">
           <span className="text-2xl">📄</span>
         </div>
-        <h3 className="text-lg font-medium text-gray-900 mb-2">
+        <h2 className="text-lg font-medium text-gray-900 mb-2">
           {t('transactions:list.noResults')}
-        </h3>
+        </h2>
         <p className="text-gray-500 dark:text-gray-400 mb-4">
           {t('transactions:list.adjustSearch')}
         </p>
@@ -393,7 +393,7 @@ export function TransactionList({ transactions, isLoading, isFetching, isSearchi
                 type="checkbox"
                 checked={selectedTransactions.length === transactions.length}
                 onChange={handleSelectAll}
-                className="h-4 w-4 text-primary-600 focus-visible:ring-primary-500 border-gray-300 rounded"
+                className="h-4 w-4 text-primary-700 dark:text-primary-600 focus-visible:ring-primary-500 border-gray-300 rounded"
                 aria-label="Select all transactions"
               />
               <span className="text-sm font-medium text-primary-900 dark:text-primary-100">
@@ -517,7 +517,7 @@ export function TransactionList({ transactions, isLoading, isFetching, isSearchi
                       <ChevronDownIcon className="w-4 h-4 text-gray-600 dark:text-gray-400 group-hover:text-primary-600 dark:group-hover:text-primary-400" />
                     )}
                   </div>
-                  <h3 className="text-sm font-bold text-gray-900 dark:text-white group-hover:text-primary-700 dark:group-hover:text-primary-300 transition-colors">
+                  <h2 className="text-sm font-bold text-gray-900 dark:text-white group-hover:text-primary-700 dark:group-hover:text-primary-300 transition-colors">
                     {formatDate(date)}
                     <span className="hidden sm:inline ml-2.5 text-xs font-medium text-gray-500 dark:text-gray-400 group-hover:text-gray-600 dark:group-hover:text-gray-300">
                       {date.toLocaleDateString(undefined, { weekday: 'long' })}
@@ -525,13 +525,13 @@ export function TransactionList({ transactions, isLoading, isFetching, isSearchi
                     <span className="hidden sm:inline ml-2 px-2 py-0.5 text-xs font-semibold text-gray-600 dark:text-gray-400 bg-gray-100 dark:bg-gray-700 rounded-full group-hover:bg-primary-100 dark:group-hover:bg-primary-900/30 transition-all">
                       {t('transactions:list.transactionCount', { count: transactionCount })}
                     </span>
-                  </h3>
+                  </h2>
                 </div>
                 <div className={cn(
                   'text-base font-bold px-3 py-1 rounded-lg transition-all duration-200',
                   dayTotal >= 0
-                    ? 'text-success-600 dark:text-success-400 bg-success-50 dark:bg-success-900/20'
-                    : 'text-error-600 dark:text-error-400 bg-error-50 dark:bg-error-900/20'
+                    ? 'text-success-700 dark:text-success-400 bg-success-50 dark:bg-success-900/20'
+                    : 'text-error-700 dark:text-error-400 bg-error-50 dark:bg-error-900/20'
                 )}>
                   {isValueVisible ? `${dayTotal >= 0 ? '+' : ''}${formatTWD(dayTotal)}` : '•••••'}
                 </div>

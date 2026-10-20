@@ -477,10 +477,10 @@ export default function EditTransactionPage() {
                         'flex-1 py-2.5 px-3 rounded-lg font-medium transition-all duration-200 flex items-center justify-center gap-2 text-sm',
                         formData.type === type.value
                           ? type.color === 'red'
-                            ? 'bg-expense-500 text-white shadow-md'
+                            ? 'bg-expense-700 dark:bg-expense-500 text-white shadow-md'
                             : type.color === 'green'
-                              ? 'bg-income-500 text-white shadow-md'
-                              : 'bg-blue-500 text-white shadow-md'
+                              ? 'bg-income-700 dark:bg-income-500 text-white shadow-md'
+                              : 'bg-blue-700 dark:bg-blue-500 text-white shadow-md'
                           : 'bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-400 hover:bg-gray-200 dark:hover:bg-gray-600'
                       )}
                     >
@@ -506,7 +506,7 @@ export default function EditTransactionPage() {
                 <div className="flex gap-3">
                   <div className="flex-1">
                     <label htmlFor="page-symbol" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                      Symbol <span className="text-error-500">*</span>
+                      Symbol <span className="text-error-700 dark:text-error-500">*</span>
                     </label>
                     <input
                       aria-invalid={!!errors.investSymbol}
@@ -521,7 +521,7 @@ export default function EditTransactionPage() {
                         errors.investSymbol && 'border-error-400'
                       )}
                     />
-                    {errors.investSymbol && <p id="page-symbol-error" role="alert" className="text-xs text-error-500 mt-1">{errors.investSymbol}</p>}
+                    {errors.investSymbol && <p id="page-symbol-error" role="alert" className="text-xs text-error-700 dark:text-error-500 mt-1">{errors.investSymbol}</p>}
                   </div>
                   <div className="w-28">
                     <label htmlFor="page-currency" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Currency</label>
@@ -542,7 +542,7 @@ export default function EditTransactionPage() {
                 <div className="flex gap-3">
                   <div className="flex-1">
                     <label htmlFor="page-quantity" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                      Quantity <span className="text-error-500">*</span>
+                      Quantity <span className="text-error-700 dark:text-error-500">*</span>
                     </label>
                     <input
                       aria-invalid={!!errors.investQty}
@@ -561,11 +561,11 @@ export default function EditTransactionPage() {
                         errors.investQty && 'border-error-400'
                       )}
                     />
-                    {errors.investQty && <p id="page-quantity-error" role="alert" className="text-xs text-error-500 mt-1">{errors.investQty}</p>}
+                    {errors.investQty && <p id="page-quantity-error" role="alert" className="text-xs text-error-700 dark:text-error-500 mt-1">{errors.investQty}</p>}
                   </div>
                   <div className="flex-1">
                     <label htmlFor="page-price-unit" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                      Price/Unit <span className="text-error-500">*</span>
+                      Price/Unit <span className="text-error-700 dark:text-error-500">*</span>
                     </label>
                     <input
                       aria-invalid={!!errors.investPrice}
@@ -584,7 +584,7 @@ export default function EditTransactionPage() {
                         errors.investPrice && 'border-error-400'
                       )}
                     />
-                    {errors.investPrice && <p id="page-price-unit-error" role="alert" className="text-xs text-error-500 mt-1">{errors.investPrice}</p>}
+                    {errors.investPrice && <p id="page-price-unit-error" role="alert" className="text-xs text-error-700 dark:text-error-500 mt-1">{errors.investPrice}</p>}
                   </div>
                 </div>
 

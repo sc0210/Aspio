@@ -220,7 +220,7 @@ function DesktopTransactionsPage() {
             panel hosts them; below lg they live in the collapsible Filters panel. */}
         <div className="hidden xl:flex items-center gap-2">
           <div className="relative">
-            <MagnifyingGlassIcon className="pointer-events-none absolute left-2.5 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
+            <MagnifyingGlassIcon className="pointer-events-none absolute left-2.5 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-500 dark:text-gray-400" />
             <input
               type="text"
               value={searchQuery}
@@ -234,7 +234,7 @@ function DesktopTransactionsPage() {
                 type="button"
                 onClick={() => setSearchQuery('')}
                 aria-label="Clear search"
-                className="absolute right-2 top-1/2 -translate-y-1/2 text-gray-400 hover:text-error-500 dark:hover:text-error-400 transition-colors"
+                className="absolute right-2 top-1/2 -translate-y-1/2 text-gray-500 dark:text-gray-400 hover:text-error-500 dark:hover:text-error-400 transition-colors"
               >
                 <XMarkIcon className="w-4 h-4" />
               </button>
@@ -336,7 +336,7 @@ function DesktopTransactionsPage() {
                 <span className="hidden sm:inline">{t('transactions:filters.showFilters')}</span>
                 <span className="sm:hidden">Filters</span>
                 {activeFilters.length > 0 && (
-                  <span className="absolute -top-1 -right-1 inline-flex items-center justify-center w-5 h-5 text-xs font-semibold text-white bg-primary-600 rounded-full shadow-md">
+                  <span className="absolute -top-1 -right-1 inline-flex items-center justify-center w-5 h-5 text-xs font-semibold text-white bg-primary-700 rounded-full shadow-md">
                     {activeFilters.length}
                   </span>
                 )}

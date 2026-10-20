@@ -56,11 +56,11 @@ export function InvestmentLoanPicker({ loans, selectedIds, onToggle, configured 
                     <BanknotesIcon className="w-4 h-4 text-indigo-500" />
                     {t('lifecycle.loans.title', 'Which loans funded the portfolio?')}
                 </h3>
-                <span className="text-sm text-gray-400 dark:text-gray-500 shrink-0">
+                <span className="text-sm text-gray-500 dark:text-gray-500 shrink-0">
                     {t('lifecycle.loans.count', '{{n}} selected', { n: selectedIds.length })}
                 </span>
             </div>
-            <p className="text-sm text-gray-400 dark:text-gray-500 mb-3">
+            <p className="text-sm text-gray-500 dark:text-gray-500 mb-3">
                 {t('lifecycle.loans.hint', 'Only these count as investment debt. A mortgage or car loan affects net worth but is not part of the strategy.')}
             </p>
 
@@ -77,7 +77,7 @@ export function InvestmentLoanPicker({ loans, selectedIds, onToggle, configured 
                     </div>
                 ) : (
                     <div className="mb-3 flex items-start gap-2 rounded-xl border border-warning-200 dark:border-warning-700/50 bg-warning-50 dark:bg-warning-900/20 p-2.5">
-                        <ExclamationTriangleIcon className="w-4 h-4 text-warning-500 shrink-0 mt-0.5" />
+                        <ExclamationTriangleIcon className="w-4 h-4 text-warning-700 dark:text-warning-500 shrink-0 mt-0.5" />
                         <p className="text-sm text-warning-700 dark:text-warning-300 leading-relaxed">
                             {t('lifecycle.loans.unconfigured', 'None of your loans look like investment debt. Tick the ones that funded the portfolio — every gauge above reads zero until you do.')}
                         </p>

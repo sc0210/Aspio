@@ -32,7 +32,7 @@ export function LoanPaymentHistory({ loanId, currency }: Props) {
     <>
       <button
         onClick={() => setOpen(v => !v)}
-        className="w-full flex items-center justify-between text-xs font-medium text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200 py-1 transition-colors"
+        className="w-full flex items-center justify-between text-xs font-medium text-gray-600 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200 py-1 transition-colors"
       >
         <span>Payment History {payments.length > 0 && !isLoading ? `(${payments.length})` : ''}</span>
         {open ? <ChevronUpIcon className="w-3.5 h-3.5" /> : <ChevronDownIcon className="w-3.5 h-3.5" />}
@@ -41,9 +41,9 @@ export function LoanPaymentHistory({ loanId, currency }: Props) {
       {open && (
         <div className="mt-1">
           {isLoading ? (
-            <p className="text-xs text-gray-400 dark:text-gray-500 text-center py-3">Loading…</p>
+            <p className="text-xs text-gray-500 dark:text-gray-500 text-center py-3">Loading…</p>
           ) : payments.length === 0 ? (
-            <p className="text-xs text-gray-400 dark:text-gray-500 text-center py-3">No payments recorded yet.</p>
+            <p className="text-xs text-gray-500 dark:text-gray-500 text-center py-3">No payments recorded yet.</p>
           ) : (
             <div className="overflow-x-auto rounded-lg border border-gray-100 dark:border-gray-700">
               <table className="w-full text-xs">
@@ -65,17 +65,17 @@ export function LoanPaymentHistory({ loanId, currency }: Props) {
                       <td className="px-3 py-2 text-right text-gray-900 dark:text-white font-medium whitespace-nowrap">
                         {fmt(Number(p.total_amount), currency)}
                       </td>
-                      <td className="px-3 py-2 text-right text-primary-600 dark:text-primary-400 whitespace-nowrap">
+                      <td className="px-3 py-2 text-right text-primary-700 dark:text-primary-400 whitespace-nowrap">
                         {fmt(Number(p.principal_portion), currency)}
                       </td>
-                      <td className="px-3 py-2 text-right text-amber-600 dark:text-amber-400 whitespace-nowrap">
+                      <td className="px-3 py-2 text-right text-amber-700 dark:text-amber-400 whitespace-nowrap">
                         {fmt(Number(p.interest_portion), currency)}
                       </td>
                       <td className="px-2 py-2">
                         <div className="flex items-center gap-1">
                           <button
                             onClick={() => setEditing(p)}
-                            className="p-1 text-gray-400 hover:text-primary-600 dark:hover:text-primary-400 rounded transition-colors"
+                            className="p-1 text-gray-500 dark:text-gray-400 hover:text-primary-600 dark:hover:text-primary-400 rounded transition-colors"
                             title="Edit payment"
                           >
                             <PencilSquareIcon className="w-3.5 h-3.5" />
@@ -87,7 +87,7 @@ export function LoanPaymentHistory({ loanId, currency }: Props) {
                               }
                             }}
                             disabled={deletePayment.isPending}
-                            className="p-1 text-gray-400 hover:text-red-600 dark:hover:text-red-400 rounded transition-colors disabled:opacity-40"
+                            className="p-1 text-gray-500 dark:text-gray-400 hover:text-red-600 dark:hover:text-red-400 rounded transition-colors disabled:opacity-40"
                             title="Delete payment"
                           >
                             <TrashIcon className="w-3.5 h-3.5" />

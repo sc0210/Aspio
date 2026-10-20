@@ -105,7 +105,7 @@ export function HoldingDetailModal({
   const lotInputError = (lotId: string, field: LotDraftField) => {
     const message = fieldErrorText(field);
     return message ? (
-      <p id={`lot-${lotId}-${field}-error`} role="alert" className="mt-1 text-xs text-error-600 dark:text-error-400">
+      <p id={`lot-${lotId}-${field}-error`} role="alert" className="mt-1 text-xs text-error-700 dark:text-error-400">
         {message}
       </p>
     ) : null;
@@ -216,7 +216,7 @@ export function HoldingDetailModal({
                 {onUpdateSymbol && !editingAggregate && (
                   <button
                     onClick={handleStartAggregateEdit}
-                    className="p-1.5 text-gray-400 dark:text-gray-500 hover:text-primary-600 dark:hover:text-primary-400 hover:bg-primary-50 dark:hover:bg-primary-900/20 rounded-lg transition-all"
+                    className="p-1.5 text-gray-500 dark:text-gray-500 hover:text-primary-600 dark:hover:text-primary-400 hover:bg-primary-50 dark:hover:bg-primary-900/20 rounded-lg transition-all"
                     title="Edit name and sector"
                   >
                     <PencilIcon className="w-4 h-4" />
@@ -247,7 +247,7 @@ export function HoldingDetailModal({
                   <div className="flex items-center gap-2">
                     <button
                       onClick={handleSaveAggregateEdit}
-                      className="flex items-center gap-1 px-3 py-1.5 text-xs font-medium text-white bg-success-600 hover:bg-success-700 rounded-lg transition-colors"
+                      className="flex items-center gap-1 px-3 py-1.5 text-xs font-medium text-white bg-success-700 hover:bg-success-800 rounded-lg transition-colors"
                     >
                       <CheckIcon className="w-3.5 h-3.5" />
                       Save
@@ -282,7 +282,7 @@ export function HoldingDetailModal({
                     setSellQuantity(aggregatedMetrics.totalQuantity);
                     setShowSellModal(true);
                   }}
-                  className="flex items-center gap-2 px-3 py-2 text-sm font-medium text-white bg-orange-600 hover:bg-orange-700 dark:bg-orange-600 dark:hover:bg-orange-700 rounded-lg transition-all shadow-sm"
+                  className="flex items-center gap-2 px-3 py-2 text-sm font-medium text-white bg-orange-700 hover:bg-orange-800 dark:bg-orange-600 dark:hover:bg-orange-700 rounded-lg transition-all shadow-sm"
                   title="Sell shares"
                   aria-label="Sell shares"
                 >
@@ -300,7 +300,7 @@ export function HoldingDetailModal({
                     onSellLot(holdings[0]);
                     onClose(); // Close detail modal before sell modal opens
                   }}
-                  className="flex items-center gap-2 px-3 py-2 text-sm font-medium text-white bg-green-600 hover:bg-green-700 dark:bg-green-600 dark:hover:bg-green-700 rounded-lg transition-all shadow-sm"
+                  className="flex items-center gap-2 px-3 py-2 text-sm font-medium text-white bg-green-700 hover:bg-green-800 dark:bg-green-600 dark:hover:bg-green-700 rounded-lg transition-all shadow-sm"
                   title="Sell shares of this holding"
                   aria-label="Sell holding"
                 >
@@ -341,7 +341,7 @@ export function HoldingDetailModal({
               )}
               <button
                 onClick={onClose}
-                className="flex-shrink-0 p-2 text-gray-400 dark:text-gray-500 hover:text-gray-600 dark:hover:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-800 rounded-lg transition-all"
+                className="flex-shrink-0 p-2 text-gray-500 dark:text-gray-500 hover:text-gray-600 dark:hover:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-800 rounded-lg transition-all"
                 aria-label="Close"
               >
                 <XMarkIcon className="w-6 h-6" />
@@ -385,8 +385,8 @@ export function HoldingDetailModal({
               <p className={cn(
                 'text-xl font-bold',
                 aggregatedMetrics.gainLoss >= 0
-                  ? 'text-success-600 dark:text-success-400'
-                  : 'text-error-600 dark:text-error-400'
+                  ? 'text-success-700 dark:text-success-400'
+                  : 'text-error-700 dark:text-error-400'
               )}>
                 {isValueVisible
                   ? `${aggregatedMetrics.gainLoss >= 0 ? '+' : ''}${formatCurrency(aggregatedMetrics.gainLoss, aggregatedMetrics.currency)}`
@@ -396,8 +396,8 @@ export function HoldingDetailModal({
               <p className={cn(
                 'text-xs font-semibold mt-1',
                 aggregatedMetrics.gainLoss >= 0
-                  ? 'text-success-600 dark:text-success-400'
-                  : 'text-error-600 dark:text-error-400'
+                  ? 'text-success-700 dark:text-success-400'
+                  : 'text-error-700 dark:text-error-400'
               )}>
                 {isValueVisible
                   ? `${aggregatedMetrics.gainLossPercentage >= 0 ? '+' : ''}${aggregatedMetrics.gainLossPercentage.toFixed(2)}%`
@@ -479,7 +479,7 @@ export function HoldingDetailModal({
                           />
                         ) : (
                           <div className="flex items-center gap-2">
-                            <CalendarIcon className="w-4 h-4 text-gray-400" />
+                            <CalendarIcon className="w-4 h-4 text-gray-500 dark:text-gray-400" />
                             <span className="text-sm text-gray-900 dark:text-white">
                               {lot.purchaseDate
                                 ? new Date(lot.purchaseDate).toLocaleDateString(undefined, {
@@ -602,8 +602,8 @@ export function HoldingDetailModal({
                           <span className={cn(
                             'text-sm font-semibold',
                             lotGainLoss >= 0
-                              ? 'text-success-600 dark:text-success-400'
-                              : 'text-error-600 dark:text-error-400'
+                              ? 'text-success-700 dark:text-success-400'
+                              : 'text-error-700 dark:text-error-400'
                           )}>
                             {isValueVisible
                               ? `${lotGainLoss >= 0 ? '+' : ''}${formatCurrency(lotGainLoss, lot.currency)}`
@@ -613,8 +613,8 @@ export function HoldingDetailModal({
                           <span className={cn(
                             'text-xs font-medium',
                             lotGainLoss >= 0
-                              ? 'text-success-600 dark:text-success-400'
-                              : 'text-error-600 dark:text-error-400'
+                              ? 'text-success-700 dark:text-success-400'
+                              : 'text-error-700 dark:text-error-400'
                           )}>
                             {isValueVisible
                               ? `${lotGainLossPercentage >= 0 ? '+' : ''}${lotGainLossPercentage.toFixed(2)}%`
@@ -668,7 +668,7 @@ export function HoldingDetailModal({
                                 }}
                                 aria-disabled={draftHasErrors}
                                 className={cn(
-                                  "inline-flex items-center gap-1.5 px-3 py-1.5 text-sm font-medium text-white bg-green-600 hover:bg-green-700 dark:bg-green-600 dark:hover:bg-green-700 rounded-lg transition-colors shadow-sm",
+                                  "inline-flex items-center gap-1.5 px-3 py-1.5 text-sm font-medium text-white bg-green-700 hover:bg-green-800 dark:bg-green-600 dark:hover:bg-green-700 rounded-lg transition-colors shadow-sm",
                                   draftHasErrors && "opacity-50 cursor-not-allowed"
                                 )}
                                 title="Save changes"
@@ -737,7 +737,7 @@ export function HoldingDetailModal({
                                       }
                                     }
                                   }}
-                                  className="p-2 text-red-600 dark:text-red-400 hover:bg-red-100 dark:hover:bg-red-900/30 rounded-lg transition-colors"
+                                  className="p-2 text-red-700 dark:text-red-400 hover:bg-red-100 dark:hover:bg-red-900/30 rounded-lg transition-colors"
                                   title="Delete lot"
                                   aria-label="Delete lot"
                                 >
@@ -747,7 +747,7 @@ export function HoldingDetailModal({
                             </div>
                           )
                         ) : (
-                          <span className="text-sm text-gray-400">—</span>
+                          <span className="text-sm text-gray-500 dark:text-gray-400">—</span>
                         )}
                       </td>
                     </tr>
@@ -786,8 +786,8 @@ export function HoldingDetailModal({
                       <span className={cn(
                         'text-sm font-bold',
                         aggregatedMetrics.gainLoss >= 0
-                          ? 'text-success-600 dark:text-success-400'
-                          : 'text-error-600 dark:text-error-400'
+                          ? 'text-success-700 dark:text-success-400'
+                          : 'text-error-700 dark:text-error-400'
                       )}>
                         {isValueVisible
                           ? `${aggregatedMetrics.gainLoss >= 0 ? '+' : ''}${formatCurrency(aggregatedMetrics.gainLoss, aggregatedMetrics.currency)}`
@@ -797,8 +797,8 @@ export function HoldingDetailModal({
                       <span className={cn(
                         'text-xs font-semibold',
                         aggregatedMetrics.gainLoss >= 0
-                          ? 'text-success-600 dark:text-success-400'
-                          : 'text-error-600 dark:text-error-400'
+                          ? 'text-success-700 dark:text-success-400'
+                          : 'text-error-700 dark:text-error-400'
                       )}>
                         {isValueVisible
                           ? `${aggregatedMetrics.gainLossPercentage >= 0 ? '+' : ''}${aggregatedMetrics.gainLossPercentage.toFixed(2)}%`

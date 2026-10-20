@@ -23,7 +23,7 @@ export const TOP_BAR_BUTTON = cn(
 /** The page's main action, at most one per bar. */
 export const TOP_BAR_PRIMARY = cn(
     base,
-    'bg-primary-600 text-white border-transparent hover:bg-primary-700 focus-visible:ring-primary-400 focus-visible:ring-offset-1 dark:focus-visible:ring-offset-gray-800',
+    'bg-primary-700 text-white border-transparent hover:bg-primary-800 focus-visible:ring-primary-400 focus-visible:ring-offset-1 dark:focus-visible:ring-offset-gray-800',
 );
 
 /** A <select> styled as a top-bar button. */

@@ -88,7 +88,7 @@ export function NextMonthCard({ review, context }: Props) {
                                 {href && (
                                     <>
                                         {' '}
-                                        <Link href={href} className="font-medium text-prosperity-600 dark:text-prosperity-400 hover:underline focus:outline-none focus-visible:ring-2 focus-visible:ring-prosperity-500 rounded">
+                                        <Link href={href} className="font-medium text-prosperity-700 dark:text-prosperity-400 hover:underline focus:outline-none focus-visible:ring-2 focus-visible:ring-prosperity-500 rounded">
                                             {href === '/goals' ? t('review.next.go.goals', 'Goals') : t('review.next.go.transactions', 'Transactions')} →
                                         </Link>
                                     </>

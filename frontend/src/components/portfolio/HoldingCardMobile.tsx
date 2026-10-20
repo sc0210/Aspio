@@ -81,7 +81,7 @@ function HoldingCardMobileBase({
               checked={isSelected}
               onChange={(e) => onToggleSelect(holding, e)}
               onClick={(e: MouseEvent) => e.stopPropagation()}
-              className="mt-1 w-4 h-4 rounded border-gray-300 dark:border-gray-600 text-primary-600 focus-visible:ring-primary-500 cursor-pointer flex-shrink-0"
+              className="mt-1 w-4 h-4 rounded border-gray-300 dark:border-gray-600 text-primary-700 dark:text-primary-600 focus-visible:ring-primary-500 cursor-pointer flex-shrink-0"
             />
           )}
           <div className="flex-1 min-w-0">
@@ -146,9 +146,9 @@ function HoldingCardMobileBase({
         {/* Gain/Loss Indicator */}
         <div className="flex items-center gap-1 ml-3 flex-shrink-0">
           {!isCash && (holding.gainLoss >= 0 ? (
-            <ArrowTrendingUpIcon className="w-5 h-5 text-success-500" />
+            <ArrowTrendingUpIcon className="w-5 h-5 text-success-700 dark:text-success-500" />
           ) : (
-            <ArrowTrendingDownIcon className="w-5 h-5 text-error-500" />
+            <ArrowTrendingDownIcon className="w-5 h-5 text-error-700 dark:text-error-500" />
           ))}
         </div>
       </div>
@@ -186,7 +186,7 @@ function HoldingCardMobileBase({
                 className="inline-flex items-center"
                 title={`Updated ${formatTimeAgo(holding.lastUpdated, t)}`}
               >
-                <ClockIcon className="w-3 h-3 text-warning-500" />
+                <ClockIcon className="w-3 h-3 text-warning-700 dark:text-warning-500" />
               </span>
             )}
           </p>
@@ -208,13 +208,13 @@ function HoldingCardMobileBase({
           {!isCash && isValueVisible && holding.dayChange != null && (
             <p className={cn(
               'text-xs mt-0.5 leading-tight',
-              holding.dayChange >= 0 ? 'text-success-600 dark:text-success-400' : 'text-error-600 dark:text-error-400'
+              holding.dayChange >= 0 ? 'text-success-700 dark:text-success-400' : 'text-error-700 dark:text-error-400'
             )}>
               {holding.dayChange >= 0 ? '+' : ''}{formatCurrency(holding.dayChange, holding.currency)}
               {holding.dayChangePercentage != null && (
                 <span className="ml-1">({holding.dayChangePercentage >= 0 ? '+' : ''}{holding.dayChangePercentage.toFixed(2)}%)</span>
               )}
-              <span className="ml-1 text-gray-400">{t('portfolio:holdings.today')}</span>
+              <span className="ml-1 text-gray-500 dark:text-gray-400">{t('portfolio:holdings.today')}</span>
             </p>
           )}
         </div>
@@ -228,7 +228,7 @@ function HoldingCardMobileBase({
           {isValueVisible && baseRate !== undefined && (
             // Same rule as the desktop row: absent when the pair could not be
             // priced, never a guess.
-            <p className="text-xs text-gray-400 dark:text-gray-500 tabular-nums">
+            <p className="text-xs text-gray-500 dark:text-gray-500 tabular-nums">
               ≈ {formatCurrency(holding.totalValue * baseRate, baseCurrency)}
             </p>
           )}
@@ -241,7 +241,7 @@ function HoldingCardMobileBase({
             <div className="flex flex-col">
               <p className={cn(
                 "text-base font-bold leading-tight",
-                holding.gainLoss >= 0 ? "text-success-600 dark:text-success-400" : "text-error-600 dark:text-error-400"
+                holding.gainLoss >= 0 ? "text-success-700 dark:text-success-400" : "text-error-700 dark:text-error-400"
               )}>
                 {isValueVisible ? (
                   <>
@@ -252,7 +252,7 @@ function HoldingCardMobileBase({
               </p>
               <p className={cn(
                 "text-xs font-semibold leading-tight mt-0.5",
-                holding.gainLossPercentage >= 0 ? "text-success-500" : "text-error-500"
+                holding.gainLossPercentage >= 0 ? "text-success-700 dark:text-success-500" : "text-error-700 dark:text-error-500"
               )}>
                 {isValueVisible ? (
                   <>

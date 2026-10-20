@@ -454,13 +454,13 @@ describe('MonthlySummaryPage', () => {
         it('bar button starts in active state', () => {
             render(<MonthlySummaryPage />);
             const barBtn = screen.getByRole('button', { name: /Bar/i });
-            expect(barBtn).toHaveClass('bg-primary-600');
+            expect(barBtn).toHaveClass('bg-primary-700');
         });
 
         it('line button starts in inactive state', () => {
             render(<MonthlySummaryPage />);
             const lineBtn = screen.getByRole('button', { name: /Line/i });
-            expect(lineBtn).not.toHaveClass('bg-primary-600');
+            expect(lineBtn).not.toHaveClass('bg-primary-700');
         });
 
         it('cannot deactivate bar when it is the only active chart', () => {
@@ -468,7 +468,7 @@ describe('MonthlySummaryPage', () => {
             const barBtn = screen.getByRole('button', { name: /Bar/i });
             // bar=true, line=false → clicking bar should be a no-op
             fireEvent.click(barBtn);
-            expect(barBtn).toHaveClass('bg-primary-600');
+            expect(barBtn).toHaveClass('bg-primary-700');
         });
 
         it('cannot deactivate line when it is the only active chart', () => {
@@ -481,14 +481,14 @@ describe('MonthlySummaryPage', () => {
             fireEvent.click(barBtn); // now bar=false, line=true
             // Now clicking line should be a no-op
             fireEvent.click(lineBtn);
-            expect(lineBtn).toHaveClass('bg-primary-600');
+            expect(lineBtn).toHaveClass('bg-primary-700');
         });
 
         it('activates line chart when clicked', () => {
             render(<MonthlySummaryPage />);
             const lineBtn = screen.getByRole('button', { name: /Line/i });
             fireEvent.click(lineBtn);
-            expect(lineBtn).toHaveClass('bg-primary-600');
+            expect(lineBtn).toHaveClass('bg-primary-700');
         });
 
         it('can deactivate bar when line is also active', () => {
@@ -499,8 +499,8 @@ describe('MonthlySummaryPage', () => {
             fireEvent.click(lineBtn); // bar=true, line=true
             fireEvent.click(barBtn); // bar=false, line=true
 
-            expect(barBtn).not.toHaveClass('bg-primary-600');
-            expect(lineBtn).toHaveClass('bg-primary-600');
+            expect(barBtn).not.toHaveClass('bg-primary-700');
+            expect(lineBtn).toHaveClass('bg-primary-700');
         });
 
         it('can deactivate line when bar is also active', () => {
@@ -511,8 +511,8 @@ describe('MonthlySummaryPage', () => {
             fireEvent.click(lineBtn); // bar=true, line=true
             fireEvent.click(lineBtn); // bar=true, line=false
 
-            expect(lineBtn).not.toHaveClass('bg-primary-600');
-            expect(barBtn).toHaveClass('bg-primary-600');
+            expect(lineBtn).not.toHaveClass('bg-primary-700');
+            expect(barBtn).toHaveClass('bg-primary-700');
         });
     });
 

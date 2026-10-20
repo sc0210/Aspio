@@ -5,7 +5,7 @@ import type { PortfolioHolding } from '@/shared/types';
 import { cn } from '@/utils/cn';
 import { formatCurrency } from '@/utils/formatters';
 
-const toneOf = (up: boolean) => (up ? 'text-success-600 dark:text-success-400' : 'text-error-600 dark:text-error-400');
+const toneOf = (up: boolean) => (up ? 'text-success-700 dark:text-success-400' : 'text-error-700 dark:text-error-400');
 const signOf = (up: boolean) => (up ? '+' : '');
 
 interface HoldingLotCardsProps {

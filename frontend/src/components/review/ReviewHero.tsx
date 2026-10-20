@@ -23,10 +23,10 @@ interface ReviewHeroProps {
 }
 
 const TONE: Record<Verdict, string> = {
-    over: 'text-error-600 dark:text-error-400',
-    tight: 'text-amber-600 dark:text-amber-400',
-    steady: 'text-prosperity-600 dark:text-prosperity-400',
-    strong: 'text-prosperity-600 dark:text-prosperity-400',
+    over: 'text-error-700 dark:text-error-400',
+    tight: 'text-amber-700 dark:text-amber-400',
+    steady: 'text-prosperity-700 dark:text-prosperity-400',
+    strong: 'text-prosperity-700 dark:text-prosperity-400',
 };
 
 const VERDICT_FALLBACK: Record<Verdict, string> = {
@@ -140,7 +140,7 @@ function Flow({ label, amount, width, change, moreIsBetter, hasPrevious, positiv
                     <Icon
                         className={cn(
                             'w-4 h-4 flex-shrink-0',
-                            positive ? 'text-prosperity-500' : 'text-error-500',
+                            positive ? 'text-prosperity-700 dark:text-prosperity-500' : 'text-error-700 dark:text-error-500',
                         )}
                         aria-hidden="true"
                     />

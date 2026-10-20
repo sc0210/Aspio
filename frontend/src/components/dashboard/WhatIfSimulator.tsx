@@ -141,8 +141,8 @@ export function WhatIfSimulator({ assets, totalAssets: initialTotal }: WhatIfSim
           <p className="text-sm text-gray-600 dark:text-gray-400 mb-1">{t('whatIf.totalChange')}</p>
           <p className={cn(
             'text-xl font-bold',
-            totalChange > 0 ? 'text-green-600 dark:text-green-400' :
-            totalChange < 0 ? 'text-red-600 dark:text-red-400' :
+            totalChange > 0 ? 'text-green-700 dark:text-green-400' :
+            totalChange < 0 ? 'text-red-700 dark:text-red-400' :
             'text-gray-900 dark:text-white'
           )}>
             {totalChange > 0 ? '+' : ''}{formatCurrency(totalChange)}
@@ -188,7 +188,7 @@ export function WhatIfSimulator({ assets, totalAssets: initialTotal }: WhatIfSim
                     {asset.asset}
                   </span>
                   {isDeviated && (
-                    <span className="ml-2 text-xs text-orange-600 dark:text-orange-400">
+                    <span className="ml-2 text-xs text-orange-700 dark:text-orange-400">
                       {t('whatIf.deviation', { pct: (deviation * 100).toFixed(1) })}
                     </span>
                   )}
@@ -229,7 +229,7 @@ export function WhatIfSimulator({ assets, totalAssets: initialTotal }: WhatIfSim
                 step="1000"
                 value={currentValue}
                 onChange={(e) => handleValueChange(asset.asset, parseFloat(e.target.value))}
-                className="w-full h-2 bg-gray-200 dark:bg-gray-700 rounded-lg appearance-none cursor-pointer accent-purple-600"
+                className="w-full h-11 sm:h-6 cursor-pointer accent-purple-600"
               />
 
               <div className="flex items-center justify-between mt-2 text-sm">
@@ -243,7 +243,7 @@ export function WhatIfSimulator({ assets, totalAssets: initialTotal }: WhatIfSim
                   <span className="text-gray-600 dark:text-gray-400">{t('whatIf.share')}</span>
                   <span className={cn(
                     'font-semibold ml-2',
-                    isDeviated ? 'text-orange-600 dark:text-orange-400' : 'text-gray-900 dark:text-white'
+                    isDeviated ? 'text-orange-700 dark:text-orange-400' : 'text-gray-900 dark:text-white'
                   )}>
                     {formatPct(result?.newPct || 0)}
                   </span>
@@ -263,8 +263,8 @@ export function WhatIfSimulator({ assets, totalAssets: initialTotal }: WhatIfSim
                     <span className="text-gray-600 dark:text-gray-400">{t('whatIf.change')}</span>
                     <span className={cn(
                       'font-medium',
-                      result.change > 0 ? 'text-green-600 dark:text-green-400' :
-                      result.change < 0 ? 'text-red-600 dark:text-red-400' :
+                      result.change > 0 ? 'text-green-700 dark:text-green-400' :
+                      result.change < 0 ? 'text-red-700 dark:text-red-400' :
                       'text-gray-900 dark:text-white'
                     )}>
                       {result.change > 0 ? '+' : ''}{formatCurrency(result.change)}

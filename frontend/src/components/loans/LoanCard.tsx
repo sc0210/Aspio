@@ -58,7 +58,7 @@ export function LoanCard({ loan, onRecordPayment, onEdit, onDelete }: LoanCardPr
         </div>
         <div className="flex items-center gap-1.5 flex-shrink-0">
           {isPaidOff && (
-            <span className="flex items-center gap-1 text-xs font-medium text-prosperity-600 dark:text-prosperity-400 bg-prosperity-50 dark:bg-prosperity-900/30 px-2 py-0.5 rounded-full">
+            <span className="flex items-center gap-1 text-xs font-medium text-prosperity-700 dark:text-prosperity-400 bg-prosperity-50 dark:bg-prosperity-900/30 px-2 py-0.5 rounded-full">
               <CheckCircleIcon className="w-3 h-3" /> {t('card.paidOff')}
             </span>
           )}
@@ -138,7 +138,7 @@ export function LoanCard({ loan, onRecordPayment, onEdit, onDelete }: LoanCardPr
             loan.payoff_months_estimate !== loan.months_remaining && (
               <div className="flex items-center gap-1">
                 <span
-                  className="text-amber-600 dark:text-amber-400"
+                  className="text-amber-700 dark:text-amber-400"
                   title={t('card.payoffEstimateHint')}
                 >
                   {t('card.payoffEstimate', { count: loan.payoff_months_estimate })}
@@ -163,7 +163,7 @@ export function LoanCard({ loan, onRecordPayment, onEdit, onDelete }: LoanCardPr
         {!isPaidOff && (
           <button
             onClick={(e) => { e.stopPropagation(); onRecordPayment(loan); }}
-            className="flex-1 px-4 py-2.5 min-h-[44px] bg-primary-600 hover:bg-primary-700 text-white text-sm font-medium rounded-lg transition-colors duration-200 shadow-sm hover:shadow-md touch-manipulation"
+            className="flex-1 px-4 py-2.5 min-h-[44px] bg-primary-700 hover:bg-primary-800 text-white text-sm font-medium rounded-lg transition-colors duration-200 shadow-sm hover:shadow-md touch-manipulation"
           >
             {t('card.recordPayment')}
           </button>
@@ -181,7 +181,7 @@ export function LoanCard({ loan, onRecordPayment, onEdit, onDelete }: LoanCardPr
         <button
           onClick={(e) => { e.stopPropagation(); onDelete(loan); }}
           aria-label={t('card.deleteLoan')}
-          className="px-4 py-2.5 min-h-[44px] border border-red-300 dark:border-red-600 hover:bg-red-50 dark:hover:bg-red-900/30 text-error-600 dark:text-error-400 text-sm font-medium rounded-lg transition-colors duration-200 touch-manipulation"
+          className="px-4 py-2.5 min-h-[44px] border border-red-300 dark:border-red-600 hover:bg-red-50 dark:hover:bg-red-900/30 text-error-700 dark:text-error-400 text-sm font-medium rounded-lg transition-colors duration-200 touch-manipulation"
         >
           {t('card.delete')}
         </button>

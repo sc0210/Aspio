@@ -32,7 +32,7 @@ export function TopExpensesCard({ range }: Props) {
                 <h2 className="text-base font-semibold text-gray-900 dark:text-white">
                     {t('review.topExpenses.title', 'Biggest expenses')}
                 </h2>
-                <Link href="/transactions" className="text-xs font-medium text-prosperity-600 dark:text-prosperity-400 hover:underline focus:outline-none focus-visible:ring-2 focus-visible:ring-prosperity-500 rounded">
+                <Link href="/transactions" className="inline-block py-3.5 -my-3.5 sm:py-1 sm:-my-1 text-xs font-medium text-prosperity-700 dark:text-prosperity-400 hover:underline focus:outline-none focus-visible:ring-2 focus-visible:ring-prosperity-500 rounded">
                     {t('review.allTransactions', 'All transactions')}
                 </Link>
             </div>
@@ -51,7 +51,7 @@ export function TopExpensesCard({ range }: Props) {
                 <ol className="mt-3 divide-y divide-gray-100 dark:divide-gray-800">
                     {data.map((e, i) => (
                         <li key={e.id} className="flex items-center gap-3 py-2.5">
-                            <span className="w-4 text-xs tabular-nums text-gray-400">{i + 1}</span>
+                            <span className="w-4 text-xs tabular-nums text-gray-500 dark:text-gray-400">{i + 1}</span>
                             <div className="min-w-0 flex-1">
                                 <p className="text-sm font-medium text-gray-900 dark:text-white truncate">{e.description || e.category}</p>
                                 <p className="text-xs text-gray-500 dark:text-gray-400 truncate">
@@ -65,7 +65,7 @@ export function TopExpensesCard({ range }: Props) {
                     ))}
                 </ol>
             )}
-            <p className="mt-2 text-xs text-gray-400 dark:text-gray-500">
+            <p className="mt-2 text-xs text-gray-500 dark:text-gray-500">
                 {t('review.topExpenses.note', 'Transfers between your own wallets are left out.')}
             </p>
         </Card>

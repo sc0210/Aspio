@@ -38,7 +38,7 @@ export function RouteErrorFallback({ error, reset, segment }: RouteErrorFallback
           </p>
           <button
             onClick={reset}
-            className="px-4 py-2 text-sm font-medium text-white bg-primary-600 rounded-lg hover:bg-primary-700 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-500 focus-visible:ring-offset-2 transition-colors"
+            className="px-4 py-2 text-sm font-medium text-white bg-primary-700 rounded-lg hover:bg-primary-800 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-500 focus-visible:ring-offset-2 transition-colors"
           >
             {t('errorState.tryAgain', 'Try again')}
           </button>

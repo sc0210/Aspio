@@ -105,7 +105,7 @@ export function LeverageHistoryPanel({
                         <ChartBarIcon className="w-4 h-4 text-indigo-500" />
                         {t('lifecycle.history.title', 'Leverage over time')}
                     </h3>
-                    <p className="text-sm text-gray-400 dark:text-gray-500 mt-1">
+                    <p className="text-sm text-gray-500 dark:text-gray-500 mt-1">
                         {t('lifecycle.history.subtitle', 'Today’s ratio cannot tell you whether you are deleveraging. The direction can.')}
                     </p>
                 </div>
@@ -126,7 +126,7 @@ export function LeverageHistoryPanel({
                                 'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-400',
                                 p === period
                                     ? 'bg-indigo-50 dark:bg-indigo-900/40 text-indigo-700 dark:text-indigo-300'
-                                    : 'text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200',
+                                    : 'text-gray-600 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200',
                             )}
                         >
                             {periodLabel(p)}
@@ -195,7 +195,7 @@ export function LeverageHistoryPanel({
                     />
 
                     {summary.daysUnderwater > 0 && (
-                        <p className="mt-3 text-xs font-medium text-error-600 dark:text-error-400">
+                        <p className="mt-3 text-xs font-medium text-error-700 dark:text-error-400">
                             {t('lifecycle.history.underwater', {
                                 defaultValue: '{{n}} days with no ratio to report: investment debt exceeded everything you owned, and the line breaks across them.',
                                 n: summary.daysUnderwater,
@@ -204,7 +204,7 @@ export function LeverageHistoryPanel({
                     )}
 
                     {summary.daysOverCeiling > 0 && (
-                        <p className="mt-3 text-xs font-medium text-error-600 dark:text-error-400">
+                        <p className="mt-3 text-xs font-medium text-error-700 dark:text-error-400">
                             {t('lifecycle.history.overCeiling', {
                                 defaultValue: '{{n}} days above your {{max}}× ceiling in this window.',
                                 n: summary.daysOverCeiling,
@@ -219,7 +219,7 @@ export function LeverageHistoryPanel({
                         </p>
                     )}
 
-                    <p className="mt-2 text-xs text-gray-400 dark:text-gray-500 leading-relaxed">
+                    <p className="mt-2 text-xs text-gray-500 dark:text-gray-500 leading-relaxed">
                         {t('lifecycle.history.basis', 'Both halves are measured, not projected: balances are replayed from your transactions and holdings, and past debt from the payments recorded against each loan — the same payments that set the balance shown today.')}
                     </p>
                 </>
@@ -240,8 +240,8 @@ function Stat({
     emphasise?: boolean;
 }) {
     const toneClass = {
-        good: 'text-prosperity-600 dark:text-prosperity-400',
-        bad: 'text-warning-600 dark:text-warning-400',
+        good: 'text-prosperity-700 dark:text-prosperity-400',
+        bad: 'text-warning-700 dark:text-warning-400',
         neutral: 'text-gray-900 dark:text-white',
     }[tone];
 

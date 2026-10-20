@@ -78,7 +78,7 @@ export default function CreateGoalModal({
           </h2>
           <button
             onClick={onClose}
-            className="text-gray-400 hover:text-gray-600 dark:hover:text-gray-200 transition-colors"
+            className="text-gray-500 dark:text-gray-400 hover:text-gray-600 dark:hover:text-gray-200 transition-colors"
           >
             <XMarkIcon className="w-5 h-5" />
           </button>
@@ -156,7 +156,7 @@ export default function CreateGoalModal({
           </div>
 
           {error && (
-            <p className="text-xs text-red-600 dark:text-red-400">{error}</p>
+            <p className="text-xs text-red-700 dark:text-red-400">{error}</p>
           )}
 
           <button

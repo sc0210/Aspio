@@ -69,7 +69,7 @@ export function MobileLoans() {
                 <div className="flex items-center justify-between pt-1">
                     <h1 className="text-xl font-extrabold tracking-tight text-gray-900 dark:text-white">{t('loans:title')}</h1>
                     <button type="button" onClick={() => setShowAdd(true)} aria-label={t('loans:addLoan')}
-                        className="grid place-items-center w-11 h-11 rounded-full bg-primary-600 hover:bg-primary-700 text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-400">
+                        className="grid place-items-center w-11 h-11 rounded-full bg-primary-700 hover:bg-primary-800 text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-400">
                         <PlusIcon className="w-5 h-5" />
                     </button>
                 </div>
@@ -81,7 +81,7 @@ export function MobileLoans() {
                         <p className="text-4xl" aria-hidden="true">🏦</p>
                         <p className="text-sm text-gray-500 dark:text-gray-400">{t('loans:emptyState.title')}</p>
                         <button type="button" onClick={() => setShowAdd(true)}
-                            className="inline-flex items-center gap-1.5 rounded-xl bg-primary-600 hover:bg-primary-700 px-4 py-2.5 text-sm font-semibold text-white">
+                            className="inline-flex items-center gap-1.5 rounded-xl bg-primary-700 hover:bg-primary-800 px-4 py-2.5 text-sm font-semibold text-white">
                             <PlusIcon className="w-4 h-4" /> {t('loans:addFirstLoan')}
                         </button>
                     </div>
@@ -131,7 +131,7 @@ export function MobileLoans() {
                                         <div className="flex items-center gap-3">
                                             <div className="min-w-0 flex-1">
                                                 <p className="text-sm font-bold text-gray-900 dark:text-white truncate">{loan.name}</p>
-                                                <p className="text-[11.5px] font-medium text-gray-400 dark:text-gray-500 tabular-nums">
+                                                <p className="text-xs font-medium text-gray-500 dark:text-gray-500 tabular-nums">
                                                     {t('loans:card.remaining', { amount: hide(fmt(loan.current_balance, loan.currency)) })}
                                                     {next ? ` · ${t('loans:card.next', { date: next })}` : ''}
                                                 </p>
@@ -153,10 +153,10 @@ export function MobileLoans() {
                     </>
                 )}
 
-                <p className="text-center px-4 pt-1 text-xs font-semibold leading-relaxed text-gray-400 dark:text-gray-500">
+                <p className="text-center px-4 pt-1 text-xs font-semibold leading-relaxed text-gray-500 dark:text-gray-500">
                     {t('dashboard:mobile.fullLoans', 'Edit, delete & paid-off history')}
                     <br />
-                    <span className="text-primary-600 dark:text-primary-400">→ {t('dashboard:mobile.onLargerScreen', 'on tablet / desktop')}</span>
+                    <span className="text-primary-700 dark:text-primary-400">→ {t('dashboard:mobile.onLargerScreen', 'on tablet / desktop')}</span>
                 </p>
             </div>
 

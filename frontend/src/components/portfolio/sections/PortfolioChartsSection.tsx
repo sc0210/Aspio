@@ -307,7 +307,7 @@ export function PortfolioChartsSection({
           {/* Close chart section */}
           <button
             onClick={() => onChartTypeChange(null)}
-            className="p-1.5 text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 rounded-md hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors"
+            className="p-1.5 text-gray-500 dark:text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 rounded-md hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors"
             title={t('portfolio:charts.closeChart')}
             aria-label={t('portfolio:charts.closeChart')}
           >

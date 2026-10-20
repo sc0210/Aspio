@@ -292,13 +292,13 @@ export function PortfolioHeatmap() {
                         </div>
                         <div className="flex items-center justify-between gap-4">
                           <span className="text-gray-500 dark:text-gray-400">{t('portfolio.heatmapToday', 'Today')}</span>
-                          <span className={info.dayPct >= 0 ? 'text-success-600 dark:text-success-400 font-semibold' : 'text-red-600 dark:text-red-400 font-semibold'}>
+                          <span className={info.dayPct >= 0 ? 'text-success-700 dark:text-success-400 font-semibold' : 'text-red-700 dark:text-red-400 font-semibold'}>
                             {formatPct(info.dayPct)}
                           </span>
                         </div>
                         <div className="flex items-center justify-between gap-4">
                           <span className="text-gray-500 dark:text-gray-400">{t('portfolio.heatmapTotal', 'Total')}</span>
-                          <span className={info.totalPct >= 0 ? 'text-success-600 dark:text-success-400 font-semibold' : 'text-red-600 dark:text-red-400 font-semibold'}>
+                          <span className={info.totalPct >= 0 ? 'text-success-700 dark:text-success-400 font-semibold' : 'text-red-700 dark:text-red-400 font-semibold'}>
                             {formatPct(info.totalPct)}
                           </span>
                         </div>

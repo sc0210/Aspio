@@ -18,19 +18,19 @@ interface Props {
 
 const VERDICT_STYLES: Record<TrackingVerdict, { text: string; chip: string }> = {
     'on-track': {
-        text: 'text-prosperity-600 dark:text-prosperity-400',
+        text: 'text-prosperity-700 dark:text-prosperity-400',
         chip: 'bg-prosperity-100 dark:bg-prosperity-900/40 text-prosperity-700 dark:text-prosperity-300',
     },
     under: {
-        text: 'text-primary-600 dark:text-primary-400',
+        text: 'text-primary-700 dark:text-primary-400',
         chip: 'bg-primary-100 dark:bg-primary-900/40 text-primary-700 dark:text-primary-300',
     },
     over: {
-        text: 'text-warning-600 dark:text-warning-400',
+        text: 'text-warning-700 dark:text-warning-400',
         chip: 'bg-warning-100 dark:bg-warning-900/40 text-warning-700 dark:text-warning-300',
     },
     breach: {
-        text: 'text-error-600 dark:text-error-400',
+        text: 'text-error-700 dark:text-error-400',
         chip: 'bg-error-100 dark:bg-error-900/40 text-error-700 dark:text-error-300',
     },
 };
@@ -136,7 +136,7 @@ export function PositionHeader({ position, target, tracking, maxLeverage }: Prop
                                     aria-hidden="true"
                                 />
                             </div>
-                            <div className="flex justify-between text-xs text-gray-400 dark:text-gray-500 -mt-1">
+                            <div className="flex justify-between text-xs text-gray-500 dark:text-gray-500 -mt-1">
                                 <span>0×</span>
                                 <span>1× · {t('lifecycle.position.noDebt', 'no debt')}</span>
                                 <span>{maxLeverage}× · {t('lifecycle.position.ceiling', 'ceiling')}</span>
@@ -198,8 +198,8 @@ function Stat({ label, value, tone = 'neutral' }: { label: string; value: string
             <dd
                 className={cn(
                     'text-xs font-bold tabular-nums',
-                    tone === 'good' && 'text-prosperity-600 dark:text-prosperity-400',
-                    tone === 'debt' && 'text-error-600 dark:text-error-400',
+                    tone === 'good' && 'text-prosperity-700 dark:text-prosperity-400',
+                    tone === 'debt' && 'text-error-700 dark:text-error-400',
                     tone === 'neutral' && 'text-gray-800 dark:text-gray-100',
                 )}
             >

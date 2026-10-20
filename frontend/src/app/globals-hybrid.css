@@ -11,6 +11,20 @@ body {
   color: rgb(17 24 39);
   background-color: rgb(249 250 251);
   transition: background-color 200ms, color 200ms;
+  /* Fixed-width digits everywhere, so amounts line up in columns and a
+     changing number does not shift its neighbours. `proportional-nums`
+     opts an element back out. */
+  font-variant-numeric: tabular-nums;
+}
+
+/* iOS zooms the page when a focused field's text is under 16px. Utilities such
+   as text-sm would otherwise win, hence !important — phones only. */
+@media (max-width: 640px) {
+  input:not([type='checkbox']):not([type='radio']):not([type='range']):not([type='file']),
+  select,
+  textarea {
+    font-size: 16px !important;
+  }
 }
 
 /* Proper dark mode support with CSS variables */

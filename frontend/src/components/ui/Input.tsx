@@ -42,7 +42,7 @@ export const Input = React.forwardRef<HTMLInputElement, InputProps>(
             className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2"
           >
             {label}
-            {props.required && <span className="text-error-500 ml-1">*</span>}
+            {props.required && <span className="text-error-700 dark:text-error-500 ml-1">*</span>}
           </label>
         )}
         
@@ -81,7 +81,7 @@ export const Input = React.forwardRef<HTMLInputElement, InputProps>(
         </div>
         
         {error && (
-          <p id={`${inputId}-error`} className="mt-1 text-sm text-error-600" role="alert">
+          <p id={`${inputId}-error`} className="mt-1 text-sm text-error-700 dark:text-error-600" role="alert">
             {error}
           </p>
         )}

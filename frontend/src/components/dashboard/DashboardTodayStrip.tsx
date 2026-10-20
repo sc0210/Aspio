@@ -35,7 +35,7 @@ function PctBadge({ pct }: { pct: number | undefined }) {
   const arrow = isNeutral ? '→' : isUp ? '▲' : '▼';
 
   const cls = isNeutral
-    ? 'bg-gray-100 dark:bg-gray-700 text-gray-500 dark:text-gray-400'
+    ? 'bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-400'
     : isUp
     ? 'bg-prosperity-100 dark:bg-prosperity-900/40 text-prosperity-700 dark:text-prosperity-300'
     : 'bg-error-100 dark:bg-error-900/40 text-error-700 dark:text-error-300';
@@ -101,7 +101,7 @@ function StripGrid({
       {/* Column 1 — Total Assets, only where nothing else states it */}
       {totalAssets !== undefined && (
       <div className="px-2.5 sm:px-5 py-3 sm:py-4 flex flex-col gap-1">
-        <p className="text-xs uppercase tracking-wide text-gray-400 dark:text-gray-500 font-medium">
+        <p className="text-xs uppercase tracking-wide text-gray-500 dark:text-gray-500 font-medium">
           {t('dashboard:todayStrip.totalAssets')}
         </p>
         <p
@@ -119,16 +119,16 @@ function StripGrid({
 
       {/* Column 2 — Net Saved */}
       <div className="px-2.5 sm:px-5 py-3 sm:py-4 flex flex-col gap-1">
-        <p className="text-xs uppercase tracking-wide text-gray-400 dark:text-gray-500 font-medium truncate">
+        <p className="text-xs uppercase tracking-wide text-gray-500 dark:text-gray-500 font-medium truncate">
           {t('dashboard:todayStrip.saved')} &middot; {periodLabel}
         </p>
         <p
-          className={`text-sm sm:text-xl font-bold tabular-nums leading-tight truncate ${netSaved >= 0 ? 'text-prosperity-600 dark:text-prosperity-400' : 'text-error-600 dark:text-error-400'}`}
+          className={`text-sm sm:text-xl font-bold tabular-nums leading-tight truncate ${netSaved >= 0 ? 'text-prosperity-700 dark:text-prosperity-400' : 'text-error-700 dark:text-error-400'}`}
           aria-label={`Net saved: ${fmt(netSaved)}`}
         >
           {fmt(netSaved)}
         </p>
-        <p className="text-xs text-gray-400 dark:text-gray-500">
+        <p className="text-xs text-gray-500 dark:text-gray-500">
           {t('dashboard:todayStrip.savingsRate', { rate: savingsRate.toFixed(1) })}
         </p>
       </div>
@@ -141,7 +141,7 @@ function StripGrid({
           return and disagrees with the ROI on the portfolio page. */}
       <div className="px-2.5 sm:px-5 py-3 sm:py-4 flex flex-col gap-1">
         <p
-          className="text-xs uppercase tracking-wide text-gray-400 dark:text-gray-500 font-medium truncate"
+          className="text-xs uppercase tracking-wide text-gray-500 dark:text-gray-500 font-medium truncate"
           title={t('dashboard:todayStrip.portfolioChangeHint')}
         >
           {t('dashboard:todayStrip.portfolio')} &middot; {periodLabel}

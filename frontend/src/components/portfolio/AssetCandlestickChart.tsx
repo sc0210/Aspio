@@ -97,7 +97,7 @@ function CandleTooltip({ active, payload, currency, isValueVisible }: CustomTool
                 {([['Open', d.open], ['High', d.high], ['Low', d.low], ['Close', d.close]] as const).map(([label, v]) => (
                     <div key={label} className="flex justify-between gap-3">
                         <span className="font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider">{label}</span>
-                        <span className={cn('font-bold tabular-nums', label === 'Close' ? (isUp ? 'text-error-600 dark:text-error-400' : 'text-success-600 dark:text-success-400') : 'text-gray-900 dark:text-white')}>
+                        <span className={cn('font-bold tabular-nums', label === 'Close' ? (isUp ? 'text-error-700 dark:text-error-400' : 'text-success-700 dark:text-success-400') : 'text-gray-900 dark:text-white')}>
                             {fmt(v)}
                         </span>
                     </div>
@@ -264,7 +264,7 @@ export function AssetCandlestickChart({ chartData, avgCost, currency, isValueVis
                     </span>
                 )}
                 {bucketSize > 1 && (
-                    <span role="listitem" className="ml-auto text-gray-400 dark:text-gray-500" title="Daily bars are grouped so the chart stays readable over long ranges">
+                    <span role="listitem" className="ml-auto text-gray-500 dark:text-gray-500" title="Daily bars are grouped so the chart stays readable over long ranges">
                         {bucketSize}-day bars
                     </span>
                 )}

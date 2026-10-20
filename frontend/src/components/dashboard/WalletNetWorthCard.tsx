@@ -1,6 +1,6 @@
 'use client';
 
-import { useMemo, memo, useState, useEffect, useRef } from 'react';
+import { useMemo, memo, useState, useEffect, useRef, type CSSProperties } from 'react';
 import Link from 'next/link';
 import { useTranslation } from 'react-i18next';
 import {
@@ -54,7 +54,7 @@ const pctBadge = (pct: number | undefined, neutral = false) => {
     if (pct === undefined) return null;
     const up = pct >= 0;
     const base = 'inline-flex items-center gap-0.5 text-xs font-semibold px-1.5 py-0.5 rounded-full';
-    if (neutral) return `${base} bg-gray-100 dark:bg-gray-700 text-gray-500 dark:text-gray-400`;
+    if (neutral) return `${base} bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-400`;
     return up
         ? `${base} bg-prosperity-100 dark:bg-prosperity-900/40 text-prosperity-700 dark:text-prosperity-300`
         : `${base} bg-error-100 dark:bg-error-900/40 text-error-700 dark:text-error-300`;
@@ -73,9 +73,9 @@ const WALLET_DEF_CONFIGS = [
 ] as const;
 
 const WALLET_COLORS = {
-    sky: { border: 'border-l-sky-400', text: 'text-sky-600 dark:text-sky-400', dot: '#0ea5e9' },
+    sky: { border: 'border-l-sky-400', text: 'text-sky-700 dark:text-sky-400', dot: '#0ea5e9' },
     violet: { border: 'border-l-violet-400', text: 'text-violet-600 dark:text-violet-400', dot: '#8b5cf6' },
-    amber: { border: 'border-l-amber-400', text: 'text-amber-600 dark:text-amber-400', dot: '#f59e0b' },
+    amber: { border: 'border-l-amber-400', text: 'text-amber-700 dark:text-amber-400', dot: '#f59e0b' },
 };
 
 const CHART_COLORS = {
@@ -114,7 +114,7 @@ const CustomTooltip = memo(function CustomTooltip({ active, payload, isValueVisi
                     </span>
                 </div>
                 <div className="flex justify-between gap-3 text-xs">
-                    <span className="text-gray-400 font-medium">{t('wallet.totalAsset', 'Total Asset')}</span>
+                    <span className="text-gray-500 dark:text-gray-400 font-medium">{t('wallet.totalAsset', 'Total Asset')}</span>
                     <span className="text-gray-900 dark:text-white font-bold tabular-nums">{isValueVisible ? formatTWD(d.totalAsset) : '•••'}</span>
                 </div>
                 {walletDefs.map(({ key, label }) => {
@@ -132,11 +132,11 @@ const CustomTooltip = memo(function CustomTooltip({ active, payload, isValueVisi
                 })}
                 {(Number(d.debtBalance) || 0) > 0 && (
                     <div className="flex justify-between gap-3 text-xs pt-1 border-t border-gray-100 dark:border-gray-700">
-                        <span className="flex items-center gap-1 text-error-500">
+                        <span className="flex items-center gap-1 text-error-700 dark:text-error-500">
                             <span className="w-1.5 h-1.5 rounded-full flex-shrink-0 bg-error-500" />
                             {t('wallet.debtBalance', 'Debt Balance')}
                         </span>
-                        <span className="text-error-500 tabular-nums">{isValueVisible ? formatTWD(d.debtBalance ?? 0) : '•••'}</span>
+                        <span className="text-error-700 dark:text-error-500 tabular-nums">{isValueVisible ? formatTWD(d.debtBalance ?? 0) : '•••'}</span>
                     </div>
                 )}
             </div>
@@ -334,7 +334,7 @@ export function WalletNetWorthCard({
                             )}
                             <Link
                                 href="/savings"
-                                className="text-xs text-primary-600 hover:text-primary-700 dark:text-primary-400 dark:hover:text-primary-300 font-medium transition-colors"
+                                className="text-xs text-primary-700 hover:text-primary-800 dark:text-primary-400 dark:hover:text-primary-300 font-medium transition-colors"
                             >
                                 {t('todayStrip.details', 'Details')}
                             </Link>
@@ -353,15 +353,15 @@ export function WalletNetWorthCard({
                     {hasDebtBalance && (
                         <div className="flex items-center gap-4 text-xs -mt-1">
                             <div className="flex items-center gap-1">
-                                <span className="text-gray-400 dark:text-gray-500">{t('wallet.assets', 'Assets')}</span>
-                                <span className="font-semibold text-prosperity-600 dark:text-prosperity-400 tabular-nums">
+                                <span className="text-gray-500 dark:text-gray-500">{t('wallet.assets', 'Assets')}</span>
+                                <span className="font-semibold text-prosperity-700 dark:text-prosperity-400 tabular-nums">
                                     {isValueVisible ? formatTWD(stats.total_asset) : '•••'}
                                 </span>
                             </div>
-                            <span className="text-gray-300 dark:text-gray-600">−</span>
+                            <span className="text-gray-500 dark:text-gray-600">−</span>
                             <div className="flex items-center gap-1">
-                                <span className="text-gray-400 dark:text-gray-500">{t('wallet.liabilities', 'Liabilities')}</span>
-                                <Link href="/loans" className="font-semibold text-error-500 dark:text-error-400 tabular-nums hover:underline">
+                                <span className="text-gray-500 dark:text-gray-500">{t('wallet.liabilities', 'Liabilities')}</span>
+                                <Link href="/loans" className="font-semibold text-error-700 dark:text-error-400 tabular-nums hover:underline">
                                     {isValueVisible ? formatTWD(totalDebt) : '•••'}
                                 </Link>
                             </div>
@@ -371,17 +371,17 @@ export function WalletNetWorthCard({
                     {/* Sub-stats */}
                     <div className="flex flex-wrap gap-x-4 gap-y-1 text-xs">
                         <div className="flex items-center gap-1.5">
-                            <span className="text-gray-400 dark:text-gray-500 font-medium">{t('wallet.emergencyRunway', 'Emergency Runway')}</span>
+                            <span className="text-gray-500 dark:text-gray-500 font-medium">{t('wallet.emergencyRunway', 'Emergency Runway')}</span>
                             {emergencyRunway !== null ? (
                                 <span className={cn('font-semibold tabular-nums',
-                                    emergencyRunway >= 6 ? 'text-prosperity-600 dark:text-prosperity-400' :
-                                        emergencyRunway >= 3 ? 'text-amber-600 dark:text-amber-400' :
-                                            'text-error-500 dark:text-error-400'
+                                    emergencyRunway >= 6 ? 'text-prosperity-700 dark:text-prosperity-400' :
+                                        emergencyRunway >= 3 ? 'text-amber-700 dark:text-amber-400' :
+                                            'text-error-700 dark:text-error-400'
                                 )}>
                                     {`${emergencyRunway.toFixed(1)} ${t('wallet.months', 'mo')}`}
                                 </span>
                             ) : (
-                                <span className="text-gray-400 dark:text-gray-500">—</span>
+                                <span className="text-gray-500 dark:text-gray-500">—</span>
                             )}
                         </div>
                     </div>
@@ -442,7 +442,7 @@ export function WalletNetWorthCard({
                                 </AreaChart>
                             </ResponsiveContainer>
                         ) : (
-                            <div className="flex items-center justify-center h-full text-gray-400 dark:text-gray-500 text-sm">
+                            <div className="flex items-center justify-center h-full text-gray-500 dark:text-gray-500 text-sm">
                                 {t('wallet.noTrendData', 'No trend data')}
                             </div>
                         )}
@@ -476,7 +476,7 @@ export function WalletNetWorthCard({
                                             'font-medium transition-colors',
                                             visible
                                                 ? 'text-gray-600 dark:text-gray-300'
-                                                : 'text-gray-400 dark:text-gray-500 line-through decoration-gray-300 dark:decoration-gray-600'
+                                                : 'text-gray-500 dark:text-gray-500 line-through decoration-gray-300 dark:decoration-gray-600'
                                         )}>
                                             {t(labelKey, fallback)}
                                         </span>
@@ -496,8 +496,8 @@ export function WalletNetWorthCard({
                                     <span className={cn(
                                         'font-medium transition-colors',
                                         lineVisibility.debtBalance
-                                            ? 'text-rose-500'
-                                            : 'text-gray-400 dark:text-gray-500 line-through decoration-gray-300 dark:decoration-gray-600'
+                                            ? 'text-rose-700 dark:text-rose-500'
+                                            : 'text-gray-500 dark:text-gray-500 line-through decoration-gray-300 dark:decoration-gray-600'
                                     )}>
                                         {t('wallet.debtBalance', 'Debt Balance')}
                                     </span>
@@ -529,7 +529,7 @@ export function WalletNetWorthCard({
                                         <span className={cn(
                                             'mt-0.5 inline-flex items-center gap-0.5 text-xs font-semibold px-1 py-0.5 rounded-full',
                                             isNeutral
-                                                ? 'bg-gray-100 dark:bg-gray-700 text-gray-500 dark:text-gray-400'
+                                                ? 'bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-400'
                                                 : change >= 0
                                                     ? 'bg-emerald-100 dark:bg-emerald-900/40 text-emerald-700 dark:text-emerald-300'
                                                     : 'bg-rose-100 dark:bg-rose-900/40 text-rose-700 dark:text-rose-300'
@@ -537,7 +537,7 @@ export function WalletNetWorthCard({
                                             {arrow(change)} {Math.abs(change).toFixed(1)}%
                                         </span>
                                     ) : (
-                                        <span className="mt-0.5 text-xs text-gray-400 dark:text-gray-500">—</span>
+                                        <span className="mt-0.5 text-xs text-gray-500 dark:text-gray-500">—</span>
                                     )}
                                 </div>
                             );
@@ -628,7 +628,7 @@ export function WalletNetWorthCard({
 
                             {/* Center label — only 2 lines to avoid clutter */}
                             <div className="absolute inset-0 flex flex-col items-center justify-center pointer-events-none">
-                                <p className="text-xs text-gray-400 dark:text-gray-500 font-medium tracking-wide uppercase">
+                                <p className="text-xs text-gray-500 dark:text-gray-500 font-medium tracking-wide uppercase">
                                     {hasDebtBalance ? t('wallet.netWorth', 'Net Worth') : t('wallet.totalAsset', 'Total Asset')}
                                 </p>
                                 <p className="text-base font-bold text-gray-900 dark:text-white tabular-nums mt-0.5">
@@ -648,7 +648,7 @@ export function WalletNetWorthCard({
                                     <div key={label} className="flex items-center gap-2 px-1">
                                         <div className="w-2.5 h-2.5 rounded-full flex-shrink-0" style={{ background: color }} />
                                         <span className="text-xs text-gray-600 dark:text-gray-400 flex-1 truncate">{label}</span>
-                                        <span className="text-xs font-semibold tabular-nums" style={{ color }}>
+                                        <span className="text-xs font-semibold tabular-nums text-gray-700 dark:[color:var(--legend)]" style={{ '--legend': color } as CSSProperties}>
                                             {pct.toFixed(1)}%
                                         </span>
                                         <span className="text-xs font-bold text-gray-900 dark:text-white tabular-nums w-24 text-right">
@@ -682,11 +682,11 @@ export function WalletNetWorthCard({
                             {hasDebtBalance && (
                                 <div className="flex items-center gap-2 px-1 pt-1 border-t border-gray-100 dark:border-gray-700">
                                     <div className="w-2.5 h-2.5 rounded-full flex-shrink-0 border-2 border-rose-500" style={{ background: 'transparent' }} />
-                                    <span className="text-xs text-rose-500 dark:text-rose-400 flex-1 truncate font-medium">{t('wallet.debt', 'Debt')}</span>
-                                    <span className="text-xs font-semibold tabular-nums text-rose-500 dark:text-rose-400 whitespace-nowrap">
+                                    <span className="text-xs text-rose-700 dark:text-rose-400 flex-1 truncate font-medium">{t('wallet.debt', 'Debt')}</span>
+                                    <span className="text-xs font-semibold tabular-nums text-rose-700 dark:text-rose-400 whitespace-nowrap">
                                         {(totalDebt / stats.total_asset * 100).toFixed(1)}% {t('wallet.ofAssets', 'of assets')}
                                     </span>
-                                    <span className="text-xs font-bold text-rose-500 dark:text-rose-400 tabular-nums w-24 text-right">
+                                    <span className="text-xs font-bold text-rose-700 dark:text-rose-400 tabular-nums w-24 text-right">
                                         {isValueVisible ? formatTWD(totalDebt) : '•••'}
                                     </span>
                                 </div>
