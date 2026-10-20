@@ -351,19 +351,22 @@ export function useTransactions(options: UseTransactionsOptions = {}) {
       // Cancel outgoing refetches
       await queryClient.cancelQueries({ queryKey: [QUERY_KEYS.TRANSACTIONS] });
 
-      // Snapshot previous value
-      const previousTransactions = queryClient.getQueryData([QUERY_KEYS.TRANSACTIONS, options]);
+      // Match by prefix, as create does: useDualModeQuery appends the mode and
+      // user id to the key, so the exact [TRANSACTIONS, options] key this used
+      // to write was never the one any query read — the row stayed on screen
+      // until the server answered, and the rollback restored nothing.
+      const snapshots = queryClient.getQueriesData({ queryKey: [QUERY_KEYS.TRANSACTIONS] });
 
-      // Optimistic delete
-      queryClient.setQueryData([QUERY_KEYS.TRANSACTIONS, options], (old: unknown) => {
+      queryClient.setQueriesData({ queryKey: [QUERY_KEYS.TRANSACTIONS] }, (old: unknown) => {
         type CachedData = { data?: Transaction[] };
         const cached = old as CachedData | Transaction[] | null | undefined;
-        const oldData: Transaction[] = Array.isArray(cached) ? cached : (cached?.data ?? []);
+        if (!cached) return cached;
+        const oldData: Transaction[] = Array.isArray(cached) ? cached : (cached.data ?? []);
         const newData = oldData.filter((t: Transaction) => t.id !== deletedId);
-        return Array.isArray(cached) ? newData : { ...(cached ?? {}), data: newData };
+        return Array.isArray(cached) ? newData : { ...cached, data: newData };
       });
 
-      return { previousTransactions, deletedId };
+      return { snapshots, deletedId };
     },
     onSuccess: () => {
       // Use centralized invalidation for dashboard data (includes wallet-trends)
@@ -377,7 +380,7 @@ export function useTransactions(options: UseTransactionsOptions = {}) {
     },
     onError: (error: unknown, _deletedId, context) => {
       // Rollback
-      queryClient.setQueryData([QUERY_KEYS.TRANSACTIONS, options], context?.previousTransactions);
+      context?.snapshots.forEach(([queryKey, data]) => queryClient.setQueryData(queryKey, data));
       const message = error instanceof Error ? error.message : t('transactions:toast.deleteFailed');
       toast.error(message);
     },

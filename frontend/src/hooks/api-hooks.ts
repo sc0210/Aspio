@@ -37,6 +37,29 @@ export function useSetDayOrder() {
   });
 }
 
+/**
+ * Apply `fn` to the rows of every cached transactions query, whatever its shape:
+ * useTransactions caches the ApiResponse (`{ data: [...] }`), older callers a bare
+ * array or `{ transactions: [...] }`. Matched by prefix because useDualModeQuery
+ * appends mode and user id to the key — an exact ['transactions'] write lands on
+ * a key no query reads, which is how both optimistic updates here used to do
+ * nothing on the transactions page.
+ */
+function mapCachedTransactions(
+  queryClient: ReturnType<typeof useQueryClient>,
+  fn: (rows: Transaction[]) => Transaction[],
+) {
+  const snapshots = queryClient.getQueriesData({ queryKey: [QUERY_KEYS.TRANSACTIONS] });
+  queryClient.setQueriesData({ queryKey: [QUERY_KEYS.TRANSACTIONS] }, (old: unknown) => {
+    if (Array.isArray(old)) return fn(old as Transaction[]);
+    const obj = old as Record<string, unknown> | null | undefined;
+    if (obj && Array.isArray(obj.data)) return { ...obj, data: fn(obj.data as Transaction[]) };
+    if (obj && Array.isArray(obj.transactions)) return { ...obj, transactions: fn(obj.transactions as Transaction[]) };
+    return old;
+  });
+  return snapshots;
+}
+
 export function useUpdateTransaction() {
   const queryClient = useQueryClient();
 
@@ -45,35 +68,19 @@ export function useUpdateTransaction() {
       apiClient.updateTransaction(id, data),
     // Optimistic update - immediately apply changes to UI
     onMutate: async ({ id, data }) => {
-      // Cancel any outgoing refetches
-      await queryClient.cancelQueries({ queryKey: ['transactions'] });
+      await queryClient.cancelQueries({ queryKey: [QUERY_KEYS.TRANSACTIONS] });
 
-      // Snapshot the previous value
-      const previousTransactions = queryClient.getQueryData(['transactions']);
+      const snapshots = mapCachedTransactions(queryClient, (rows) =>
+        rows.map((t) => (t.id === id ? { ...t, ...data, updatedAt: new Date() } : t))
+      );
 
-      // Optimistically update the transaction
-      queryClient.setQueryData(['transactions'], (old: unknown) => {
-        if (Array.isArray(old)) {
-          return old.map((t: Transaction) =>
-            t.id === id
-              ? { ...t, ...data, updatedAt: new Date() }
-              : t
-          );
-        }
-        return old;
-      });
-
-      return { previousTransactions, id, data };
+      return { snapshots, id, data };
     },
-    onSuccess: (updatedTransaction, { id }) => {
-      // Replace optimistic update with real data
-      queryClient.setQueryData(['transactions'], (old: unknown) => {
-        if (Array.isArray(old)) {
-          return old.map((t: Transaction) => t.id === id ? updatedTransaction : t);
-        }
-        return old;
-      });
-
+    onSuccess: () => {
+      // No row swap here: apiClient.updateTransaction returns the raw backend
+      // row (snake_case), not a Transaction, so splicing it into the cache would
+      // blank the row's date and wallet. onSettled refetches the real one.
+      //
       // Centralized dashboard invalidation — covers dashboard, optimized/comprehensive
       // dashboard, dashboard-stats, wallet-trends and portfolio (kept in sync with
       // useTransactions.ts so both transaction hooks refresh identical widgets).
@@ -81,12 +88,12 @@ export function useUpdateTransaction() {
     },
     onError: (error, _variables, context) => {
       // If the mutation fails, restore the previous data
-      queryClient.setQueryData(['transactions'], context?.previousTransactions);
+      context?.snapshots.forEach(([queryKey, data]) => queryClient.setQueryData(queryKey, data));
       console.error('Transaction update error:', error);
     },
     // Ensure consistency
     onSettled: () => {
-      queryClient.invalidateQueries({ queryKey: ['transactions'] });
+      queryClient.invalidateQueries({ queryKey: [QUERY_KEYS.TRANSACTIONS] });
     },
   });
 }
@@ -108,30 +115,11 @@ export function useDeleteTransaction() {
     // Optimistic delete - immediately remove from UI before backend responds
     onMutate: async (deletedId) => {
       // Cancel any outgoing refetches for all transaction queries
-      await queryClient.cancelQueries({ queryKey: ['transactions'] });
+      await queryClient.cancelQueries({ queryKey: [QUERY_KEYS.TRANSACTIONS] });
 
-      // Snapshot all transaction query data
-      const allTransactionQueries = queryClient.getQueriesData({ queryKey: ['transactions'] });
-
-      // Optimistically remove the transaction from all relevant queries
-      allTransactionQueries.forEach(([queryKey, data]) => {
-        if (data) {
-          queryClient.setQueryData(queryKey, (old: unknown) => {
-            if (Array.isArray(old)) {
-              return old.filter((t: Transaction) => t.id !== deletedId);
-            }
-            const oldObj = old as Record<string, unknown>;
-            // Handle paginated responses
-            if (oldObj?.transactions && Array.isArray(oldObj.transactions)) {
-              return {
-                ...oldObj,
-                transactions: (oldObj.transactions as Transaction[]).filter((t: Transaction) => t.id !== deletedId)
-              };
-            }
-            return old;
-          });
-        }
-      });
+      const allTransactionQueries = mapCachedTransactions(queryClient, (rows) =>
+        rows.filter((t) => t.id !== deletedId)
+      );
 
       // Return a context with all previous data
       return { allTransactionQueries, deletedId };

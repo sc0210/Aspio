@@ -6,6 +6,7 @@ import { useSession } from 'next-auth/react';
 import { useTranslation } from 'react-i18next';
 import { portfolioService } from '@/services/portfolioService';
 import { invalidateDashboardData, QUERY_KEYS } from '@/hooks/useDataSynchronization';
+import { toTWD } from '@/utils/formatters';
 import toast from 'react-hot-toast';
 import type { PortfolioFilters } from './usePortfolioFilters';
 import type { PortfolioModalsState } from './usePortfolioModals';
@@ -33,6 +34,7 @@ interface CachedPortfolio {
     walletType?: string;
     symbol?: string;
     name?: string;
+    currency?: string;
   }>;
   totalValue?: number;
   totalCost?: number;
@@ -73,9 +75,21 @@ export function usePortfolioHoldingOperations(
 
       queryClient.setQueryData(['portfolio', memoizedFilters, userKey], (old: CachedPortfolio | undefined) => {
         if (!old) return old;
-        const updatedHoldings = old.holdings?.filter((h) => h.id !== holdingId) || [];
-        const totalValue = updatedHoldings.reduce((sum, h) => sum + (h.totalValue || 0), 0);
-        const totalCost = updatedHoldings.reduce((sum, h) => sum + ((h.quantity ?? 0) * (h.averageCost ?? 0) || 0), 0);
+        const removed = old.holdings?.find((h) => h.id === holdingId);
+        if (!removed) return old;
+        const updatedHoldings = old.holdings!.filter((h) => h.id !== holdingId);
+        // The portfolio totals are TWD and count portfolio-wallet holdings only
+        // (portfolioService.recalculatePortfolioTotals); holdings[] are native
+        // currency. Take the removed lot's converted share off the totals —
+        // re-summing the native values counted a US$ lot as NT$ until refetch.
+        const inTotals = !removed.walletType || removed.walletType === 'portfolio';
+        const currency = removed.currency || 'TWD';
+        const removedValue = inTotals ? toTWD(removed.totalValue ?? 0, currency) : 0;
+        const removedCost = inTotals
+          ? toTWD(removed.totalCost ?? (removed.quantity ?? 0) * (removed.averageCost ?? 0), currency)
+          : 0;
+        const totalValue = (old.totalValue ?? 0) - removedValue;
+        const totalCost = (old.totalCost ?? 0) - removedCost;
         const totalGainLoss = totalValue - totalCost;
         const totalGainLossPercentage = totalCost > 0 ? (totalGainLoss / totalCost) * 100 : 0;
         return { ...old, holdings: updatedHoldings, totalValue, totalCost, totalGainLoss, totalGainLossPercentage };
@@ -96,88 +110,6 @@ export function usePortfolioHoldingOperations(
         queryClient.setQueryData(['portfolio', memoizedFilters, userKey], context.previousPortfolio);
       }
       toast.error(error.message || t('portfolio:toast.holdingDeleteFailed'));
-    },
-  });
-
-  // ──────────────────────────────────────────────
-  // Update holding mutation (with optimistic update)
-  // ──────────────────────────────────────────────
-  const updateHoldingMutation = useMutation({
-    mutationFn: async (data: {
-      id: string;
-      quantity: number;
-      averageCost: number;
-      sector?: string | null;
-      purchaseDate?: string;
-    }) => {
-      const response = await portfolioService.updateHolding({
-        id: data.id,
-        quantity: data.quantity,
-        averageCost: data.averageCost,
-        sector: data.sector ?? undefined,
-        purchaseDate: data.purchaseDate ? new Date(data.purchaseDate).toISOString() : undefined,
-      });
-      if (!response.success) {
-        throw new Error(response.message || 'Failed to update holding');
-      }
-      return response;
-    },
-    onMutate: async (data) => {
-      await queryClient.cancelQueries({ queryKey: ['portfolio'] });
-
-      const previousPortfolio = queryClient.getQueryData([
-        'portfolio', memoizedFilters, userKey,
-      ]);
-
-      queryClient.setQueryData(['portfolio', memoizedFilters, userKey], (old: CachedPortfolio | undefined) => {
-        if (!old) return old;
-        const updatedHoldings = old.holdings?.map((h) => {
-          if (h.id !== data.id) return h;
-          const newTotalCost = data.quantity * data.averageCost;
-          const newTotalValue = data.quantity * (h.currentPrice ?? 0);
-          const newGainLoss = newTotalValue - newTotalCost;
-          const newGainLossPercentage = newTotalCost > 0 ? (newGainLoss / newTotalCost) * 100 : 0;
-          return {
-            ...h,
-            quantity: data.quantity,
-            averageCost: data.averageCost,
-            sector: data.sector,
-            purchaseDate: data.purchaseDate || h.purchaseDate,
-            totalCost: newTotalCost,
-            totalValue: newTotalValue,
-            gainLoss: newGainLoss,
-            gainLossPercentage: newGainLossPercentage,
-          };
-        }) || [];
-        const totalValue = updatedHoldings.reduce((sum, h) => sum + (h.totalValue || 0), 0);
-        const totalCost = updatedHoldings.reduce((sum, h) => sum + (h.totalCost || 0), 0);
-        const totalGainLoss = totalValue - totalCost;
-        const totalGainLossPercentage = totalCost > 0 ? (totalGainLoss / totalCost) * 100 : 0;
-        return { ...old, holdings: updatedHoldings, totalValue, totalCost, totalGainLoss, totalGainLossPercentage };
-      });
-
-      return { previousPortfolio };
-    },
-    onSuccess: async () => {
-      queryClient.invalidateQueries({ queryKey: [QUERY_KEYS.PORTFOLIO] });
-      queryClient.invalidateQueries({ queryKey: ['portfolio-analytics'] });
-      queryClient.invalidateQueries({ queryKey: ['portfolio-daily-performance'] });
-      invalidateDashboardData(queryClient);
-      queryClient.invalidateQueries({ queryKey: ['cash-wallet'] });
-      portfolioService.recalculateIRR().catch(() => {});
-      await queryClient.refetchQueries({
-        queryKey: [QUERY_KEYS.PORTFOLIO, memoizedFilters, userKey],
-        exact: true,
-        type: 'active',
-      });
-      await queryClient.refetchQueries({ queryKey: ['portfolio-analytics'], type: 'active' });
-      toast.success(t('portfolio:toast.holdingUpdated'));
-    },
-    onError: (error: Error, _variables, context: { previousPortfolio: unknown } | undefined) => {
-      if (context?.previousPortfolio) {
-        queryClient.setQueryData(['portfolio', memoizedFilters, userKey], context.previousPortfolio);
-      }
-      toast.error(error.message || t('portfolio:toast.holdingUpdateFailed'));
     },
   });
 
@@ -297,6 +229,5 @@ export function usePortfolioHoldingOperations(
     handleSellFromWallet,
     handleAddInvestment,
     isDeleting: deleteHoldingMutation.isPending,
-    isUpdating: updateHoldingMutation.isPending,
   };
 }
