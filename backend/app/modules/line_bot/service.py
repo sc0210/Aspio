@@ -38,6 +38,7 @@ from app.modules.line_bot.models import (
     LineUserLink,
     SharedExpense,
 )
+from app.modules.line_bot.quick_log import FALLBACK_CATEGORY, guess_category_name, parse_quick_entry
 from app.modules.line_bot.repositories import (
     LineAccountRepository,
     LineGroupRepository,
@@ -63,6 +64,7 @@ from app.modules.line_bot.schemas import (
 from app.modules.goals.models import Goal, GoalStatus
 from app.modules.portfolio.models import Portfolio, PortfolioHolding
 from app.modules.transactions.models import (
+    CategoryType,
     Transaction,
     TransactionCategory,
     TransactionType,
@@ -546,6 +548,12 @@ def _flex_settle_confirm(target_name: str, currency: str, total: Decimal) -> dic
     }
 
 
+def _money_text(amount: Decimal) -> str:
+    """1200 → "1,200", 12.50 → "12.5": grouped, but never rounded away from
+    what was stored."""
+    return format(amount.normalize(), ",f")
+
+
 def _flex_undo_confirm(description: str, currency: str, amount: Decimal) -> dict:
     """Flex confirmation after /undo."""
     return {
@@ -573,7 +581,7 @@ def _flex_undo_confirm(description: str, currency: str, amount: Decimal) -> dict
                     "layout": "horizontal",
                     "contents": [
                         {"type": "text", "text": "Amount", "size": "sm", "color": "#888888", "flex": 3},
-                        {"type": "text", "text": f"{currency} {amount:,.0f}", "size": "sm", "weight": "bold", "color": "#E53E3E", "flex": 5, "align": "end"},
+                        {"type": "text", "text": f"{currency} {_money_text(amount)}", "size": "sm", "weight": "bold", "color": "#E53E3E", "flex": 5, "align": "end"},
                     ],
                 },
             ],
@@ -1050,7 +1058,7 @@ def _flex_txn_confirm(
                 },
                 {
                     "type": "text",
-                    "text": f"{currency} {amount:,.0f}",
+                    "text": f"{currency} {_money_text(amount)}",
                     "color": "#ffffff",
                     "size": "xxl",
                     "weight": "bold",
@@ -1223,8 +1231,9 @@ def _flex_help(is_group: bool = False) -> dict:
             _bubble(
                 "#06C755", "💳", "Track Spending",
                 [
-                    _cmd_row("/txn 150 food coffee", "Log a spend"),
-                    _cmd_row("/txn 1200 transport taxi", "Any category"),
+                    _cmd_row("午餐 120", "Just type it — logged"),
+                    _cmd_row("+50000 薪水", "A + makes it income"),
+                    _cmd_row("/txn 1200 transport taxi", "Pick the category"),
                     {"type": "separator", "margin": "sm"},
                     _cmd_row("/balance", "Monthly income & expenses"),
                     _cmd_row("/summary", "Breakdown by category"),
@@ -2688,6 +2697,263 @@ async def handle_txn_command(
     )
 
 
+# ---------------------------------------------------------------------------
+# Quick log — plain-text bookkeeping in a DM ("午餐 120", "+50000 薪水")
+# ---------------------------------------------------------------------------
+
+LINE_TXN_NOTE = "Added via LINE bot"
+# Undo and re-categorise reach only the user's own LINE-made rows, and only for
+# a day: a stale button in the chat history must not edit last month's books.
+QUICK_EDIT_WINDOW = timedelta(hours=24)
+QUICK_FAVORITES_LOOKBACK_DAYS = 60
+QUICK_FAVORITES_MIN_COUNT = 3
+
+
+def _amount_text(amount: Decimal) -> str:
+    """1200 → "1200", 12.50 → "12.5": what a person would type back."""
+    return format(amount.normalize(), "f")
+
+
+async def _find_category(db: AsyncSession, name: str, cat_type: CategoryType) -> Optional[TransactionCategory]:
+    """The active category with this name and type. Duplicate global rows exist
+    (Dining, Others); the most used one wins, so a guess lands where the user's
+    history already is."""
+    result = await db.execute(
+        select(TransactionCategory)
+        .where(
+            TransactionCategory.is_active.is_(True),
+            TransactionCategory.type == cat_type,
+            sqlfunc.lower(TransactionCategory.name) == name.lower(),
+        )
+        .order_by(TransactionCategory.usage_count.desc())
+        .limit(1)
+    )
+    return result.scalar_one_or_none()
+
+
+async def _category_from_history(
+    db: AsyncSession, user_id: UUID, description: str, txn_type: TransactionType
+) -> Optional[TransactionCategory]:
+    """The category this user filed the same description under most often."""
+    result = await db.execute(
+        select(TransactionCategory)
+        .join(Transaction, Transaction.category_id == TransactionCategory.id)
+        .where(
+            Transaction.user_id == user_id,
+            Transaction.type == txn_type,
+            sqlfunc.lower(Transaction.description) == description.lower(),
+            TransactionCategory.is_active.is_(True),
+        )
+        .group_by(TransactionCategory.id)
+        .order_by(sqlfunc.count(Transaction.id).desc(), sqlfunc.max(Transaction.created_at).desc())
+        .limit(1)
+    )
+    return result.scalar_one_or_none()
+
+
+async def _resolve_quick_category(
+    db: AsyncSession, user_id: UUID, description: str, is_income: bool
+) -> Optional[TransactionCategory]:
+    txn_type = TransactionType.INCOME if is_income else TransactionType.EXPENSE
+    cat_type = CategoryType.INCOME if is_income else CategoryType.EXPENSE
+    category = await _category_from_history(db, user_id, description, txn_type)
+    if category is not None:
+        return category
+    category = await _find_category(db, guess_category_name(description, is_income), cat_type)
+    if category is not None:
+        return category
+    return await _find_category(db, FALLBACK_CATEGORY, cat_type)
+
+
+async def _quick_favorites(db: AsyncSession, user_id: UUID) -> list[tuple[str, Decimal]]:
+    """The expenses this user repeats — same description and amount, 3+ times in
+    the last 60 days — offered back as one-tap entries."""
+    since = business_today() - timedelta(days=QUICK_FAVORITES_LOOKBACK_DAYS)
+    result = await db.execute(
+        select(Transaction.description, Transaction.amount, sqlfunc.count(Transaction.id).label("n"))
+        .where(
+            Transaction.user_id == user_id,
+            Transaction.type == TransactionType.EXPENSE,
+            Transaction.transaction_date >= since,
+        )
+        .group_by(Transaction.description, Transaction.amount)
+        .having(sqlfunc.count(Transaction.id) >= QUICK_FAVORITES_MIN_COUNT)
+        .order_by(sqlfunc.count(Transaction.id).desc())
+        .limit(4)
+    )
+    return [(row.description, row.amount) for row in result.all() if parse_quick_entry(f"{row.description} {_amount_text(row.amount)}")]
+
+
+def _quick_log_replies(txn_id: UUID, favorites: list[tuple[str, Decimal]]) -> list[dict]:
+    replies = [
+        _qr_postback("↩️ Undo", f"cmd=qlog_undo&t={txn_id}", "Undo"),
+        _qr_postback("🏷️ Category", f"cmd=qlog_cat&t={txn_id}", "Change category"),
+    ]
+    for desc, amount in favorites:
+        text = f"{desc} {_amount_text(amount)}"
+        replies.append(_qr_message(f"⚡ {text}"[:20], text))
+    replies.append(_qr_postback("📋 Menu", "cmd=menu", "Menu"))
+    return replies
+
+
+async def handle_quick_log(
+    db: AsyncSession,
+    text: str,
+    line_user_id: str,
+    reply_token: str,
+) -> bool:
+    """Record "午餐 120" / "+50000 薪水" typed in a DM. Returns False when the text
+    is not a bookkeeping line, so the caller can fall back to the menu."""
+    entry = parse_quick_entry(text)
+    if entry is None:
+        return False
+
+    link = await _get_link(db, line_user_id)
+    if link is None:
+        await _reply_flex(reply_token, "Link your Aspiro account", _flex_not_linked())
+        return True
+
+    category = await _resolve_quick_category(db, link.user_id, entry.description, entry.is_income)
+    if category is None:
+        await _reply(reply_token, "Could not find a transaction category. Please set up categories in the Aspiro app first.")
+        return True
+
+    currency = await _get_user_currency(db, link.user_id)
+    txn = Transaction(
+        user_id=link.user_id,
+        type=TransactionType.INCOME if entry.is_income else TransactionType.EXPENSE,
+        wallet_type=TransactionWalletType.LIFE,
+        amount=entry.amount,
+        currency=currency,
+        description=entry.description,
+        category_id=category.id,
+        payment_method=PaymentMethod.OTHER,
+        transaction_date=business_today(),
+        notes=LINE_TXN_NOTE,
+    )
+    db.add(txn)
+    await db.flush()
+
+    kind = "Income" if entry.is_income else "Logged"
+    await _log_activity(
+        db, link.user_id, "txn", f"{kind}: {entry.description} {currency} {_money_text(entry.amount)}",
+        amount=entry.amount, currency=currency,
+    )
+    favorites = [] if entry.is_income else await _quick_favorites(db, link.user_id)
+    sign = "+" if entry.is_income else ""
+    await _reply_flex(
+        reply_token,
+        f"Recorded: {entry.description} {sign}{currency} {_money_text(entry.amount)} · {category.name}",
+        _flex_txn_confirm(entry.description, entry.amount, currency, category.name),
+        _quick_log_replies(txn.id, favorites),
+    )
+    return True
+
+
+async def _get_quick_txn(db: AsyncSession, user_id: UUID, txn_id: str) -> Optional[Transaction]:
+    """A LINE-made transaction of this user from the last day, or None."""
+    try:
+        tid = UUID(txn_id)
+    except (ValueError, TypeError):
+        return None
+    result = await db.execute(
+        select(Transaction).where(
+            Transaction.id == tid,
+            Transaction.user_id == user_id,
+            Transaction.notes == LINE_TXN_NOTE,
+            Transaction.created_at >= datetime.now(timezone.utc) - QUICK_EDIT_WINDOW,
+        )
+    )
+    return result.scalar_one_or_none()
+
+
+async def handle_quick_undo(db: AsyncSession, line_user_id: str, reply_token: str, txn_id: str) -> None:
+    link = await _get_link(db, line_user_id)
+    if link is None:
+        await _reply_flex(reply_token, "Link your Aspiro account", _flex_not_linked())
+        return
+    txn = await _get_quick_txn(db, link.user_id, txn_id)
+    if txn is None:
+        await _reply(reply_token, "Nothing to undo — only entries made here in the last 24 hours can be undone.", DM_QR)
+        return
+    desc, amount, currency = txn.description, txn.amount, txn.currency
+    await db.delete(txn)
+    await db.flush()
+    await _log_activity(db, link.user_id, "undo_txn", f"Removed: {desc} {currency} {_money_text(amount)}", amount=amount, currency=currency)
+    await _reply_flex(reply_token, f"Removed: {desc} {currency} {_money_text(amount)}", _flex_undo_confirm(desc, currency, amount), DM_QR)
+
+
+async def handle_quick_category_picker(db: AsyncSession, line_user_id: str, reply_token: str, txn_id: str) -> None:
+    link = await _get_link(db, line_user_id)
+    if link is None:
+        await _reply_flex(reply_token, "Link your Aspiro account", _flex_not_linked())
+        return
+    txn = await _get_quick_txn(db, link.user_id, txn_id)
+    if txn is None:
+        await _reply(reply_token, "That entry can no longer be changed here — edit it in the Aspiro app.", DM_QR)
+        return
+    cat_type = CategoryType.INCOME if txn.type == TransactionType.INCOME else CategoryType.EXPENSE
+    result = await db.execute(
+        select(TransactionCategory)
+        .where(TransactionCategory.is_active.is_(True), TransactionCategory.type == cat_type)
+        .order_by(TransactionCategory.usage_count.desc())
+    )
+    categories = list(result.scalars())
+    # Skip by name, not id: a duplicate global row of the current category
+    # (two "Dining" rows exist) would otherwise be offered as a "change".
+    current = next((c.name.lower() for c in categories if c.id == txn.category_id), None)
+    seen: set[str] = {current} if current else set()
+    replies: list[dict] = []
+    for cat in categories:
+        key = cat.name.lower()
+        if key in seen or key in {"transfer", "investment purchase", "investment sale", "loan receipt"}:
+            continue
+        seen.add(key)
+        label = f"{_cat_icon(cat.name)} {cat.name}"[:20]
+        replies.append(_qr_postback(label, f"cmd=qlog_set&t={txn.id}&c={cat.id}", cat.name))
+        if len(replies) == 12:  # LINE allows 13 quick replies
+            break
+    await _reply(reply_token, f"Move “{txn.description}” to which category?", replies)
+
+
+async def handle_quick_set_category(
+    db: AsyncSession, line_user_id: str, reply_token: str, txn_id: str, category_id: str
+) -> None:
+    link = await _get_link(db, line_user_id)
+    if link is None:
+        await _reply_flex(reply_token, "Link your Aspiro account", _flex_not_linked())
+        return
+    txn = await _get_quick_txn(db, link.user_id, txn_id)
+    if txn is None:
+        await _reply(reply_token, "That entry can no longer be changed here — edit it in the Aspiro app.", DM_QR)
+        return
+    try:
+        cid = UUID(category_id)
+    except (ValueError, TypeError):
+        await _reply(reply_token, "Unknown category.", DM_QR)
+        return
+    cat_type = CategoryType.INCOME if txn.type == TransactionType.INCOME else CategoryType.EXPENSE
+    category = (await db.execute(
+        select(TransactionCategory).where(
+            TransactionCategory.id == cid,
+            TransactionCategory.is_active.is_(True),
+            TransactionCategory.type == cat_type,
+        )
+    )).scalar_one_or_none()
+    if category is None:
+        await _reply(reply_token, "Unknown category.", DM_QR)
+        return
+    # Re-filing the row is also how the bot learns: the next "<same description>"
+    # resolves from this user's history before any keyword guess.
+    txn.category_id = category.id
+    await db.flush()
+    await _reply(
+        reply_token,
+        f"{_cat_icon(category.name)} “{txn.description}” is now {category.name}. Next time I'll file it there.",
+        _quick_log_replies(txn.id, []),
+    )
+
+
 async def handle_help_command(reply_token: str, is_group: bool = False) -> None:
     carousel = _flex_help(is_group=is_group)
     alt = "Group Commands" if is_group else "Aspiro Commands"
@@ -3563,7 +3829,7 @@ async def handle_postback_event(db: AsyncSession, event: LineEvent) -> None:
     # DM-only postbacks must never run in a group chat — they'd surface a member's
     # personal portfolio/goals or log a personal transaction into the shared chat.
     # Mirrors the guards the text dispatcher already applies to /portfolio, /goals, /txn.
-    if is_group and cmd in {"goals", "portfolio", "txn_start", "txn_cat", "txn_amount", "txn_confirm"}:
+    if is_group and cmd in {"goals", "portfolio", "txn_start", "txn_cat", "txn_amount", "txn_confirm", "qlog_undo", "qlog_cat", "qlog_set"}:
         await _reply(reply_token, "💡 That's a personal command — DM me to use it.", GROUP_QR)
         return
 
@@ -3617,6 +3883,12 @@ async def handle_postback_event(db: AsyncSession, event: LineEvent) -> None:
             await handle_balance_command(db, line_user_id, line_group_id, reply_token)
         else:
             await _reply(reply_token, "Settle is only available in group chats.")
+    elif cmd == "qlog_undo":
+        await handle_quick_undo(db, line_user_id, reply_token, params.get("t", ""))
+    elif cmd == "qlog_cat":
+        await handle_quick_category_picker(db, line_user_id, reply_token, params.get("t", ""))
+    elif cmd == "qlog_set":
+        await handle_quick_set_category(db, line_user_id, reply_token, params.get("t", ""), params.get("c", ""))
     elif cmd == "txn_start":
         await handle_txn_start(reply_token)
     elif cmd == "txn_cat":
@@ -3779,7 +4051,10 @@ async def handle_event(db: AsyncSession, event: LineEvent) -> None:
     elif text and not cmd.startswith("/"):
         # Only surface the menu in DM context — replying to every non-command
         # message in a group chat would be disruptive to normal conversation.
+        # In a DM, a line like "午餐 120" is a bookkeeping entry first.
         if not is_group:
+            if await handle_quick_log(db, text, line_user_id, event.replyToken):
+                return
             await _reply_flex(
                 event.replyToken,
                 "Aspiro Menu",
