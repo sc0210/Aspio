@@ -5,17 +5,17 @@
  *   node scripts/capture-readme-demo.mjs [baseUrl]   # default http://localhost:3000
  *
  * Drives a short tour of the app in demo mode (the `demo-mode` cookie, fixture data, never a real
- * account), records it in light and dark with Playwright and converts each video with ffmpeg, to
+ * account), records it in light and dark at the full 1440×900 viewport and encodes each with ffmpeg, to
  * docs/images/demo.gif and docs/images/demo-dark.gif; the README serves whichever matches the
  * reader's GitHub theme.
  * Needs a running frontend and ffmpeg on PATH. Re-run it when the pages in the tour change enough
  * that the GIF no longer matches the screenshots below it.
  *
- * Playwright's video has no mouse pointer, so the tour draws its own and moves it before each
+ * A screen recording has no mouse pointer, so the tour draws its own and moves it before each
  * click; a reader can then follow where the next page came from.
  */
 import { execFileSync } from 'node:child_process';
-import { mkdtempSync, rmSync, statSync } from 'node:fs';
+import { mkdtempSync, rmSync, statSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { dirname, join, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
@@ -27,7 +27,6 @@ const THEMES = ['light', 'dark'];
 const gifName = (theme) => (theme === 'dark' ? 'demo-dark.gif' : 'demo.gif');
 const BASE_URL = process.argv.slice(2).find((a) => !a.startsWith('--')) ?? 'http://localhost:3000';
 const VIEWPORT = { width: 1440, height: 900 };
-const GIF_WIDTH = 960;
 const GIF_FPS = 12;
 
 // Pages the tour visits, also compiled once up front so the recording never shows a cold
@@ -123,15 +122,30 @@ async function visit(page, href, { dwell = 2500, scroll = 0 } = {}) {
   }
 }
 
-async function record(browser, videoDir, theme) {
-  const context = await newDemoContext(browser, theme, { recordVideo: { dir: videoDir, size: VIEWPORT } });
+/**
+ * Records the tour as lossless PNG frames from Chrome's screencast, not Playwright's video:
+ * that video is lossy, so every frame carries compression noise and the GIF can't reuse a single
+ * unchanged pixel between frames, which made a full-resolution GIF too big for GitHub. Chrome only
+ * sends a frame when something changed; each one is kept with its timestamp so the GIF replays at
+ * the real pace.
+ */
+async function record(browser, frameDir, theme) {
+  const context = await newDemoContext(browser, theme);
   const page = await context.newPage();
-  const recordingStarted = Date.now();
   await page.goto(`${BASE_URL}/dashboard`, { waitUntil: 'networkidle' });
   await waitForContent(page);
   await page.mouse.move(VIEWPORT.width / 2, VIEWPORT.height / 2);
-  // Everything before this point is the blank first load; it is cut from the GIF.
-  const trimStart = (Date.now() - recordingStarted) / 1000 + 0.5;
+
+  const frames = [];
+  const cdp = await context.newCDPSession(page);
+  cdp.on('Page.screencastFrame', ({ data, metadata, sessionId }) => {
+    const file = join(frameDir, `${theme}-${String(frames.length).padStart(5, '0')}.png`);
+    writeFileSync(file, Buffer.from(data, 'base64'));
+    frames.push({ file, at: metadata.timestamp });
+    cdp.send('Page.screencastFrameAck', { sessionId }).catch(() => {});
+  });
+  await cdp.send('Page.startScreencast', { format: 'png', maxWidth: VIEWPORT.width, maxHeight: VIEWPORT.height });
+
   await page.waitForTimeout(2500);
   await scrollMain(page, 520);
   await page.waitForTimeout(800);
@@ -152,35 +166,46 @@ async function record(browser, videoDir, theme) {
   await visit(page, '/goals');
   await visit(page, '/review', { dwell: 3000, scroll: 500 });
 
-  const video = page.video();
+  await cdp.send('Page.stopScreencast');
   await context.close();
-  return { videoPath: await video.path(), trimStart };
+  return frames;
 }
 
-function toGif(videoPath, trimStart, out) {
+function toGif(frames, frameDir, theme, out) {
+  // An ffconcat list holds each frame for as long as it stayed on screen.
+  const lines = ['ffconcat version 1.0'];
+  frames.forEach(({ file, at }, i) => {
+    const next = frames[i + 1]?.at ?? at + 1;
+    lines.push(`file '${file}'`, `duration ${(next - at).toFixed(3)}`);
+  });
+  // The concat demuxer ignores the last entry's duration unless the file is listed again.
+  lines.push(`file '${frames.at(-1).file}'`);
+  const list = join(frameDir, `${theme}.ffconcat`);
+  writeFileSync(list, lines.join('\n'));
+
   const filters =
-    `fps=${GIF_FPS},scale=${GIF_WIDTH}:-1:flags=lanczos,split[a][b];` +
-    '[a]palettegen=max_colors=128:stats_mode=diff[p];[b][p]paletteuse=dither=bayer:bayer_scale=4:diff_mode=rectangle';
+    `fps=${GIF_FPS},split[a][b];` +
+    '[a]palettegen=max_colors=256:stats_mode=diff[p];[b][p]paletteuse=dither=none:diff_mode=rectangle';
   execFileSync(
     'ffmpeg',
-    ['-y', '-loglevel', 'error', '-ss', trimStart.toFixed(2), '-i', videoPath, '-vf', filters, '-loop', '0', out],
+    ['-y', '-loglevel', 'error', '-f', 'concat', '-safe', '0', '-i', list, '-vf', filters, '-loop', '0', out],
     { stdio: 'inherit' },
   );
 }
 
-const videoDir = mkdtempSync(join(tmpdir(), 'aspiro-demo-'));
+const frameDir = mkdtempSync(join(tmpdir(), 'aspiro-demo-'));
 const browser = await chromium.launch();
 try {
   console.log('Warming up pages…');
   await warmUp(browser);
   for (const theme of THEMES) {
     console.log(`Recording ${theme} tour…`);
-    const { videoPath, trimStart } = await record(browser, videoDir, theme);
+    const frames = await record(browser, frameDir, theme);
     const out = resolve(IMAGES, gifName(theme));
-    toGif(videoPath, trimStart, out);
+    toGif(frames, frameDir, theme, out);
     console.log(`  ✓ docs/images/${gifName(theme)} (${(statSync(out).size / 1024 / 1024).toFixed(1)} MB)`);
   }
 } finally {
   await browser.close();
-  rmSync(videoDir, { recursive: true, force: true });
+  rmSync(frameDir, { recursive: true, force: true });
 }
