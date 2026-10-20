@@ -9,7 +9,7 @@
  * docs/images/demo.gif and docs/images/demo-dark.gif; the README serves whichever matches the
  * reader's GitHub theme.
  * Needs a running frontend and ffmpeg on PATH. Re-run it when the pages in the tour change enough
- * that the GIF no longer matches the screenshots below it.
+ * that the GIF no longer matches the screenshots it links to.
  *
  * A screen recording has no mouse pointer, so the tour draws its own and moves it before each
  * click; a reader can then follow where the next page came from.
