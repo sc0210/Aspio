@@ -15,6 +15,8 @@ recording expenses and splitting group bills from chat.
 [Features](#features) · [Self-host](#self-host-your-own) · [Develop](#run-it-locally) ·
 [Docs](#documentation) · [Contributing](#contributing)
 
+<picture><source media="(prefers-color-scheme: dark)" srcset="docs/images/demo-dark.gif"><img src="docs/images/demo.gif" alt="A tour of Aspiro in demo mode: dashboard, transactions, portfolio, rebalancing, goals and Month in Review" width="100%"></picture>
+
 </div>
 
 <table>
