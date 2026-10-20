@@ -6,6 +6,8 @@ WORKDIR /app
 
 # Copy package files first for better caching
 COPY package*.json ./
+# Local packages the lockfile links to (see vendor/braces/ASPIRO_PATCH.md).
+COPY vendor ./vendor
 
 # Install all dependencies (including dev dependencies)
 RUN npm install

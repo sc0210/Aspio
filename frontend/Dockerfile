@@ -10,6 +10,8 @@ FROM --platform=$BUILDPLATFORM node:22-alpine AS builder
 WORKDIR /app
 
 COPY package*.json ./
+# Local packages the lockfile links to (see vendor/braces/ASPIRO_PATCH.md).
+COPY vendor ./vendor
 RUN npm ci
 
 COPY . .

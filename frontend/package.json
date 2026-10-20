@@ -83,6 +83,7 @@
     "@types/react-dom": "^19.3.0",
     "autoprefixer": "^10.6.1",
     "axe-playwright": "^2.2.2",
+    "braces": "file:./vendor/braces",
     "eslint": "^9.39.5",
     "eslint-config-next": "^16.4.0",
     "jest": "^30.5.2",
@@ -98,6 +99,7 @@
     "uuid": "^14.0.0",
     "js-yaml": "^4.3.2",
     "sharp": "^0.35.5",
-    "browserslist": "^4.28.9"
+    "browserslist": "^4.28.9",
+    "braces": "$braces"
   }
 }
