@@ -257,11 +257,12 @@ async def test_a_failed_dividend_query_is_an_error_not_no_dividends(monkeypatch)
 
     from app.modules.portfolio.routers import dividends
 
-    class Failing:
-        async def get_dividend_data(self, **_):
-            raise RuntimeError("price provider down")
+    async def failing(self, **_):
+        raise RuntimeError("price provider down")
 
-    monkeypatch.setattr(dividends, "get_portfolio_service", lambda _session: Failing())
+    # Patch the method on the real class: a stand-in service accepted a call to a
+    # method PortfolioService does not have, and every request 500'd behind it.
+    monkeypatch.setattr(dividends.AnalyticsService, "get_dividend_data", failing)
     with pytest.raises(HTTPException) as caught:
         await dividends.get_dividends_demo(
             period="1y", current_user=SimpleNamespace(id=1), session=None
