@@ -17,7 +17,7 @@ import { cn } from '@/utils/cn';
 import { useDemo } from '@/contexts/DemoContext';
 import { useAuthContext } from '@/contexts/AuthContext';
 import { languages } from '@/lib/i18n';
-import { isNavItemAvailable, primaryNavItems, secondaryNavItems } from '@/lib/navigation';
+import { getSecondaryNavItems, primaryNavItems } from '@/lib/navigation';
 import { useFeatures } from '@/hooks/useFeatures';
 import { changeAppLanguage, signOutCompletely } from '@/lib/session-actions';
 import { useDialog } from '@/hooks/useDialog';
@@ -92,7 +92,7 @@ function MoreSheet({ open, onClose, isDemoMode, onDisableDemo }: MoreSheetProps)
   // hand-written list had five entries and silently omitted loans, groups,
   // housing, lifecycle and achievements.
   const sheetLinks = [
-    ...secondaryNavItems.filter((item) => isNavItemAvailable(item, features)).map((item) => ({
+    ...getSecondaryNavItems(features).map((item) => ({
       href: item.href,
       icon: item.icon,
       labelKey: item.nameKey,

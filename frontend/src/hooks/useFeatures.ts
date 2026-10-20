@@ -2,12 +2,11 @@
 
 import { useQuery } from '@tanstack/react-query';
 import { apiClient } from '@/lib/api-client';
-import type { Features } from '@/lib/features';
+import { ALL_FEATURES, type Features } from '@/lib/features';
 import { useAppMode } from './useAppMode';
 import { QUERY_KEYS } from './useDataSynchronization';
 
 const ALL_OFF: Features = { lineBot: false };
-const ALL_ON: Features = { lineBot: true };
 
 /**
  * Optional add-ons this instance has configured.
@@ -36,6 +35,6 @@ export function useFeatures(): Features & { isLoading: boolean; isError: boolean
     staleTime: Infinity,
   });
 
-  if (isDemo) return { ...ALL_ON, isLoading: false, isError: false };
+  if (isDemo) return { ...ALL_FEATURES, isLoading: false, isError: false };
   return { ...(query.data ?? ALL_OFF), isLoading: query.isLoading, isError: query.isError };
 }

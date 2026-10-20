@@ -8,16 +8,21 @@
  * to ship a feature.
  */
 
-import { getNavigationItems, getNavigationSections, isNavItemAvailable, primaryNavItems, secondaryNavItems } from '@/lib/navigation';
+import { getNavigationItems, getNavigationSections, getSecondaryNavItems, primaryNavItems } from '@/lib/navigation';
+import { ALL_FEATURES } from '@/lib/features';
 import en from '@/locales/en/common.json';
 import zhTW from '@/locales/zh-TW/common.json';
 
 describe('navigation structure', () => {
+    // Every combination, since dropping an add-on's row must not leave a
+    // heading above a single item.
     it.each([
-        ['a reader', false],
-        ['an admin', true],
-    ])('gives %s 2–5 items in every titled section', (_who, isAdmin) => {
-        for (const section of getNavigationSections(isAdmin)) {
+        ['a reader', false, ALL_FEATURES],
+        ['an admin', true, ALL_FEATURES],
+        ['a reader without the LINE bot', false, { lineBot: false }],
+        ['an admin without the LINE bot', true, { lineBot: false }],
+    ])('gives %s 2–5 items in every titled section', (_who, isAdmin, features) => {
+        for (const section of getNavigationSections(isAdmin, features)) {
             if (!section.titleKey) {
                 // Standalone rows carry no heading, so they are exempt — but a
                 // heading-less group of several would be an unlabelled pile.
@@ -30,7 +35,7 @@ describe('navigation structure', () => {
     });
 
     it('gives every destination its own icon', () => {
-        const items = getNavigationItems(true);
+        const items = getNavigationItems(true, ALL_FEATURES);
         const outline = items.map((item) => item.icon);
         const solid = items.map((item) => item.iconSolid);
 
@@ -39,20 +44,19 @@ describe('navigation structure', () => {
     });
 
     it('lists every destination once', () => {
-        const hrefs = getNavigationItems(true).map((item) => item.href);
+        const hrefs = getNavigationItems(true, ALL_FEATURES).map((item) => item.href);
         expect(new Set(hrefs).size).toBe(hrefs.length);
     });
 
     it('gates /groups on the LINE bot, and nothing else on any add-on', () => {
-        const items = getNavigationItems(true);
-        const hidden = items.filter((i) => !isNavItemAvailable(i, { lineBot: false })).map((i) => i.href);
-        expect(hidden).toEqual(['/groups']);
-        expect(items.every((i) => isNavItemAvailable(i, { lineBot: true }))).toBe(true);
+        const on = getNavigationItems(true, ALL_FEATURES).map((i) => i.href);
+        const off = getNavigationItems(true, { lineBot: false }).map((i) => i.href);
+        expect(on.filter((href) => !off.includes(href))).toEqual(['/groups']);
     });
 
     it('shows /admin only to admins', () => {
-        expect(getNavigationItems(false).map((i) => i.href)).not.toContain('/admin');
-        expect(getNavigationItems(true).map((i) => i.href)).toContain('/admin');
+        expect(getNavigationItems(false, ALL_FEATURES).map((i) => i.href)).not.toContain('/admin');
+        expect(getNavigationItems(true, ALL_FEATURES).map((i) => i.href)).toContain('/admin');
     });
 
     it('fills the mobile bar with four tabs and the sheet with the rest', () => {
@@ -64,9 +68,14 @@ describe('navigation structure', () => {
 
         // Nothing may fall between the two: the hand-written sheet used to omit
         // loans, groups, housing, lifecycle and achievements outright.
-        const all = getNavigationItems(false).map((i) => i.href);
-        expect([...primaryNavItems, ...secondaryNavItems].map((i) => i.href).sort())
+        const all = getNavigationItems(false, ALL_FEATURES).map((i) => i.href);
+        expect([...primaryNavItems, ...getSecondaryNavItems(ALL_FEATURES)].map((i) => i.href).sort())
             .toEqual([...all].sort());
+    });
+
+    it('keeps add-on pages out of the tabs, which are not filtered', () => {
+        expect(primaryNavItems.every((i) => !i.feature)).toBe(true);
+        expect(getSecondaryNavItems({ lineBot: false }).map((i) => i.href)).not.toContain('/groups');
     });
 });
 
@@ -91,7 +100,7 @@ describe('navigation labels', () => {
         ['en', en as unknown as Record<string, unknown>],
         ['zh-TW', zhTW as unknown as Record<string, unknown>],
     ])('resolves every item and section name in %s', (_locale, bundle) => {
-        for (const section of getNavigationSections(true)) {
+        for (const section of getNavigationSections(true, ALL_FEATURES)) {
             if (section.titleKey) {
                 expect(typeof lookup(bundle, section.titleKey)).toBe('string');
             }
@@ -108,7 +117,7 @@ describe('navigation labels', () => {
         ['zh-TW', zhTW as unknown as { navigation: { sections: Record<string, string> } }],
     ])('leaves no orphaned section headings behind in %s', (_locale, bundle) => {
         const used = new Set(
-            getNavigationSections(true)
+            getNavigationSections(true, ALL_FEATURES)
                 .map((section) => section.titleKey?.replace('navigation.sections.', ''))
                 .filter(Boolean),
         );

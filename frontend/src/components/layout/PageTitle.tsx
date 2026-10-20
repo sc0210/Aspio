@@ -3,6 +3,7 @@
 import { usePathname } from 'next/navigation';
 import { useTranslation } from 'react-i18next';
 import { getNavigationItems } from '@/lib/navigation';
+import { ALL_FEATURES } from '@/lib/features';
 
 /**
  * The page's name in the desktop top bar, with its parent as a breadcrumb.
@@ -22,7 +23,7 @@ import { getNavigationItems } from '@/lib/navigation';
 
 /** href → nameKey, for everything the sidebar can reach. */
 const DESTINATIONS: Record<string, string> = Object.fromEntries(
-  getNavigationItems(true).map((item) => [item.href, item.nameKey]),
+  getNavigationItems(true, ALL_FEATURES).map((item) => [item.href, item.nameKey]),
 );
 
 interface SubRoute {

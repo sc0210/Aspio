@@ -20,7 +20,7 @@
  */
 
 import type { ComponentType, SVGProps } from 'react';
-import type { Features } from '@/lib/features';
+import { ALL_FEATURES, type Features } from '@/lib/features';
 import {
   HomeIcon,
   CreditCardIcon,
@@ -153,7 +153,11 @@ const ADMIN: NavItem = {
   keywords: ['users', 'admin', '管理'],
 };
 
-export function getNavigationSections(isAdmin: boolean): NavSection[] {
+/**
+ * The sidebar's sections for this reader on this instance. Items whose add-on
+ * is not configured are dropped here, once, so no nav surface can forget to.
+ */
+export function getNavigationSections(isAdmin: boolean, features: Features): NavSection[] {
   const sections: NavSection[] = [
     { items: [DASHBOARD] },
     { items: [REVIEW] },
@@ -163,7 +167,9 @@ export function getNavigationSections(isAdmin: boolean): NavSection[] {
 
   if (isAdmin) sections.push({ items: [ADMIN] });
 
-  return sections;
+  return sections
+    .map((section) => ({ ...section, items: section.items.filter((item) => isNavItemAvailable(item, features)) }))
+    .filter((section) => section.items.length > 0);
 }
 
 /** Whether `item`'s add-on, if it has one, is configured on this instance. */
@@ -172,10 +178,14 @@ export function isNavItemAvailable(item: NavItem, features: Features): boolean {
 }
 
 /** Flat list, in sidebar order — what the ⌘K palette searches. */
-export function getNavigationItems(isAdmin: boolean): NavItem[] {
-  return getNavigationSections(isAdmin).flatMap((section) => section.items);
+export function getNavigationItems(isAdmin: boolean, features: Features): NavItem[] {
+  return getNavigationSections(isAdmin, features).flatMap((section) => section.items);
 }
 
-/** The bottom bar's own tabs; everything else goes in its More sheet. */
-export const primaryNavItems: NavItem[] = getNavigationItems(false).filter((i) => i.primary);
-export const secondaryNavItems: NavItem[] = getNavigationItems(false).filter((i) => !i.primary);
+/** The bottom bar's own tabs; everything else goes in its More sheet. None depends on an add-on. */
+export const primaryNavItems: NavItem[] = getNavigationItems(false, ALL_FEATURES).filter((i) => i.primary);
+
+/** The More sheet's links. */
+export function getSecondaryNavItems(features: Features): NavItem[] {
+  return getNavigationItems(false, features).filter((i) => !i.primary);
+}

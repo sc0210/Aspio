@@ -25,7 +25,7 @@ import { cn } from '@/utils/cn';
 import { useDemo } from '@/contexts/DemoContext';
 import { usePrivacy } from '@/contexts/PrivacyContext';
 import { useIsAdmin } from '@/hooks/useAdmin';
-import { getNavigationItems, isNavItemAvailable, type NavIcon } from '@/lib/navigation';
+import { getNavigationItems, type NavIcon } from '@/lib/navigation';
 import { useFeatures } from '@/hooks/useFeatures';
 import { languages } from '@/lib/i18n';
 import { changeAppLanguage, signOutCompletely } from '@/lib/session-actions';
@@ -91,7 +91,7 @@ export function CommandPalette() {
 
   const pages: Command[] = useMemo(
     () =>
-      getNavigationItems(isAdmin).filter((item) => isNavItemAvailable(item, { lineBot })).map((item) => ({
+      getNavigationItems(isAdmin, { lineBot }).map((item) => ({
         id: item.href,
         label: t(item.nameKey),
         icon: item.icon,
