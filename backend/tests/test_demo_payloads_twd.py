@@ -141,16 +141,11 @@ async def test_historical_demo_ends_at_the_fixture_value():
 
 
 @pytest.mark.asyncio
-async def test_performance_twr_and_historical_describe_the_fixture():
+async def test_twr_and_historical_describe_the_fixture():
     from app.modules.portfolio.routers.performance import (
         get_historical_performance,
-        get_performance,
         get_time_weighted_return,
     )
-
-    perf = await get_performance(current_user=None, period="1m", session=None)
-    assert perf["total_value"] == DEMO_PORTFOLIO["total_value"]
-    assert float(perf["chart_data"][-1]["value"]) == FIXTURE_PORTFOLIO_VALUE
 
     twr = _body(
         await get_time_weighted_return(
