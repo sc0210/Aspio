@@ -374,15 +374,6 @@ class TestPortfolioEndpoints:
             data = response.json()
             assert "total_value" in data or "totalValue" in data
 
-    def test_portfolio_performance_demo_mode(self):
-        """Test portfolio performance endpoint in demo mode."""
-        client = TestClient(app)
-        response = client.get("/api/v1/portfolio/performance")
-
-        assert response.status_code == 200
-        data = response.json()
-        assert isinstance(data, dict)
-
 
 class TestAuthenticationEndpoints:
     """Test authentication API endpoints."""

@@ -141,16 +141,11 @@ async def test_historical_demo_ends_at_the_fixture_value():
 
 
 @pytest.mark.asyncio
-async def test_performance_twr_and_historical_describe_the_fixture():
+async def test_twr_and_historical_describe_the_fixture():
     from app.modules.portfolio.routers.performance import (
         get_historical_performance,
-        get_performance,
         get_time_weighted_return,
     )
-
-    perf = await get_performance(current_user=None, period="1m", session=None)
-    assert perf["total_value"] == DEMO_PORTFOLIO["total_value"]
-    assert float(perf["chart_data"][-1]["value"]) == FIXTURE_PORTFOLIO_VALUE
 
     twr = _body(
         await get_time_weighted_return(
@@ -257,11 +252,12 @@ async def test_a_failed_dividend_query_is_an_error_not_no_dividends(monkeypatch)
 
     from app.modules.portfolio.routers import dividends
 
-    class Failing:
-        async def get_dividend_data(self, **_):
-            raise RuntimeError("price provider down")
+    async def failing(self, **_):
+        raise RuntimeError("price provider down")
 
-    monkeypatch.setattr(dividends, "get_portfolio_service", lambda _session: Failing())
+    # Patch the method on the real class: a stand-in service accepted a call to a
+    # method PortfolioService does not have, and every request 500'd behind it.
+    monkeypatch.setattr(dividends.AnalyticsService, "get_dividend_data", failing)
     with pytest.raises(HTTPException) as caught:
         await dividends.get_dividends_demo(
             period="1y", current_user=SimpleNamespace(id=1), session=None

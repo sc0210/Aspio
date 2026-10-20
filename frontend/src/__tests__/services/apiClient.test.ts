@@ -144,6 +144,36 @@ describe('ApiClient', () => {
       // Each request should re-fetch because expiry is always < now + 60s
       expect(mockGetSession).toHaveBeenCalledTimes(2);
     });
+
+    it('shares one getSession call across concurrent requests', async () => {
+      // A page's queries all fire at once on a cold cache; each used to make its
+      // own /api/auth/session round-trip before the first data request went out.
+      mockGetSession.mockResolvedValue({ accessToken: 'tok', accessTokenExpires: Math.floor(Date.now() / 1000) + 3600 });
+      mockFetch.mockResolvedValue(makeJsonResponse({}));
+
+      await Promise.all([apiClient.get('/a'), apiClient.get('/b'), apiClient.get('/c')]);
+
+      expect(mockGetSession).toHaveBeenCalledTimes(1);
+      for (const call of mockFetch.mock.calls) {
+        expect(call[1].headers['Authorization']).toBe('Bearer tok');
+      }
+    });
+
+    it('does not cache a token whose lookup resolved after clearAccessToken', async () => {
+      let resolveSession: (s: unknown) => void = () => {};
+      mockGetSession.mockReturnValueOnce(new Promise((r) => { resolveSession = r; }));
+      mockGetSession.mockResolvedValue(null);
+      mockFetch.mockResolvedValue(makeJsonResponse({}));
+
+      const inFlight = apiClient.get('/a');
+      apiClient.clearAccessToken(); // signed out while the lookup was pending
+      resolveSession({ accessToken: 'old-tok', accessTokenExpires: Math.floor(Date.now() / 1000) + 3600 });
+      await inFlight;
+      await apiClient.get('/b');
+
+      expect(mockGetSession).toHaveBeenCalledTimes(2);
+      expect(mockFetch.mock.calls[1][1].headers['Authorization']).toBeUndefined();
+    });
   });
 
   describe('setAccessToken', () => {

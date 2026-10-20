@@ -73,8 +73,7 @@ async def get_asset_allocation(
         return ApiResponse.success_response(data=demo_allocation)
 
     try:
-        portfolio_service = get_portfolio_service(session)
-        allocation = await portfolio_service.get_asset_allocation(current_user.id)
+        allocation = await AnalyticsService(session).get_asset_allocation(current_user.id)
         return ApiResponse.success_response(data=allocation)
 
     except Exception as e:

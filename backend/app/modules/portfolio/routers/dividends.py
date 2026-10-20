@@ -95,8 +95,7 @@ async def get_dividends_demo(
         return ApiResponse.success_response(data=demo_dividend_payload(period))
 
     try:
-        portfolio_service = get_portfolio_service(session)
-        dividends = await portfolio_service.get_dividend_data(
+        dividends = await AnalyticsService(session).get_dividend_data(
             user_id=current_user.id, period=period
         )
         return ApiResponse.success_response(data=dividends)

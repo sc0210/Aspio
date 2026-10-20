@@ -18,30 +18,6 @@ from app.utils.datetime_helpers import business_today
 router = APIRouter()
 
 
-def _demo_performance() -> Dict[str, Any]:
-    """The demo portfolio's performance, off the same walk /daily-performance
-    serves. This was a NT$28,450 AAPL/GOOGL account with a hand-typed chart."""
-    series = demo_value_series(35)
-    last, prev = series[-1], series[-2]
-    day_change = Decimal(str(round(last["value"] - prev["value"], 2)))
-    return {
-        "total_value": DEMO_PORTFOLIO["total_value"],
-        "total_cost": DEMO_PORTFOLIO["total_cost"],
-        "total_gain_loss": DEMO_PORTFOLIO["total_gain_loss"],
-        "total_gain_loss_percentage": DEMO_PORTFOLIO["total_gain_loss_percentage"],
-        "day_change": day_change,
-        "day_change_percentage": (day_change / Decimal(str(prev["value"])) * 100).quantize(
-            Decimal("0.01")
-        ),
-        # Weekly points, ending today.
-        "chart_data": [
-            {"date": p["date"].isoformat(), "value": Decimal(str(p["value"]))}
-            for p in series[::-1][::5][::-1]
-        ],
-        "top_holdings": DEMO_HOLDINGS[:3],
-    }
-
-
 def _demo_twr() -> Dict[str, Any]:
     """TWR for the demo account: one buy on DEMO_SERIES_START and no cash flow
     since, so TWR is simply value over cost. This stated NT$100,000 invested
@@ -66,31 +42,6 @@ def _demo_twr() -> Dict[str, Any]:
         "holdings_analyzed": len(DEMO_HOLDINGS),
         "message": "DEMO: Sample time-weighted return data",
     }
-
-
-@router.get("/performance", response_model=Dict[str, Any])
-async def get_performance(
-    current_user=Depends(get_optional_current_user),
-    period: str = Query("1m", description="Performance period (1d, 1w, 1m, 3m, 1y)"),
-    session: AsyncSession = Depends(get_db),
-):
-    """Get portfolio performance metrics"""
-
-    if not current_user:
-        return _demo_performance()
-
-    try:
-        portfolio_service = get_portfolio_service(session)
-        performance = await portfolio_service.get_portfolio_performance(
-            user_id=current_user.id, period=period
-        )
-        return performance
-
-    except Exception as e:
-        # Never the demo account's figures: a signed-in user would read a believable
-        # NT$2M portfolio they do not have. Fail like the other endpoints here.
-        logger.error(f"Failed to compute portfolio performance: {e}", exc_info=True)
-        raise HTTPException(status_code=500, detail="Failed to compute portfolio performance")
 
 
 @router.get("/risk-metrics", response_model=Dict[str, Any])

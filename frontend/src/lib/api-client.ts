@@ -88,6 +88,12 @@ class ApiClient {
   // Invalidated when the token is within 60 s of expiry or when clearAccessToken is called.
   private _cachedSessionToken: string | null = null;
   private _cachedSessionExpiry: number = 0; // Unix ms
+  // The lookup in flight, shared so a page's first burst of queries makes one
+  // /api/auth/session round-trip instead of one each.
+  private _sessionLookup: Promise<string | null> | null = null;
+  // Bumped by clearAccessToken(): a lookup started before a sign-out must not
+  // put the old token back when it resolves.
+  private _sessionGeneration = 0;
 
   constructor() {
     // Determine the API base URL based on environment
@@ -135,6 +141,8 @@ class ApiClient {
     this.accessToken = null;
     this._cachedSessionToken = null;
     this._cachedSessionExpiry = 0;
+    this._sessionLookup = null;
+    this._sessionGeneration += 1;
   }
 
   /**
@@ -142,27 +150,43 @@ class ApiClient {
    * missing or within 60 seconds of expiry. This avoids a getSession() call
    * on every API request when the session is still valid.
    */
-  private async _getSessionToken(): Promise<string | null> {
-    const nowMs = Date.now();
-    if (this._cachedSessionToken && nowMs < this._cachedSessionExpiry - 60_000) {
-      return this._cachedSessionToken;
+  private _getSessionToken(): Promise<string | null> {
+    if (this._cachedSessionToken && Date.now() < this._cachedSessionExpiry - 60_000) {
+      return Promise.resolve(this._cachedSessionToken);
     }
+    if (!this._sessionLookup) {
+      const lookup = this._lookUpSessionToken(this._sessionGeneration);
+      this._sessionLookup = lookup;
+      lookup.finally(() => {
+        if (this._sessionLookup === lookup) this._sessionLookup = null;
+      });
+    }
+    return this._sessionLookup;
+  }
+
+  private async _lookUpSessionToken(generation: number): Promise<string | null> {
+    const nowMs = Date.now();
+    const isCurrent = () => generation === this._sessionGeneration;
     try {
       const session = await getSession();
       const token = (session as { accessToken?: string; accessTokenExpires?: number } | null);
       if (token?.accessToken) {
-        this._cachedSessionToken = token.accessToken;
-        // accessTokenExpires is in seconds (JWT standard); fall back to 25-minute window
-        this._cachedSessionExpiry = token.accessTokenExpires
-          ? token.accessTokenExpires * 1000
-          : nowMs + 25 * 60 * 1000;
-        return this._cachedSessionToken;
+        if (isCurrent()) {
+          this._cachedSessionToken = token.accessToken;
+          // accessTokenExpires is in seconds (JWT standard); fall back to 25-minute window
+          this._cachedSessionExpiry = token.accessTokenExpires
+            ? token.accessTokenExpires * 1000
+            : nowMs + 25 * 60 * 1000;
+        }
+        return token.accessToken;
       }
     } catch {
       // Session fetch failed — fall through to internal token
     }
-    this._cachedSessionToken = null;
-    this._cachedSessionExpiry = 0;
+    if (isCurrent()) {
+      this._cachedSessionToken = null;
+      this._cachedSessionExpiry = 0;
+    }
     return null;
   }
 
