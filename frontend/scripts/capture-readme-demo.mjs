@@ -65,8 +65,8 @@ async function newDemoContext(browser, theme, extra = {}) {
       document.head.appendChild(style);
       const cursor = document.createElement('div');
       cursor.id = 'demo-cursor';
-      cursor.style.left = `${window.__cursor?.x ?? innerWidth / 2}px`;
-      cursor.style.top = `${window.__cursor?.y ?? innerHeight / 2}px`;
+      cursor.style.left = `${innerWidth / 2}px`;
+      cursor.style.top = `${innerHeight / 2}px`;
       document.body.appendChild(cursor);
       addEventListener('mousemove', (e) => {
         cursor.style.left = `${e.clientX}px`;
