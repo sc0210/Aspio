@@ -49,13 +49,15 @@ class TestLineBotRouteMounting:
 
     def test_routes_absent_when_unconfigured(self, monkeypatch):
         app = self._app_with(monkeypatch, enabled=False)
-        assert not any(r.path.startswith("/api/v1/line-bot") for r in app.routes)
         assert TestClient(app).post("/api/v1/line-bot/webhook", content=b"{}").status_code == 404
 
+    # Asked over HTTP, not read off app.routes: FastAPI 0.143 lists an included
+    # router there as one lazy entry with no .path. The webhook is also
+    # include_in_schema=False, so /openapi.json would not show it either.
     def test_routes_present_when_configured(self, monkeypatch):
         app = self._app_with(monkeypatch, enabled=True)
-        # The webhook is include_in_schema=False, so read the route table.
-        assert "/api/v1/line-bot/webhook" in {r.path for r in app.routes}
+        # Unsigned, so the handler rejects it, but it is there to reject it.
+        assert TestClient(app).post("/api/v1/line-bot/webhook", content=b"{}").status_code != 404
 
     @pytest.mark.parametrize("enabled", [True, False])
     def test_features_reports_flag_without_auth(self, monkeypatch, enabled):
