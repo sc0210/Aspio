@@ -17,25 +17,10 @@ recording expenses and splitting group bills from chat.
 
 <picture><source media="(prefers-color-scheme: dark)" srcset="docs/images/demo-dark.gif"><img src="docs/images/demo.gif" alt="A tour of Aspiro in demo mode: dashboard, transactions, portfolio, rebalancing, goals and Month in Review" width="100%"></picture>
 
+<sub>A tour in demo mode, on fixture data with no account. See every page in
+<a href="docs/images/screenshots/README.md">screenshots</a>, light and dark, for every release.</sub>
+
 </div>
-
-<table>
-  <tr>
-    <td width="50%"><b>Dashboard</b><br><picture><source media="(prefers-color-scheme: dark)" srcset="docs/images/screenshots/2026.09.3/dashboard-dark.png"><img src="docs/images/screenshots/2026.09.3/dashboard.png" alt="Dashboard"></picture></td>
-    <td width="50%"><b>Transactions</b><br><picture><source media="(prefers-color-scheme: dark)" srcset="docs/images/screenshots/2026.09.3/transactions-dark.png"><img src="docs/images/screenshots/2026.09.3/transactions.png" alt="Transactions"></picture></td>
-  </tr>
-  <tr>
-    <td><b>Portfolio</b><br><picture><source media="(prefers-color-scheme: dark)" srcset="docs/images/screenshots/2026.09.3/portfolio-dark.png"><img src="docs/images/screenshots/2026.09.3/portfolio.png" alt="Portfolio"></picture></td>
-    <td><b>Rebalancing</b><br><picture><source media="(prefers-color-scheme: dark)" srcset="docs/images/screenshots/2026.09.3/rebalancing-dark.png"><img src="docs/images/screenshots/2026.09.3/rebalancing.png" alt="Rebalancing"></picture></td>
-  </tr>
-  <tr>
-    <td><b>Goals</b><br><picture><source media="(prefers-color-scheme: dark)" srcset="docs/images/screenshots/2026.09.3/goals-dark.png"><img src="docs/images/screenshots/2026.09.3/goals.png" alt="Goals"></picture></td>
-    <td><b>Month in Review</b><br><picture><source media="(prefers-color-scheme: dark)" srcset="docs/images/screenshots/2026.09.3/review-dark.png"><img src="docs/images/screenshots/2026.09.3/review.png" alt="Month in Review"></picture></td>
-  </tr>
-</table>
-
-<sub>Screenshots follow your GitHub theme and are taken in demo mode, on fixture data with no
-account. Earlier versions are in the [screenshot history](docs/images/screenshots/README.md).</sub>
 
 ## Features
 

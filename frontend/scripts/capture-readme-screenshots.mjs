@@ -1,23 +1,23 @@
 #!/usr/bin/env node
 /**
- * Captures the page screenshots shown in the root README, one folder per app version.
+ * Captures the page screenshots linked from the root README, one folder per app version.
  *
  *   node scripts/capture-readme-screenshots.mjs [baseUrl]   # default http://localhost:3000
  *   node scripts/capture-readme-screenshots.mjs http://localhost:3010 --version=2026.07 \
  *     --api=http://localhost:8000
+ *   node scripts/capture-readme-screenshots.mjs --index-only   # rebuild the index, capture nothing
  *
  * The version is the newest entry in src/data/changelog.ts. `--version` files the shots under
- * another one instead, for backfilling an older build running at baseUrl; only the newest version
- * repoints the README. The backend's CORS allowlist only admits :3000, so a build on any other
+ * another one instead, for backfilling an older build running at baseUrl. The backend's CORS allowlist only admits :3000, so a build on any other
  * port needs `--api=<backend origin>`: its calls are then relayed through Playwright with the
  * CORS headers added. Shots land in
  * docs/images/screenshots/<version>/; other versions' folders are never touched, so the set
- * builds up into a visual history. The script then points the README at the new folder and
- * rewrites docs/images/screenshots/README.md, the index of every version.
+ * builds up into a visual history. The script then rewrites docs/images/screenshots/README.md, the
+ * index of every version, which the root README links to under its demo GIF.
  *
  * Pages are captured in demo mode (the `demo-mode` cookie), so they show fixture data and never
  * a real account. Each page is shot twice, light as `<name>.png` and dark as `<name>-dark.png`;
- * the README serves whichever matches the reader's GitHub theme. Needs a running frontend; the
+ * the index shows the newest version in whichever matches the reader's GitHub theme. Needs a running frontend; the
  * backend is optional.
  */
 import { readFileSync, writeFileSync, mkdirSync, readdirSync, existsSync } from 'node:fs';
@@ -28,12 +28,12 @@ import { chromium } from 'playwright';
 const here = dirname(fileURLToPath(import.meta.url));
 const REPO_ROOT = resolve(here, '../..');
 const SHOTS_ROOT = resolve(REPO_ROOT, 'docs/images/screenshots');
-const README = resolve(REPO_ROOT, 'README.md');
 const args = process.argv.slice(2);
 const BASE_URL = args.find((a) => !a.startsWith('--')) ?? 'http://localhost:3000';
 const flag = (name) => args.find((a) => a.startsWith(`--${name}=`))?.slice(name.length + 3);
 const VERSION_ARG = flag('version');
 const API_ORIGIN = flag('api');
+const INDEX_ONLY = args.includes('--index-only');
 
 // Newest entry first. Its version is also what the What's New modal compares against: the
 // modal opens over every page in a fresh context unless the stored value equals it exactly.
@@ -133,17 +133,6 @@ async function relayApiWithCors(context) {
   });
 }
 
-function pointReadmeAtCurrentVersion() {
-  const readme = readFileSync(README, 'utf8');
-  writeFileSync(
-    README,
-    readme.replace(
-      /docs\/images\/screenshots\/(?:[^/"]+\/)?([\w-]+\.png)/g,
-      `docs/images/screenshots/${CURRENT_VERSION}/$1`,
-    ),
-  );
-}
-
 function writeIndex() {
   const releaseOrder = (version) => {
     const i = RELEASES.findIndex((r) => r.version === version);
@@ -155,9 +144,31 @@ function writeIndex() {
     .map((d) => d.name)
     .sort((a, b) => releaseOrder(a) - releaseOrder(b) || b.localeCompare(a));
 
+  const picture = (version, name, alt) => {
+    const light = `${version}/${name}.png`;
+    const dark = `${version}/${name}-dark.png`;
+    const img = `<img src="${light}" alt="${alt}">`;
+    return existsSync(resolve(SHOTS_ROOT, dark))
+      ? `<picture><source media="(prefers-color-scheme: dark)" srcset="${dark}">${img}</picture>`
+      : img;
+  };
+
+  // The newest version at full width, two pages a row, following the reader's GitHub theme.
+  const latest = versions[0];
+  const cells = PAGES.filter(({ name }) => existsSync(resolve(SHOTS_ROOT, latest, `${name}.png`))).map(
+    ({ name, label }) => `    <td width="50%"><b>${label}</b><br>${picture(latest, name, label)}</td>`,
+  );
+  const rows = [];
+  for (let i = 0; i < cells.length; i += 2) rows.push(`  <tr>\n${cells.slice(i, i + 2).join('\n')}\n  </tr>`);
+  const mobile = MOBILE_PAGES.filter(({ name }) => existsSync(resolve(SHOTS_ROOT, latest, `${name}.png`))).map(
+    ({ name, label }) =>
+      `<b>${label}</b><br>${picture(latest, name, label).replace('<img ', '<img width="280" ')}`,
+  );
+  const gallery = `<table>\n${rows.join('\n')}\n</table>\n\n${mobile.join('\n\n')}\n`;
+
   const sections = versions.map((version) => {
     const release = RELEASES.find((r) => r.version === version);
-    const heading = release ? `## ${version} · ${release.date} · ${release.title}` : `## ${version}`;
+    const heading = release ? `### ${version} · ${release.date} · ${release.title}` : `### ${version}`;
     // Light first, then dark; versions captured before dark shots existed have only light.
     const images = THEMES.flatMap((theme) =>
       [...PAGES, ...MOBILE_PAGES]
@@ -174,11 +185,16 @@ function writeIndex() {
 
   writeFileSync(
     resolve(SHOTS_ROOT, 'README.md'),
-    `# Screenshot history
+    `# Screenshots
+
+Every page of Aspiro, captured in demo mode on fixture data with no account. They follow your
+GitHub theme. The newest release is first; every earlier one is kept below as a history.
+
+${gallery}
+## History
 
 One folder per app version: the newest entry in \`frontend/src/data/changelog.ts\`, the same
-version the What's New modal shows. All captured in demo mode, in light and (from 2026.09.3) dark.
-The root README shows the newest.
+version the What's New modal shows. All captured in light and (from 2026.09.3) dark.
 
 Generated by \`frontend/scripts/capture-readme-screenshots.mjs\`. Run it once per release, after
 bumping the changelog, and commit the new folder. Don't edit this file by hand.
@@ -192,23 +208,25 @@ ${sections.join('\n')}`,
   );
 }
 
-mkdirSync(OUT_DIR, { recursive: true });
-const browser = await chromium.launch();
-try {
-  // <main> is the scroll container, not window, so fullPage would grab only one viewport;
-  // a fixed viewport keeps every shot the same size instead.
-  for (const theme of THEMES) {
-    await capture(browser, PAGES, { viewport: { width: 1440, height: 900 }, deviceScaleFactor: 1 }, theme);
-    await capture(
-      browser,
-      MOBILE_PAGES,
-      { viewport: { width: 390, height: 844 }, deviceScaleFactor: 2, isMobile: true, hasTouch: true },
-      theme,
-    );
+if (!INDEX_ONLY) {
+  mkdirSync(OUT_DIR, { recursive: true });
+  const browser = await chromium.launch();
+  try {
+    // <main> is the scroll container, not window, so fullPage would grab only one viewport;
+    // a fixed viewport keeps every shot the same size instead.
+    for (const theme of THEMES) {
+      await capture(browser, PAGES, { viewport: { width: 1440, height: 900 }, deviceScaleFactor: 1 }, theme);
+      await capture(
+        browser,
+        MOBILE_PAGES,
+        { viewport: { width: 390, height: 844 }, deviceScaleFactor: 2, isMobile: true, hasTouch: true },
+        theme,
+      );
+    }
+  } finally {
+    await browser.close();
   }
-} finally {
-  await browser.close();
+  console.log(`Saved ${CURRENT_VERSION}`);
 }
-if (CURRENT_VERSION === LATEST_VERSION) pointReadmeAtCurrentVersion();
 writeIndex();
-console.log(`Saved ${CURRENT_VERSION}; index at docs/images/screenshots/README.md`);
+console.log('Index at docs/images/screenshots/README.md');
