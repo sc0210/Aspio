@@ -156,18 +156,22 @@ jobs:
       # before a report could be written — the cause was a mocked hook handing
       # back fresh function identities each render, which made two effects in the
       # page ping-pong setState forever. Fixed at the mock; it runs in ~1s.
+      #
+      # --coverage enforces the floors in jest.config.js (coverageThreshold); a
+      # drop below them fails this step like a failing assertion does.
       - name: Run Jest
         id: jest
         continue-on-error: true
         run: >-
           npx jest --silent --maxWorkers=2
+          --coverage --coverageReporters=text-summary
           --json --outputFile=jest-results.json
       - name: Fail on test suites that run zero tests
         run: node scripts/check-dead-test-suites.mjs jest-results.json
       - name: Fail the build if any Jest assertion failed
         if: steps.jest.outcome == 'failure'
         run: |
-          echo "Jest reported failing tests — see the 'Run Jest' step above."
+          echo "Jest reported failing tests or coverage below the floor — see the 'Run Jest' step above."
           exit 1
 
       - run: npm run build
@@ -202,11 +206,15 @@ jobs:
       # test_historical_fetch). This selector was `-m unit`, which collected
       # 3 of 976 tests — a green check that validated ~0.3% of the backend.
       #
-      # addopts is cleared to drop the repo-wide 35% coverage gate; re-enabling
-      # it is a separate decision from running the tests at all.
+      # addopts is cleared (it carries -v and HTML/XML reports meant for local
+      # runs); the coverage floor is passed here instead. It is a ratchet: the
+      # measured level rounded down (77.6% on 2026-10-20). Raise it as tests
+      # land; never lower it to get a PR green.
       # `python -m pytest` (not the bare `pytest` console script) so the
       # backend/ working dir lands on sys.path — conftest.py imports `app`.
-      - run: python -m pytest -m "not integration" -o "addopts=" -p no:cacheprovider -q
+      - run: >-
+          python -m pytest -m "not integration" -o "addopts=" -p no:cacheprovider -q
+          --cov=app --cov-report=term:skip-covered --cov-fail-under=77
         env:
           DATABASE_URL: "sqlite+aiosqlite:///:memory:"
           SECRET_KEY: "ci-test-secret-key-0123456789abcdef0123456789"

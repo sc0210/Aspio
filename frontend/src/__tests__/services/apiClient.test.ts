@@ -63,10 +63,18 @@ describe('ApiClient', () => {
     // must await the request. Asserting synchronously reports "Number of calls: 0",
     // which reads as a routing bug rather than a missing await.
     it('should initialize with default base URL when no env var is set', async () => {
-      await apiClient.get('/test');
+      // next/jest loads frontend/.env, which sets this on a dev machine, so unset
+      // it here rather than relying on the environment being clean (CI has no .env).
+      const saved = process.env.NEXT_PUBLIC_API_URL;
+      delete process.env.NEXT_PUBLIC_API_URL;
+      try {
+        await new ApiClient().get('/test');
 
-      // Same-origin by default, so one prebuilt image works on any domain.
-      expect(mockFetch).toHaveBeenCalledWith('/api/v1/test', expect.any(Object));
+        // Same-origin by default, so one prebuilt image works on any domain.
+        expect(mockFetch).toHaveBeenCalledWith('/api/v1/test', expect.any(Object));
+      } finally {
+        if (saved !== undefined) process.env.NEXT_PUBLIC_API_URL = saved;
+      }
     });
 
     it('should use environment variable for base URL', async () => {
