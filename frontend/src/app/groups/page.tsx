@@ -1,5 +1,6 @@
 'use client';
 
+import { LineBotGate } from '@/components/line/LineBotGate';
 import { useState, useEffect } from 'react';
 import Link from 'next/link';
 import {
@@ -290,6 +291,10 @@ function DesktopGroupsPage() {
  * then each group with your share of it; tablet/desktop get the expandable cards.
  */
 export default function GroupsPage() {
+  return <LineBotGate><GroupsPageContent /></LineBotGate>;
+}
+
+function GroupsPageContent() {
   const isMobile = useIsMobile();
   if (isMobile === null) {
     return (

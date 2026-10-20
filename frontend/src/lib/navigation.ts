@@ -20,6 +20,7 @@
  */
 
 import type { ComponentType, SVGProps } from 'react';
+import type { Features } from '@/lib/features';
 import {
   HomeIcon,
   CreditCardIcon,
@@ -60,6 +61,8 @@ export interface NavItem {
   primary?: boolean;
   /** Extra terms the ⌘K palette matches on, so search works in both languages. */
   keywords?: string[];
+  /** An optional add-on the page depends on; hidden when the instance lacks it. */
+  feature?: keyof Features;
 }
 
 export interface NavSection {
@@ -105,6 +108,8 @@ const FINANCE: NavItem[] = [
     nameKey: 'navigation.groups', href: '/groups',
     icon: UserGroupIcon, iconSolid: UserGroupIconSolid,
     keywords: ['split', 'line', '群組', '分帳'],
+    // Groups are LINE groups: without a configured bot there are none to show.
+    feature: 'lineBot',
   },
 ];
 
@@ -159,6 +164,11 @@ export function getNavigationSections(isAdmin: boolean): NavSection[] {
   if (isAdmin) sections.push({ items: [ADMIN] });
 
   return sections;
+}
+
+/** Whether `item`'s add-on, if it has one, is configured on this instance. */
+export function isNavItemAvailable(item: NavItem, features: Features): boolean {
+  return !item.feature || features[item.feature];
 }
 
 /** Flat list, in sidebar order — what the ⌘K palette searches. */

@@ -11,6 +11,8 @@ import '@testing-library/jest-dom';
 import { getNavigationItems } from '@/lib/navigation';
 
 const mockPush = jest.fn();
+// The LINE bot is configured: these suites exercise the pages it unlocks.
+jest.mock('@/hooks/useFeatures', () => ({ useFeatures: () => ({ lineBot: true, isLoading: false }) }));
 jest.mock('next/navigation', () => ({
   useRouter: () => ({ push: mockPush }),
 }));

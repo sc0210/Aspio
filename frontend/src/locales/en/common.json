@@ -587,7 +587,9 @@
     "runSuffix": "in LINE to get a fresh link.",
     "signInHint": "Sign in with the Google account you use for Aspiro to complete the link.",
     "tryOr": "or",
-    "tryPrefix": "Go back to LINE and try"
+    "tryPrefix": "Go back to LINE and try",
+    "unavailableTitle": "LINE isn’t set up here",
+    "unavailableBody": "This Aspiro instance has no LINE bot configured, so LINE linking and group splitting are off. The admin can enable them by adding a LINE channel."
   },
   "loadingOverlay": {
     "hint": "Fetching the latest data from the server",

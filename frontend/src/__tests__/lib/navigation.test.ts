@@ -8,7 +8,7 @@
  * to ship a feature.
  */
 
-import { getNavigationItems, getNavigationSections, primaryNavItems, secondaryNavItems } from '@/lib/navigation';
+import { getNavigationItems, getNavigationSections, isNavItemAvailable, primaryNavItems, secondaryNavItems } from '@/lib/navigation';
 import en from '@/locales/en/common.json';
 import zhTW from '@/locales/zh-TW/common.json';
 
@@ -41,6 +41,13 @@ describe('navigation structure', () => {
     it('lists every destination once', () => {
         const hrefs = getNavigationItems(true).map((item) => item.href);
         expect(new Set(hrefs).size).toBe(hrefs.length);
+    });
+
+    it('gates /groups on the LINE bot, and nothing else on any add-on', () => {
+        const items = getNavigationItems(true);
+        const hidden = items.filter((i) => !isNavItemAvailable(i, { lineBot: false })).map((i) => i.href);
+        expect(hidden).toEqual(['/groups']);
+        expect(items.every((i) => isNavItemAvailable(i, { lineBot: true }))).toBe(true);
     });
 
     it('shows /admin only to admins', () => {

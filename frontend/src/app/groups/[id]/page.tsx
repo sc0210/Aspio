@@ -1,5 +1,6 @@
 'use client';
 
+import { LineBotGate } from '@/components/line/LineBotGate';
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import Link from 'next/link';
 import { useParams } from 'next/navigation';
@@ -206,6 +207,10 @@ const PAGE_SIZE = 50;
 // ─── Page component ───────────────────────────────────────────────────────────
 
 export default function GroupDetailPage() {
+  return <LineBotGate><GroupDetailContent /></LineBotGate>;
+}
+
+function GroupDetailContent() {
   const { t } = useTranslation('groups');
   const { isDemo } = useAppMode();
   const params = useParams();

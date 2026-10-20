@@ -400,6 +400,17 @@ class Settings(BaseSettings):
         }
 
     @property
+    def line_bot_enabled(self) -> bool:
+        """Whether this instance has a LINE Messaging API channel configured.
+
+        The bot is an optional add-on: it needs a channel created on LINE's
+        developer console. Without both credentials the webhook cannot verify a
+        signature or send a reply, so the /line-bot routes are not mounted and
+        the frontend hides every LINE surface (it reads this via /features).
+        """
+        return bool(self.LINE_CHANNEL_SECRET and self.LINE_CHANNEL_ACCESS_TOKEN)
+
+    @property
     def dev_tools_active(self) -> bool:
         """Whether developer-only routes may be exposed at all.
 

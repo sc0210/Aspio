@@ -60,7 +60,7 @@ rebalancing calculators.
 | `portfolio` | Holdings, historical prices, performance, IRR, rebalancing |
 | `dashboard` | Aggregated stats across all wallets |
 | `goals` | Savings goals, milestones, streaks |
-| `line_bot` | LINE webhook, account linking, group expense splitting |
+| `line_bot` | LINE webhook, account linking, group expense splitting. Optional: mounted only when `settings.line_bot_enabled`; the frontend reads `GET /features` and hides LINE surfaces |
 | `loans` | Peer loan tracking |
 | `peers` | Social comparison / peer connections |
 | `reports` | Spending, monthly-trend and goals reads behind `/review` |

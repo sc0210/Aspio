@@ -15,7 +15,8 @@ import { cn } from '@/utils/cn';
 import { useDemo } from '@/contexts/DemoContext';
 import { useIsAdmin } from '@/hooks/useAdmin';
 import { useScrollLock } from '@/hooks/useScrollLock';
-import { getNavigationSections, type NavSection } from '@/lib/navigation';
+import { getNavigationSections, isNavItemAvailable, type NavSection } from '@/lib/navigation';
+import { useFeatures } from '@/hooks/useFeatures';
 import { openCommandPalette } from './CommandPalette';
 import { AccountMenu } from './AccountMenu';
 
@@ -78,7 +79,10 @@ export function DashboardSidebar({ open, collapsed, onToggleCollapsed, onClose }
   // keyboard tooltip this exists to provide.
   const [railTooltip, setRailTooltip] = useState<{ label: string; top: number } | null>(null);
 
-  const navigationSections = getNavigationSections(isAdmin);
+  const features = useFeatures();
+  const navigationSections = getNavigationSections(isAdmin)
+    .map((section) => ({ ...section, items: section.items.filter((item) => isNavItemAvailable(item, features)) }))
+    .filter((section) => section.items.length > 0);
   const isActiveRoute = (href: string) => pathname === href || pathname.startsWith(href + '/');
 
   // Which section opens itself when the reader has expressed no preference.

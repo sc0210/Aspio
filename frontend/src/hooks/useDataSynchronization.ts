@@ -71,6 +71,8 @@ export const QUERY_KEYS = {
   NOTIFICATIONS: 'notifications',
   EXCHANGE_RATES: 'exchange-rates',
   ADMIN: 'admin',
+  // Which optional add-ons (the LINE bot) this instance has configured.
+  FEATURES: 'features',
 
   // User
   USER_PROFILE: 'user-profile',
@@ -93,6 +95,7 @@ export const UNGROUPED_KEYS: readonly QueryKeyValue[] = [
   QUERY_KEYS.ADMIN,
   QUERY_KEYS.USER_PROFILE,
   QUERY_KEYS.NOTIFICATIONS,
+  QUERY_KEYS.FEATURES,
 ] as const;
 
 /**
