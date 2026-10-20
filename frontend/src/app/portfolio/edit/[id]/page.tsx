@@ -480,7 +480,7 @@ export default function EditHoldingPage() {
 
             {/* Wallet Type Selector */}
             <div>
-              <label className="label mb-3 block">{t('portfolio:holdingWallet.title')} <span className="text-error-500">*</span></label>
+              <label className="label mb-3 block">{t('portfolio:holdingWallet.title')} <span className="text-error-700 dark:text-error-500">*</span></label>
               <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
                 {WALLET_TYPES.map((wallet) => {
                   const isSelected = walletType === wallet.value;
@@ -548,7 +548,7 @@ export default function EditHoldingPage() {
 
                 <div>
                   <label htmlFor="currency" className="label">
-                    Currency <span className="text-error-500">*</span>
+                    Currency <span className="text-error-700 dark:text-error-500">*</span>
                   </label>
                   <select
                     aria-invalid={!!errors.currency}
@@ -570,7 +570,7 @@ export default function EditHoldingPage() {
 
                 <div>
                   <label htmlFor="exchange" className="label">
-                    Exchange <span className="text-error-500">*</span>
+                    Exchange <span className="text-error-700 dark:text-error-500">*</span>
                   </label>
                   <select
                     aria-invalid={!!errors.exchange}

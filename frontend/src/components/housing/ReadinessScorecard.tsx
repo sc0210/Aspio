@@ -292,7 +292,7 @@ export function ReadinessScorecard({ seed, cashNeededAtPurchase, monthlyHousingC
                                         )}
                                     </span>
                                     {!c.met && c.shortfall > 0 && c.key !== 'debt' && (
-                                        <span className="text-xs text-error-500 font-medium">
+                                        <span className="text-xs text-error-700 dark:text-error-500 font-medium">
                                             {isValueVisible ? formatTWDCompact(c.shortfall) : '•••'} {t('housing.ready.short', 'short')}
                                         </span>
                                     )}

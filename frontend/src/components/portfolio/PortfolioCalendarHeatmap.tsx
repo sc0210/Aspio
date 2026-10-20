@@ -20,8 +20,8 @@ const PROVISIONAL_NOTE = 'not final — the market has not closed for this day y
 const WEEKDAY_LABELS = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri'];
 
 function cellColorClass(change: number | null, maxAbs: number, invertColors: boolean): string {
-    if (change === null) return 'bg-gray-100 dark:bg-gray-800/60 text-gray-500 dark:text-gray-600';
-    if (change === 0) return 'bg-gray-100 dark:bg-gray-800 text-gray-500 dark:text-gray-400';
+    if (change === null) return 'bg-gray-100 dark:bg-gray-800/60 text-gray-600 dark:text-gray-600';
+    if (change === 0) return 'bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-400';
 
     const ratio = maxAbs > 0 ? Math.min(Math.abs(change) / maxAbs, 1) : 0;
     const isGain = change > 0;

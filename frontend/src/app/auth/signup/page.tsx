@@ -310,7 +310,7 @@ function SignUpForm() {
                         ))}
                       </div>
                       <span className={cn('text-xs font-semibold flex-shrink-0', {
-                        'text-red-500':     strength.score <= 1,
+                        'text-red-700 dark:text-red-500':     strength.score <= 1,
                         'text-amber-500':   strength.score === 2,
                         'text-yellow-700 dark:text-yellow-500':  strength.score === 3,
                         'text-emerald-500': strength.score >= 4,

@@ -53,7 +53,7 @@ export function SafetyPanel({ stress, cashFlowBasisMonths = 0 }: Props) {
     return (
         <Card padding="md">
             <h3 className="text-sm font-semibold text-gray-700 dark:text-gray-300 flex items-center gap-1.5">
-                <ShieldExclamationIcon className="w-4 h-4 text-error-500" />
+                <ShieldExclamationIcon className="w-4 h-4 text-error-700 dark:text-error-500" />
                 {t('lifecycle.safety.title', 'Can you survive a bad market?')}
             </h3>
             <p className="text-sm text-gray-500 dark:text-gray-500 mt-1 mb-4">

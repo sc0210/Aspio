@@ -810,7 +810,7 @@ export default function AssetDetailPage() {
                                                                     {isLotUp ? '+' : ''}{formatCurrency(lotGain, currency)}
                                                                 </span>
                                                                 {lotGainPct != null && (
-                                                                    <span className={cn('block text-xs', isLotUp ? 'text-success-700 dark:text-success-400' : 'text-error-500 dark:text-error-400')}>
+                                                                    <span className={cn('block text-xs', isLotUp ? 'text-success-700 dark:text-success-400' : 'text-error-700 dark:text-error-400')}>
                                                                         {isLotUp ? '+' : ''}{lotGainPct.toFixed(2)}%
                                                                     </span>
                                                                 )}
@@ -855,7 +855,7 @@ export default function AssetDetailPage() {
                                                             <span className={cn('font-medium', (holding.gainLoss ?? 0) >= 0 ? 'text-success-700 dark:text-success-400' : 'text-error-700 dark:text-error-400')}>
                                                                 {(holding.gainLoss ?? 0) >= 0 ? '+' : ''}{formatCurrency(holding.gainLoss, currency)}
                                                             </span>
-                                                            <span className={cn('block text-xs', (holding.gainLoss ?? 0) >= 0 ? 'text-success-700 dark:text-success-500' : 'text-error-500')}>
+                                                            <span className={cn('block text-xs', (holding.gainLoss ?? 0) >= 0 ? 'text-success-700 dark:text-success-500' : 'text-error-700 dark:text-error-500')}>
                                                                 {(holding.gainLoss ?? 0) >= 0 ? '+' : ''}{(holding.gainLossPercentage ?? 0).toFixed(2)}%
                                                             </span>
                                                         </div>

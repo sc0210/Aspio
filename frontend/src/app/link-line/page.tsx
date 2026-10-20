@@ -127,7 +127,7 @@ function LinkLineContent() {
               )}
             </div>
             <p className="text-sm text-center text-gray-500 dark:text-gray-400">
-              {t('common:lineLink.tryPrefix')} <span className="font-mono bg-gray-100 dark:bg-gray-700 px-1 rounded">/balance</span> {t('common:lineLink.tryOr')} <span className="font-mono bg-gray-100 dark:bg-gray-700 px-1 rounded">/add 150 coffee</span>
+              {t('common:lineLink.tryPrefix')} <span className="font-mono bg-gray-100 dark:bg-gray-700 px-1 rounded text-gray-700 dark:text-inherit">/balance</span> {t('common:lineLink.tryOr')} <span className="font-mono bg-gray-100 dark:bg-gray-700 px-1 rounded text-gray-700 dark:text-inherit">/add 150 coffee</span>
             </p>
           </div>
         )}
@@ -144,7 +144,7 @@ function LinkLineContent() {
               <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">{errorMsg}</p>
             </div>
             <p className="text-sm text-center text-gray-500 dark:text-gray-400">
-              {t('common:lineLink.runPrefix')} <span className="font-mono bg-gray-100 dark:bg-gray-700 px-1 rounded">/link</span> {t('common:lineLink.runSuffix')}
+              {t('common:lineLink.runPrefix')} <span className="font-mono bg-gray-100 dark:bg-gray-700 px-1 rounded text-gray-700 dark:text-inherit">/link</span> {t('common:lineLink.runSuffix')}
             </p>
           </div>
         )}

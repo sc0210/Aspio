@@ -491,7 +491,7 @@ export default function AddInvestmentPage() {
           <div className="mb-4 p-3 bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800 rounded-lg">
             <div className="flex items-center gap-2">
               <span className="text-amber-700 dark:text-amber-400 font-medium text-sm">
-                ⚠️ Fields marked with <span className="text-error-500">*</span> {t('portfolio:addHolding.areRequired')}
+                ⚠️ Fields marked with <span className="text-error-700 dark:text-error-500">*</span> {t('portfolio:addHolding.areRequired')}
               </span>
             </div>
           </div>
@@ -508,7 +508,7 @@ export default function AddInvestmentPage() {
                 {/* Symbol Input with Lookup */}
                 <div className="md:col-span-2">
                   <label htmlFor="symbol" className="label font-semibold">
-                    {t('portfolio:fields.symbol')} <span className="text-error-500">*</span>
+                    {t('portfolio:fields.symbol')} <span className="text-error-700 dark:text-error-500">*</span>
                   </label>
                   <div className="flex gap-2">
                     <div className="flex-1">
@@ -561,7 +561,7 @@ export default function AddInvestmentPage() {
                 <div className="md:col-span-2">
                   <Input
                     {...register('name')}
-                    label={<span className="font-semibold">{t('portfolio:addHolding.investmentName')} <span className="text-error-500">*</span></span>}
+                    label={<span className="font-semibold">{t('portfolio:addHolding.investmentName')} <span className="text-error-700 dark:text-error-500">*</span></span>}
                     placeholder={t('portfolio:addHolding.namePlaceholder')}
                     error={errors.name?.message}
                   />
@@ -569,7 +569,7 @@ export default function AddInvestmentPage() {
 
                 <div>
                   <label htmlFor="type" className="label font-semibold">
-                    {t('portfolio:fields.type')} <span className="text-error-500">*</span>
+                    {t('portfolio:fields.type')} <span className="text-error-700 dark:text-error-500">*</span>
                   </label>
                   <select
                     id="type"
@@ -592,7 +592,7 @@ export default function AddInvestmentPage() {
                 {/* Wallet Type Selector */}
                 <div className="md:col-span-2">
                   <label className="label font-semibold mb-3 block">
-                    {t('portfolio:holdingWallet.title')} <span className="text-error-500">*</span>
+                    {t('portfolio:holdingWallet.title')} <span className="text-error-700 dark:text-error-500">*</span>
                   </label>
                   <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
                     {WALLET_TYPES.map((wallet) => {
@@ -644,7 +644,7 @@ export default function AddInvestmentPage() {
                   <Input
                     {...register('purchaseDate')}
                     type="date"
-                    label={<span className="font-semibold">{t('portfolio:addHolding.purchaseDate')} <span className="text-error-500">*</span></span>}
+                    label={<span className="font-semibold">{t('portfolio:addHolding.purchaseDate')} <span className="text-error-700 dark:text-error-500">*</span></span>}
                     error={errors.purchaseDate?.message}
                     max={businessToday()}
                   />
@@ -660,7 +660,7 @@ export default function AddInvestmentPage() {
                     inputMode="decimal"
                     onWheel={(e) => e.currentTarget.blur()}
                     step="0.001"
-                    label={<span className="font-semibold">{t('portfolio:fields.quantity')} <span className="text-error-500">*</span></span>}
+                    label={<span className="font-semibold">{t('portfolio:fields.quantity')} <span className="text-error-700 dark:text-error-500">*</span></span>}
                     placeholder={t('portfolio:addHolding.quantityPlaceholder')}
                     error={errors.quantity?.message}
                   />
@@ -673,7 +673,7 @@ export default function AddInvestmentPage() {
                     inputMode="decimal"
                     onWheel={(e) => e.currentTarget.blur()}
                     step="0.01"
-                    label={<span className="font-semibold">{t('portfolio:addHolding.purchasePrice')} <span className="text-error-500">*</span></span>}
+                    label={<span className="font-semibold">{t('portfolio:addHolding.purchasePrice')} <span className="text-error-700 dark:text-error-500">*</span></span>}
                     placeholder={t('portfolio:addHolding.pricePlaceholder')}
                     error={errors.averageCost?.message}
                     leftIcon={<CurrencyDollarIcon className="w-5 h-5 text-gray-500 dark:text-gray-400" />}
@@ -685,7 +685,7 @@ export default function AddInvestmentPage() {
 
                 <div>
                   <label htmlFor="currency" className="label font-semibold">
-                    {t('portfolio:fields.currency')} <span className="text-error-500">*</span>
+                    {t('portfolio:fields.currency')} <span className="text-error-700 dark:text-error-500">*</span>
                   </label>
                   <select
                     id="currency"
@@ -707,7 +707,7 @@ export default function AddInvestmentPage() {
 
                 <div>
                   <label htmlFor="exchange" className="label font-semibold">
-                    {t('portfolio:fields.exchange')} <span className="text-error-500">*</span>
+                    {t('portfolio:fields.exchange')} <span className="text-error-700 dark:text-error-500">*</span>
                   </label>
                   <select
                     id="exchange"
@@ -747,7 +747,7 @@ export default function AddInvestmentPage() {
             {/* Optional Fields Section */}
             <div className="p-4 bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700">
               <h3 className="text-sm font-semibold text-gray-700 dark:text-gray-300 mb-3 flex items-center gap-2">
-                <span className="flex items-center justify-center w-5 h-5 bg-gray-400 text-white rounded-full text-xs">2</span>
+                <span className="flex items-center justify-center w-5 h-5 bg-gray-500 dark:bg-gray-400 text-white rounded-full text-xs">2</span>
                 {t('portfolio:addHolding.optionalSection')}
               </h3>
 

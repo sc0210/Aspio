@@ -215,7 +215,7 @@ export function NotificationBell() {
         </svg>
         {unread > 0 && (
           <span
-            className="absolute -right-0.5 -top-0.5 flex h-[1.1rem] min-w-[1.1rem] items-center justify-center rounded-full bg-error-500 px-0.5 text-[10px] font-bold leading-none text-white"
+            className="absolute -right-0.5 -top-0.5 flex h-[1.1rem] min-w-[1.1rem] items-center justify-center rounded-full bg-error-600 dark:bg-error-500 px-0.5 text-[10px] font-bold leading-none text-white"
             aria-hidden="true"
           >
             {unread > 99 ? '99+' : unread}

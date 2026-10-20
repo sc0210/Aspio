@@ -35,7 +35,7 @@ function PctBadge({ pct }: { pct: number | undefined }) {
   const arrow = isNeutral ? '→' : isUp ? '▲' : '▼';
 
   const cls = isNeutral
-    ? 'bg-gray-100 dark:bg-gray-700 text-gray-500 dark:text-gray-400'
+    ? 'bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-400'
     : isUp
     ? 'bg-prosperity-100 dark:bg-prosperity-900/40 text-prosperity-700 dark:text-prosperity-300'
     : 'bg-error-100 dark:bg-error-900/40 text-error-700 dark:text-error-300';

@@ -140,7 +140,7 @@ function Flow({ label, amount, width, change, moreIsBetter, hasPrevious, positiv
                     <Icon
                         className={cn(
                             'w-4 h-4 flex-shrink-0',
-                            positive ? 'text-prosperity-700 dark:text-prosperity-500' : 'text-error-500',
+                            positive ? 'text-prosperity-700 dark:text-prosperity-500' : 'text-error-700 dark:text-error-500',
                         )}
                         aria-hidden="true"
                     />

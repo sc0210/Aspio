@@ -113,7 +113,7 @@ export function RetirementProgressTracker({
                             <span className="text-sm font-semibold text-gray-900 dark:text-gray-100 leading-none">
                                 {t('portfolio:retirement.title')}
                             </span>
-                            <span className="text-xs font-medium px-1.5 py-0.5 rounded bg-gray-100 dark:bg-gray-700 text-gray-500 dark:text-gray-400">
+                            <span className="text-xs font-medium px-1.5 py-0.5 rounded bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-400">
                                 {t(`portfolio:retirement.stages.${stage.key}.label`, stage.label)} · {stageIndex + 1}/{FINANCIAL_STAGES.length}
                             </span>
                         </div>

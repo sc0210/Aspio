@@ -151,7 +151,7 @@ export function CashFields({ idPrefix: p, formData, errors, onChange, activeLoan
               )}
               autoFocus
             />
-            {errors.description && <p id={`${p}-description-error`} role="alert" className="text-xs text-error-500 mt-1">{errors.description}</p>}
+            {errors.description && <p id={`${p}-description-error`} role="alert" className="text-xs text-error-700 dark:text-error-500 mt-1">{errors.description}</p>}
           </div>
           <div className="w-full sm:w-40">
             <label htmlFor={`${p}-amount`} className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">{t('transactions:fields.amount', 'Amount')}</label>
@@ -180,11 +180,11 @@ export function CashFields({ idPrefix: p, formData, errors, onChange, activeLoan
                 placeholder="0"
                 className={cn(
                   'flex-1 text-base font-semibold bg-transparent border-none outline-none text-gray-900 dark:text-white placeholder-gray-300 dark:placeholder-gray-600 focus:ring-0',
-                  errors.amount && 'text-error-500'
+                  errors.amount && 'text-error-700 dark:text-error-500'
                 )}
               />
             </div>
-            {errors.amount && <p id={`${p}-amount-error`} role="alert" className="text-xs text-error-500 mt-1">{errors.amount}</p>}
+            {errors.amount && <p id={`${p}-amount-error`} role="alert" className="text-xs text-error-700 dark:text-error-500 mt-1">{errors.amount}</p>}
           </div>
         </div>
       </div>
@@ -193,7 +193,7 @@ export function CashFields({ idPrefix: p, formData, errors, onChange, activeLoan
       {formData.type !== 'transfer' && (
         <div>
           <div id={`${p}-group-category`} className="text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-            {t('transactions:form.categoryLabel', 'Category')} {errors.category && <span className="text-error-500 text-xs">*</span>}
+            {t('transactions:form.categoryLabel', 'Category')} {errors.category && <span className="text-error-700 dark:text-error-500 text-xs">*</span>}
           </div>
           <div role="group" aria-labelledby={`${p}-group-category`} className="grid grid-cols-3 sm:grid-cols-4 gap-2">
             {categories.map((category) => {
@@ -220,7 +220,7 @@ export function CashFields({ idPrefix: p, formData, errors, onChange, activeLoan
               );
             })}
           </div>
-          {errors.category && <p className="text-sm text-error-500 mt-1" role="alert">{errors.category}</p>}
+          {errors.category && <p className="text-sm text-error-700 dark:text-error-500 mt-1" role="alert">{errors.category}</p>}
         </div>
       )}
 
@@ -285,7 +285,7 @@ export function CashFields({ idPrefix: p, formData, errors, onChange, activeLoan
                 {side === 'toWallet' && <div className="flex justify-center"><div className="text-3xl text-blue-500" aria-hidden="true">↓</div></div>}
                 <div>
                   <div id={`${p}-group-${side}`} className="text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                    {side === 'fromWallet' ? t('transactions:form.fromWallet', 'From Wallet') : t('transactions:form.toWallet', 'To Wallet')} <span className="text-error-500">*</span>
+                    {side === 'fromWallet' ? t('transactions:form.fromWallet', 'From Wallet') : t('transactions:form.toWallet', 'To Wallet')} <span className="text-error-700 dark:text-error-500">*</span>
                   </div>
                   <div role="group" aria-labelledby={`${p}-group-${side}`} className="grid grid-cols-2 sm:grid-cols-4 gap-3">
                     {WALLET_TYPES.map((wallet) => {
@@ -324,7 +324,7 @@ export function CashFields({ idPrefix: p, formData, errors, onChange, activeLoan
               </React.Fragment>
             );
           })}
-          {errors.transfer && <p role="alert" className="text-sm text-error-500 text-center">{errors.transfer}</p>}
+          {errors.transfer && <p role="alert" className="text-sm text-error-700 dark:text-error-500 text-center">{errors.transfer}</p>}
         </div>
       )}
 
@@ -360,7 +360,7 @@ export function CashFields({ idPrefix: p, formData, errors, onChange, activeLoan
       {formData.type !== 'transfer' && (
         <div>
           <div id={`${p}-group-wallet-type`} className="text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-            {t('transactions:form.walletTypeLabel', 'Wallet Type')} <span className="text-error-500">*</span>
+            {t('transactions:form.walletTypeLabel', 'Wallet Type')} <span className="text-error-700 dark:text-error-500">*</span>
           </div>
           <div role="group" aria-labelledby={`${p}-group-wallet-type`} className="grid grid-cols-1 sm:grid-cols-2 gap-3">
             {WALLET_TYPES.map((wallet) => (

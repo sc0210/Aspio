@@ -124,7 +124,7 @@ export default function SharedGoalCard({ goal, onViewRecords, onDelete, deleting
             <span
               className={`text-xs font-semibold shrink-0 ml-2 ${
                 daysLeft < 0
-                  ? 'text-error-500 dark:text-error-400'
+                  ? 'text-error-700 dark:text-error-400'
                   : daysLeft <= 14
                   ? 'text-amber-500 dark:text-amber-400'
                   : 'text-gray-500 dark:text-gray-500'

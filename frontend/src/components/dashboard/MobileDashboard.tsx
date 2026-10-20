@@ -72,7 +72,7 @@ export function MobileDashboard() {
                     <p className="mt-1.5 text-[40px] leading-none font-extrabold tracking-tight tabular-nums text-gray-900 dark:text-white">
                         {isValueVisible ? formatTWD(model.netWorth) : hidden}
                     </p>
-                    <p className={cn('mt-2 text-[13.5px] font-bold tabular-nums', up ? 'text-prosperity-700 dark:text-prosperity-400' : 'text-error-500')}>
+                    <p className={cn('mt-2 text-[13.5px] font-bold tabular-nums', up ? 'text-prosperity-700 dark:text-prosperity-400' : 'text-error-700 dark:text-error-500')}>
                         {up ? '▲' : '▼'} {isValueVisible ? formatTWDCompact(Math.abs(model.changeAbs)) : '•••'}
                         <span className="text-gray-500 dark:text-gray-500 font-semibold ml-1.5">
                             {up ? '+' : '−'}{Math.abs(model.changePct).toFixed(1)}% · {t('mobile.thisMonth', 'this month')}
@@ -127,7 +127,7 @@ export function MobileDashboard() {
                         {/* Cash flow */}
                         <article className="snap-start flex-[0_0_78%] rounded-3xl bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 p-4 min-h-[130px]">
                             <p className="text-[12.5px] font-bold text-gray-500 dark:text-gray-500">{t('mobile.cashFlow', 'Cash flow this month')}</p>
-                            <p className={cn('mt-2 text-[22px] font-extrabold tracking-tight tabular-nums', model.net >= 0 ? 'text-prosperity-700 dark:text-prosperity-400' : 'text-error-500')}>
+                            <p className={cn('mt-2 text-[22px] font-extrabold tracking-tight tabular-nums', model.net >= 0 ? 'text-prosperity-700 dark:text-prosperity-400' : 'text-error-700 dark:text-error-500')}>
                                 {model.net >= 0 ? '+' : '−'}{isValueVisible ? formatTWDCompact(Math.abs(model.net)) : '•••'}
                             </p>
                             <p className="text-xs font-semibold text-gray-500 dark:text-gray-400">
@@ -142,7 +142,7 @@ export function MobileDashboard() {
                         {/* Portfolio P/L */}
                         <article className="snap-start flex-[0_0_78%] rounded-3xl bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 p-4 min-h-[130px]">
                             <p className="text-[12.5px] font-bold text-gray-500 dark:text-gray-500">{t('mobile.portfolioPnl', 'Portfolio gain / loss')}</p>
-                            <p className={cn('mt-2 text-[22px] font-extrabold tracking-tight tabular-nums', model.pnl >= 0 ? 'text-prosperity-700 dark:text-prosperity-400' : 'text-error-500')}>
+                            <p className={cn('mt-2 text-[22px] font-extrabold tracking-tight tabular-nums', model.pnl >= 0 ? 'text-prosperity-700 dark:text-prosperity-400' : 'text-error-700 dark:text-error-500')}>
                                 {model.pnl >= 0 ? '▲' : '▼'} {isValueVisible ? formatTWDCompact(Math.abs(model.pnl)) : '•••'}
                             </p>
                             <p className="text-xs font-semibold text-gray-500 dark:text-gray-400 tabular-nums">

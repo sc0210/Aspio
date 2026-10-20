@@ -76,7 +76,7 @@ export function CompactDashboard() {
                         <p className="text-[clamp(2.5rem,5vw,3.5rem)] leading-none font-extrabold tracking-tight tabular-nums text-gray-900 dark:text-white">
                             {isValueVisible ? formatTWD(m.netWorth) : hidden}
                         </p>
-                        <p className={cn('mb-1 text-[15px] font-bold tabular-nums', up ? 'text-prosperity-700 dark:text-prosperity-400' : 'text-error-500')}>
+                        <p className={cn('mb-1 text-[15px] font-bold tabular-nums', up ? 'text-prosperity-700 dark:text-prosperity-400' : 'text-error-700 dark:text-error-500')}>
                             {up ? '▲' : '▼'} {isValueVisible ? formatTWDCompact(Math.abs(m.changeAbs)) : '•••'}
                             <span className="text-gray-500 dark:text-gray-500 font-semibold ml-1.5">
                                 {up ? '+' : '−'}{Math.abs(m.changePct).toFixed(1)}% · {t('mobile.thisMonth', 'this month')}
@@ -124,7 +124,7 @@ export function CompactDashboard() {
                         {/* Cash flow */}
                         <article className="rounded-3xl bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 p-5">
                             <p className="text-[13px] font-bold text-gray-500 dark:text-gray-500">{t('mobile.cashFlow', 'Cash flow this month')}</p>
-                            <p className={cn('mt-2 text-[26px] font-extrabold tracking-tight tabular-nums', m.net >= 0 ? 'text-prosperity-700 dark:text-prosperity-400' : 'text-error-500')}>
+                            <p className={cn('mt-2 text-[26px] font-extrabold tracking-tight tabular-nums', m.net >= 0 ? 'text-prosperity-700 dark:text-prosperity-400' : 'text-error-700 dark:text-error-500')}>
                                 {m.net >= 0 ? '+' : '−'}{isValueVisible ? formatTWDCompact(Math.abs(m.net)) : '•••'}
                             </p>
                             <p className="text-[12.5px] font-semibold text-gray-500 dark:text-gray-400">
@@ -139,7 +139,7 @@ export function CompactDashboard() {
                         {/* Portfolio P/L */}
                         <article className="rounded-3xl bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 p-5">
                             <p className="text-[13px] font-bold text-gray-500 dark:text-gray-500">{t('mobile.portfolioPnl', 'Portfolio gain / loss')}</p>
-                            <p className={cn('mt-2 text-[26px] font-extrabold tracking-tight tabular-nums', m.pnl >= 0 ? 'text-prosperity-700 dark:text-prosperity-400' : 'text-error-500')}>
+                            <p className={cn('mt-2 text-[26px] font-extrabold tracking-tight tabular-nums', m.pnl >= 0 ? 'text-prosperity-700 dark:text-prosperity-400' : 'text-error-700 dark:text-error-500')}>
                                 {m.pnl >= 0 ? '▲' : '▼'} {isValueVisible ? formatTWDCompact(Math.abs(m.pnl)) : '•••'}
                             </p>
                             <p className="text-[12.5px] font-semibold text-gray-500 dark:text-gray-400 tabular-nums">

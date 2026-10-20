@@ -212,7 +212,7 @@ export function GoalsOverview({ goals = [], isLoading = false, onEdit, onContrib
                         <h3 className="text-sm font-semibold text-gray-700 dark:text-gray-300">{t('goals:overview.title', 'Goals')}</h3>
                         <div className="flex items-center gap-1.5 text-xs text-gray-500 dark:text-gray-500">
                             <span className="font-semibold text-gray-600 dark:text-gray-400">{activeGoals.length}</span> {t('goals:overview.active')}
-                            <span className="text-gray-300 dark:text-gray-600">·</span>
+                            <span aria-hidden="true" className="text-gray-300 dark:text-gray-600">·</span>
                             <span className="font-semibold text-gray-600 dark:text-gray-400">{completedGoals.length}</span> {t('goals:overview.completed')}
                         </div>
                     </div>

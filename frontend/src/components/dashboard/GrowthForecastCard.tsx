@@ -634,7 +634,7 @@ export function GrowthForecastCard({ stats, loading = false }: GrowthForecastCar
                         <div className="mt-3">
                             <div className="flex items-baseline justify-between gap-2">
                                 <span className="text-xs font-medium text-gray-600 dark:text-gray-400">{t('growthForecast.monthlySavings', 'Net savings / mo')}</span>
-                                <span className={cn('text-sm font-bold tabular-nums', monthlySavings >= 0 ? 'text-gray-900 dark:text-white' : 'text-error-500')}>
+                                <span className={cn('text-sm font-bold tabular-nums', monthlySavings >= 0 ? 'text-gray-900 dark:text-white' : 'text-error-700 dark:text-error-500')}>
                                     {isValueVisible ? formatTWD(monthlySavings) : '•••'}
                                 </span>
                             </div>
@@ -712,7 +712,7 @@ export function GrowthForecastCard({ stats, loading = false }: GrowthForecastCar
                             </div>
                             <div className="flex items-center justify-between text-xs font-semibold pt-1.5 border-t border-gray-100 dark:border-gray-700">
                                 <span className="text-gray-700 dark:text-gray-200">{t('growthForecast.monthlySavings', 'Net savings / mo')}</span>
-                                <span className={cn('tabular-nums', monthlySavings >= 0 ? 'text-prosperity-700 dark:text-prosperity-400' : 'text-error-500')}>
+                                <span className={cn('tabular-nums', monthlySavings >= 0 ? 'text-prosperity-700 dark:text-prosperity-400' : 'text-error-700 dark:text-error-500')}>
                                     {isValueVisible ? formatTWD(monthlySavings) : '•••'}
                                 </span>
                             </div>
@@ -738,7 +738,7 @@ export function GrowthForecastCard({ stats, loading = false }: GrowthForecastCar
                             <div className="flex items-center gap-1 font-medium mb-0.5">
                                 <span aria-hidden="true">{dot}</span>
                                 <span>{t(`growthForecast.stage_${s.key}`, s.label)}</span>
-                                {i < stages.length - 1 && <span className="ml-auto text-gray-300 dark:text-gray-600">›</span>}
+                                {i < stages.length - 1 && <span aria-hidden="true" className="ml-auto text-gray-300 dark:text-gray-600">›</span>}
                             </div>
                             <div className="tabular-nums opacity-80">{isValueVisible ? s.metric : '•••'}</div>
                         </div>

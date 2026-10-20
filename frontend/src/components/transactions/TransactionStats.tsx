@@ -124,7 +124,7 @@ export function TransactionStats({
 
         <StatCard
           accent="rose"
-          icon={<ArrowTrendingDownIcon className="w-4 h-4 text-error-500" />}
+          icon={<ArrowTrendingDownIcon className="w-4 h-4 text-error-700 dark:text-error-500" />}
           label={t('transactions:stats.totalExpenses')}
           value={amount(stats.totalExpenses)}
           title={amountTitle(stats.totalExpenses)}

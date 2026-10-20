@@ -273,7 +273,7 @@ function HoldingRowBase({
               {(holding.gainLoss || 0) >= 0 ? (
                 <ArrowTrendingUpIcon className="w-4 h-4 text-success-700 dark:text-success-500" />
               ) : (
-                <ArrowTrendingDownIcon className="w-4 h-4 text-error-500" />
+                <ArrowTrendingDownIcon className="w-4 h-4 text-error-700 dark:text-error-500" />
               )}
               <div className="flex flex-col items-end">
                 {/* Total Gain/Loss Amount */}
@@ -289,7 +289,7 @@ function HoldingRowBase({
                 {/* ROI (Return on Investment) - Simple percentage gain */}
                 <div className={cn(
                   'text-xs leading-tight',
-                  (holding.gainLossPercentage || 0) >= 0 ? 'text-success-700 dark:text-success-400' : 'text-error-500 dark:text-error-400'
+                  (holding.gainLossPercentage || 0) >= 0 ? 'text-success-700 dark:text-success-400' : 'text-error-700 dark:text-error-400'
                 )}>
                   {isValueVisible
                     ? `${(holding.gainLossPercentage || 0) >= 0 ? '+' : ''}${(holding.gainLossPercentage || 0).toFixed(2)}% ROI`

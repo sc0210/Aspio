@@ -148,7 +148,7 @@ function HoldingCardMobileBase({
           {!isCash && (holding.gainLoss >= 0 ? (
             <ArrowTrendingUpIcon className="w-5 h-5 text-success-700 dark:text-success-500" />
           ) : (
-            <ArrowTrendingDownIcon className="w-5 h-5 text-error-500" />
+            <ArrowTrendingDownIcon className="w-5 h-5 text-error-700 dark:text-error-500" />
           ))}
         </div>
       </div>
@@ -252,7 +252,7 @@ function HoldingCardMobileBase({
               </p>
               <p className={cn(
                 "text-xs font-semibold leading-tight mt-0.5",
-                holding.gainLossPercentage >= 0 ? "text-success-700 dark:text-success-500" : "text-error-500"
+                holding.gainLossPercentage >= 0 ? "text-success-700 dark:text-success-500" : "text-error-700 dark:text-error-500"
               )}>
                 {isValueVisible ? (
                   <>

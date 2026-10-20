@@ -328,7 +328,7 @@ export function PortfolioOverview({ portfolio, dateRange }: PortfolioOverviewPro
           <h3 className="text-sm font-semibold text-gray-700 dark:text-gray-300">
             {t('dashboard:portfolioOverview.title', 'Investments')}
           </h3>
-          <span className="text-xs font-medium text-gray-500 dark:text-gray-500 bg-gray-100 dark:bg-gray-700 px-2 py-0.5 rounded-full ml-2">{dateRange ? PERIOD_LABELS[dateRange] ?? dateRange : 'All'}</span>
+          <span className="text-xs font-medium text-gray-600 dark:text-gray-500 bg-gray-100 dark:bg-gray-700 px-2 py-0.5 rounded-full ml-2">{dateRange ? PERIOD_LABELS[dateRange] ?? dateRange : 'All'}</span>
         </div>
         <div className="flex items-center gap-2">
           <button

@@ -302,9 +302,9 @@ export default function AddTransactionPage() {
 
   // ─── type-button active colours ───────────────────────────────────────────
   const activeClass: Record<string, string> = {
-    red:    'bg-expense-500 text-white shadow-md',
-    green:  'bg-income-500 text-white shadow-md',
-    blue:   'bg-blue-500 text-white shadow-md',
+    red:    'bg-expense-700 dark:bg-expense-500 text-white shadow-md',
+    green:  'bg-income-700 dark:bg-income-500 text-white shadow-md',
+    blue:   'bg-blue-700 dark:bg-blue-500 text-white shadow-md',
     purple: 'bg-violet-600 text-white shadow-md',
   };
   const inactiveClass = 'bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-400 hover:bg-gray-200 dark:hover:bg-gray-600';
@@ -435,7 +435,7 @@ export default function AddTransactionPage() {
                       <div className="flex flex-col sm:flex-row gap-3">
                         <div className="flex-1">
                           <label htmlFor="tx-invest-symbol" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                            {t('transactions:form.invest.symbol', 'Symbol')} <span className="text-error-500">*</span>
+                            {t('transactions:form.invest.symbol', 'Symbol')} <span className="text-error-700 dark:text-error-500">*</span>
                           </label>
                           <input
                             aria-invalid={!!errors.investSymbol}
@@ -451,7 +451,7 @@ export default function AddTransactionPage() {
                               errors.investSymbol ? 'border-error-400' : 'border-gray-300 dark:border-gray-600'
                             )}
                           />
-                          {errors.investSymbol && <p id="tx-invest-symbol-error" role="alert" className="text-xs text-error-500 mt-1">{errors.investSymbol}</p>}
+                          {errors.investSymbol && <p id="tx-invest-symbol-error" role="alert" className="text-xs text-error-700 dark:text-error-500 mt-1">{errors.investSymbol}</p>}
                         </div>
                         <div className="flex-1">
                           <label htmlFor="tx-invest-name" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
@@ -472,7 +472,7 @@ export default function AddTransactionPage() {
                       <div className="flex flex-col sm:flex-row gap-3">
                         <div className="flex-1">
                           <label htmlFor="tx-invest-quantity" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                            {t('transactions:form.invest.quantity', 'Quantity')} <span className="text-error-500">*</span>
+                            {t('transactions:form.invest.quantity', 'Quantity')} <span className="text-error-700 dark:text-error-500">*</span>
                           </label>
                           <input
                             aria-invalid={!!errors.investQty}
@@ -491,11 +491,11 @@ export default function AddTransactionPage() {
                               errors.investQty ? 'border-error-400' : 'border-gray-300 dark:border-gray-600'
                             )}
                           />
-                          {errors.investQty && <p id="tx-invest-quantity-error" role="alert" className="text-xs text-error-500 mt-1">{errors.investQty}</p>}
+                          {errors.investQty && <p id="tx-invest-quantity-error" role="alert" className="text-xs text-error-700 dark:text-error-500 mt-1">{errors.investQty}</p>}
                         </div>
                         <div className="flex-1">
                           <label htmlFor="tx-invest-priceperunit" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                            {t('transactions:form.invest.pricePerUnit', 'Price / Unit')} <span className="text-error-500">*</span>
+                            {t('transactions:form.invest.pricePerUnit', 'Price / Unit')} <span className="text-error-700 dark:text-error-500">*</span>
                           </label>
                           <div className="flex items-center gap-1.5">
                             <select
@@ -526,7 +526,7 @@ export default function AddTransactionPage() {
                               )}
                             />
                           </div>
-                          {errors.investPrice && <p id="tx-invest-priceperunit-error" role="alert" className="text-xs text-error-500 mt-1">{errors.investPrice}</p>}
+                          {errors.investPrice && <p id="tx-invest-priceperunit-error" role="alert" className="text-xs text-error-700 dark:text-error-500 mt-1">{errors.investPrice}</p>}
                         </div>
                       </div>
 
@@ -576,7 +576,7 @@ export default function AddTransactionPage() {
                           {/* Holding picker (required) */}
                           <div>
                             <div id="tx-group-holding" className="text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                              {t('transactions:form.invest.selectHolding', 'Select Holding')} <span className="text-error-500">*</span>
+                              {t('transactions:form.invest.selectHolding', 'Select Holding')} <span className="text-error-700 dark:text-error-500">*</span>
                             </div>
                             <div role="group" aria-labelledby="tx-group-holding" className="flex gap-2 overflow-x-auto pb-1 snap-x">
                               {sellableHoldings.map((h) => (
@@ -604,14 +604,14 @@ export default function AddTransactionPage() {
                                 </button>
                               ))}
                             </div>
-                            {errors.investHolding && <p className="text-xs text-error-500 mt-1">{errors.investHolding}</p>}
+                            {errors.investHolding && <p className="text-xs text-error-700 dark:text-error-500 mt-1">{errors.investHolding}</p>}
                           </div>
 
                           {/* Quantity + optional price */}
                           <div className="flex flex-col sm:flex-row gap-3">
                             <div className="flex-1">
                               <label htmlFor="tx-invest-quantitytosell" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                                {t('transactions:form.invest.quantityToSell', 'Quantity to Sell')} <span className="text-error-500">*</span>
+                                {t('transactions:form.invest.quantityToSell', 'Quantity to Sell')} <span className="text-error-700 dark:text-error-500">*</span>
                               </label>
                               <input
                                 id="tx-invest-quantitytosell"
@@ -631,7 +631,7 @@ export default function AddTransactionPage() {
                               {selectedHolding ? (
                                 <p className="text-xs text-gray-500 dark:text-gray-500 mt-1">{t('transactions:form.invest.availablePrefix', 'Available:')} <strong>{selectedHolding.quantity}</strong> {t('transactions:form.invest.units', 'units')}</p>
                               ) : errors.investSellQty ? (
-                                <p className="text-xs text-error-500 mt-1">{errors.investSellQty}</p>
+                                <p className="text-xs text-error-700 dark:text-error-500 mt-1">{errors.investSellQty}</p>
                               ) : null}
                             </div>
                             <div className="flex-1">

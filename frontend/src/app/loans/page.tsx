@@ -99,7 +99,7 @@ function DesktopLoansPage() {
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4 animate-fade-in">
             <Card padding="sm" accent="rose">
               <div className="flex items-center gap-2 mb-1">
-                <BanknotesIcon className="w-4 h-4 text-red-500" />
+                <BanknotesIcon className="w-4 h-4 text-red-700 dark:text-red-500" />
                 <p className="text-sm text-gray-600 dark:text-gray-400">{t('summary.totalDebt')}</p>
               </div>
               <p className="text-2xl font-bold text-gray-900 dark:text-white">{fmt(summary.total_debt)}</p>

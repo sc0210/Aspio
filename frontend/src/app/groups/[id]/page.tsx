@@ -565,7 +565,7 @@ export default function GroupDetailPage() {
                           </span>
                         </span>
                         <div className="flex items-center gap-2 flex-shrink-0">
-                          <span className="font-bold text-red-500">
+                          <span className="font-bold text-red-700 dark:text-red-500">
                             {formatAmount(b.amount, b.currency)}
                           </span>
                           <button
@@ -612,12 +612,12 @@ export default function GroupDetailPage() {
                             <td className="py-2 text-right text-gray-600 dark:text-gray-400">
                               {ms.paid.toLocaleString(undefined, { maximumFractionDigits: 0 })}
                             </td>
-                            <td className="py-2 text-right text-red-500">
+                            <td className="py-2 text-right text-red-700 dark:text-red-500">
                               {ms.owes.toLocaleString(undefined, { maximumFractionDigits: 0 })}
                             </td>
                             <td
                               className={`py-2 text-right font-semibold ${
-                                net >= 0 ? 'text-green-700 dark:text-green-400' : 'text-red-500'
+                                net >= 0 ? 'text-green-700 dark:text-green-400' : 'text-red-700 dark:text-red-500'
                               }`}
                             >
                               {net >= 0 ? '+' : ''}
@@ -1007,7 +1007,7 @@ function ExpenseFormModal({
                 <span
                   className={`font-semibold ${
                     Math.abs(remaining) > 0.01
-                      ? 'text-red-500'
+                      ? 'text-red-700 dark:text-red-500'
                       : 'text-green-700 dark:text-green-400'
                   }`}
                 >

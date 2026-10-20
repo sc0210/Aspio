@@ -1,6 +1,6 @@
 'use client';
 
-import { useId, useMemo, useState } from 'react';
+import { useId, useMemo, useState, type CSSProperties } from 'react';
 import { PieChart, Pie, Cell, Tooltip, ResponsiveContainer } from 'recharts';
 import { cn } from '@/utils/cn';
 import { Button } from '@/components/ui/Button';
@@ -554,7 +554,7 @@ export function ExpenseGroupSummary({
                       <span className="text-xs text-gray-600 dark:text-gray-400 flex-1 truncate">
                         {g.icon} {t(g.labelKey)}
                       </span>
-                      <span className="text-xs font-semibold tabular-nums" style={{ color: g.color }}>
+                      <span className="text-xs font-semibold tabular-nums text-gray-700 dark:[color:var(--legend)]" style={{ '--legend': g.color } as CSSProperties}>
                         {g.percentage.toFixed(1)}%
                       </span>
                       <span className="text-xs font-bold text-gray-900 dark:text-white tabular-nums w-20 2xl:w-24 text-right">
@@ -743,7 +743,7 @@ export function ExpenseGroupSummary({
                     className={cn(
                       'flex-shrink-0 inline-flex items-center justify-center w-5 h-5 rounded-full text-xs font-bold tabular-nums',
                       index === 0
-                        ? 'bg-rose-500 text-white shadow-sm'
+                        ? 'bg-rose-700 dark:bg-rose-500 text-white shadow-sm'
                         : 'bg-gray-200 dark:bg-gray-700 text-gray-600 dark:text-gray-300'
                     )}
                   >
@@ -797,7 +797,7 @@ export function ExpenseGroupSummary({
                     className={cn(
                       'flex-shrink-0 inline-flex items-center justify-center w-5 h-5 rounded-full text-xs font-bold tabular-nums',
                       index === 0
-                        ? 'bg-prosperity-500 text-white shadow-sm'
+                        ? 'bg-prosperity-700 dark:bg-prosperity-500 text-white shadow-sm'
                         : 'bg-gray-200 dark:bg-gray-700 text-gray-600 dark:text-gray-300'
                     )}
                   >

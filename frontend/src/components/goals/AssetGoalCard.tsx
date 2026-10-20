@@ -78,7 +78,7 @@ export function AssetGoalCard({
 
         let className: string;
         if (days < 0) className = 'text-error-700 dark:text-error-400 font-semibold';
-        else if (days <= 14) className = 'text-error-500 dark:text-error-400 font-medium';
+        else if (days <= 14) className = 'text-error-700 dark:text-error-400 font-medium';
         else if (days <= 60) className = 'text-amber-700 dark:text-amber-400';
         else className = 'text-gray-600 dark:text-gray-400';
 
@@ -107,7 +107,7 @@ export function AssetGoalCard({
                             {t('goals:card.done')}
                         </span>
                     ) : priority === 'high' ? (
-                        <span className="text-xs font-semibold uppercase tracking-wide text-error-500 dark:text-error-400">
+                        <span className="text-xs font-semibold uppercase tracking-wide text-error-700 dark:text-error-400">
                             {t('goals:priorities.high')}
                         </span>
                     ) : null}

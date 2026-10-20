@@ -525,7 +525,7 @@ export const PortfolioChart = memo(function PortfolioChart({ holdings, baseCurre
                   <span className="text-sm font-bold text-gray-900 dark:text-white">
                     {item.market}
                   </span>
-                  <span className="text-xs font-medium text-gray-500 dark:text-gray-400 bg-gray-100 dark:bg-gray-700/50 px-2 py-0.5 rounded-md">
+                  <span className="text-xs font-medium text-gray-600 dark:text-gray-400 bg-gray-100 dark:bg-gray-700/50 px-2 py-0.5 rounded-md">
                     {item.count} {item.count === 1 ? 'holding' : 'holdings'}
                   </span>
                 </div>

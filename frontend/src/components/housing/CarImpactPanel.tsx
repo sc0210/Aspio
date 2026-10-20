@@ -89,7 +89,7 @@ export function CarImpactPanel({ context }: Props) {
                         )}>
                             {impact.baseline.months === null ? (
                                 <p className="text-sm font-semibold text-gray-700 dark:text-gray-200 flex items-center gap-1.5">
-                                    <ExclamationTriangleIcon className="w-4 h-4 text-error-500 flex-shrink-0" />
+                                    <ExclamationTriangleIcon className="w-4 h-4 text-error-700 dark:text-error-500 flex-shrink-0" />
                                     {t('housing.car.baseUnreachable', 'Improve your cash flow first to estimate a house timeline.')}
                                 </p>
                             ) : impact.neverReaches ? (

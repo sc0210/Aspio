@@ -265,7 +265,7 @@ function LineBotSection() {
                     <button
                       onClick={handleUnlink}
                       disabled={unlinking}
-                      className="text-xs px-3 py-2 min-h-[44px] rounded-lg bg-red-500 hover:bg-red-600 text-white font-medium transition-colors disabled:opacity-50 touch-manipulation"
+                      className="text-xs px-3 py-2 min-h-[44px] rounded-lg bg-red-600 hover:bg-red-700 dark:bg-red-500 dark:hover:bg-red-600 text-white font-medium transition-colors disabled:opacity-50 touch-manipulation"
                     >
                       {unlinking ? '…' : t('settings.lineBot.yes')}
                     </button>
@@ -725,7 +725,7 @@ export default function SettingsPage() {
                 {isDemoMode ? 'alex.chen@example.com' : (user?.email || '—')}
               </p>
             </div>
-            <span className="text-xs text-gray-500 dark:text-gray-400 bg-gray-100 dark:bg-gray-700 px-2 py-0.5 rounded">
+            <span className="text-xs text-gray-600 dark:text-gray-400 bg-gray-100 dark:bg-gray-700 px-2 py-0.5 rounded">
               {t('settings.readOnly', 'Read-only')}
             </span>
           </div>

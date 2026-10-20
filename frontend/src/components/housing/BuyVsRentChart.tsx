@@ -141,7 +141,7 @@ export function BuyVsRentChart({ data, colors, breakEvenYear, isValueVisible, la
                                         </div>
                                         <div className="flex justify-between gap-3 text-xs pt-1.5 border-t border-gray-100 dark:border-gray-700">
                                             <span className="text-gray-500 dark:text-gray-400">Δ</span>
-                                            <span className={`font-semibold tabular-nums ${diff >= 0 ? 'text-prosperity-700 dark:text-prosperity-400' : 'text-error-500'}`}>
+                                            <span className={`font-semibold tabular-nums ${diff >= 0 ? 'text-prosperity-700 dark:text-prosperity-400' : 'text-error-700 dark:text-error-500'}`}>
                                                 {diff >= 0 ? '+' : '−'}{isValueVisible ? formatTWDCompact(Math.abs(diff)) : '•••'}
                                             </span>
                                         </div>

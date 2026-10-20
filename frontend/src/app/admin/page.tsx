@@ -1515,11 +1515,11 @@ function DevDbSyncPanel({ target }: { target: SyncTarget }) {
 function ConnectionStateBadge({ state, waitEvent }: { state: string; waitEvent?: string | null }) {
   const cfg: Record<string, { label: string; cls: string }> = {
     active: { label: 'active', cls: 'bg-success-100 dark:bg-success-900/30 text-success-700 dark:text-success-300' },
-    idle: { label: 'idle', cls: 'bg-gray-100 dark:bg-gray-700 text-gray-500 dark:text-gray-400' },
+    idle: { label: 'idle', cls: 'bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-400' },
     'idle in transaction': { label: 'idle in tx', cls: 'bg-warning-100 dark:bg-warning-900/30 text-warning-700 dark:text-warning-300' },
     'idle in transaction (aborted)': { label: 'aborted', cls: 'bg-red-100 dark:bg-red-900/30 text-red-700 dark:text-red-300' },
   };
-  const { label, cls } = cfg[state] ?? { label: state, cls: 'bg-gray-100 dark:bg-gray-700 text-gray-500' };
+  const { label, cls } = cfg[state] ?? { label: state, cls: 'bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-500' };
   return (
     <div className="flex flex-col gap-0.5">
       <span className={cn('inline-block px-1.5 py-0.5 text-xs font-semibold rounded', cls)}>{label}</span>
@@ -1539,7 +1539,7 @@ function UserStatusBadge({ isActive }: { isActive: boolean }) {
     );
   }
   return (
-    <span className="inline-flex items-center gap-1 sm:gap-1.5 px-2 sm:px-2.5 py-1 text-xs font-bold rounded-lg bg-gray-100 dark:bg-gray-700 text-gray-500 dark:text-gray-400">
+    <span className="inline-flex items-center gap-1 sm:gap-1.5 px-2 sm:px-2.5 py-1 text-xs font-bold rounded-lg bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-400">
       <NoSymbolIcon className="w-3.5 h-3.5" />
       <span className="hidden sm:inline">{t('admin:inactive')}</span>
     </span>
@@ -1609,7 +1609,7 @@ function MetricCard({ title, value, subtitle, icon: Icon, trend, color, isLarge 
             'flex items-center gap-1 px-2 py-1 rounded-lg',
             trend.value > 0
               ? 'bg-success-100 dark:bg-success-900/30 text-success-700 dark:text-success-300'
-              : 'bg-gray-100 dark:bg-gray-700 text-gray-500 dark:text-gray-400'
+              : 'bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-400'
           )}>
             <ArrowTrendingUpIcon className="w-3.5 h-3.5" />
             <span className="text-xs font-bold">{trend.value > 0 ? '+' : ''}{trend.value}</span>

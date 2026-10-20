@@ -53,7 +53,7 @@ export function MonthlyInsightCard({ stats, dateRange, trendData }: MonthlyInsig
       <div className="flex items-center justify-between mb-4">
         <div className="flex items-center gap-2">
           <h3 className="text-sm font-semibold text-gray-700 dark:text-gray-300">{t('dashboard:sections.cashFlow', 'Cash Flow')}</h3>
-          <span className="text-xs font-medium text-gray-500 dark:text-gray-500 bg-gray-100 dark:bg-gray-700 px-2 py-0.5 rounded-full">
+          <span className="text-xs font-medium text-gray-600 dark:text-gray-500 bg-gray-100 dark:bg-gray-700 px-2 py-0.5 rounded-full">
             {periodLabel}
           </span>
         </div>
@@ -99,7 +99,7 @@ export function MonthlyInsightCard({ stats, dateRange, trendData }: MonthlyInsig
           <div className="flex items-center justify-between mb-1.5">
             <div className="flex items-center gap-2">
               <div className="p-1.5 bg-error-50 dark:bg-error-900/20 rounded-lg">
-                <ArrowTrendingDownIcon className="w-3.5 h-3.5 text-error-500" />
+                <ArrowTrendingDownIcon className="w-3.5 h-3.5 text-error-700 dark:text-error-500" />
               </div>
               <span className="text-xs font-medium text-gray-500 dark:text-gray-400">
                 {t('dashboard:chart.expenses', 'Expenses')}
@@ -110,7 +110,7 @@ export function MonthlyInsightCard({ stats, dateRange, trendData }: MonthlyInsig
                 {isValueVisible ? `-${formatTWD(expenses)}` : '•••••'}
               </span>
               {income > 0 && (
-                <span className="ml-1.5 text-xs font-semibold text-error-500">
+                <span className="ml-1.5 text-xs font-semibold text-error-700 dark:text-error-500">
                   {expenseRatio.toFixed(0)}%
                 </span>
               )}
@@ -183,7 +183,7 @@ export function MonthlyInsightCard({ stats, dateRange, trendData }: MonthlyInsig
             </ul>
           </div>
           <div className="min-w-0">
-            <p className="text-xs font-semibold uppercase tracking-wider text-error-500 mb-1.5">
+            <p className="text-xs font-semibold uppercase tracking-wider text-error-700 dark:text-error-500 mb-1.5">
               {t('dashboard:cashFlow.topSpending', 'Top Spending')}
             </p>
             <ul className="space-y-1">
@@ -227,7 +227,7 @@ export function MonthlyInsightCard({ stats, dateRange, trendData }: MonthlyInsig
               )}
               {expenseHasSpark && (
                 <div>
-                  <p className="text-xs text-rose-500 dark:text-rose-400 font-medium mb-0.5">{t('dashboard:chart.expenses', 'Expenses')}</p>
+                  <p className="text-xs text-rose-700 dark:text-rose-400 font-medium mb-0.5">{t('dashboard:chart.expenses', 'Expenses')}</p>
                   <SimpleSparkline data={expenseData} labels={labels} height={48} trend={expenseTrend} color="#f87171" showDot className="w-full" />
                 </div>
               )}

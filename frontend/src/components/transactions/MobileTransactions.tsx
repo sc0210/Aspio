@@ -113,7 +113,7 @@ export function MobileTransactions() {
                     <p className="text-xs font-bold tracking-wide text-gray-500 dark:text-gray-500">
                         {t('dashboard:mobile.cashFlow', 'Cash flow this month')}
                     </p>
-                    <p className={cn('mt-1.5 text-[34px] leading-none font-extrabold tracking-tight tabular-nums', netUp ? 'text-prosperity-700 dark:text-prosperity-400' : 'text-error-500')}>
+                    <p className={cn('mt-1.5 text-[34px] leading-none font-extrabold tracking-tight tabular-nums', netUp ? 'text-prosperity-700 dark:text-prosperity-400' : 'text-error-700 dark:text-error-500')}>
                         {netUp ? '+' : '−'}{isValueVisible ? formatTWD(Math.abs(model.net)) : hidden}
                     </p>
                     <p className="mt-1 text-xs font-semibold text-gray-500 dark:text-gray-500">
