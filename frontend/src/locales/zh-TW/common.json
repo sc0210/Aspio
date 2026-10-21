@@ -589,7 +589,14 @@
     "tryOr": "或",
     "tryPrefix": "回到 LINE 並試著輸入",
     "unavailableTitle": "此站台尚未設定 LINE",
-    "unavailableBody": "這個 Aspiro 站台沒有設定 LINE 機器人，因此 LINE 綁定與群組分帳功能未啟用。管理員可新增 LINE 頻道來啟用。"
+    "unavailableBody": "這個 Aspiro 站台沒有設定 LINE 機器人，因此 LINE 綁定與群組分帳功能未啟用。管理員可新增 LINE 頻道來啟用。",
+    "confirmLineAccount": "連結此 LINE 帳號",
+    "confirmUnknownName": "（無法取得 LINE 名稱）",
+    "confirmAspiroAccount": "到您的 Aspiro 帳號",
+    "confirmWarning": "只有在您剛剛於自己與機器人的 LINE 聊天室輸入 /link 時才繼續。如果這個連結是別人傳給您的，請取消：連結後對方的 LINE 帳號將能在您的帳號記帳並查看餘額。",
+    "confirmButton": "連結帳號",
+    "cancel": "取消",
+    "cancelled": "未進行任何連結，您可以關閉此頁面。"
   },
   "loadingOverlay": {
     "hint": "正在從伺服器取得最新資料",

@@ -589,7 +589,14 @@
     "tryOr": "or",
     "tryPrefix": "Go back to LINE and try",
     "unavailableTitle": "LINE isn’t set up here",
-    "unavailableBody": "This Aspiro instance has no LINE bot configured, so LINE linking and group splitting are off. The admin can enable them by adding a LINE channel."
+    "unavailableBody": "This Aspiro instance has no LINE bot configured, so LINE linking and group splitting are off. The admin can enable them by adding a LINE channel.",
+    "confirmLineAccount": "Link this LINE account",
+    "confirmUnknownName": "(LINE name unavailable)",
+    "confirmAspiroAccount": "to your Aspiro account",
+    "confirmWarning": "Only continue if you just typed /link in your own LINE chat with the bot. If someone sent you this link, cancel: linking would let their LINE account log transactions and read balances on your account.",
+    "confirmButton": "Link account",
+    "cancel": "Cancel",
+    "cancelled": "Nothing was linked. You can close this page."
   },
   "loadingOverlay": {
     "hint": "Fetching the latest data from the server",

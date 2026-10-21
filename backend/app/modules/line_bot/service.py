@@ -54,6 +54,7 @@ from app.modules.line_bot.schemas import (
     LiffSessionResponse,
     LineEvent,
     LinkConfirmResponse,
+    LinkPreviewResponse,
     LinkStatusResponse,
     MemberOut,
     SettleRequest,
@@ -74,6 +75,7 @@ from app.modules.transactions.models import (
 from app.modules.transactions.repositories import (
     TransactionRepository,
 )
+from app.modules.users.models import UserStatus
 from app.modules.users.security import jwt_manager
 from app.utils.exchange_rate_service import ExchangeRateService
 from app.utils.datetime_helpers import business_day_of, business_now, business_today
@@ -4128,6 +4130,27 @@ async def process_webhook_events(events: list[LineEvent]) -> None:
 # ---------------------------------------------------------------------------
 
 
+async def link_preview(db: AsyncSession, token: UUID) -> LinkPreviewResponse:
+    """Say which LINE account a link token would attach, without using it.
+
+    The token is a bearer capability minted by whoever ran /link in LINE, and
+    anyone can send its URL to someone else. /link-line shows this to the
+    signed-in user and confirms only on an explicit click, so a link from a
+    stranger cannot silently bind the stranger's LINE account to theirs.
+    """
+    link_token = await LineAccountRepository(db).get_token(token)
+    if link_token is None or link_token.used:
+        raise ValueError("Invalid or already-used link token")
+    if datetime.now(timezone.utc) > link_token.expires_at:
+        raise ValueError("Link token has expired — please run /link again in LINE")
+    line_display_name, picture_url = await _fetch_line_profile(link_token.line_user_id)
+    return LinkPreviewResponse(
+        line_display_name=line_display_name,
+        picture_url=picture_url,
+        expires_at=link_token.expires_at,
+    )
+
+
 async def confirm_link(
     db: AsyncSession, token: UUID, user_id: UUID, display_name: Optional[str]
 ) -> LinkConfirmResponse:
@@ -4284,8 +4307,16 @@ async def liff_session(db: AsyncSession, id_token: str) -> LiffSessionResponse:
         return LiffSessionResponse(linked=False)
 
     user = await LineAccountRepository(db).get_user(link.user_id)
-    if user is None:
-        # Link points at a deleted/missing user — treat as unlinked.
+    # A missing, deactivated, suspended, pending or locked account gets no token:
+    # this mints a session without a password, so it must refuse exactly what
+    # CurrentUser refuses, or deactivation would not reach LINE-linked users.
+    if (
+        user is None
+        or not user.is_active
+        or user.deleted_at is not None
+        or user.status != UserStatus.ACTIVE
+        or user.is_account_locked
+    ):
         return LiffSessionResponse(linked=False)
 
     access_token = jwt_manager.create_access_token({"sub": str(user.id), "email": user.email})

@@ -73,6 +73,13 @@ class LinkConfirmRequest(BaseModel):
     token: UUID = Field(..., description="Token from the /link LINE command")
 
 
+class LinkPreviewResponse(BaseModel):
+    """Which LINE account a link token would attach, shown before the user confirms."""
+    line_display_name: Optional[str] = None
+    picture_url: Optional[str] = None
+    expires_at: datetime
+
+
 class LinkConfirmResponse(BaseModel):
     line_user_id: str
     display_name: Optional[str]

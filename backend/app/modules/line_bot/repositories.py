@@ -136,6 +136,10 @@ class LineAccountRepository:
         self.db.add(token)
         return token
 
+    async def get_token(self, token: UUID) -> Optional[LineLinkToken]:
+        result = await self.db.execute(select(LineLinkToken).where(LineLinkToken.token == token))
+        return result.scalar_one_or_none()
+
     async def get_token_for_update(self, token: UUID) -> Optional[LineLinkToken]:
         result = await self.db.execute(
             select(LineLinkToken)
