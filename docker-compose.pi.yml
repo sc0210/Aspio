@@ -77,6 +77,7 @@ x-backend-environment: &backend-environment
   - LINE_CHANNEL_ACCESS_TOKEN=${LINE_CHANNEL_ACCESS_TOKEN:-}
   - FINLAB_API_TOKEN=${FINLAB_API_TOKEN:-}
   - ADMIN_EMAILS=${ADMIN_EMAILS:-}
+  - DEMO_ACCOUNT_ENABLED=${DEMO_ACCOUNT_ENABLED:-false}
   - FRONTEND_URL=https://${APP_DOMAIN:?APP_DOMAIN is required - the public hostname (see production.env.sample)}
   # The self-hosted quickchart container is omitted here (its image is amd64-only,
   # and a Pi cannot run it under emulation at a useful speed). This is therefore the

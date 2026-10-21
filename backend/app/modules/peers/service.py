@@ -120,6 +120,17 @@ class PeerService:
                 detail="You cannot invite yourself",
             )
 
+        # The demo account's password is public, so a connection to it would show
+        # this user's finances to anyone. Refused in both directions (the
+        # requester side is checked once it is loaded, below).
+        from app.modules.users.init_demo_user import DEMO_EMAIL
+
+        if receiver.email == DEMO_EMAIL:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="The demo account cannot have peer connections",
+            )
+
         # 2. Check requester's accepted-peer count
         accepted_count = await self._connections.count_accepted(requester_id)
         if accepted_count >= MAX_PEERS:
@@ -133,8 +144,11 @@ class PeerService:
 
         # 4. Fetch requester for notification payload
         requester = await self._users.get_by_id(requester_id)
-
-        from app.modules.users.init_demo_user import DEMO_EMAIL
+        if requester is not None and requester.email == DEMO_EMAIL:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="The demo account cannot have peer connections",
+            )
 
         if any_existing is not None:
             if any_existing.status in (PeerStatus.PENDING, PeerStatus.ACCEPTED):
@@ -146,21 +160,17 @@ class PeerService:
             # (requester_id, receiver_id) is not violated by a second INSERT.
             any_existing.requester_id = requester_id
             any_existing.receiver_id = receiver.id
-            any_existing.status = (
-                PeerStatus.ACCEPTED if receiver.email == DEMO_EMAIL else PeerStatus.PENDING
-            )
+            any_existing.status = PeerStatus.PENDING
             any_existing.updated_at = datetime.now(timezone.utc)
             conn = any_existing
             await self.session.flush()
         else:
-            # 5. Insert new connection — auto-accept when receiver is the demo user
+            # 5. Insert new connection
             conn = PeerConnection(
                 id=uuid.uuid4(),
                 requester_id=requester_id,
                 receiver_id=receiver.id,
-                status=(
-                    PeerStatus.ACCEPTED if receiver.email == DEMO_EMAIL else PeerStatus.PENDING
-                ),
+                status=PeerStatus.PENDING,
             )
             self._connections.add(conn)
             await self.session.flush()  # populate conn.id before notification

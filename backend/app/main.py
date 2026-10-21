@@ -128,27 +128,31 @@ async def lifespan(app: FastAPI):
     except Exception as e:
         logger.warning(f"Admin initialization skipped: {e}")
 
-    # Initialize demo user
+    # Demo account: opt-in, because its password is published in this repository
     try:
         from app.core.database import get_db
-        from app.modules.users.init_demo_user import init_demo_user
+        from app.modules.users.init_demo_user import disable_demo_user, init_demo_user
 
         async for session in get_db():
-            await init_demo_user(session)
+            if settings.DEMO_ACCOUNT_ENABLED:
+                await init_demo_user(session)
+            else:
+                await disable_demo_user(session)
             break
     except Exception as e:
         logger.warning(f"Demo user initialization skipped: {e}")
 
     # Seed demo user's portfolio + transactions
-    try:
-        from app.core.database import get_db
-        from app.modules.users.init_demo_data import init_demo_data
+    if settings.DEMO_ACCOUNT_ENABLED:
+        try:
+            from app.core.database import get_db
+            from app.modules.users.init_demo_data import init_demo_data
 
-        async for session in get_db():
-            await init_demo_data(session)
-            break
-    except Exception as e:
-        logger.warning(f"Demo data seeding skipped: {e}")
+            async for session in get_db():
+                await init_demo_data(session)
+                break
+        except Exception as e:
+            logger.warning(f"Demo data seeding skipped: {e}")
 
     yield
 

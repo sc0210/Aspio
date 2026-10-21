@@ -56,6 +56,9 @@ services:
       # explicit here rather than inferred from DEBUG, so that a deployment
       # reusing this file (Pi, LAN) can turn them off without touching DEBUG.
       - ENABLE_API_DOCS=${ENABLE_API_DOCS:-true}
+      # Public demo account (demo@aspiro.dev / demo1234). On for local dev; the
+      # production stack leaves it off because the password is public.
+      - DEMO_ACCOUNT_ENABLED=${DEMO_ACCOUNT_ENABLED:-true}
       - RATE_LIMIT_DEV_MULTIPLIER=${RATE_LIMIT_DEV_MULTIPLIER:-10}
       # Trust *.ngrok.io / *.ngrok-free.app origins. Off by default — turn on
       # only while tunnelling, or list the exact URL in EXTRA_CORS_ORIGINS.

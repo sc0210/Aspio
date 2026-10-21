@@ -264,6 +264,12 @@ class Settings(BaseSettings):
     # Format: "email1:role1,email2:role2"  e.g. "admin@example.com:super_admin"
     ADMIN_EMAILS: str = ""
 
+    # The demo account (demo@aspiro.dev / demo1234) has a password published in
+    # this repository, so on an internet-facing instance it is an account anyone
+    # can sign in to. Off unless the operator opts in; when off, startup
+    # deactivates an existing demo account so the public password stops working.
+    DEMO_ACCOUNT_ENABLED: bool = False
+
     @field_validator("SECRET_KEY", mode="before")
     @classmethod
     def validate_secret_key(cls, v: str) -> str:

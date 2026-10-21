@@ -3,6 +3,8 @@ Demo user initialization.
 
 Creates a pre-seeded demo account on startup so anyone can sign in with
 real credentials and experience the full authenticated app without registering.
+Only when DEMO_ACCOUNT_ENABLED is set: the password below is public, so the
+account is open to anyone who can reach the instance.
 
 Credentials (intentionally public):
   email:    demo@aspiro.dev
@@ -61,21 +63,44 @@ async def init_demo_user(session: AsyncSession) -> None:
         await session.commit()
         logger.info("Demo user refreshed: %s", DEMO_EMAIL)
 
-    # Auto-accept any pending invites sent to the demo user
-    try:
-        from app.modules.peers.models import PeerConnection, PeerStatus
+    await detach_demo_from_peers(session, user.id)
 
-        pending_stmt = select(PeerConnection).where(
+
+async def disable_demo_user(session: AsyncSession) -> None:
+    """Deactivate an existing demo account so its public password stops working.
+
+    Its data is kept; turning DEMO_ACCOUNT_ENABLED back on reactivates it.
+    """
+    user = (await session.execute(select(User).where(User.email == DEMO_EMAIL))).scalar_one_or_none()
+    if user is None:
+        return
+    if user.is_active:
+        user.is_active = False
+        await session.commit()
+        logger.info("Demo account disabled (DEMO_ACCOUNT_ENABLED is off): %s", DEMO_EMAIL)
+    await detach_demo_from_peers(session, user.id)
+
+
+async def detach_demo_from_peers(session: AsyncSession, demo_user_id: uuid.UUID) -> None:
+    """End every peer connection involving the demo account.
+
+    A peer sees the other side's wallet totals, debt and net-worth trend, and
+    anyone holding the public demo password is the demo account, so no real
+    user may stay connected to it. Invites to or from it are refused at
+    creation (peers/service.py); this clears rows created before that.
+    """
+    from app.modules.peers.models import PeerConnection, PeerStatus
+
+    rows = (await session.execute(
+        select(PeerConnection).where(
             and_(
-                PeerConnection.receiver_id == user.id,
-                PeerConnection.status == PeerStatus.PENDING,
+                or_(PeerConnection.requester_id == demo_user_id, PeerConnection.receiver_id == demo_user_id),
+                PeerConnection.status.in_([PeerStatus.PENDING, PeerStatus.ACCEPTED]),
             )
         )
-        pending = (await session.execute(pending_stmt)).scalars().all()
-        for conn in pending:
-            conn.status = PeerStatus.ACCEPTED
-        if pending:
-            await session.commit()
-            logger.info("Demo user auto-accepted %d pending invite(s)", len(pending))
-    except Exception as e:
-        logger.warning("Demo user invite auto-accept skipped: %s", e)
+    )).scalars().all()
+    for conn in rows:
+        conn.status = PeerStatus.REMOVED
+    if rows:
+        await session.commit()
+        logger.info("Removed %d peer connection(s) involving the demo account", len(rows))
