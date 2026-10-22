@@ -30,8 +30,12 @@ from app.modules.users.dependencies import (
     get_optional_current_user,
 )
 from app.modules.users.models import User
-from app.modules.admin.dependencies import get_current_admin
-from app.modules.admin.models import AdminUser
+from app.modules.admin.dependencies import RequirePermission
+from app.modules.admin.models import AdminPermission, AdminUser
+
+# Shared reference data and all-users jobs need an explicit permission, not just
+# any admin row: analyst, support and moderator are read-only or limited roles.
+require_manage_settings = RequirePermission(AdminPermission.MANAGE_SETTINGS)
 from .dependencies import (
     get_transaction_service,
     get_categorization_service,
@@ -980,7 +984,7 @@ async def create_category(
     category_data: TransactionCategoryCreate,
     category_repo: CategoryRepoDepends,
     # Categories are shared by every user, so only an admin may change them.
-    current_admin: AdminUser = Depends(get_current_admin),
+    current_admin: AdminUser = Depends(require_manage_settings),
 ):
     """Create a new transaction category"""
     try:
@@ -1058,7 +1062,7 @@ async def get_category(
 async def update_category(
     category_repo: CategoryRepoDepends,
     # Categories are shared by every user, so only an admin may change them.
-    current_admin: AdminUser = Depends(get_current_admin),
+    current_admin: AdminUser = Depends(require_manage_settings),
     category_id: str = Path(..., description="Category ID"),
     category_data: TransactionCategoryUpdate = Body(...),
 ):
@@ -1084,7 +1088,7 @@ async def update_category(
 async def delete_category(
     category_repo: CategoryRepoDepends,
     # Categories are shared by every user, so only an admin may change them.
-    current_admin: AdminUser = Depends(get_current_admin),
+    current_admin: AdminUser = Depends(require_manage_settings),
     category_id: str = Path(..., description="Category ID"),
 ):
     """Delete a transaction category (soft delete)"""
@@ -1201,11 +1205,11 @@ async def delete_recurring_transaction(
 @router.post("/recurring/process-due")
 async def process_due_recurring_transactions(
     recurring_service: RecurringServiceDepends,
-    current_user: User = Depends(get_current_user),
+    # Processes every user's schedules, so an ordinary account must not run it.
+    current_admin: AdminUser = Depends(require_manage_settings),
 ):
     """Process recurring transactions that are due (admin only)"""
     try:
-        # In a real application, you'd want to restrict this to admin users
         result = await recurring_service.process_due_transactions()
         return JSONResponse(
             content={
@@ -1319,6 +1323,9 @@ async def bulk_import_transactions(
                 "errors": result.get("errors", []),
             }
         )
+    except HTTPException:
+        # The service's own refusals (413 too large, 400 not UTF-8) reach the client.
+        raise
     except Exception as e:
         logger.error("Import failed: %s", e, exc_info=True)
         raise HTTPException(status_code=500, detail="An internal error occurred")
@@ -1352,6 +1359,9 @@ async def import_transactions_csv(
     try:
         result = await import_service.import_csv(current_user.id, file, import_settings)
         return JSONResponse(content=result)
+    except HTTPException:
+        # The service's own refusals (413 too large, 400 not UTF-8) reach the client.
+        raise
     except Exception as e:
         logger.error("Import failed: %s", e, exc_info=True)
         raise HTTPException(status_code=500, detail="An internal error occurred")

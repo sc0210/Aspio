@@ -58,6 +58,11 @@ logger = logging.getLogger(__name__)
 TWR_MIN_REAL_PRICE_SHARE = 0.9
 # A diversified equity portfolio sits near 1; outside this the inputs are broken.
 MAX_PLAUSIBLE_BETA = 3.0
+
+# Holdings import-preview bounds (see _run_xlsx in parse_import_file).
+MAX_IMPORT_ROWS = 5000
+MAX_IMPORT_COLS = 50
+
 # SPY is only as good as its last close: beta against a stale benchmark is noise.
 BENCHMARK_MAX_AGE_DAYS = 5
 
@@ -1778,7 +1783,14 @@ async def parse_import_file(content: bytes, filename: str) -> dict:
 
         wb = load_workbook(BytesIO(content), data_only=True, read_only=True)
         ws = wb.active
-        all_rows = list(ws.iter_rows(values_only=True))
+        # read_only mode walks every row up to the sheet's declared size, padded
+        # to its declared width, and that size is whatever the file claims: a
+        # 5 KB workbook can declare 1,048,576 x 16,384 cells. Refuse sheets larger
+        # than any holdings list, and bound the read either way.
+        if (ws.max_row or 0) > MAX_IMPORT_ROWS + 1 or (ws.max_column or 0) > MAX_IMPORT_COLS:
+            wb.close()
+            return {"holdings": [], "errors": [f"Sheet too large (max {MAX_IMPORT_ROWS} rows, {MAX_IMPORT_COLS} columns)"]}
+        all_rows = list(ws.iter_rows(max_row=MAX_IMPORT_ROWS + 1, max_col=MAX_IMPORT_COLS, values_only=True))
         wb.close()
 
         if not all_rows:
