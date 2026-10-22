@@ -32,6 +32,13 @@ environment.
   failure the client redirects to `/api/auth/destroy`, which clears cookies server-side;
   `signOut()` races the HttpOnly cookies and leaves a half-logged-out state.
 - `CurrentUser` (`users/dependencies.py`) is the only sanctioned way to resolve the caller.
+- Account state (active, not deleted, not suspended, not locked) is enforced on every way of
+  acting as a user: `CurrentUser`, `get_optional_current_user`, LIFF session minting and the LINE
+  bot's `_get_link`. A new path that acts for a user must apply the same check; deactivation
+  is only as strong as the weakest one.
+- Shared data and all-users actions (global categories, recurring processing, the market cache)
+  need an admin *permission* (`RequirePermission`), not just an `AdminUser` row: analyst,
+  support and moderator are limited roles.
 
 The LINE webhook is the one unauthenticated endpoint. It is verified by HMAC over the request
 body against `X-Line-Signature`, not by JWT — do not "fix" it by adding auth, and do not skip
@@ -48,6 +55,11 @@ Strict-Transport-Security: max-age=31536000; includeSubDomains
 Content-Security-Policy: …
 ```
 
+Request bodies are capped by `BodySizeLimitMiddleware` (same file) before anything buffers
+them: 64 KB on auth routes and the LINE webhook, the upload limit plus 1 MB elsewhere. Nothing
+in front of the backend (Caddy, uvicorn) caps them. Validation errors never echo or log the
+rejected input.
+
 CORS is an explicit allowlist: `CORS_ORIGINS` in config, extendable per-deployment via
 `EXTRA_CORS_ORIGINS` (comma-separated) without touching source. Add the exact origin — never
 widen to `*`.
@@ -63,6 +75,13 @@ involved despite what older notes may claim.
   effects. It is a separate knob precisely so production cannot inherit a 10× looser login
   limit from an env shape.
 - Exceeding a limit returns `RATE_LIMIT_EXCEEDED`.
+- Rules match the real route path (registration is `/api/v1/users/register`). Idle buckets are
+  swept and the total is capped, since keys include the raw path.
+- The in-route auth guard (`rate_limit_check`) keeps its limits as constants: a FastAPI
+  dependency's plain parameters are bound from the query string, so a `limit` argument would
+  let any caller set it.
+- The client IP comes from `X-Forwarded-For` only as far as `TRUSTED_PROXY_COUNT` allows. It
+  defaults to 0 (ignore forwarded headers); set it to the number of proxies actually in front.
 
 Because state is in-process, limits are per-worker. Treat it as abuse-dampening, not as a hard
 quota.

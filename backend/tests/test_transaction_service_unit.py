@@ -155,19 +155,31 @@ class TestEnsureCategoryId:
         assert result == str(mock_cat.id)
 
     @pytest.mark.asyncio
-    async def test_category_name_not_found_creates_new(self):
-        new_cat = make_mock_category("Custom Category")
+    async def test_unknown_category_name_falls_back_without_creating(self):
+        # Categories are global; an ordinary request must not add one.
+        others = make_mock_category("Others")
         c_repo = MagicMock()
-        c_repo.get_by_name = AsyncMock(return_value=None)
-        c_repo.create = AsyncMock(return_value=new_cat)
+        c_repo.get_by_name = AsyncMock(side_effect=lambda name, t: others if name == "Others" else None)
+        c_repo.create = AsyncMock()
 
         svc = make_service(category_repo=c_repo)
         result = await svc._ensure_category_id({
             "category_name": "Custom Category",
             "type": "expense",
         })
-        assert result == str(new_cat.id)
-        c_repo.create.assert_awaited_once()
+        assert result == str(others.id)
+        c_repo.create.assert_not_awaited()
+
+    @pytest.mark.asyncio
+    async def test_unknown_category_name_without_fallback_returns_none(self):
+        c_repo = MagicMock()
+        c_repo.get_by_name = AsyncMock(return_value=None)
+        c_repo.create = AsyncMock()
+
+        svc = make_service(category_repo=c_repo)
+        result = await svc._ensure_category_id({"category_name": "Custom Category", "type": "expense"})
+        assert result is None
+        c_repo.create.assert_not_awaited()
 
     @pytest.mark.asyncio
     async def test_no_category_info_returns_none(self):

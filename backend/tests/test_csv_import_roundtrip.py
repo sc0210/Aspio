@@ -15,9 +15,22 @@ pattern this mirrors.
 from uuid import uuid4
 
 import pytest
+import pytest_asyncio
 from fastapi.testclient import TestClient
 
 from app.modules.users.models import User, UserRole, UserStatus
+
+
+@pytest_asyncio.fixture(autouse=True)
+async def _shopping_categories(async_session):
+    """Categories are global and only admins add them, so an import resolves names
+    to existing rows. The CSVs here use 'Shopping', which a real instance has."""
+    from app.modules.transactions.models import TransactionCategory, TransactionType
+
+    for t in (TransactionType.EXPENSE, TransactionType.INCOME):
+        async_session.add(TransactionCategory(name="Shopping", name_en="Shopping", type=t, icon="🛍️", color="#F9CA24"))
+    async_session.add(TransactionCategory(name="Salary", name_en="Salary", type=TransactionType.INCOME, icon="💰", color="#2ECC71"))
+    await async_session.commit()
 
 
 @pytest.fixture
