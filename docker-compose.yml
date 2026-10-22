@@ -120,12 +120,17 @@ services:
   # Cloudflare Tunnel — exposes the backend webhook to LINE's platform.
   # LINE requires a public HTTPS URL; this creates a free temporary *.trycloudflare.com tunnel.
   #
+  # Opt-in (`docker compose --profile tunnel up -d`): this stack runs with a
+  # committed dev SECRET_KEY and insecure defaults, so it must not be on the
+  # internet unless you ask for it.
+  #
   # After starting: docker logs aspiro-cloudflared 2>&1 | grep trycloudflare
   # Copy the URL and set it in LINE Developers Console:
   #   Messaging API → Webhook URL → https://<id>.trycloudflare.com/api/v1/line-bot/webhook
   cloudflared:
     image: cloudflare/cloudflared:latest
     container_name: aspiro-cloudflared
+    profiles: ["tunnel"]
     restart: unless-stopped
     command: tunnel --no-autoupdate --url http://backend:8000
     depends_on:
