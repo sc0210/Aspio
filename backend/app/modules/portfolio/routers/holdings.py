@@ -13,12 +13,16 @@ from ._shared import (  # noqa: F401  explicit re-import for underscore-prefixed
     _price_cache,
     fetch_historical_data_background,
 )
-from sqlalchemy import select, and_
+from sqlalchemy import select, and_, func
+
+from ..models import PortfolioHolding
 
 from app.core.exceptions import AspiroException
 from app.utils.datetime_helpers import business_day_of, utc_now
 
 router = APIRouter()
+
+MAX_ACTIVE_HOLDINGS_PER_USER = 2000
 
 
 @router.get("/holdings", response_model=PaginatedHoldingsResponse)
@@ -143,6 +147,19 @@ async def add_holding(
 
     try:
         portfolio_service = get_portfolio_service(session)
+        # Every active holding's symbol is fetched from outside providers on each
+        # all-users price run, so one account's holding count spends shared budget.
+        active_count = (
+            await session.execute(
+                select(func.count(PortfolioHolding.id)).where(
+                    PortfolioHolding.user_id == current_user.id,
+                    PortfolioHolding.is_active == True,  # noqa: E712
+                )
+            )
+        ).scalar_one()
+        if active_count >= MAX_ACTIVE_HOLDINGS_PER_USER:
+            raise ValueError(f"Holding limit reached ({MAX_ACTIVE_HOLDINGS_PER_USER} active holdings)")
+
         holding = await portfolio_service.add_holding(
             current_user.id, holding_data, aggregate=aggregate
         )

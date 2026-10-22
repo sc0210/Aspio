@@ -10,6 +10,7 @@ unchanged and continues to provide persistence.
 """
 
 import asyncio
+import contextlib
 import logging
 import time
 from datetime import datetime, timezone
@@ -80,6 +81,22 @@ def _inflight_lock(key: str) -> asyncio.Lock:
     return lock
 
 
+@contextlib.asynccontextmanager
+async def _inflight(key: str):
+    """Hold the pair's single-flight lock, and drop it from the registry once idle.
+
+    The key comes from the request path, so keeping every lock forever let
+    anonymous callers grow the registry by one entry per made-up pair.
+    """
+    lock = _inflight_lock(key)
+    try:
+        async with lock:
+            yield
+    finally:
+        if not lock.locked() and not getattr(lock, "_waiters", None) and _inflight_locks.get(key) is lock:
+            del _inflight_locks[key]
+
+
 # The source written for a rate fetched live. Rows from before it carry the
 # plain "exchangerate-api", which an outage also wrote for the hardcoded table.
 LIVE_SOURCE = "exchangerate-api-live"
@@ -140,7 +157,7 @@ class ExchangeRateService:
         # Everything below is the miss path: at most one caller per pair runs it
         # at a time, so concurrent misses cost one DB read and one API call
         # between them instead of one each.
-        async with _inflight_lock(mem_key):
+        async with _inflight(mem_key):
             if not force_refresh:
                 # The holder of the lock may have filled the cache while we
                 # waited — that is the whole point of queueing here.

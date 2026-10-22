@@ -485,8 +485,10 @@ async def refresh_exchange_rates(
     description="Get current exchange rate from cache or API",
 )
 async def get_exchange_rate_endpoint(
-    from_currency: str = Path(..., description="Source currency code (e.g., USD)"),
-    to_currency: str = Path(..., description="Target currency code (e.g., TWD)"),
+    # ISO 4217 codes only: anything else is refused before it reaches a cache,
+    # a lock or the paid exchange-rate API.
+    from_currency: str = Path(..., pattern="^[A-Za-z]{3}$", description="Source currency code (e.g., USD)"),
+    to_currency: str = Path(..., pattern="^[A-Za-z]{3}$", description="Target currency code (e.g., TWD)"),
     current_user=Depends(get_optional_current_user),
 ):
     """

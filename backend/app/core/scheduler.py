@@ -22,6 +22,7 @@ from app.core.database import async_session
 from app.modules.portfolio.price_update_service import PriceUpdateService
 from app.modules.portfolio.historical_price_service import HistoricalPriceService
 from app.modules.portfolio.models import PortfolioHolding
+from app.modules.users.models import User
 from app.modules.portfolio.market_data_service import resolve_symbol_market
 from app.modules.users.models import User
 
@@ -106,7 +107,10 @@ async def sync_historical_data_for_all_users(days: int = 7):
                     PortfolioHolding.market,
                     PortfolioHolding.type,
                 )
+                .join(User, User.id == PortfolioHolding.user_id)
                 .where(PortfolioHolding.is_active == True)
+                # Blocked accounts' holdings still drive outside fetches otherwise.
+                .where(User.is_active == True, User.deleted_at.is_(None))
                 .distinct()
             )
 
