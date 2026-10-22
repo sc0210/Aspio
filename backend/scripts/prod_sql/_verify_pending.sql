@@ -107,7 +107,12 @@ WITH checks(sort, object, source_file, present) AS (
     (15, 'column transactions.day_position', '2026_10_07_transaction_day_position.sql',
         EXISTS (SELECT 1 FROM information_schema.columns
                  WHERE table_schema = 'public' AND table_name = 'transactions'
-                   AND column_name = 'day_position'))
+                   AND column_name = 'day_position')),
+    -- 2026_10_22_username_lower_unique.sql
+    (16, 'index users.uq_users_username_lower', '2026_10_22_username_lower_unique.sql',
+        EXISTS (SELECT 1 FROM pg_indexes
+                 WHERE schemaname = 'public' AND tablename = 'users'
+                   AND indexname = 'uq_users_username_lower'))
 )
 SELECT
     CASE WHEN present THEN 'OK     ' ELSE 'MISSING' END AS status,

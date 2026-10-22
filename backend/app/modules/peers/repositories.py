@@ -263,14 +263,22 @@ class PeerUserRepository:
     async def find_by_username(
         self, username: str, exclude_id: Optional[UUID] = None
     ) -> Optional[User]:
-        """Find an active user by username (case-insensitive)."""
+        """Find an active user by username (case-insensitive).
+
+        This picks who receives a peer invite, and with it the inviter's financial
+        summary. Usernames are unique case-insensitively (uq_users_username_lower);
+        for rows written before that index, the exact spelling wins, then the oldest.
+        """
         conditions = [
             func.lower(User.username) == username.lower(),
             User.deleted_at.is_(None),
         ]
         if exclude_id is not None:
             conditions.append(User.id != exclude_id)
-        stmt = select(User).where(and_(*conditions))
+        # Exact spelling first, so a case variant can never outrank the owner.
+        stmt = select(User).where(and_(*conditions)).order_by(
+            (User.username == username).desc(), User.created_at
+        )
         return (await self.session.execute(stmt)).scalars().first()
 
     async def get_by_id(self, user_id: UUID) -> Optional[User]:
