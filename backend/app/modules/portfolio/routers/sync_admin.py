@@ -13,6 +13,8 @@ from ._shared import (  # noqa: F401  explicit re-import for underscore-prefixed
     _price_cache,
     fetch_historical_data_background,
 )
+from app.modules.admin.dependencies import RequirePermission
+from app.modules.admin.models import AdminPermission, AdminUser
 
 router = APIRouter()
 
@@ -330,7 +332,10 @@ async def get_api_cache_status(current_user: CurrentUser):
 
 
 @router.post("/clear-market-cache")
-async def clear_market_data_cache(current_user: CurrentUser):
+async def clear_market_data_cache(
+    # Process-wide cache shared by every user: an operator action, not a user one.
+    current_admin: AdminUser = Depends(RequirePermission(AdminPermission.MANAGE_SETTINGS)),
+):
     """
     Clear the in-memory FinLab market data cache.
 

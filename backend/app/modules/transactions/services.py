@@ -38,6 +38,9 @@ from app.utils.datetime_helpers import business_today
 
 logger = logging.getLogger(__name__)
 
+# The catch-all an unknown category_name resolves to (matches the LINE bot's).
+UNKNOWN_CATEGORY_FALLBACK = "Others"
+
 
 class TransactionService:
     """Service for transaction business logic"""
@@ -90,20 +93,19 @@ class TransactionService:
                 )
                 return str(category.id)
 
-            # Create new category if it doesn't exist
-            logger.info(f"📝 Creating new category: {data['category_name']}")
-            new_category = await self.category_repo.create(
-                {
-                    "name": data["category_name"],
-                    "type": data.get("type", "expense"),
-                    "color": "#6B7280",
-                    "icon": "receipt",
-                }
+            # Categories are global and only admins add them, so an unknown name
+            # from an ordinary request is not a reason to create one: that let any
+            # account put text into every user's category list. Use the existing
+            # catch-all instead; without one, auto-categorization decides.
+            fallback = await self.category_repo.get_by_name(
+                UNKNOWN_CATEGORY_FALLBACK, data.get("type", "expense")
             )
             logger.info(
-                f"✅ Created new category: {data['category_name']} -> ID: {new_category.id}"
+                "Unknown category_name %r; using %s",
+                data["category_name"],
+                repr(UNKNOWN_CATEGORY_FALLBACK) if fallback else "auto-categorization",
             )
-            return str(new_category.id)
+            return str(fallback.id) if fallback else None
 
         # If no category info provided, use auto-categorization
         logger.warning(f"⚠️ No category_id or category_name provided, returning None")

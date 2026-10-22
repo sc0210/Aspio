@@ -1388,19 +1388,11 @@ def clear_finlab_market_cache():
     - After market close to ensure next-day data is fresh
     - For testing purposes
     """
-    global _finlab_market_cache
-    _finlab_market_cache = {
-        "close": None,
-        "open": None,
-        "high": None,
-        "low": None,
-        "volume": None,
-        "window_start": None,
-        "last_fetch": None,
-        "fetch_lock": None,
-        "fetch_task": None,
-        "failed_at": None,
-    }
+    # Clear the data in place. fetch_lock, fetch_task and failed_at stay: they keep
+    # refills to one in-flight whole-market fetch and hold the failure cooldown,
+    # and dropping them let a clear start a second concurrent fetch.
+    for key in ("close", "open", "high", "low", "volume", "window_start", "last_fetch"):
+        _finlab_market_cache[key] = None
     logger.info("🗑️ FinLab market cache cleared")
 
 

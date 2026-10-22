@@ -1544,6 +1544,16 @@ class TransactionCategoryRepository:
         result = await self.db.execute(stmt)
         return list(result.scalars().all())
 
+    async def delete(self, category_id: str) -> bool:
+        """Soft-delete a category: it stops being offered, its transactions keep it."""
+        category = await self.get_by_id(category_id)
+        if category is None:
+            return False
+        category.is_active = False
+        category.updated_at = datetime.now(timezone.utc)
+        await self.db.commit()
+        return True
+
     async def update(
         self, category_id: str, update_data: dict
     ) -> Optional[TransactionCategory]:
