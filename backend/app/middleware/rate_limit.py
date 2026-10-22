@@ -31,6 +31,23 @@ _burst_buckets: Dict[str, Deque[float]] = defaultdict(deque)
 
 _BURST_WINDOW_SECONDS = 10  # burst window duration
 
+# Buckets are keyed by client and raw path, and the middleware runs before
+# routing, so every distinct path (a 404 included) used to add two keys that
+# were never removed. Sweep idle keys periodically, and hard-cap the total.
+_SWEEP_EVERY = 1000
+_MAX_BUCKET_KEYS = 50_000
+_IDLE_SECONDS = 120  # longer than any rule's window
+_calls_since_sweep = 0
+
+
+def _sweep(now: float) -> None:
+    cutoff = now - _IDLE_SECONDS
+    for buckets in (_window_buckets, _burst_buckets):
+        for key in [k for k, b in buckets.items() if not b or b[-1] < cutoff]:
+            del buckets[key]
+        if len(buckets) > _MAX_BUCKET_KEYS:
+            buckets.clear()
+
 
 def _prune(bucket: Deque[float], cutoff: float) -> None:
     """Remove timestamps older than cutoff from the left of the deque."""
@@ -60,10 +77,22 @@ class RateLimitMiddleware(BaseHTTPMiddleware):
                 "window": 60,
                 "burst": 2 * dev_multiplier,
             },
-            "/api/v1/auth/register": {
+            # Registration lives under /users, not /auth: keyed to the real path,
+            # or the /api/v1/users rule (2000/min) applies instead.
+            "/api/v1/users/register": {
                 "requests": 3 * dev_multiplier,
                 "window": 60,
                 "burst": 1 * dev_multiplier,
+            },
+            "/api/v1/auth/resend-verification": {
+                "requests": 3 * dev_multiplier,
+                "window": 60,
+                "burst": 1 * dev_multiplier,
+            },
+            "/api/v1/auth/verify-email": {
+                "requests": 10 * dev_multiplier,
+                "window": 60,
+                "burst": 3 * dev_multiplier,
             },
             "/api/v1/auth/refresh": {
                 "requests": 10 * dev_multiplier,
@@ -157,6 +186,12 @@ class RateLimitMiddleware(BaseHTTPMiddleware):
         now = time.time()
         window_cutoff = now - window_size
         burst_cutoff = now - _BURST_WINDOW_SECONDS
+
+        global _calls_since_sweep
+        _calls_since_sweep += 1
+        if _calls_since_sweep >= _SWEEP_EVERY or len(_window_buckets) > _MAX_BUCKET_KEYS:
+            _calls_since_sweep = 0
+            _sweep(now)
 
         window_key = f"{client_id}:{path}:{method}:window"
         burst_key = f"{client_id}:{path}:{method}:burst"
