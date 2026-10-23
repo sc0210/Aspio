@@ -542,7 +542,14 @@ class TransactionService:
             logger.info(
                 f"🔍 UPDATE TRANSACTION - Before category resolution: category_id={data.get('category_id')}, category_name={data.get('category_name')}"
             )
-            category_id = await self._ensure_category_id(data)
+            # An edit rarely resends the type; resolve the name against the
+            # stored one so an income row does not get an expense category.
+            lookup = data
+            if data.get("category_name") and "type" not in data:
+                stored = await self.transaction_repo.get_by_id(transaction_id, user_id)
+                if stored:
+                    lookup = {**data, "type": stored.type}
+            category_id = await self._ensure_category_id(lookup)
             logger.info(
                 f"🔍 UPDATE TRANSACTION - After _ensure_category_id: category_id={category_id}"
             )

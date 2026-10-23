@@ -389,6 +389,9 @@ class TestUpdateTransaction:
 
         t_repo = MagicMock()
         t_repo.update = AsyncMock(return_value=mock_tx)
+        stored = make_mock_transaction()
+        stored.type = TransactionType.INCOME
+        t_repo.get_by_id = AsyncMock(return_value=stored)
 
         svc = make_service(transaction_repo=t_repo, category_repo=c_repo)
 
@@ -398,6 +401,9 @@ class TestUpdateTransaction:
 
         assert result == mock_tx
         c_repo.increment_usage.assert_awaited_once()
+        # The edit sent no type, so the name resolves against the stored row's.
+        c_repo.get_by_name.assert_awaited_once_with("Shopping", TransactionType.INCOME)
+        assert "type" not in t_repo.update.await_args.args[2]
 
     @pytest.mark.asyncio
     async def test_update_transaction_not_found_returns_none(self):
