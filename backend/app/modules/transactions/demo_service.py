@@ -31,6 +31,11 @@ from app.utils.datetime_helpers import utc_now
 
 logger = logging.getLogger(__name__)
 
+# Anonymous demo writes land in this process-wide list, shared by every visitor
+# and kept until restart. Keep only the newest few so unauthenticated callers
+# cannot grow backend memory without bound.
+MAX_DEMO_WRITES = 100
+
 
 class DemoTransactionService:
     """Service for demo transaction operations without database persistence"""
@@ -39,6 +44,7 @@ class DemoTransactionService:
         self.demo_transactions = []
         self.demo_categories = []
         self._initialize_demo_data()
+        self._seed_count = len(self.demo_transactions)
 
     def _initialize_demo_data(self):
         """Initialize demo transactions and categories"""
@@ -497,6 +503,10 @@ class DemoTransactionService:
 
         # Add to demo transactions (at beginning for chronological order)
         self.demo_transactions.insert(0, transaction_dict)
+        written = len(self.demo_transactions) - self._seed_count
+        if written > MAX_DEMO_WRITES:
+            # New writes sit in front of the seed rows; drop the oldest of them.
+            del self.demo_transactions[MAX_DEMO_WRITES:written]
 
         logger.info(f"Demo transaction created: {tx_id}")
 

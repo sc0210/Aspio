@@ -10,7 +10,7 @@ from datetime import datetime, timedelta, timezone
 from typing import Optional, Dict, Any, Tuple
 from uuid import UUID
 
-from sqlalchemy import and_, select
+from sqlalchemy import and_, func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 from fastapi import HTTPException, status
 
@@ -386,12 +386,18 @@ class UserService:
             update_dict = update_data.model_dump(exclude_unset=True)
 
             if update_dict.get('username') is not None:
+                # Case-insensitive, matching how peer search resolves a handle:
+                # an exact-case check let 'alice' coexist with 'Alice', and an
+                # invite to one could land on the other.
                 taken = await self.session.execute(
                     select(User.id).where(
-                        and_(User.username == update_dict['username'], User.id != user_id)
+                        and_(
+                            func.lower(User.username) == update_dict['username'].lower(),
+                            User.id != user_id,
+                        )
                     )
                 )
-                if taken.scalar_one_or_none():
+                if taken.first() is not None:
                     raise HTTPException(
                         status_code=status.HTTP_409_CONFLICT,
                         detail="Username already taken",

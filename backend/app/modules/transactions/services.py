@@ -38,6 +38,9 @@ from app.utils.datetime_helpers import business_today
 
 logger = logging.getLogger(__name__)
 
+# The catch-all an unknown category_name resolves to (matches the LINE bot's).
+UNKNOWN_CATEGORY_FALLBACK = "Others"
+
 
 class TransactionService:
     """Service for transaction business logic"""
@@ -90,20 +93,25 @@ class TransactionService:
                 )
                 return str(category.id)
 
-            # Create new category if it doesn't exist
-            logger.info(f"📝 Creating new category: {data['category_name']}")
-            new_category = await self.category_repo.create(
-                {
-                    "name": data["category_name"],
-                    "type": data.get("type", "expense"),
-                    "color": "#6B7280",
-                    "icon": "receipt",
-                }
-            )
+            # Categories are global and only admins add them, so an unknown name
+            # from an ordinary request is not a reason to create one: that let any
+            # account put text into every user's category list. Use the catch-all
+            # instead, creating only that fixed name on a fresh install without it.
+            txn_type = data.get("type", "expense")
+            fallback = await self.category_repo.get_by_name(UNKNOWN_CATEGORY_FALLBACK, txn_type)
+            if not fallback:
+                fallback = await self.category_repo.create(
+                    {
+                        "name": UNKNOWN_CATEGORY_FALLBACK,
+                        "type": txn_type,
+                        "color": "#6B7280",
+                        "icon": "receipt",
+                    }
+                )
             logger.info(
-                f"✅ Created new category: {data['category_name']} -> ID: {new_category.id}"
+                "Unknown category_name %r; using %r", data["category_name"], UNKNOWN_CATEGORY_FALLBACK
             )
-            return str(new_category.id)
+            return str(fallback.id)
 
         # If no category info provided, use auto-categorization
         logger.warning(f"⚠️ No category_id or category_name provided, returning None")
@@ -534,7 +542,14 @@ class TransactionService:
             logger.info(
                 f"🔍 UPDATE TRANSACTION - Before category resolution: category_id={data.get('category_id')}, category_name={data.get('category_name')}"
             )
-            category_id = await self._ensure_category_id(data)
+            # An edit rarely resends the type; resolve the name against the
+            # stored one so an income row does not get an expense category.
+            lookup = data
+            if data.get("category_name") and "type" not in data:
+                stored = await self.transaction_repo.get_by_id(transaction_id, user_id)
+                if stored:
+                    lookup = {**data, "type": stored.type}
+            category_id = await self._ensure_category_id(lookup)
             logger.info(
                 f"🔍 UPDATE TRANSACTION - After _ensure_category_id: category_id={category_id}"
             )

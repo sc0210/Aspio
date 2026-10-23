@@ -8,6 +8,7 @@ from uuid import uuid4
 
 import openpyxl
 import pytest
+import pytest_asyncio
 from fastapi.testclient import TestClient
 
 from app.modules.transactions.attachment_service import ImportExportService
@@ -21,6 +22,17 @@ SEED = (
     "2026-07-09,income,1000,TWD,Salary,Shopping,\n"
     "2026-08-01,expense,5,TWD,Late,Shopping,\n"
 )
+
+
+@pytest_asyncio.fixture(autouse=True)
+async def _shopping_categories(async_session):
+    """Categories are global and only admins add them, so an import resolves names
+    to existing rows. The CSVs here use 'Shopping', which a real instance has."""
+    from app.modules.transactions.models import TransactionCategory, TransactionType
+
+    for t in (TransactionType.EXPENSE, TransactionType.INCOME):
+        async_session.add(TransactionCategory(name="Shopping", name_en="Shopping", type=t, icon="🛍️", color="#F9CA24"))
+    await async_session.commit()
 
 
 @pytest.fixture

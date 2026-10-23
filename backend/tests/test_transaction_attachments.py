@@ -4,6 +4,7 @@ from pathlib import Path
 from uuid import uuid4
 
 import pytest
+import pytest_asyncio
 from fastapi.testclient import TestClient
 
 from app.core.config import get_settings
@@ -49,6 +50,16 @@ def as_user(users, override_get_async_session):
     with client:
         yield switch
     fastapi_app.dependency_overrides.clear()
+
+
+@pytest_asyncio.fixture(autouse=True)
+async def _shopping_category(async_session):
+    """The seed CSV files its row under Shopping; categories are global and only
+    admins add them, so the import resolves to an existing row."""
+    from app.modules.transactions.models import TransactionCategory, TransactionType
+
+    async_session.add(TransactionCategory(name="Shopping", name_en="Shopping", type=TransactionType.EXPENSE, icon="🛍️", color="#F9CA24"))
+    await async_session.commit()
 
 
 @pytest.fixture

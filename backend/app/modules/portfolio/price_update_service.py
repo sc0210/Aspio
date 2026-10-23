@@ -21,6 +21,7 @@ from sqlalchemy import select, and_, func, update, text
 
 from .manual_pricing import MANUALLY_PRICED_TYPES, is_manually_priced
 from .models import PortfolioHolding
+from app.modules.users.models import User
 from .market_data_service import get_market_data_service, resolve_symbol_market
 from ...core.config import get_settings
 from app.utils.datetime_helpers import business_today
@@ -519,8 +520,11 @@ class PriceUpdateService:
         # 1. Collect all unique (symbol, market) pairs from active tradable holdings
         result = await self.session.execute(
             select(PortfolioHolding.symbol, PortfolioHolding.market)
+            .join(User, User.id == PortfolioHolding.user_id)
             .where(PortfolioHolding.is_active == True)
             .where(PortfolioHolding.type.notin_(sorted(MANUALLY_PRICED_TYPES)))
+            # Blocked accounts' holdings would otherwise still be fetched every run.
+            .where(User.is_active == True, User.deleted_at.is_(None))
             .distinct()
         )
         # Collapse to ONE market per symbol. The query returns distinct

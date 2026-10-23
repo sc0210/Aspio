@@ -24,6 +24,15 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.config import get_settings
 
+# Receipt OCR: US Letter at 300 DPI is about 8.4M pixels.
+MAX_PDF_PIXELS = 12_000_000
+MIN_PDF_DPI = 72
+
+# CSV import bounds. Bytes reuse the attachment limit; failed rows are counted
+# but only the first few are kept, without their contents.
+MAX_IMPORT_ROWS = 5000
+MAX_IMPORT_ERRORS = 100
+
 logger = logging.getLogger(__name__)
 
 
@@ -278,11 +287,29 @@ class AttachmentService:
         small host.
         """
         import pytesseract
-        from pdf2image import convert_from_path
+        from pdf2image import convert_from_path, pdfinfo_from_path
+
+        # The page size comes from the PDF itself, so a few hundred bytes can
+        # declare a page that rasterises to gigabytes at 300 DPI. Read it first
+        # and lower the DPI until width x height fits a fixed pixel budget; a
+        # page too large even for MIN_PDF_DPI is not a receipt.
+        try:
+            info = pdfinfo_from_path(str(file_path), first_page=1, last_page=1, timeout=10)
+            w_pt, h_pt = (float(v) for v in info["Page size"].split(" pts")[0].split(" x "))
+        except Exception as exc:
+            logger.warning("PDF inspection failed for %s: %s", file_path, exc)
+            return ""
+        if w_pt <= 0 or h_pt <= 0:
+            return ""
+        area_in2 = (w_pt / 72.0) * (h_pt / 72.0)
+        dpi = min(300, int((MAX_PDF_PIXELS / area_in2) ** 0.5))
+        if dpi < MIN_PDF_DPI:
+            logger.warning("PDF page too large to OCR (%.0f x %.0f pt): %s", w_pt, h_pt, file_path)
+            return ""
 
         try:
             pages = convert_from_path(
-                str(file_path), dpi=300, first_page=1, last_page=1
+                str(file_path), dpi=dpi, first_page=1, last_page=1, timeout=30
             )
         except Exception as exc:
             logger.warning("PDF rasterisation failed for %s: %s", file_path, exc)
@@ -480,7 +507,18 @@ class ImportExportService:
         from io import StringIO
         from .models import TransactionImportBatch
         from .schemas import TransactionCreate, BulkTransactionCreate
-        
+
+        max_bytes = get_settings().max_file_size_bytes
+        content = await file.read(max_bytes + 1)
+        if len(content) > max_bytes:
+            raise HTTPException(status_code=413, detail="File too large")
+        try:
+            rows = list(csv.DictReader(StringIO(content.decode('utf-8'))))
+        except UnicodeDecodeError:
+            raise HTTPException(status_code=400, detail="CSV must be UTF-8")
+        if len(rows) > MAX_IMPORT_ROWS:
+            raise HTTPException(status_code=413, detail=f"Too many rows (max {MAX_IMPORT_ROWS})")
+
         # Create import batch
         batch = TransactionImportBatch(
             user_id=user_id,
@@ -496,30 +534,26 @@ class ImportExportService:
         await self.db.refresh(batch)
         
         try:
-            # Read CSV content
-            content = await file.read()
-            csv_content = StringIO(content.decode('utf-8'))
-            reader = csv.DictReader(csv_content)
-            
             # Parse transactions
             transactions = []
             errors = []
+            failed_rows = 0
             row_number = 1
-            
-            for row in reader:
+
+            for row in rows:
                 row_number += 1
                 try:
                     transaction_data = self._parse_csv_row(row, import_settings)
                     transactions.append(TransactionCreate(**transaction_data))
                 except Exception as e:
-                    errors.append({
-                        'row': row_number,
-                        'error': str(e),
-                        'data': row
-                    })
-            
+                    # Count every failure, keep a few: the list is persisted, and
+                    # storing each bad row verbatim grew the database ~5x the upload.
+                    failed_rows += 1
+                    if len(errors) < MAX_IMPORT_ERRORS:
+                        errors.append({'row': row_number, 'error': str(e)[:200]})
+
             # Update batch statistics
-            batch.total_records = len(transactions) + len(errors)
+            batch.total_records = len(transactions) + failed_rows
             batch.processed_records = len(transactions)
             
             # Bulk create transactions
@@ -533,7 +567,7 @@ class ImportExportService:
                 result = await self.transaction_service.bulk_create_transactions(bulk_data, user_id)
                 batch.successful_imports = result.successful
                 batch.failed_imports = result.failed
-                errors.extend(result.errors)
+                errors.extend(result.errors[: max(0, MAX_IMPORT_ERRORS - len(errors))])
             
             # Finalize batch
             batch.status = 'completed'

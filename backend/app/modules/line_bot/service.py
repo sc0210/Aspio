@@ -75,7 +75,7 @@ from app.modules.transactions.models import (
 from app.modules.transactions.repositories import (
     TransactionRepository,
 )
-from app.modules.users.models import UserStatus
+from app.modules.users.models import User, UserStatus
 from app.modules.users.security import jwt_manager
 from app.utils.exchange_rate_service import ExchangeRateService
 from app.utils.datetime_helpers import business_day_of, business_now, business_today
@@ -1711,8 +1711,36 @@ async def _log_activity(
 
 
 
-async def _get_link(db: AsyncSession, line_user_id: str) -> Optional[LineUserLink]:
+async def _get_raw_link(db: AsyncSession, line_user_id: str) -> Optional[LineUserLink]:
+    """The LineUserLink row regardless of the account's state.
+
+    Only for code that manages the link itself (linking, LIFF), which must still
+    see a link that belongs to a blocked account. Everything that acts for the
+    user goes through _get_link.
+    """
     return await LineAccountRepository(db).get_link_by_line_user_id(line_user_id)
+
+
+async def _get_link(db: AsyncSession, line_user_id: str) -> Optional[LineUserLink]:
+    """The link of an account allowed to act, else None ("not linked").
+
+    LINE commands act for the linked Aspiro user without a session, so this must
+    apply the same account-state policy as CurrentUser: otherwise an account an
+    admin deactivated kept logging, reading and splitting through the bot.
+    """
+    link = await _get_raw_link(db, line_user_id)
+    if link is None:
+        return None
+    user = await db.get(User, link.user_id)
+    if (
+        user is None
+        or not user.is_active
+        or user.deleted_at is not None
+        or user.status != UserStatus.ACTIVE
+        or user.is_account_locked
+    ):
+        return None
+    return link
 
 
 async def _get_or_create_group(
@@ -1795,7 +1823,7 @@ async def handle_link_command(
     In group context the personal token URL is pushed via DM to avoid
     exposing a single-use secret link publicly in the group chat.
     """
-    existing = await _get_link(db, line_user_id)
+    existing = await _get_raw_link(db, line_user_id)
     if existing:
         name = existing.display_name or "there"
         flex = _flex_welcome_back(name)
@@ -3013,7 +3041,7 @@ async def handle_follow_event(db: AsyncSession, event: LineEvent) -> None:
     if not line_user_id:
         return
 
-    link = await _get_link(db, line_user_id)
+    link = await _get_raw_link(db, line_user_id)
     if link:
         name = link.display_name or "there"
         welcome_flex = _flex_welcome_back(name)
@@ -4164,7 +4192,7 @@ async def confirm_link(
         raise ValueError("Link token has expired — please run /link again in LINE")
 
     # Check if this LINE user is already linked to a different account
-    existing = await _get_link(db, link_token.line_user_id)
+    existing = await _get_raw_link(db, link_token.line_user_id)
     if existing and existing.user_id != user_id:
         raise ValueError("This LINE account is already linked to a different Aspiro account")
 
@@ -4302,7 +4330,7 @@ async def liff_session(db: AsyncSession, id_token: str) -> LiffSessionResponse:
     if not line_user_id:
         raise ValueError("LINE ID token missing subject")
 
-    link = await _get_link(db, line_user_id)
+    link = await _get_raw_link(db, line_user_id)
     if link is None:
         return LiffSessionResponse(linked=False)
 

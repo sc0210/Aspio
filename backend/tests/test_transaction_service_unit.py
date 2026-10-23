@@ -155,19 +155,34 @@ class TestEnsureCategoryId:
         assert result == str(mock_cat.id)
 
     @pytest.mark.asyncio
-    async def test_category_name_not_found_creates_new(self):
-        new_cat = make_mock_category("Custom Category")
+    async def test_unknown_category_name_falls_back_without_creating(self):
+        # Categories are global; an ordinary request must not add one.
+        others = make_mock_category("Others")
         c_repo = MagicMock()
-        c_repo.get_by_name = AsyncMock(return_value=None)
-        c_repo.create = AsyncMock(return_value=new_cat)
+        c_repo.get_by_name = AsyncMock(side_effect=lambda name, t: others if name == "Others" else None)
+        c_repo.create = AsyncMock()
 
         svc = make_service(category_repo=c_repo)
         result = await svc._ensure_category_id({
             "category_name": "Custom Category",
             "type": "expense",
         })
-        assert result == str(new_cat.id)
+        assert result == str(others.id)
+        c_repo.create.assert_not_awaited()
+
+    @pytest.mark.asyncio
+    async def test_fresh_install_creates_only_the_fixed_fallback(self):
+        # No "Others" yet: create that one fixed name, never the requested one.
+        others = make_mock_category("Others")
+        c_repo = MagicMock()
+        c_repo.get_by_name = AsyncMock(return_value=None)
+        c_repo.create = AsyncMock(return_value=others)
+
+        svc = make_service(category_repo=c_repo)
+        result = await svc._ensure_category_id({"category_name": "Custom Category", "type": "expense"})
+        assert result == str(others.id)
         c_repo.create.assert_awaited_once()
+        assert c_repo.create.await_args.args[0]["name"] == "Others"
 
     @pytest.mark.asyncio
     async def test_no_category_info_returns_none(self):
@@ -374,6 +389,9 @@ class TestUpdateTransaction:
 
         t_repo = MagicMock()
         t_repo.update = AsyncMock(return_value=mock_tx)
+        stored = make_mock_transaction()
+        stored.type = TransactionType.INCOME
+        t_repo.get_by_id = AsyncMock(return_value=stored)
 
         svc = make_service(transaction_repo=t_repo, category_repo=c_repo)
 
@@ -383,6 +401,9 @@ class TestUpdateTransaction:
 
         assert result == mock_tx
         c_repo.increment_usage.assert_awaited_once()
+        # The edit sent no type, so the name resolves against the stored row's.
+        c_repo.get_by_name.assert_awaited_once_with("Shopping", TransactionType.INCOME)
+        assert "type" not in t_repo.update.await_args.args[2]
 
     @pytest.mark.asyncio
     async def test_update_transaction_not_found_returns_none(self):

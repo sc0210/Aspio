@@ -204,7 +204,10 @@ class Settings(BaseSettings):
     # the leftmost value (which can be spoofed by the client).
     # Set to 0 when running without a proxy (direct exposure), 1 behind one proxy, etc.
     # The real client IP is: xff_list[-(TRUSTED_PROXY_COUNT)] when the list has enough entries.
-    TRUSTED_PROXY_COUNT: int = 1
+    # Defaults to 0 so a stack with nothing in front (the LAN overlay, a bare
+    # uvicorn) ignores client-written X-Forwarded-For; stacks with proxies set it
+    # explicitly (docker-compose.pi.yml sets 2).
+    TRUSTED_PROXY_COUNT: int = 0
 
     # Email Configuration
     SMTP_HOST: Optional[str] = None

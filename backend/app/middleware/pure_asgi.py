@@ -269,6 +269,91 @@ class InputValidationMiddleware:
         await self.app(scope, receive, send)
 
 
+class _BodyTooLarge(Exception):
+    pass
+
+
+class BodySizeLimitMiddleware:
+    """
+    Pure ASGI middleware that caps request body size before the app buffers it.
+
+    Nothing else in the stack does: Caddy, uvicorn and Starlette all accept a body
+    of any size, and the webhook and auth routes read it whole before checking
+    anything. A declared Content-Length over the limit is refused outright, and a
+    streamed body is counted as it is read, so a missing or false header does not
+    get around it. Credential and webhook routes need a few KB; uploads get the
+    configured file limit plus room for multipart framing.
+    """
+
+    SMALL_LIMIT = 64 * 1024
+    SMALL_PREFIXES = (
+        "/api/v1/auth/",
+        "/api/v1/users/register",
+        "/api/v1/line-bot/webhook",
+    )
+
+    def __init__(self, app: ASGIApp):
+        self.app = app
+        from app.core.config import get_settings
+
+        self.default_limit = get_settings().max_file_size_bytes + 1024 * 1024
+
+    def _limit_for(self, path: str) -> int:
+        return self.SMALL_LIMIT if path.startswith(self.SMALL_PREFIXES) else self.default_limit
+
+    async def __call__(self, scope: Scope, receive: Receive, send: Send):
+        if scope["type"] != "http":
+            await self.app(scope, receive, send)
+            return
+
+        limit = self._limit_for(scope.get("path", ""))
+        too_large = PlainTextResponse("Request body too large", status_code=413)
+
+        for name, value in scope.get("headers", []):
+            if name == b"content-length":
+                try:
+                    declared = int(value)
+                except ValueError:
+                    declared = limit + 1
+                if declared > limit:
+                    await too_large(scope, receive, send)
+                    return
+
+        received = 0
+        started = False
+        overflowed = False
+        replaced = False
+
+        async def counted_receive():
+            nonlocal received, overflowed
+            message = await receive()
+            if message["type"] == "http.request":
+                received += len(message.get("body", b""))
+                if received > limit:
+                    overflowed = True
+                    raise _BodyTooLarge()
+            return message
+
+        async def tracked_send(message):
+            nonlocal started, replaced
+            if replaced:
+                return
+            if message["type"] == "http.response.start":
+                started = True
+                if overflowed:
+                    # FastAPI catches the cut-off body and answers 400; say what happened instead.
+                    replaced = True
+                    await too_large(scope, receive, send)
+                    return
+            await send(message)
+
+        try:
+            await self.app(scope, counted_receive, tracked_send)
+        except _BodyTooLarge:
+            if not started:
+                await too_large(scope, receive, send)
+
+
 def setup_pure_asgi_middleware(app):
     """
     Setup Pure ASGI middleware for the FastAPI application.
@@ -278,11 +363,13 @@ def setup_pure_asgi_middleware(app):
     2. SecurityHeadersMiddleware - Add security headers
     3. LoggingMiddleware - Log requests/responses
     4. InputValidationMiddleware - Basic URL validation
+    5. BodySizeLimitMiddleware - Refuse oversized request bodies
 
     Args:
         app: FastAPI application instance
     """
     # Add middleware in reverse order (last added = first executed)
+    app.add_middleware(BodySizeLimitMiddleware)
     app.add_middleware(InputValidationMiddleware)
     app.add_middleware(LoggingMiddleware)
     app.add_middleware(SecurityHeadersMiddleware)

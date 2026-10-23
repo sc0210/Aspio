@@ -5,6 +5,7 @@ This module provides authentication and authorization dependencies
 for FastAPI endpoints with comprehensive security validation.
 """
 
+from datetime import datetime, timezone
 from typing import Optional, Annotated
 from uuid import UUID
 import logging
@@ -329,11 +330,28 @@ async def get_optional_current_user(
                 User.is_verified,
                 User.status,
                 User.role,
+                User.deleted_at,
+                User.account_locked_until,
             ).where(User.id == user_id)
         )
         row = result.fetchone()
 
         if row:
+            # The same account-state policy as CurrentUser. Most transaction and
+            # holding writes use this dependency, so without it a deactivated,
+            # suspended or locked account kept full access for the token's life.
+            # Checked before caching, so only usable accounts are ever cached.
+            if not row.is_active or row.deleted_at is not None:
+                raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="User account is deactivated")
+            if row.status == UserStatus.SUSPENDED:
+                raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="User account is suspended")
+            locked_until = row.account_locked_until
+            if locked_until is not None:
+                if locked_until.tzinfo is None:
+                    locked_until = locked_until.replace(tzinfo=timezone.utc)
+                if locked_until > datetime.now(timezone.utc):
+                    raise HTTPException(status_code=status.HTTP_423_LOCKED, detail="User account is temporarily locked")
+
             fields = {
                 "id": user_id,
                 "email": row.email,
@@ -373,11 +391,15 @@ def get_user_agent(request: Request) -> str:
     return request.headers.get("User-Agent", "unknown")
 
 
-async def rate_limit_check(
-    request: Request,
-    limit: int = 10,
-    window: int = 60,
-) -> None:
+# Server-side constants, not parameters: FastAPI binds a dependency's plain
+# parameters from the query string, so `limit`/`window` arguments let any caller
+# send ?limit=100000 and switch this guard off.
+AUTH_RATE_LIMIT = 10
+AUTH_RATE_WINDOW = 60
+_AUTH_BUCKET_MAX = 50_000
+
+
+async def rate_limit_check(request: Request) -> None:
     """
     Per-IP rate limit guard for sensitive auth endpoints (in-memory sliding window).
 
@@ -388,8 +410,6 @@ async def rate_limit_check(
 
     Args:
         request: FastAPI request object
-        limit: Maximum requests allowed in the window (default 10 per minute)
-        window: Time window in seconds
 
     Raises:
         HTTPException 429: If rate limit exceeded
@@ -402,11 +422,18 @@ async def rate_limit_check(
         from collections import defaultdict
         rate_limit_check._buckets = defaultdict(deque)  # type: ignore[attr-defined]
 
+    limit, window = AUTH_RATE_LIMIT, AUTH_RATE_WINDOW
     client_ip = get_client_ip(request)
     # Namespace by endpoint path so each auth endpoint has its own counter
     bucket_key = f"{client_ip}:{request.url.path}"
     now = time.time()
     cutoff = now - window
+
+    buckets = rate_limit_check._buckets  # type: ignore[attr-defined]
+    if len(buckets) > _AUTH_BUCKET_MAX:
+        # One key per client IP and route; drop the idle ones so the map stays bounded.
+        for key in [k for k, b in buckets.items() if not b or b[-1] < cutoff]:
+            del buckets[key]
 
     bucket = rate_limit_check._buckets[bucket_key]  # type: ignore[attr-defined]
     # Prune expired entries

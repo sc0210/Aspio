@@ -161,16 +161,10 @@ async def validation_exception_handler(
 ) -> JSONResponse:
     """Handler for request validation errors"""
 
-    logger.warning(
-        f"ValidationError: {exc.errors()}",
-        extra={
-            "errors": exc.errors(),
-            "path": str(request.url),
-            "method": request.method,
-        },
-    )
-
-    # Format validation errors for better readability
+    # The rejected input is left out of both the log and the response: it is
+    # whatever the caller sent, of any size, and may be a password typed into the
+    # wrong field. Logging it turned one oversized request into a log line larger
+    # than the request, and the response repeated it three times.
     formatted_errors = []
     for error in exc.errors():
         loc = " -> ".join(str(x) for x in error["loc"])
@@ -179,9 +173,15 @@ async def validation_exception_handler(
                 "field": loc,
                 "message": error["msg"],
                 "type": error["type"],
-                "input": error.get("input"),
             }
         )
+
+    logger.warning(
+        "ValidationError on %s %s: %s",
+        request.method,
+        request.url.path,
+        [{"field": e["field"], "type": e["type"]} for e in formatted_errors],
+    )
 
     return JSONResponse(
         status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
