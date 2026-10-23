@@ -1398,3 +1398,96 @@ class TestEventDedup:
         await svc._dispatch_event(async_session, evt)
 
         assert len(seen) == 1
+
+
+# ---------------------------------------------------------------------------
+# link_preview: /link-line shows the LINE account before anything is linked
+# ---------------------------------------------------------------------------
+
+class TestLinkPreview:
+    """Anyone can run /link and send the URL to someone else, so the page must
+    show whose LINE account it attaches and confirm only on a click. The preview
+    must therefore never use the token up."""
+
+    @pytest.mark.asyncio
+    async def test_shows_the_line_account_without_using_the_token(self, async_session):
+        token = LineLinkToken(
+            line_user_id=MOCK_LINE_USER_ID,
+            expires_at=datetime.now(timezone.utc) + timedelta(minutes=10),
+            used=False,
+        )
+        async_session.add(token)
+        await async_session.flush()
+
+        with patch.object(svc, "_fetch_line_profile", AsyncMock(return_value=("Stranger", "https://x/p.png"))):
+            preview = await svc.link_preview(async_session, token.token)
+
+        assert preview.line_display_name == "Stranger"
+        assert preview.picture_url == "https://x/p.png"
+        assert token.used is False
+
+    @pytest.mark.asyncio
+    async def test_refuses_a_used_token(self, async_session):
+        token = LineLinkToken(
+            line_user_id=MOCK_LINE_USER_ID,
+            expires_at=datetime.now(timezone.utc) + timedelta(minutes=10),
+            used=True,
+        )
+        async_session.add(token)
+        await async_session.flush()
+
+        with pytest.raises(ValueError, match="already-used"):
+            await svc.link_preview(async_session, token.token)
+
+
+# ---------------------------------------------------------------------------
+# liff_session: no password-less token for an account CurrentUser would refuse
+# ---------------------------------------------------------------------------
+
+def _liff_verify_ok(line_user_id: str):
+    resp = MagicMock(status_code=200)
+    resp.json.return_value = {"sub": line_user_id}
+    client = MagicMock()
+    client.post = AsyncMock(return_value=resp)
+    return patch.object(svc, "_get_http_client", return_value=client)
+
+
+class TestLiffSessionAccountState:
+    @pytest.mark.parametrize(
+        "state",
+        [
+            {"is_active": False},
+            {"status": UserStatus.SUSPENDED},
+            {"status": UserStatus.PENDING_APPROVAL},
+        ],
+        ids=["deactivated", "suspended", "pending"],
+    )
+    @pytest.mark.asyncio
+    async def test_refuses_a_blocked_account(self, async_session, monkeypatch, state):
+        user = _make_user()
+        for field, value in state.items():
+            setattr(user, field, value)
+        async_session.add(user)
+        async_session.add(_make_link(user.id))
+        await async_session.flush()
+        monkeypatch.setattr(svc.settings, "LINE_LOGIN_CHANNEL_ID", "dummy-channel")
+
+        with _liff_verify_ok(MOCK_LINE_USER_ID):
+            result = await svc.liff_session(async_session, "id-token")
+
+        assert result.linked is False
+        assert result.access_token is None
+
+    @pytest.mark.asyncio
+    async def test_issues_a_token_for_an_active_account(self, async_session, monkeypatch):
+        user = _make_user()
+        async_session.add(user)
+        async_session.add(_make_link(user.id))
+        await async_session.flush()
+        monkeypatch.setattr(svc.settings, "LINE_LOGIN_CHANNEL_ID", "dummy-channel")
+
+        with _liff_verify_ok(MOCK_LINE_USER_ID):
+            result = await svc.liff_session(async_session, "id-token")
+
+        assert result.linked is True
+        assert result.access_token

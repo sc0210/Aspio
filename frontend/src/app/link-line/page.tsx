@@ -9,7 +9,12 @@ import { apiClient } from '@/lib/api-client';
 import { useAppMode } from '@/hooks/useAppMode';
 import { useTranslation } from 'react-i18next';
 
-type State = 'loading' | 'needs_login' | 'linking' | 'success' | 'error';
+type State = 'loading' | 'needs_login' | 'confirm' | 'linking' | 'success' | 'cancelled' | 'error';
+
+interface LinkPreview {
+  line_display_name?: string | null;
+  picture_url?: string | null;
+}
 
 const GoogleIcon = (
   <svg className="w-5 h-5 flex-shrink-0" viewBox="0 0 24 24">
@@ -28,13 +33,14 @@ const LineLogo = (
 
 function LinkLineContent() {
   const { t } = useTranslation(['common']);
-  const { isAuthenticated, isLoading } = useAppMode();
+  const { isAuthenticated, isLoading, user } = useAppMode();
   const searchParams = useSearchParams();
   const token = searchParams?.get('token');
 
   const [state, setState] = useState<State>('loading');
   const [errorMsg, setErrorMsg] = useState('');
   const [linkedDisplayName, setLinkedDisplayName] = useState('');
+  const [preview, setPreview] = useState<LinkPreview | null>(null);
 
   useEffect(() => {
     if (!token) {
@@ -50,9 +56,23 @@ function LinkLineContent() {
       return;
     }
 
-    // Logged in — call the link-confirm endpoint
-    setState('linking');
+    // Logged in: show which LINE account this token would attach, and link only
+    // on an explicit click. Anyone can run /link and send the resulting URL to
+    // someone else, so confirming on page load would bind a stranger's LINE
+    // account to whoever opened it.
+    apiClient.get<LinkPreview>(`/line-bot/link-preview?token=${encodeURIComponent(token)}`)
+      .then((res) => {
+        setPreview(res.data ?? {});
+        setState('confirm');
+      })
+      .catch((err) => {
+        setErrorMsg(err.message || t('common:lineLink.errorRetry'));
+        setState('error');
+      });
+  }, [isAuthenticated, isLoading, token]);
 
+  const handleConfirm = () => {
+    setState('linking');
     apiClient.post<{ display_name?: string }>('/line-bot/link-confirm', { token })
       .then((res) => {
         setLinkedDisplayName(res.data?.display_name || '');
@@ -62,11 +82,11 @@ function LinkLineContent() {
         setErrorMsg(err.message || t('common:lineLink.errorRetry'));
         setState('error');
       });
-  }, [isAuthenticated, isLoading, token]);
+  };
 
   const handleGoogleSignIn = () => {
     signIn('google', {
-      callbackUrl: `/link-line?token=${token}`,
+      callbackUrl: `/link-line?token=${encodeURIComponent(token ?? '')}`,
     });
   };
 
@@ -110,6 +130,53 @@ function LinkLineContent() {
               Continue with Google
             </button>
           </div>
+        )}
+
+        {state === 'confirm' && (
+          <div className="space-y-5">
+            <div className="flex items-center gap-3 rounded-xl border border-gray-200 dark:border-gray-700 p-4">
+              {preview?.picture_url ? (
+                // eslint-disable-next-line @next/next/no-img-element
+                <img src={preview.picture_url} alt="" className="w-12 h-12 rounded-full flex-shrink-0" />
+              ) : (
+                <div className="w-12 h-12 rounded-full bg-gray-100 dark:bg-gray-700 flex-shrink-0" />
+              )}
+              <div className="min-w-0">
+                <p className="text-xs text-gray-500 dark:text-gray-400">{t('common:lineLink.confirmLineAccount')}</p>
+                <p className="font-semibold text-gray-900 dark:text-white truncate">
+                  {preview?.line_display_name || t('common:lineLink.confirmUnknownName')}
+                </p>
+                {user?.email && (
+                  <p className="text-xs text-gray-500 dark:text-gray-400 truncate">
+                    {t('common:lineLink.confirmAspiroAccount')} <span className="font-medium">{user.email}</span>
+                  </p>
+                )}
+              </div>
+            </div>
+            <p className="text-sm text-amber-700 dark:text-amber-400 bg-amber-50 dark:bg-amber-900/20 rounded-lg p-3">
+              {t('common:lineLink.confirmWarning')}
+            </p>
+            <div className="flex gap-3">
+              <button
+                onClick={() => setState('cancelled')}
+                className="flex-1 px-4 py-3 border border-gray-300 dark:border-gray-600 rounded-xl text-sm font-medium text-gray-700 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-gray-400"
+              >
+                {t('common:lineLink.cancel')}
+              </button>
+              <button
+                onClick={handleConfirm}
+                className="flex-1 px-4 py-3 rounded-xl text-sm font-semibold text-white bg-[#06C755] hover:bg-[#05b34d] transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#06C755] focus-visible:ring-offset-2"
+              >
+                {t('common:lineLink.confirmButton')}
+              </button>
+            </div>
+          </div>
+        )}
+
+        {state === 'cancelled' && (
+          <p className="text-sm text-center text-gray-600 dark:text-gray-300 py-4">
+            {t('common:lineLink.cancelled')}
+          </p>
         )}
 
         {state === 'success' && (

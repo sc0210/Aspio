@@ -591,8 +591,9 @@ class UserService:
                 )
             
             # Exchange authorization code for tokens
+            # The redirect URI is server configuration, never the caller's choice.
             token_response = await google_oauth.exchange_code_for_tokens(
-                oauth_data.authorization_code, oauth_data.redirect_uri
+                oauth_data.authorization_code
             )
             
             if not token_response:
@@ -609,34 +610,58 @@ class UserService:
                     detail="Failed to get user information from Google"
                 )
             
+            # An unverified Google email proves nothing about who owns the address,
+            # so it can neither sign in to the account using it nor register it.
+            if not user_info.get("verified_email"):
+                raise HTTPException(
+                    status_code=status.HTTP_403_FORBIDDEN,
+                    detail="Your Google account's email address is not verified"
+                )
+
             # Check if user exists
             user = await self.user_repo.get_user_by_email(user_info["email"])
             is_new_user = False
-            
+
             if not user:
-                # Create new user from Google data
+                # Same policy as every other way in: self-signup waits for a
+                # super_admin, so this door must not hand out an active account.
                 user_data = {
                     'email': user_info["email"],
                     'name': user_info.get("name", user_info["email"].split('@')[0]),
-                    'is_verified': True,  # Google email is pre-verified
-                    'status': UserStatus.ACTIVE,
+                    'is_verified': True,
+                    'email_verified_at': datetime.now(timezone.utc),
+                    'status': UserStatus.PENDING_APPROVAL,
+                    'is_active': False,
                     'google_id': user_info.get("id"),
                     'avatar_url': user_info.get("picture")
                 }
-                
+
                 user = await self.user_repo.create_user(user_data)
-                is_new_user = True
-                
-                # Award registration bonus
-                await self._award_experience_points(user.id, 100, "oauth_registration")
-                
-                logger.info(f"Created new user via Google OAuth: {user.email}")
-            
-            else:
-                # Update login info for existing user
-                await self.user_repo.update_login_info(user.id, ip_address or "", success=True)
-                await self._update_user_activity(user.id)
-            
+                logger.info(f"Created new Google OAuth user (pending approval): {user.email}")
+                raise HTTPException(
+                    status_code=status.HTTP_403_FORBIDDEN,
+                    detail="Your account has been registered and is pending admin approval. Please wait for an administrator to approve your account before logging in."
+                )
+
+            if user.status == UserStatus.PENDING_APPROVAL:
+                raise HTTPException(
+                    status_code=status.HTTP_403_FORBIDDEN,
+                    detail="Your account is pending admin approval. Please wait for an administrator to approve your registration."
+                )
+            if not user.is_active or user.status == UserStatus.SUSPENDED or user.deleted_at is not None:
+                raise HTTPException(
+                    status_code=status.HTTP_403_FORBIDDEN,
+                    detail="Account is suspended or deactivated."
+                )
+            if user.is_account_locked:
+                raise HTTPException(
+                    status_code=status.HTTP_423_LOCKED,
+                    detail="Account is temporarily locked"
+                )
+
+            await self.user_repo.update_login_info(user.id, ip_address or "", success=True)
+            await self._update_user_activity(user.id)
+
             # Create JWT tokens
             token_data = {"sub": str(user.id), "email": user.email}
             access_token = jwt_manager.create_access_token(token_data)

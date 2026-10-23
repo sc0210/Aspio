@@ -32,6 +32,7 @@ from app.modules.line_bot.schemas import (
     LiffSessionResponse,
     LinkConfirmRequest,
     LinkConfirmResponse,
+    LinkPreviewResponse,
     LinkStatusResponse,
     LineWebhookPayload,
     MemberOut,
@@ -106,6 +107,23 @@ async def liff_session(
 # ---------------------------------------------------------------------------
 # Authenticated: account linking
 # ---------------------------------------------------------------------------
+
+
+@router.get(
+    "/link-preview",
+    response_model=ApiResponse[LinkPreviewResponse],
+    summary="Show which LINE account a link token would attach",
+)
+async def link_preview(
+    token: UUID,
+    current_user: CurrentUser,
+    db: AsyncSession = Depends(get_db),
+) -> ApiResponse[LinkPreviewResponse]:
+    try:
+        result = await service.link_preview(db, token)
+    except ValueError as exc:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(exc))
+    return ApiResponse.success_response(data=result)
 
 
 @router.post(
