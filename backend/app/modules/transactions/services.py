@@ -95,17 +95,23 @@ class TransactionService:
 
             # Categories are global and only admins add them, so an unknown name
             # from an ordinary request is not a reason to create one: that let any
-            # account put text into every user's category list. Use the existing
-            # catch-all instead; without one, auto-categorization decides.
-            fallback = await self.category_repo.get_by_name(
-                UNKNOWN_CATEGORY_FALLBACK, data.get("type", "expense")
-            )
+            # account put text into every user's category list. Use the catch-all
+            # instead, creating only that fixed name on a fresh install without it.
+            txn_type = data.get("type", "expense")
+            fallback = await self.category_repo.get_by_name(UNKNOWN_CATEGORY_FALLBACK, txn_type)
+            if not fallback:
+                fallback = await self.category_repo.create(
+                    {
+                        "name": UNKNOWN_CATEGORY_FALLBACK,
+                        "type": txn_type,
+                        "color": "#6B7280",
+                        "icon": "receipt",
+                    }
+                )
             logger.info(
-                "Unknown category_name %r; using %s",
-                data["category_name"],
-                repr(UNKNOWN_CATEGORY_FALLBACK) if fallback else "auto-categorization",
+                "Unknown category_name %r; using %r", data["category_name"], UNKNOWN_CATEGORY_FALLBACK
             )
-            return str(fallback.id) if fallback else None
+            return str(fallback.id)
 
         # If no category info provided, use auto-categorization
         logger.warning(f"⚠️ No category_id or category_name provided, returning None")

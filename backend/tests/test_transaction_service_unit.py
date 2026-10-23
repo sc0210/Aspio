@@ -171,15 +171,18 @@ class TestEnsureCategoryId:
         c_repo.create.assert_not_awaited()
 
     @pytest.mark.asyncio
-    async def test_unknown_category_name_without_fallback_returns_none(self):
+    async def test_fresh_install_creates_only_the_fixed_fallback(self):
+        # No "Others" yet: create that one fixed name, never the requested one.
+        others = make_mock_category("Others")
         c_repo = MagicMock()
         c_repo.get_by_name = AsyncMock(return_value=None)
-        c_repo.create = AsyncMock()
+        c_repo.create = AsyncMock(return_value=others)
 
         svc = make_service(category_repo=c_repo)
         result = await svc._ensure_category_id({"category_name": "Custom Category", "type": "expense"})
-        assert result is None
-        c_repo.create.assert_not_awaited()
+        assert result == str(others.id)
+        c_repo.create.assert_awaited_once()
+        assert c_repo.create.await_args.args[0]["name"] == "Others"
 
     @pytest.mark.asyncio
     async def test_no_category_info_returns_none(self):
