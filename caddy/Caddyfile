@@ -24,6 +24,14 @@
 		dns cloudflare {env.CF_API_TOKEN}
 	}
 
+	# Only NextAuth may call this, and it reaches the backend directly over the
+	# Docker network (INTERNAL_API_URL), never through Caddy. Refusing it here keeps
+	# the account-login endpoint off the internet even if a backend check regresses.
+	# Caddy runs the most specific handle first, so this wins over /api/v1/*.
+	handle /api/v1/auth/google/callback* {
+		respond 404
+	}
+
 	# Backend API (FastAPI) lives under /api/v1
 	handle /api/v1/* {
 		reverse_proxy backend:8000
@@ -45,6 +53,10 @@
 #
 # The HTTPS block above still serves the LAN directly, so both paths work.
 http://{$APP_DOMAIN} {
+	# NextAuth-only: see the same handle above.
+	handle /api/v1/auth/google/callback* {
+		respond 404
+	}
 	handle /api/v1/* {
 		reverse_proxy backend:8000
 	}

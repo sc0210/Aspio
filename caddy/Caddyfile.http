@@ -19,6 +19,14 @@
 # /api/v1 (which the frontend calls same-origin), everything else — including
 # NextAuth's /api/auth/* — to Next.js.
 :80 {
+	# Only NextAuth may call this, and it reaches the backend directly over the
+	# Docker network (INTERNAL_API_URL), never through Caddy. Refusing it here keeps
+	# the account-login endpoint off the internet even if a backend check regresses.
+	# Caddy runs the most specific handle first, so this wins over /api/v1/*.
+	handle /api/v1/auth/google/callback* {
+		respond 404
+	}
+
 	handle /api/v1/* {
 		reverse_proxy backend:8000
 	}
