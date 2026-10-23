@@ -184,6 +184,7 @@ frontend/.next.bak/
 
 # pytest artifacts
 backend/.coverage
+backend/.coverage.*
 backend/test-results/
 backend/htmlcov/
 # Jest JSON report produced by the dead-suite check in CI
