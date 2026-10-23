@@ -1,4 +1,4 @@
 # Optional: FinLab whole-market Taiwan data, used only when FINLAB_API_TOKEN is set.
 # Pulls in pyarrow and scipy (~300MB), so the production image installs it only on
 # request (INSTALL_FINLAB build arg; docker-compose.pi.yml sets it when .env has a token).
-finlab==2.2.1
+finlab==2.2.14
