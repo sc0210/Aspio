@@ -9,6 +9,8 @@ from typing import Optional, List, Dict, Any, Tuple
 import logging
 import re
 
+from sqlalchemy.exc import IntegrityError
+
 from app.core.exceptions import ValidationException
 
 from .repositories import (
@@ -38,8 +40,9 @@ from app.utils.datetime_helpers import business_today
 
 logger = logging.getLogger(__name__)
 
-# The catch-all an unknown category_name resolves to (matches the LINE bot's).
-UNKNOWN_CATEGORY_FALLBACK = "Others"
+# The catch-all an unknown category_name resolves to, per type. Both are in the
+# fresh-install seed (scripts/seed/categories.sql); "Others" matches the LINE bot's.
+UNKNOWN_CATEGORY_FALLBACK = {"expense": "Others", "income": "Other Income"}
 
 
 class TransactionService:
@@ -98,19 +101,23 @@ class TransactionService:
             # account put text into every user's category list. Use the catch-all
             # instead, creating only that fixed name on a fresh install without it.
             txn_type = data.get("type", "expense")
-            fallback = await self.category_repo.get_by_name(UNKNOWN_CATEGORY_FALLBACK, txn_type)
-            if not fallback:
-                fallback = await self.category_repo.create(
-                    {
-                        "name": UNKNOWN_CATEGORY_FALLBACK,
-                        "type": txn_type,
-                        "color": "#6B7280",
-                        "icon": "receipt",
-                    }
-                )
-            logger.info(
-                "Unknown category_name %r; using %r", data["category_name"], UNKNOWN_CATEGORY_FALLBACK
+            name = UNKNOWN_CATEGORY_FALLBACK.get(
+                str(getattr(txn_type, "value", txn_type)).lower(), UNKNOWN_CATEGORY_FALLBACK["expense"]
             )
+            fallback = await self.category_repo.get_by_name(name, txn_type)
+            if not fallback:
+                # Flushed in a savepoint and committed with the transaction, so a
+                # concurrent first request winning the insert undoes only this row.
+                try:
+                    async with self.category_repo.db.begin_nested():
+                        fallback = await self.category_repo.create_flush(
+                            {"name": name, "type": txn_type, "color": "#6B7280", "icon": "receipt"}
+                        )
+                except IntegrityError:
+                    fallback = await self.category_repo.get_by_name(name, txn_type)
+                    if not fallback:
+                        raise
+            logger.info("Unknown category_name %r; using %r", data["category_name"], name)
             return str(fallback.id)
 
         # If no category info provided, use auto-categorization
