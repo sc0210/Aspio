@@ -30,9 +30,16 @@ later.
 Tests run against in-memory SQLite (`tests/conftest.py`). Only `integration` tests need a real
 Postgres or live market-data APIs.
 
-`pytest.ini` sets `--cov-fail-under=35`. Coverage currently sits below that, so a plain
-`pytest` run reports failure on the coverage gate even when every test passes — read the test
-count, not just the exit code. CI sidesteps this with `-o "addopts="`.
+Coverage is a ratchet: `pytest.ini` and CI both pass `--cov-fail-under` at the measured level
+rounded down (81 as of 2026-10-23), and the Jest floors live in `frontend/jest.config.js`. Raise
+them when tests land; never lower one to get a PR green. Running a single file under the full
+`addopts` therefore fails the gate even when every test passes, so add `-o "addopts="` for a
+partial run. To measure one module, keep `--cov=app` and read its row: a dotted
+`--cov=app.modules.x` imports the module before `conftest.py` teaches SQLite about JSONB, and
+every DB fixture errors.
+
+`backend/.coveragerc` omits `app/modules/line_bot/` from the figure: the LINE bot is an
+optional add-on, so the floor measures the core app only. Its tests still run and must pass.
 
 ### Mocks that hide bugs
 

@@ -6,15 +6,8 @@
 import {
   User,
   Transaction,
-  FinancialGoal,
-  Portfolio,
-  Budget,
   Notification,
   ApiResponse,
-  PaginationParams,
-  TokenResponse,
-  LoginRequest,
-  RegisterRequest,
   PeerUserPreview,
   PeerConnectionOut,
   CompareDataResponse,
@@ -443,36 +436,6 @@ class ApiClient {
   }
 
   // Authentication APIs
-  async login(credentials: LoginRequest): Promise<TokenResponse> {
-    const response = await this.request<TokenResponse>('/auth/login', {
-      method: 'POST',
-      body: JSON.stringify(credentials),
-    });
-
-    if (response.data) {
-      this.setAccessToken(response.data.access_token);
-    }
-
-    return response.data!;
-  }
-
-  async register(userData: RegisterRequest): Promise<TokenResponse> {
-    // /users/register, not /auth/register — the latter does not exist and 404s.
-    const response = await this.request<TokenResponse>('/users/register', {
-      method: 'POST',
-      body: JSON.stringify(userData),
-    });
-
-    // Registration returns the created user, not a token pair: new accounts land
-    // in PENDING_APPROVAL and cannot sign in until an admin approves them. Only
-    // store a token if one is ever actually issued.
-    if (response.data?.access_token) {
-      this.setAccessToken(response.data.access_token);
-    }
-
-    return response.data!;
-  }
-
   async logout(refreshToken?: string): Promise<void> {
     await this.request('/auth/logout', {
       method: 'POST',
@@ -516,77 +479,6 @@ class ApiClient {
   }
 
   // Transaction APIs
-  async getTransactions(params?: PaginationParams): Promise<Transaction[]> {
-    const queryParams = new URLSearchParams();
-    if (params?.page) queryParams.append('page', params.page.toString());
-    if (params?.limit) queryParams.append('limit', params.limit.toString());
-    if (params?.sortBy) queryParams.append('sort_by', params.sortBy);
-    if (params?.sortOrder) queryParams.append('sort_order', params.sortOrder);
-
-    const endpoint = `/transactions/${queryParams.toString() ? '?' + queryParams.toString() : ''}`;
-    try {
-      type RawTransaction = Record<string, unknown>;
-      type TransactionsResponse = { transactions?: RawTransaction[] } & Record<string, unknown>;
-      const response = await this.request<TransactionsResponse>(endpoint);
-
-      const normalizeTransaction = (transaction: RawTransaction): Transaction => ({
-        ...(transaction as unknown as Transaction),
-        // Normalize category field
-        category: (transaction.category || (transaction.category_obj as Record<string, unknown>)?.name || 'Uncategorized') as string,
-        // Normalize date field
-        date: (transaction.date || transaction.transaction_date || transaction.created_at) as string | Date,
-        // Normalize payment method field
-        paymentMethod: (transaction.paymentMethod || transaction.payment_method) as string | undefined,
-        // Ensure other fields exist
-        tags: (transaction.tags as string[]) || [],
-      });
-
-      // Handle direct transactions array response (common case)
-      if (response.data && Array.isArray(response.data)) {
-        return (response.data as RawTransaction[]).map(normalizeTransaction);
-      }
-
-      // Handle paginated response with transactions array
-      if (response.data && (response.data as TransactionsResponse).transactions) {
-        return ((response.data as TransactionsResponse).transactions as RawTransaction[]).map(normalizeTransaction);
-      }
-
-      // Handle direct transactions array in response (from backend API test)
-      if (Array.isArray(response.transactions)) {
-        return (response.transactions as RawTransaction[]).map(normalizeTransaction);
-      }
-
-      return (response.data as unknown as Transaction[]) || [];
-    } catch (error) {
-      console.warn('Transaction API error:', error);
-      // In demo mode or API errors, return empty array to allow graceful degradation
-      if (!this.accessToken) {
-        return [];
-      }
-      throw error;
-    }
-  }
-
-  async createTransaction(transaction: Omit<Transaction, 'id' | 'userId' | 'createdAt' | 'updatedAt'>): Promise<Transaction> {
-    try {
-      // Use transactionService to handle data transformation and dual-mode support
-      const { transactionService } = await import('@/services/transactionService');
-      const response = await transactionService.createTransaction(transaction);
-      return response.data!;
-    } catch (error) {
-      // Propagate. This used to swallow ANY failure and return a synthesised
-      // `demo-<ts>` / `demo-user` transaction, so a real backend error was
-      // indistinguishable from a successful create: the caller got an object with
-      // an id, showed the row, and nothing was ever persisted.
-      //
-      // Demo mode does not need this fallback — it is handled upstream, where
-      // callers check `isDemo` / `canPersistData` before writing, and
-      // transactionService owns the dual-mode path.
-      console.error('Create transaction failed:', error);
-      throw error;
-    }
-  }
-
   async updateTransaction(id: string, transaction: Partial<Transaction>): Promise<Transaction> {
     const response = await this.request<Transaction>(`/transactions/${id}`, {
       method: 'PUT',
@@ -597,60 +489,6 @@ class ApiClient {
 
   async deleteTransaction(id: string): Promise<void> {
     await this.request(`/transactions/${id}`, { method: 'DELETE' });
-  }
-
-  // Goals APIs
-  async getGoals(): Promise<FinancialGoal[]> {
-    const response = await this.request<FinancialGoal[]>('/goals/');
-    return response.data!;
-  }
-
-  async createGoal(goal: Omit<FinancialGoal, 'id' | 'userId' | 'createdAt' | 'updatedAt'>): Promise<FinancialGoal> {
-    const response = await this.request<FinancialGoal>('/goals/', {
-      method: 'POST',
-      body: JSON.stringify(goal),
-    });
-    return response.data!;
-  }
-
-  async updateGoal(id: string, goal: Partial<FinancialGoal>): Promise<FinancialGoal> {
-    const response = await this.request<FinancialGoal>(`/goals/${id}`, {
-      method: 'PUT',
-      body: JSON.stringify(goal),
-    });
-    return response.data!;
-  }
-
-  async deleteGoal(id: string): Promise<void> {
-    await this.request(`/goals/${id}`, { method: 'DELETE' });
-  }
-
-  // Portfolio APIs
-  async getPortfolio(): Promise<Portfolio> {
-    const response = await this.request<Portfolio>('/portfolio/');
-    return response.data!;
-  }
-
-  async updatePortfolioHolding(holdingId: string, data: unknown): Promise<unknown> {
-    const response = await this.request(`/portfolio/holdings/${holdingId}`, {
-      method: 'PUT',
-      body: JSON.stringify(data),
-    });
-    return response.data!;
-  }
-
-  // Budget APIs
-  async getBudgets(): Promise<Budget[]> {
-    const response = await this.request<Budget[]>('/budgets');
-    return response.data!;
-  }
-
-  async createBudget(budget: Omit<Budget, 'id' | 'userId' | 'createdAt' | 'updatedAt'>): Promise<Budget> {
-    const response = await this.request<Budget>('/budgets', {
-      method: 'POST',
-      body: JSON.stringify(budget),
-    });
-    return response.data!;
   }
 
   // Notifications APIs
@@ -676,13 +514,6 @@ class ApiClient {
     return response.data!;
   }
 
-  async getUserAchievements(limit = 50, offset = 0): Promise<AchievementItem[]> {
-    const response = await this.request<AchievementItem[]>(
-      `/users/me/achievements?limit=${limit}&offset=${offset}`
-    );
-    return (response as unknown as { data: AchievementItem[] }).data ?? [];
-  }
-
   async getAchievementProgress(): Promise<AchievementProgress[]> {
     const response = await this.request<AchievementProgress[]>('/users/me/achievements/progress');
     return (response as unknown as { data: AchievementProgress[] }).data ?? [];
@@ -700,12 +531,6 @@ class ApiClient {
       method: 'POST',
     });
     return (response as unknown as { data: AchievementItem[] }).data ?? [];
-  }
-
-  // Dashboard APIs
-  async getDashboardData(period: string = '30d'): Promise<unknown> {
-    const response = await this.request(`/dashboard/stats?period=${period}`);
-    return response.data!;
   }
 
   // Peer comparison
@@ -759,14 +584,6 @@ class ApiClient {
 
   async deleteSavingRecord(goalId: string, recordId: string): Promise<ApiResponse<null>> {
     return this.delete<null>(`/peers/goals/${goalId}/records/${recordId}`);
-  }
-
-  // Health check
-  async healthCheck(): Promise<unknown> {
-    // Health check endpoint doesn't require auth
-    const url = this.baseUrl.replace('/api/v1', '/health');
-    const response = await fetch(url);
-    return response.json();
   }
 }
 

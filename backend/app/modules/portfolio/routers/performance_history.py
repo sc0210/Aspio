@@ -13,7 +13,7 @@ from ._shared import (  # noqa: F401  explicit re-import for underscore-prefixed
     _price_cache,
     fetch_historical_data_background,
 )
-from app.utils.datetime_helpers import business_now, business_today
+from app.utils.datetime_helpers import business_today
 from app.utils.datetime_helpers import utc_now
 
 router = APIRouter()
@@ -660,68 +660,13 @@ async def get_daily_performance(
 
     except Exception as e:
         logger.error(f"Error fetching daily performance: {str(e)}", exc_info=True)
-
-        # Fallback to simple calculation using current prices
-        try:
-            daily_data = []
-            current_value = float(portfolio.total_value) if portfolio else 28450.75
-
-            for i in range(days, -1, -1):
-                # business_now(), not utc_now(): on a Taipei Monday morning the
-                # container's UTC weekday is still Sunday, so the weekend skip below
-                # would drop today's point — and the series would end on yesterday.
-                date_point = business_now() - timedelta(days=i)
-
-                # Skip weekends (Saturday=5, Sunday=6) - only show market days
-                if date_point.weekday() >= 5:
-                    continue
-
-                # Simple linear interpolation from 95% to 100% of current value
-                progress = (days - i) / days if days > 0 else 1
-                value = current_value * (0.95 + progress * 0.05)
-
-                if len(daily_data) > 0:
-                    prev_value = daily_data[-1]["value"]
-                    change = value - prev_value
-                    # Safely calculate change percent, handling NaN values
-                    if (
-                        prev_value > 0
-                        and isinstance(change, (int, float, Decimal))
-                        and isinstance(prev_value, (int, float, Decimal))
-                    ):
-                        if isinstance(change, Decimal) and isinstance(
-                            prev_value, Decimal
-                        ):
-                            if change.is_finite() and prev_value.is_finite():
-                                change_percent = float((change / prev_value) * 100)
-                            else:
-                                change_percent = 0
-                        else:
-                            change_percent = (change / prev_value) * 100
-                    else:
-                        change_percent = 0
-                else:
-                    change = 0
-                    change_percent = 0
-
-                daily_data.append(
-                    {
-                        "date": date_point.strftime("%Y-%m-%d"),
-                        "value": round(value, 2),
-                        "change": round(change, 2),
-                        "changePercent": round(change_percent, 2),
-                    }
-                )
-
-            return ApiResponse.success_response(
-                data=daily_data,
-                message=f"Retrieved {len(daily_data)} days of estimated performance data",
-            )
-        except Exception as fallback_error:
-            logger.error(f"Fallback also failed: {str(fallback_error)}")
-            raise HTTPException(
-                status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-                detail="An internal error occurred",
-            )
+        # An error, not a made-up series. This used to answer any failure with a
+        # straight line from 95% to 100% of the current value, labelled
+        # "estimated" only in the message, so a broken calculation drew as a calm
+        # month. The client already shows an empty chart for a failed fetch.
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="Failed to calculate daily performance",
+        )
 
 

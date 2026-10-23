@@ -194,131 +194,9 @@ async def get_portfolio_analytics(
             else 0
         )
 
-        # Calculate risk metrics (Sharpe Ratio, Beta) from real daily performance data
-        sharpe_ratio = None
-        beta = None
-        try:
-            # Use recent trading days to compute stable risk metrics
-            daily_perf_response = await get_daily_performance(
-                days=120, current_user=current_user, session=session
-            )
-            daily_perf_data = (
-                daily_perf_response.data
-                if daily_perf_response
-                and getattr(daily_perf_response, "success", False)
-                else []
-            )
-
-            portfolio_series = []
-            portfolio_dates = []
-            for point in daily_perf_data:
-                change_pct = point.get("changePercent")
-                point_date = point.get("date")
-                if change_pct is None or not point_date:
-                    continue
-                portfolio_series.append(float(change_pct) / 100.0)
-                portfolio_dates.append(point_date)
-
-            if len(portfolio_series) >= 20:
-                mean_daily = sum(portfolio_series) / len(portfolio_series)
-                variance = sum((x - mean_daily) ** 2 for x in portfolio_series) / (
-                    len(portfolio_series) - 1
-                )
-                std_daily = math.sqrt(variance) if variance > 0 else 0.0
-
-                if std_daily > 0:
-                    risk_free_annual = 0.02
-                    risk_free_daily = risk_free_annual / 252
-                    sharpe_ratio = (
-                        (mean_daily - risk_free_daily) / std_daily
-                    ) * math.sqrt(252)
-
-            # Beta against SPY benchmark when benchmark history is available
-            if len(portfolio_series) >= 20 and portfolio_dates:
-                benchmark_map = {}
-                try:
-                    from app.modules.portfolio.historical_price_service import (
-                        get_historical_price_service,
-                    )
-
-                    hist_price_service = get_historical_price_service(session)
-                    benchmark_start = datetime.strptime(
-                        portfolio_dates[0], "%Y-%m-%d"
-                    ).date() - timedelta(days=5)
-                    benchmark_end = datetime.strptime(
-                        portfolio_dates[-1], "%Y-%m-%d"
-                    ).date()
-
-                    benchmark_prices = await hist_price_service.get_batch_price_range(
-                        symbols=["SPY"],
-                        start_date=benchmark_start,
-                        end_date=benchmark_end,
-                    )
-                    benchmark_map = benchmark_prices.get("SPY", {}) or {}
-
-                    # If SPY not cached, fetch and store it, then retry
-                    if not benchmark_map:
-                        logger.info("SPY benchmark not in cache, fetching from API...")
-                        await hist_price_service.fetch_and_store_historical_data(
-                            symbol="SPY",
-                            market="US",
-                            start_date=benchmark_start,
-                            end_date=benchmark_end,
-                        )
-                        benchmark_prices = (
-                            await hist_price_service.get_batch_price_range(
-                                symbols=["SPY"],
-                                start_date=benchmark_start,
-                                end_date=benchmark_end,
-                            )
-                        )
-                        benchmark_map = benchmark_prices.get("SPY", {}) or {}
-                except Exception as benchmark_error:
-                    logger.debug(
-                        f"Benchmark data unavailable for beta calculation: {benchmark_error}"
-                    )
-
-                benchmark_returns_by_date: Dict[str, float] = {}
-                if benchmark_map:
-                    sorted_dates = sorted(benchmark_map.keys())
-                    prev_close = None
-                    for benchmark_date in sorted_dates:
-                        close_val = benchmark_map.get(benchmark_date, {}).get("close")
-                        if close_val is None:
-                            continue
-                        close_price = float(close_val)
-                        if prev_close and prev_close > 0:
-                            benchmark_returns_by_date[benchmark_date] = (
-                                close_price - prev_close
-                            ) / prev_close
-                        prev_close = close_price
-
-                paired_portfolio = []
-                paired_benchmark = []
-                for idx, perf_date in enumerate(portfolio_dates):
-                    benchmark_ret = benchmark_returns_by_date.get(perf_date)
-                    if benchmark_ret is None:
-                        continue
-                    paired_portfolio.append(portfolio_series[idx])
-                    paired_benchmark.append(benchmark_ret)
-
-                if len(paired_portfolio) >= 20:
-                    mean_portfolio = sum(paired_portfolio) / len(paired_portfolio)
-                    mean_benchmark = sum(paired_benchmark) / len(paired_benchmark)
-
-                    cov = sum(
-                        (paired_portfolio[i] - mean_portfolio)
-                        * (paired_benchmark[i] - mean_benchmark)
-                        for i in range(len(paired_portfolio))
-                    ) / (len(paired_portfolio) - 1)
-                    var_benchmark = sum(
-                        (x - mean_benchmark) ** 2 for x in paired_benchmark
-                    ) / (len(paired_benchmark) - 1)
-
-                    if var_benchmark > 0:
-                        beta = cov / var_benchmark
-        except Exception as risk_metrics_error:
-            logger.debug(f"Risk metrics calculation skipped: {risk_metrics_error}")
+        # Sharpe and beta come from /portfolio/risk-metrics, not from here: this
+        # endpoint's own calculation called a function it never imported, so it
+        # always returned null. The keys stay for the frontend's fallback read.
 
         # Sort holdings for top/worst performers
         sorted_by_performance = sorted(
@@ -401,8 +279,8 @@ async def get_portfolio_analytics(
                 max([float((v / total_value) * 100) for v in type_dict.values()] or [0])
                 + 20,
             ),
-            "sharpeRatio": round(sharpe_ratio, 3) if sharpe_ratio is not None else None,
-            "beta": round(beta, 3) if beta is not None else None,
+            "sharpeRatio": None,
+            "beta": None,
         }
 
         return ApiResponse.success_response(data=analytics_data)

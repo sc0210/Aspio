@@ -1,6 +1,5 @@
 'use client';
 
-import { apiClient } from '@/lib/api-client';
 import { getSession } from 'next-auth/react';
 import type { Session } from 'next-auth';
 import { log } from '@/utils/logger';
@@ -31,6 +30,12 @@ interface UserDataCache {
   };
 }
 
+/**
+ * Per-user cache in localStorage, deliberately local-only. The backend holds
+ * the authoritative records and TanStack Query caches the reads; a server-side
+ * copy of this would be a second source of truth to keep in sync. Anything
+ * that must survive a device change belongs in a real table, not here.
+ */
 class UserDataService {
   private readonly CACHE_PREFIX = 'aspiro_user_';
   private readonly CACHE_EXPIRY = 24 * 60 * 60 * 1000; // 24 hours
@@ -127,109 +132,6 @@ class UserDataService {
   }
 
   /**
-   * Store calculated financial stats to avoid recalculation
-   */
-  async cacheCalculatedStats(userId: string, stats: UserDataCache['calculatedStats']): Promise<void> {
-    const statsWithTimestamp = {
-      ...stats,
-      lastCalculated: new Date(),
-    } as UserDataCache['calculatedStats'];
-
-    await this.cacheUserData(userId, { calculatedStats: statsWithTimestamp });
-
-    // Deliberately local-only. This used to carry a TODO about syncing to
-    // "backend cache endpoints", which were never built — and shouldn't be. The
-    // backend already holds the authoritative records, and TanStack Query
-    // caches the reads in memory; a third copy on the server would be a second
-    // source of truth to keep in sync, not a feature. Anything that must
-    // survive a device change belongs in a real table, not here.
-  }
-
-  /**
-   * Get cached stats if they're recent, otherwise return null
-   */
-  getCachedStats(userId: string): UserDataCache['calculatedStats'] | null {
-    const cache = this.getUserCache(userId);
-    if (!cache?.calculatedStats) return null;
-
-    const lastCalculated = new Date(cache.calculatedStats.lastCalculated);
-    const now = new Date();
-    const statsExpiry = 30 * 60 * 1000; // 30 minutes for stats
-
-    if (now.getTime() - lastCalculated.getTime() > statsExpiry) {
-      return null;
-    }
-
-    return cache.calculatedStats;
-  }
-
-  /**
-   * Store user preferences for personalized experience
-   */
-  async cacheUserPreferences(userId: string, preferences: Partial<UserDataCache['preferences']>): Promise<void> {
-    const cache = this.getUserCache(userId);
-    const updatedPreferences = {
-      ...cache?.preferences,
-      ...preferences,
-    };
-
-    await this.cacheUserData(userId, { preferences: updatedPreferences as UserDataCache['preferences'] });
-    
-    // Sync to backend
-    try {
-      await apiClient.post('/user/preferences', updatedPreferences);
-    } catch (error) {
-      log.apiError('POST', '/user/preferences', error);
-    }
-  }
-
-  /**
-   * Get user preferences with fallbacks
-   */
-  getUserPreferences(userId: string): UserDataCache['preferences'] {
-    const cache = this.getUserCache(userId);
-    return cache?.preferences || {
-      currency: 'TWD',
-      dateFormat: 'DD/MM/YYYY',
-      dashboardLayout: {} as Record<string, unknown>,
-      favoriteCategories: [],
-      quickActions: ['add-transaction', 'add-goal'],
-    };
-  }
-
-  /**
-   * Cache session data for faster subsequent loads
-   */
-  async cacheSessionData(userId: string, sessionData: Partial<UserDataCache['sessionData']>): Promise<void> {
-    const cache = this.getUserCache(userId);
-    const updatedSessionData = {
-      ...cache?.sessionData,
-      ...sessionData,
-      lastSynced: new Date(),
-    };
-
-    await this.cacheUserData(userId, { sessionData: updatedSessionData as UserDataCache['sessionData'] });
-  }
-
-  /**
-   * Get fresh session data or cached if recent
-   */
-  getSessionData(userId: string): UserDataCache['sessionData'] | null {
-    const cache = this.getUserCache(userId);
-    if (!cache?.sessionData) return null;
-
-    const lastSynced = new Date(cache.sessionData.lastSynced);
-    const now = new Date();
-    const sessionExpiry = 10 * 60 * 1000; // 10 minutes for session data
-
-    if (now.getTime() - lastSynced.getTime() > sessionExpiry) {
-      return null;
-    }
-
-    return cache.sessionData;
-  }
-
-  /**
    * Initialize user data on login using current session
    */
   async initializeUserSession(providedUserId?: string): Promise<UserDataCache | null> {
@@ -299,7 +201,7 @@ class UserDataService {
     if (userId) {
       this.clearUserCache(userId);
 
-      // Only localStorage to clear — see cacheCalculatedStats. There is no
+      // Only localStorage to clear (see the class comment). There is no
       // server-side copy of this cache to invalidate; signing out already
       // discards the session that gates the real data.
     }
@@ -329,8 +231,8 @@ class UserDataService {
       const cache = this.getUserCache(userId);
       if (!cache) return;
 
-      // Nothing to push — this cache is local by design (see
-      // cacheCalculatedStats). The call is kept as the hook's auth-change
+      // Nothing to push — this cache is local by design (see the class
+      // comment). The call is kept as the hook's auth-change
       // entry point, which reads the cache and warms it.
       log.debug('User data sync completed (localStorage only)', undefined, 'UserDataService');
     } catch (error) {

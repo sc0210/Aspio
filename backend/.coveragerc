@@ -1,2 +1,7 @@
 [run]
 concurrency = greenlet,thread
+# The LINE bot is an optional add-on (mounted only when both LINE credentials
+# are set), so it is left out of the coverage figure and its floor. Its tests
+# still run and must still pass.
+omit =
+    app/modules/line_bot/*
