@@ -33,23 +33,23 @@ const customJestConfig = {
   // them are left out of `global`.
   coverageThreshold: {
     global: {
-      statements: 44,
-      branches: 34,
+      statements: 45,
+      branches: 35,
       functions: 39,
-      lines: 45,
+      lines: 46,
     },
     // Critical paths; both now clear 60 on every metric — keep them there.
     './src/services/': {
-      statements: 76,
-      branches: 66,
-      functions: 81,
-      lines: 77,
+      statements: 77,
+      branches: 67,
+      functions: 83,
+      lines: 78,
     },
     './src/hooks/': {
-      statements: 77,
-      branches: 61,
-      functions: 77,
-      lines: 78,
+      statements: 80,
+      branches: 68,
+      functions: 80,
+      lines: 81,
     },
   },
   moduleNameMapper: {

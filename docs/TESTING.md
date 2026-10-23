@@ -31,7 +31,7 @@ Tests run against in-memory SQLite (`tests/conftest.py`). Only `integration` tes
 Postgres or live market-data APIs.
 
 Coverage is a ratchet: `pytest.ini` and CI both pass `--cov-fail-under` at the measured level
-rounded down (80 as of 2026-10-23), and the Jest floors live in `frontend/jest.config.js`. Raise
+rounded down (81 as of 2026-10-23), and the Jest floors live in `frontend/jest.config.js`. Raise
 them when tests land; never lower one to get a PR green. Running a single file under the full
 `addopts` therefore fails the gate even when every test passes, so add `-o "addopts="` for a
 partial run. To measure one module, keep `--cov=app` and read its row: a dotted
