@@ -1,6 +1,7 @@
 -- Starter global categories for a fresh install, so the category picker is not empty.
--- Everything else is created on demand (transactions/services.py::_ensure_category_id,
--- and the loans "Loan Payment" category). Loaded only when `alembic upgrade head`
+-- "Others" and "Other Income" are the catch-alls an unknown category name resolves to
+-- (transactions/services.py::_ensure_category_id); only admins add other categories.
+-- The loans "Loan Payment" category is still created on demand. Loaded only when `alembic upgrade head`
 -- bootstraps an EMPTY database (alembic/env.py); it never runs against an existing one.
 -- Idempotent by (name, type).
 

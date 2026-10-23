@@ -185,6 +185,37 @@ class TestEnsureCategoryId:
         assert c_repo.create.await_args.args[0]["name"] == "Others"
 
     @pytest.mark.asyncio
+    async def test_unknown_income_name_uses_the_income_catch_all(self):
+        other_income = make_mock_category("Other Income")
+        c_repo = MagicMock()
+        c_repo.get_by_name = AsyncMock(
+            side_effect=lambda name, t: other_income if name == "Other Income" else None
+        )
+        c_repo.create = AsyncMock()
+
+        svc = make_service(category_repo=c_repo)
+        result = await svc._ensure_category_id(
+            {"category_name": "Side Gig", "type": TransactionType.INCOME}
+        )
+        assert result == str(other_income.id)
+        c_repo.create.assert_not_awaited()
+
+    @pytest.mark.asyncio
+    async def test_concurrent_first_use_reads_the_winner(self):
+        from sqlalchemy.exc import IntegrityError
+
+        others = make_mock_category("Others")
+        c_repo = MagicMock()
+        c_repo.get_by_name = AsyncMock(side_effect=[None, None, others])
+        c_repo.create = AsyncMock(side_effect=IntegrityError("insert", {}, Exception("dup")))
+        c_repo.db.rollback = AsyncMock()
+
+        svc = make_service(category_repo=c_repo)
+        result = await svc._ensure_category_id({"category_name": "Custom", "type": "expense"})
+        assert result == str(others.id)
+        c_repo.db.rollback.assert_awaited_once()
+
+    @pytest.mark.asyncio
     async def test_no_category_info_returns_none(self):
         svc = make_service()
         result = await svc._ensure_category_id({"type": "expense", "description": "test"})
