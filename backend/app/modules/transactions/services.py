@@ -106,13 +106,14 @@ class TransactionService:
             )
             fallback = await self.category_repo.get_by_name(name, txn_type)
             if not fallback:
+                # Flushed in a savepoint and committed with the transaction, so a
+                # concurrent first request winning the insert undoes only this row.
                 try:
-                    fallback = await self.category_repo.create(
-                        {"name": name, "type": txn_type, "color": "#6B7280", "icon": "receipt"}
-                    )
+                    async with self.category_repo.db.begin_nested():
+                        fallback = await self.category_repo.create_flush(
+                            {"name": name, "type": txn_type, "color": "#6B7280", "icon": "receipt"}
+                        )
                 except IntegrityError:
-                    # A concurrent first request created it; nothing else is pending yet.
-                    await self.category_repo.db.rollback()
                     fallback = await self.category_repo.get_by_name(name, txn_type)
                     if not fallback:
                         raise

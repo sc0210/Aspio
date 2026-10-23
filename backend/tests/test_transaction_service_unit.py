@@ -84,6 +84,16 @@ def make_mock_transaction(
     return t
 
 
+class _Savepoint:
+    """Stands in for AsyncSession.begin_nested(): lets the body's error through."""
+
+    async def __aenter__(self):
+        return self
+
+    async def __aexit__(self, *exc):
+        return False
+
+
 def make_mock_category(name="Food & Dining", cat_type=TransactionType.EXPENSE):
     c = MagicMock()
     c.id = uuid4()
@@ -176,13 +186,14 @@ class TestEnsureCategoryId:
         others = make_mock_category("Others")
         c_repo = MagicMock()
         c_repo.get_by_name = AsyncMock(return_value=None)
-        c_repo.create = AsyncMock(return_value=others)
+        c_repo.create_flush = AsyncMock(return_value=others)
+        c_repo.db.begin_nested = MagicMock(return_value=_Savepoint())
 
         svc = make_service(category_repo=c_repo)
         result = await svc._ensure_category_id({"category_name": "Custom Category", "type": "expense"})
         assert result == str(others.id)
-        c_repo.create.assert_awaited_once()
-        assert c_repo.create.await_args.args[0]["name"] == "Others"
+        c_repo.create_flush.assert_awaited_once()
+        assert c_repo.create_flush.await_args.args[0]["name"] == "Others"
 
     @pytest.mark.asyncio
     async def test_unknown_income_name_uses_the_income_catch_all(self):
@@ -207,13 +218,15 @@ class TestEnsureCategoryId:
         others = make_mock_category("Others")
         c_repo = MagicMock()
         c_repo.get_by_name = AsyncMock(side_effect=[None, None, others])
-        c_repo.create = AsyncMock(side_effect=IntegrityError("insert", {}, Exception("dup")))
+        c_repo.create_flush = AsyncMock(side_effect=IntegrityError("insert", {}, Exception("dup")))
+        c_repo.db.begin_nested = MagicMock(return_value=_Savepoint())
         c_repo.db.rollback = AsyncMock()
 
         svc = make_service(category_repo=c_repo)
         result = await svc._ensure_category_id({"category_name": "Custom", "type": "expense"})
         assert result == str(others.id)
-        c_repo.db.rollback.assert_awaited_once()
+        # Only the savepoint is undone; the request's session is left alone.
+        c_repo.db.rollback.assert_not_awaited()
 
     @pytest.mark.asyncio
     async def test_no_category_info_returns_none(self):
