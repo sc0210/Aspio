@@ -56,6 +56,34 @@ async def test_streamed_body_without_length_is_cut_off_at_the_limit():
     assert sum(consumed) <= BodySizeLimitMiddleware.SMALL_LIMIT
 
 
+async def test_streamed_body_through_fastapi_gets_413_not_400():
+    # FastAPI turns a failed body read into its own 400; the middleware must
+    # still report the real reason.
+    import httpx
+    from fastapi import FastAPI
+    from pydantic import BaseModel
+
+    from app.middleware.pure_asgi import BodySizeLimitMiddleware
+
+    class Body(BaseModel):
+        password: str
+
+    inner = FastAPI()
+
+    @inner.post("/api/v1/auth/login")
+    async def login(body: Body):
+        return {"ok": True}
+
+    async def stream():
+        for _ in range(10):
+            yield b"x" * 16 * 1024
+
+    transport = httpx.ASGITransport(app=BodySizeLimitMiddleware(inner))
+    async with httpx.AsyncClient(transport=transport, base_url="http://t") as c:
+        r = await c.post("/api/v1/auth/login", content=stream(), headers={"Content-Type": "application/json"})
+    assert r.status_code == 413
+
+
 async def test_validation_errors_do_not_echo_the_input(client):
     r = client.post("/api/v1/auth/login", json={"unexpected": "secret-value"})
     assert r.status_code == 422

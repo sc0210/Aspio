@@ -24,7 +24,6 @@ from app.modules.portfolio.historical_price_service import HistoricalPriceServic
 from app.modules.portfolio.models import PortfolioHolding
 from app.modules.users.models import User
 from app.modules.portfolio.market_data_service import resolve_symbol_market
-from app.modules.users.models import User
 
 logger = logging.getLogger(__name__)
 

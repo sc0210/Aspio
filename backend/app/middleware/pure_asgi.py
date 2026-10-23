@@ -321,20 +321,30 @@ class BodySizeLimitMiddleware:
 
         received = 0
         started = False
+        overflowed = False
+        replaced = False
 
         async def counted_receive():
-            nonlocal received
+            nonlocal received, overflowed
             message = await receive()
             if message["type"] == "http.request":
                 received += len(message.get("body", b""))
                 if received > limit:
+                    overflowed = True
                     raise _BodyTooLarge()
             return message
 
         async def tracked_send(message):
-            nonlocal started
+            nonlocal started, replaced
+            if replaced:
+                return
             if message["type"] == "http.response.start":
                 started = True
+                if overflowed:
+                    # FastAPI catches the cut-off body and answers 400; say what happened instead.
+                    replaced = True
+                    await too_large(scope, receive, send)
+                    return
             await send(message)
 
         try:
