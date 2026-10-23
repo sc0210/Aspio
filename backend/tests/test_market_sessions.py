@@ -146,18 +146,14 @@ async def test_the_series_marks_a_day_it_had_to_price_from_a_live_quote(
     # Yesterday has a published close; today does not yet — which is the whole point.
     #
     # Frozen, and to a Wednesday: both the day under test and the day before it have to
-    # be trading days. The endpoint reads the business day through business_now() /
-    # business_today() in its own module namespace, so those are what get patched — the
-    # host's clock and zone then do not enter into it at all.
+    # be trading days. The endpoint reads the business day through business_today() in
+    # its own module namespace, so that is what gets patched — the host's clock and
+    # zone then do not enter into it at all.
     import app.modules.portfolio.routers.performance_history as ph
 
     frozen = datetime(2026, 9, 23, 11, 0, tzinfo=ZoneInfo("Asia/Taipei"))
     assert frozen.weekday() == 2, "the fixed day must be a Wednesday"
     monkeypatch.setattr(ph, "business_today", lambda: frozen.date())
-    # business_today() is the one the real path reads. business_now() is patched too so
-    # that the exception fallback, if this ever takes it, is deterministic rather than
-    # quietly dated from the real clock.
-    monkeypatch.setattr(ph, "business_now", lambda: frozen)
 
     today = frozen.date()
     yesterday = today - timedelta(days=1)
@@ -222,7 +218,6 @@ async def test_a_weekend_series_ends_on_friday_and_claims_nothing_about_saturday
     assert saturday.weekday() == 5, "the fixed day must be a Saturday"
     friday = saturday.date() - timedelta(days=1)
     monkeypatch.setattr(ph, "business_today", lambda: saturday.date())
-    monkeypatch.setattr(ph, "business_now", lambda: saturday)
 
     user_id = uuid_module.uuid4()
     portfolio = Portfolio(

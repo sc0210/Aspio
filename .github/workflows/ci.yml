@@ -208,7 +208,7 @@ jobs:
       #
       # addopts is cleared (it carries -v and HTML/XML reports meant for local
       # runs); the coverage floor is passed here instead. It is a ratchet: the
-      # measured level rounded down (81.2% on 2026-10-23). Raise it as tests
+      # measured level rounded down (81.7% on 2026-10-24). Raise it as tests
       # land; never lower it to get a PR green.
       # `python -m pytest` (not the bare `pytest` console script) so the
       # backend/ working dir lands on sys.path — conftest.py imports `app`.

@@ -148,3 +148,17 @@ async def test_no_price_history_returns_empty(authenticated_client, async_sessio
 
 async def test_without_holdings_returns_empty(authenticated_client):
     assert _series(authenticated_client) == []
+
+
+async def test_a_failure_is_an_error_not_an_invented_series(authenticated_client, portfolio, monkeypatch):
+    # This used to answer any failure with a straight line from 95% to 100% of
+    # the current value, which charted as a calm month.
+    async def boom(self, *a, **kw):
+        raise RuntimeError("price store down")
+
+    from app.modules.portfolio.historical_price_service import HistoricalPriceService
+
+    monkeypatch.setattr(HistoricalPriceService, "get_batch_price_range", boom)
+    r = authenticated_client.get("/api/v1/portfolio/daily-performance", params={"days": DAYS})
+    assert r.status_code == 500
+    assert "data" not in r.json() or not r.json().get("data")
