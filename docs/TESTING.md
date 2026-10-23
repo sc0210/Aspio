@@ -38,6 +38,9 @@ partial run. To measure one module, keep `--cov=app` and read its row: a dotted
 `--cov=app.modules.x` imports the module before `conftest.py` teaches SQLite about JSONB, and
 every DB fixture errors.
 
+`backend/.coveragerc` omits `app/modules/line_bot/` from the figure: the LINE bot is an
+optional add-on, so the floor measures the core app only. Its tests still run and must pass.
+
 ### Mocks that hide bugs
 
 Two patterns have each shipped a real production break past a green suite:
