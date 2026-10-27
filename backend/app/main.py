@@ -256,18 +256,6 @@ def create_app() -> FastAPI:
         """Optional add-ons this instance has configured, so the UI can hide the rest."""
         return ApiResponse.success_response(data={"line_bot": settings.line_bot_enabled})
 
-    # DB-sync routes TRUNCATE and replace whole databases and have no user auth,
-    # so they need the full dev-tools gate (explicit DEV_TOOLS_TOKEN + local DB),
-    # not just a development ENVIRONMENT — the self-hosted Pi reports the latter
-    # while being internet-reachable.
-    if settings.dev_tools_active:
-        from app.modules.admin.dev_db_sync import router as dev_db_sync_router
-        app.include_router(dev_db_sync_router, prefix=f"{api_prefix}/dev/db-sync", tags=["Dev"])
-        logger.warning(
-            "DEV TOOLS ENABLED — /dev/db-sync/* can replace entire databases. "
-            "Requires X-Dev-Tools-Token. Never enable outside local development."
-        )
-
     # Health check endpoints
     @app.get("/health", tags=["Health"])
     async def health_check():

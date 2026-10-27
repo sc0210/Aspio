@@ -64,7 +64,7 @@ rebalancing calculators.
 | `loans` | Peer loan tracking |
 | `peers` | Social comparison / peer connections |
 | `reports` | Spending, monthly-trend and goals reads behind `/review` |
-| `admin` | Admin panel, user management, DB sync |
+| `admin` | Admin panel: user management and approvals, DB stats and cleanup, audit log, system health |
 | `notifications` | Alerts and reminders |
 
 Shared infrastructure lives outside `modules/`:

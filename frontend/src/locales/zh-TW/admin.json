@@ -5,10 +5,8 @@
   "approveAll": "全部核准",
   "cancel": "取消",
   "cleanup": {
-    "completed": "執行成功",
     "confirmRun": "確定清理",
     "demoProtected": "示範帳號（demo@aspiro.dev）受保護，不會受到影響。",
-    "exitedWithError": "執行失敗 — 請查看上方紀錄",
     "lineCacheCleared": "LINE 個人資料快取已清除",
     "nothingToClean": "沒有需要清理的項目 — 資料庫已相當整潔。",
     "preview": "預覽清理項目",
@@ -17,7 +15,6 @@
     "run": "執行清理",
     "runAgain": "再執行一次",
     "running": "清理進行中…",
-    "runningShort": "執行中…",
     "scanning": "掃描資料庫中…",
     "subtitle": "移除已軟刪除的紀錄、過期快取與舊通知",
     "title": "資料清理"
@@ -105,5 +102,72 @@
   "selectAllUsers": "全選所有使用者",
   "selectUser": "選取使用者",
   "selectAllPending": "全選待審核使用者",
-  "selectPendingUser": "選取待審核使用者"
+  "selectPendingUser": "選取待審核使用者",
+  "health": {
+    "title": "系統健康",
+    "subtitle": "此主機的資料庫、排程器與資料更新狀態",
+    "checking": "檢查中…",
+    "loadFailed": "無法載入系統健康狀態",
+    "unknown": "未知",
+    "status": "狀態",
+    "database": "資料庫",
+    "latency": "往返時間",
+    "postgres": "PostgreSQL",
+    "scheduler": "排程器",
+    "jobs": "此 worker 的排程工作",
+    "dataFreshness": "資料新鮮度",
+    "daysAgo_one": "{{count}} 天前",
+    "daysAgo_other": "{{count}} 天前",
+    "lineBotOn": "LINE 機器人已啟用",
+    "lineBotOff": "LINE 機器人未啟用",
+    "overall": {
+      "healthy": "正常",
+      "degraded": "部分異常",
+      "unhealthy": "異常"
+    },
+    "schedulerStatus": {
+      "healthy": "執行中",
+      "unhealthy": "未執行",
+      "disabled": "已停用",
+      "unknown": "未知"
+    },
+    "feed": {
+      "fresh": "最新",
+      "stale": "過舊",
+      "empty": "尚無資料",
+      "unknown": "未知"
+    },
+    "feeds": {
+      "wallet_snapshots": "錢包快照",
+      "historical_prices": "歷史價格",
+      "fx_rates": "匯率"
+    }
+  },
+  "audit": {
+    "tab": "稽核紀錄",
+    "title": "稽核紀錄",
+    "subtitle": "所有管理員操作，最新的在前",
+    "count_one": "{{count}} 筆紀錄",
+    "count_other": "{{count}} 筆紀錄",
+    "loadFailed": "無法載入稽核紀錄",
+    "empty": "尚無管理員操作紀錄。",
+    "filterLabel": "依操作篩選",
+    "allActions": "所有操作",
+    "when": "時間",
+    "action": "操作",
+    "target": "對象",
+    "admin": "管理員",
+    "result": "結果",
+    "success": "成功",
+    "previous": "← 上一頁",
+    "page": "第 {{page}} / {{total}} 頁",
+    "actions": {
+      "approve_user": "核准使用者",
+      "reject_user": "拒絕使用者",
+      "delete_user": "刪除使用者",
+      "toggle_active": "切換啟用狀態",
+      "vacuum": "Vacuum",
+      "cleanup": "清理"
+    }
+  }
 }

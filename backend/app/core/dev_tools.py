@@ -1,8 +1,7 @@
 """Shared guard for developer-only routes.
 
-Routes that bypass authentication (``/auth/dev-login``) or rewrite whole
-databases (``/dev/db-sync/*``) must never be reachable on a deployment serving
-real users. Network reachability is not a usable boundary here: the project's
+Routes that bypass authentication (``/auth/dev-login``) must never be
+reachable on a deployment serving real users. Network reachability is not a usable boundary here: the project's
 compose file publishes the API port to the host, and the lan/Pi overlays
 republish it on ``0.0.0.0`` behind a public HTTPS domain.
 

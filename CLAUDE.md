@@ -88,7 +88,7 @@ Typical module structure: `models.py · schemas.py · repositories.py · service
 | `loans` | Peer loan tracking |
 | `peers` | Social comparison / peer connections |
 | `reports` | Spending, monthly-trend and goals reads behind `/review` |
-| `admin` | Admin panel, user management, DB sync |
+| `admin` | Admin panel: user management and approvals, DB stats and cleanup, audit log, system health |
 | `notifications` | Alerts and reminders |
 
 All API responses use `ApiResponse[T]` from `backend/app/common/schemas.py` — a generic envelope with `success`, `data`, `message` fields.

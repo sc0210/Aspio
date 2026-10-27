@@ -26,9 +26,7 @@ import {
   TableCellsIcon,
   WifiIcon,
   ExclamationCircleIcon,
-  CloudArrowUpIcon,
-  CloudArrowDownIcon,
-  CommandLineIcon,
+  ClipboardDocumentListIcon,
 } from '@heroicons/react/24/outline';
 import { DashboardLayout } from '@/components/layout/DashboardLayout';
 import { TOP_BAR_BUTTON } from '@/components/layout/topBarStyles';
@@ -40,27 +38,11 @@ import { apiClient } from '@/lib/api-client';
 import type { TableStat, IndexStat, ActiveConnection } from '@/types/admin';
 import { useTranslation } from 'react-i18next';
 import { Card } from '@/components/ui/Card';
+import { formatTimeAgo } from '@/components/admin/formatTimeAgo';
+import { SystemHealthPanel } from '@/components/admin/SystemHealthPanel';
+import { AuditLogPanel } from '@/components/admin/AuditLogPanel';
 
 // ─── Helpers ────────────────────────────────────────────────────────────────
-
-function formatTimeAgo(dateString: string, compact = false): string {
-  const date = new Date(dateString);
-  const diffMs = Date.now() - date.getTime();
-  const diffMins = Math.floor(diffMs / 60_000);
-  const diffHours = Math.floor(diffMs / 3_600_000);
-  const diffDays = Math.floor(diffMs / 86_400_000);
-  if (compact) {
-    if (diffMins < 60) return `${diffMins}m`;
-    if (diffHours < 24) return `${diffHours}h`;
-    return `${diffDays}d`;
-  }
-  if (diffMins < 1) return 'just now';
-  if (diffMins < 60) return `${diffMins}m ago`;
-  if (diffHours < 24) return `${diffHours}h ago`;
-  if (diffDays === 1) return 'yesterday';
-  if (diffDays < 30) return `${diffDays}d ago`;
-  return date.toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' });
-}
 
 function getAvatarInitials(name: string): string {
   if (!name) return '?';
@@ -209,6 +191,7 @@ export default function AdminPage() {
             <TabButton active={activeTab === 'users'} onClick={() => setActiveTab('users')} icon={UsersIcon} label="Users" badge={stats?.total_users ?? users.length} />
             <TabButton active={activeTab === 'pending'} onClick={() => setActiveTab('pending')} icon={UserPlusIcon} label="Pending" badge={pendingUsers.length} badgeColor="orange" />
             <TabButton active={activeTab === 'database'} onClick={() => setActiveTab('database')} icon={CircleStackIcon} label="Database" />
+            <TabButton active={activeTab === 'audit'} onClick={() => setActiveTab('audit')} icon={ClipboardDocumentListIcon} label={t('admin:audit.tab')} />
           </nav>
         </Card>
 
@@ -227,6 +210,8 @@ export default function AdminPage() {
               <SystemHealthCard title={t('admin:stats.cacheHitRate')} value={`${((stats.cache_hit_rate || 0) * 100).toFixed(1)}%`} subtitle={stats.cache_hit_rate >= 0.8 ? 'Optimal' : 'Needs attention'} icon={CpuChipIcon} status={stats.cache_hit_rate >= 0.8 ? 'success' : 'warning'} />
               <SystemHealthCard title={t('admin:stats.dbSize')} value={`${(stats.database_size_mb || 0).toFixed(2)} MB`} subtitle={t('admin:stats.totalStorage')} icon={CircleStackIcon} status="info" />
             </div>
+
+            <SystemHealthPanel />
 
             {/* Registration snapshot */}
             <Card padding="lg">
@@ -248,6 +233,9 @@ export default function AdminPage() {
             </Card>
           </div>
         )}
+
+        {/* ── Audit log tab ── */}
+        {activeTab === 'audit' && <AuditLogPanel />}
 
         {/* ── Users tab ── */}
         {activeTab === 'users' && (
@@ -1004,14 +992,6 @@ export default function AdminPage() {
               </Card>
             )}
 
-            {/* Dev-only DB sync — only rendered in local development */}
-            {process.env.NODE_ENV === 'development' && (
-              <div className="grid grid-cols-1 xl:grid-cols-2 gap-4 items-start">
-                <DevDbSyncPanel target={REMOTE_SYNC_TARGET} />
-                <DevDbSyncPanel target={PI_SYNC_TARGET} />
-              </div>
-            )}
-
           </div>
         )}
 
@@ -1282,231 +1262,6 @@ function CleanupPanel() {
 
       </div>
     </Card>
-  );
-}
-
-// ─── DevDbSyncPanel ───────────────────────────────────────────────────────────
-
-type SyncCommand = 'status' | 'push' | 'pull';
-type SyncState = 'idle' | 'confirming' | 'running' | 'done' | 'error';
-
-type SyncTarget = {
-  title: string;
-  subtitle: string;
-  statusCmd: string;
-  pushCmd: string;
-  pullCmd: string;
-  pushLabel: string;
-  pullLabel: string;
-  pushConfirm: string;
-  pullConfirm: string;
-};
-
-const REMOTE_SYNC_TARGET: SyncTarget = {
-  title: 'Dev DB Sync',
-  subtitle: 'Local ↔ Supabase — only visible in development',
-  statusCmd: 'status',
-  pushCmd: 'push',
-  pullCmd: 'pull',
-  pushLabel: 'Push (local → remote)',
-  pullLabel: 'Pull (remote → local)',
-  pushConfirm: 'This will OVERWRITE the Supabase database with your local data',
-  pullConfirm: 'This will ERASE your local database and replace it with remote data',
-};
-
-const PI_SYNC_TARGET: SyncTarget = {
-  title: 'Raspberry Pi Sync',
-  subtitle: 'Local ↔ Raspberry Pi (LAN) — only visible in development',
-  statusCmd: 'status-pi',
-  pushCmd: 'push-pi',
-  pullCmd: 'pull-pi',
-  pushLabel: 'Push (local → Pi)',
-  pullLabel: 'Pull (Pi → local)',
-  pushConfirm: 'This will OVERWRITE the Raspberry Pi database with your local data',
-  pullConfirm: 'This will ERASE your local database and replace it with the Pi data',
-};
-
-function DevDbSyncPanel({ target }: { target: SyncTarget }) {
-  const { t } = useTranslation(['admin']);
-  const [state, setState] = useState<SyncState>('idle');
-  const [pendingCmd, setPendingCmd] = useState<SyncCommand | null>(null);
-  const [logs, setLogs] = useState<string>('');
-  const logRef = React.useRef<HTMLPreElement>(null);
-
-  const scrollLogs = () => {
-    if (logRef.current) logRef.current.scrollTop = logRef.current.scrollHeight;
-  };
-
-  const runCommand = async (command: SyncCommand, confirmed = false) => {
-    if ((command === 'push' || command === 'pull') && !confirmed) {
-      setPendingCmd(command);
-      setState('confirming');
-      return;
-    }
-
-    setState('running');
-    setLogs('');
-    setPendingCmd(null);
-
-    try {
-      const backendCommand =
-        command === 'status' ? target.statusCmd
-        : command === 'push' ? target.pushCmd
-        : target.pullCmd;
-      const res = await fetch('/api/dev/db-sync', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ command: backendCommand, confirmed: confirmed || command === 'status' }),
-      });
-
-      if (!res.ok || !res.body) {
-        const text = await res.text().catch(() => res.statusText);
-        setState('error');
-        setLogs(text);
-        return;
-      }
-
-      const reader = res.body.getReader();
-      const decoder = new TextDecoder();
-      let buf = '';
-
-      while (true) {
-        const { done, value } = await reader.read();
-        if (done) break;
-        buf += decoder.decode(value, { stream: true });
-        setLogs(buf);
-        scrollLogs();
-      }
-
-      const exitMatch = buf.match(/\[exit (\d+)\]/);
-      setState(exitMatch && exitMatch[1] === '0' ? 'done' : 'error');
-    } catch (err) {
-      setState('error');
-      setLogs(String(err));
-    }
-  };
-
-  const reset = () => { setState('idle'); setLogs(''); setPendingCmd(null); };
-
-  const confirmLabel: Record<SyncCommand, string> = {
-    push: target.pushConfirm,
-    pull: target.pullConfirm,
-    status: '',
-  };
-
-  return (
-    <div className="bg-amber-50 dark:bg-amber-950/30 border border-amber-200 dark:border-amber-800/60 rounded-2xl overflow-hidden">
-      {/* Header */}
-      <div className="px-6 py-4 border-b border-amber-200 dark:border-amber-800/60 flex items-center justify-between gap-3">
-        <div className="flex items-center gap-3">
-          <div className="w-8 h-8 rounded-lg bg-amber-100 dark:bg-amber-900/50 flex items-center justify-center">
-            <CommandLineIcon className="w-4 h-4 text-amber-700 dark:text-amber-400" />
-          </div>
-          <div>
-            <h3 className="text-sm font-bold text-amber-900 dark:text-amber-200">{target.title}</h3>
-            <p className="text-xs text-amber-700 dark:text-amber-400">{target.subtitle}</p>
-          </div>
-        </div>
-        {(state === 'done' || state === 'error') && (
-          <button
-            onClick={reset}
-            className="text-xs text-amber-700 dark:text-amber-400 hover:underline"
-          >
-            {t('admin:clear')}
-          </button>
-        )}
-      </div>
-
-      <div className="px-6 py-5 space-y-4">
-        {/* Action buttons */}
-        {state !== 'confirming' && (
-          <div className="flex flex-wrap gap-2">
-            <button
-              onClick={() => runCommand('status')}
-              disabled={state === 'running'}
-              className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold rounded-lg bg-white dark:bg-gray-800 border border-amber-200 dark:border-amber-700 text-amber-800 dark:text-amber-300 hover:bg-amber-50 dark:hover:bg-amber-900/30 disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
-            >
-              {state === 'running' && pendingCmd === null
-                ? <ArrowPathIcon className="w-3.5 h-3.5 animate-spin" />
-                : <ArrowPathIcon className="w-3.5 h-3.5" />}
-              {t('admin:usersTable.status')}
-            </button>
-            <button
-              onClick={() => runCommand('pull')}
-              disabled={state === 'running'}
-              className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold rounded-lg bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-700 text-blue-700 dark:text-blue-300 hover:bg-blue-100 dark:hover:bg-blue-900/40 disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
-            >
-              <CloudArrowDownIcon className="w-3.5 h-3.5" />
-              {target.pullLabel}
-            </button>
-            <button
-              onClick={() => runCommand('push')}
-              disabled={state === 'running'}
-              className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold rounded-lg bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-700 text-red-700 dark:text-red-300 hover:bg-red-100 dark:hover:bg-red-900/40 disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
-            >
-              <CloudArrowUpIcon className="w-3.5 h-3.5" />
-              {target.pushLabel}
-            </button>
-          </div>
-        )}
-
-        {/* Confirmation dialog */}
-        {state === 'confirming' && pendingCmd && (
-          <div className="rounded-xl border border-red-200 dark:border-red-800 bg-red-50 dark:bg-red-900/20 p-4 space-y-3">
-            <div className="flex items-start gap-2">
-              <ExclamationTriangleIcon className="w-4 h-4 text-red-700 dark:text-red-400 mt-0.5 shrink-0" />
-              <p className="text-xs text-red-700 dark:text-red-300">{confirmLabel[pendingCmd]}</p>
-            </div>
-            <div className="flex gap-2">
-              <button
-                onClick={() => runCommand(pendingCmd, true)}
-                className="px-3 py-1.5 text-xs font-bold rounded-lg bg-red-600 text-white hover:bg-red-700 transition-colors"
-              >
-                Yes, {pendingCmd === 'push' ? 'push' : 'pull'}
-              </button>
-              <button
-                onClick={reset}
-                className="px-3 py-1.5 text-xs font-semibold rounded-lg bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 text-gray-600 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors"
-              >
-                {t('admin:cancel')}
-              </button>
-            </div>
-          </div>
-        )}
-
-        {/* Log output */}
-        {logs && (
-          <pre
-            ref={logRef}
-            className="text-xs font-mono bg-gray-900 text-gray-100 rounded-xl p-4 max-h-72 overflow-y-auto whitespace-pre-wrap leading-relaxed"
-          >
-            {logs}
-          </pre>
-        )}
-
-        {/* Running indicator */}
-        {state === 'running' && !logs && (
-          <div className="flex items-center gap-2 text-xs text-amber-700 dark:text-amber-400">
-            <ArrowPathIcon className="w-3.5 h-3.5 animate-spin" />
-            {t('admin:cleanup.runningShort')}
-          </div>
-        )}
-
-        {/* Result badge */}
-        {state === 'done' && (
-          <div className="flex items-center gap-1.5 text-xs font-semibold text-success-700 dark:text-success-400">
-            <CheckCircleIcon className="w-4 h-4" />
-            {t('admin:cleanup.completed')}
-          </div>
-        )}
-        {state === 'error' && (
-          <div className="flex items-center gap-1.5 text-xs font-semibold text-red-700 dark:text-red-400">
-            <XCircleIcon className="w-4 h-4" />
-            {t('admin:cleanup.exitedWithError')}
-          </div>
-        )}
-      </div>
-    </div>
   );
 }
 

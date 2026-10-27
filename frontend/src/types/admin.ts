@@ -84,3 +84,59 @@ export interface DatabaseStats {
 
 export type StatusFilter = 'all' | 'active' | 'inactive';
 export type VacuumResult = { duration_s: number; timestamp: string };
+
+// GET /admin/health/detailed
+export type HealthStatus = 'healthy' | 'degraded' | 'unhealthy';
+export type FeedStatus = 'fresh' | 'stale' | 'empty' | 'unknown';
+
+export interface FeedFreshness {
+  status: FeedStatus;
+  latest: string | null;
+  age_days: number | null;
+  stale_after_days?: number;
+}
+
+export interface SystemHealth {
+  status: HealthStatus;
+  app: {
+    version: string;
+    commit: string;
+    environment: string;
+    uptime_seconds: number;
+    line_bot_enabled: boolean;
+  };
+  database: {
+    status: 'healthy' | 'unhealthy';
+    latency_ms?: number;
+    version?: string;
+    size_mb?: number;
+  };
+  scheduler: {
+    status: 'healthy' | 'unhealthy' | 'disabled' | 'unknown';
+    enabled: boolean;
+    running: boolean;
+    jobs: { id: string; name: string; next_run: string | null }[];
+  };
+  data_freshness: Record<'wallet_snapshots' | 'historical_prices' | 'fx_rates', FeedFreshness>;
+  timestamp: string;
+}
+
+// GET /admin/audit-logs
+export interface AuditLogEntry {
+  id: string;
+  action: string;
+  resource_type: string;
+  resource_id: string | null;
+  status: string;
+  error_message: string | null;
+  admin_email: string | null;
+  metadata: Record<string, unknown>;
+  created_at: string | null;
+}
+
+export interface AuditLogPage {
+  logs: AuditLogEntry[];
+  total: number;
+  page: number;
+  limit: number;
+}

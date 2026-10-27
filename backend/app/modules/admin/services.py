@@ -7,16 +7,34 @@ from typing import Optional, List, Dict, Any
 from uuid import UUID
 from sqlalchemy import select, func, text, and_, case
 from sqlalchemy.ext.asyncio import AsyncSession
+import logging
+import os
 import time
 
+from app.core.config import get_settings
+from app.core.scheduler import SCHEDULER_ADVISORY_LOCK_KEY, get_scheduler_status
 from app.modules.users.models import User
-from app.modules.portfolio.models import Portfolio, PortfolioHolding, PortfolioTransaction
+from app.modules.dashboard.models import DailyWalletSnapshot
+from app.modules.portfolio.models import (
+    CurrencyRate,
+    HistoricalPrice,
+    Portfolio,
+    PortfolioHolding,
+    PortfolioTransaction,
+)
 from app.modules.transactions.models import Transaction
+from app.utils.datetime_helpers import business_day_of, business_today
 from .models import AdminUser, AdminAuditLog
 from .repositories import AdminRepository, AuditLogRepository
 
+logger = logging.getLogger(__name__)
+
 # Track application start time
 _APP_START_TIME = time.time()
+
+# Days a feed may lag before the health check calls it stale. Prices allow for a
+# weekend plus a market holiday; snapshots and FX rates are written daily.
+STALE_AFTER_DAYS = {"wallet_snapshots": 2, "historical_prices": 4, "fx_rates": 2}
 
 
 class AdminMonitoringService:
@@ -244,35 +262,6 @@ class AdminMonitoringService:
             "active_connections": active_connections,
         }
 
-    async def get_user_api_usage(self, user_id: UUID, days: int = 7) -> Dict[str, Any]:
-        """Get API usage statistics for a user"""
-        
-        # This would integrate with actual API logging
-        # For now, returning mock structure
-        return {
-            "user_id": str(user_id),
-            "period_days": days,
-            "total_requests": 0,
-            "requests_by_endpoint": {},
-            "avg_response_time_ms": 0.0,
-            "error_count": 0,
-            "rate_limit_hits": 0
-        }
-
-    async def get_api_usage_statistics(self, hours: int = 24) -> Dict[str, Any]:
-        """Get system-wide API usage statistics"""
-        
-        # Would integrate with API logging service
-        return {
-            "period_hours": hours,
-            "total_requests": 0,
-            "requests_by_endpoint": {},
-            "avg_response_time_ms": 0.0,
-            "error_rate": 0.0,
-            "errors_by_code": {},
-            "top_users": []
-        }
-
     async def run_vacuum(
         self,
         table_name: Optional[str] = None,
@@ -328,8 +317,7 @@ class AdminMonitoringService:
         skip: int = 0,
         limit: int = 50
     ) -> Dict[str, Any]:
-        """Get admin audit logs"""
-        
+        """Admin audit log entries, newest first, with the acting admin's email."""
         repo = AuditLogRepository(self.session)
         logs, total = await repo.search(
             action=action,
@@ -338,37 +326,157 @@ class AdminMonitoringService:
             skip=skip,
             limit=limit
         )
-        
+
+        admin_ids = {log.admin_user_id for log in logs}
+        emails: Dict[UUID, str] = {}
+        if admin_ids:
+            rows = await self.session.execute(
+                select(AdminUser.id, User.email)
+                .join(User, User.id == AdminUser.user_id)
+                .where(AdminUser.id.in_(admin_ids))
+            )
+            emails = {row.id: row.email for row in rows}
+
         return {
-            "logs": logs,
+            "logs": [
+                {
+                    "id": str(log.id),
+                    "action": log.action,
+                    "resource_type": log.resource_type,
+                    "resource_id": log.resource_id,
+                    "status": log.status,
+                    "error_message": log.error_message,
+                    "admin_email": emails.get(log.admin_user_id),
+                    "metadata": log.action_metadata or {},
+                    "created_at": log.created_at.isoformat() if log.created_at else None,
+                }
+                for log in logs
+            ],
             "total": total,
             "page": skip // limit + 1,
             "limit": limit
         }
 
     async def get_system_health(self) -> Dict[str, Any]:
-        """Get detailed system health check"""
-        
-        health_checks = {}
-        
-        # Database check
+        """What a self-hosted operator needs to know is working.
+
+        Only real signals: the database round trip, whether any worker holds the
+        scheduler lock, and how old the daily feeds are. Failures are logged, not
+        returned, so driver messages (hosts, DSN fragments) stay out of the page.
+        """
+        settings = get_settings()
+
+        database: Dict[str, Any]
         try:
+            started = time.perf_counter()
             await self.session.execute(select(1))
-            health_checks["database"] = {"status": "healthy", "latency_ms": 0}
-        except Exception as e:
-            health_checks["database"] = {"status": "unhealthy", "error": str(e)}
-        
-        # Redis check (would integrate with actual Redis)
-        health_checks["redis"] = {"status": "unknown", "message": "Not configured"}
-        
-        # External APIs
-        health_checks["external_apis"] = {"status": "unknown"}
-        
+            database = {
+                "status": "healthy",
+                "latency_ms": round((time.perf_counter() - started) * 1000, 1),
+            }
+        except Exception:
+            logger.warning("admin health: database check failed", exc_info=True)
+            database = {"status": "unhealthy"}
+        if database["status"] == "healthy":
+            # Informational only: the round trip above is what decides health.
+            try:
+                database["version"] = (
+                    await self.session.execute(text("SHOW server_version"))
+                ).scalar()
+                database["size_mb"] = round(await self._get_database_size(), 1)
+            except Exception:
+                logger.warning("admin health: database version check failed", exc_info=True)
+
+        scheduler = await self._scheduler_health(settings.ENABLE_SCHEDULER)
+        feeds = await self._feed_freshness()
+
+        if database["status"] != "healthy":
+            overall = "unhealthy"
+        elif scheduler["status"] == "unhealthy" or any(
+            f["status"] == "stale" for f in feeds.values()
+        ):
+            overall = "degraded"
+        else:
+            overall = "healthy"
+
         return {
-            "status": "healthy",
-            "checks": health_checks,
-            "timestamp": datetime.now(timezone.utc).isoformat()
+            "status": overall,
+            "app": {
+                "version": settings.APP_VERSION,
+                "commit": os.getenv("GIT_SHA", "unknown"),
+                "environment": settings.ENVIRONMENT,
+                "uptime_seconds": int(time.time() - _APP_START_TIME),
+                "line_bot_enabled": settings.line_bot_enabled,
+            },
+            "database": database,
+            "scheduler": scheduler,
+            "data_freshness": feeds,
+            "timestamp": datetime.now(timezone.utc).isoformat(),
         }
+
+    async def _scheduler_health(self, enabled: bool) -> Dict[str, Any]:
+        """Whether any worker holds the scheduler lock.
+
+        Asking this process is not enough: under `--workers N` one elected worker
+        owns the jobs, and a request served by another would read "not running".
+        A bigint advisory key shows in pg_locks split across classid (high 32
+        bits) and objid (low 32 bits), with objsubid = 1.
+        """
+        if not enabled:
+            return {"status": "disabled", "enabled": False, "running": False, "jobs": []}
+        try:
+            held = (
+                await self.session.execute(
+                    text(
+                        "SELECT EXISTS (SELECT 1 FROM pg_locks WHERE locktype = 'advisory'"
+                        " AND objsubid = 1 AND granted"
+                        " AND (classid::bigint << 32) | objid::bigint = :key)"
+                    ),
+                    {"key": SCHEDULER_ADVISORY_LOCK_KEY},
+                )
+            ).scalar()
+        except Exception:
+            logger.warning("admin health: scheduler lock check failed", exc_info=True)
+            return {"status": "unknown", "enabled": True, "running": False, "jobs": []}
+
+        # Job details only exist in the worker that owns the scheduler.
+        local = get_scheduler_status()
+        return {
+            "status": "healthy" if held else "unhealthy",
+            "enabled": True,
+            "running": bool(held),
+            "jobs": local["jobs"] if local["running"] else [],
+        }
+
+    async def _feed_freshness(self) -> Dict[str, Dict[str, Any]]:
+        """Latest day each daily feed has data for, and whether that is stale."""
+        today = business_today()
+        sources = {
+            "wallet_snapshots": func.max(DailyWalletSnapshot.snapshot_date),
+            "historical_prices": func.max(HistoricalPrice.date),
+            "fx_rates": func.max(CurrencyRate.rate_timestamp),
+        }
+        feeds: Dict[str, Dict[str, Any]] = {}
+        for name, latest_expr in sources.items():
+            try:
+                latest = (await self.session.execute(select(latest_expr))).scalar()
+            except Exception:
+                logger.warning("admin health: %s freshness check failed", name, exc_info=True)
+                feeds[name] = {"status": "unknown", "latest": None, "age_days": None}
+                continue
+            if latest is None:
+                # A fresh install has nothing yet; that is not a broken feed.
+                feeds[name] = {"status": "empty", "latest": None, "age_days": None}
+                continue
+            latest_day = business_day_of(latest)
+            age = (today - latest_day).days
+            feeds[name] = {
+                "status": "stale" if age > STALE_AFTER_DAYS[name] else "fresh",
+                "latest": latest_day.isoformat(),
+                "age_days": age,
+                "stale_after_days": STALE_AFTER_DAYS[name],
+            }
+        return feeds
 
     async def _get_database_size(self) -> float:
         """Get current database size in MB"""
@@ -647,50 +755,6 @@ class UserManagementService:
             "email": user.email,
             "is_active": user.is_active,
         }
-
-    async def get_all_admins(
-        self,
-        skip: int = 0,
-        limit: int = 50,
-        is_active: Optional[bool] = None,
-    ) -> Dict[str, Any]:
-        """Get all admin users with pagination"""
-        repo = AdminRepository(self.session)
-        admins, total = await repo.get_all(skip=skip, limit=limit, is_active=is_active)
-
-        return {
-            "admins": [
-                {
-                    "id": str(admin.id),
-                    "user_id": str(admin.user_id),
-                    "role": admin.role,
-                    "is_active": admin.is_active,
-                    "created_at": admin.created_at.isoformat(),
-                }
-                for admin in admins
-            ],
-            "total": total,
-            "skip": skip,
-            "limit": limit,
-        }
-
-    async def create_admin(
-        self,
-        user_id: UUID,
-        role: str,
-        created_by: UUID
-    ) -> AdminUser:
-        """Create new admin user"""
-        repo = AdminRepository(self.session)
-        
-        admin_data = {
-            "user_id": user_id,
-            "role": role,
-            "created_by_admin_id": created_by,
-            "is_active": True
-        }
-        
-        return await repo.create(admin_data)
 
     async def log_admin_action(
         self,

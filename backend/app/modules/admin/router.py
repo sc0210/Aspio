@@ -2,7 +2,7 @@
 Admin monitoring and management endpoints.
 
 Provides elevated access for administrators to monitor users, system stats,
-API usage, database metrics, and perform administrative actions.
+database metrics, the audit log and system health, and perform administrative actions.
 """
 
 from fastapi import APIRouter, Depends, Query, Path, HTTPException, status
@@ -17,7 +17,6 @@ from .dependencies import (
     get_optional_admin,
     require_view_users,
     require_view_system_stats,
-    require_view_analytics,
     require_super_admin,
 )
 from .models import AdminUser, AdminPermission
@@ -195,33 +194,6 @@ async def delete_user(
 
     return ApiResponse.success_response(
         message=f"User {user_email} deleted successfully"
-    )
-
-
-@router.get("/users/{user_id}/api-usage", response_model=ApiResponse)
-async def get_user_api_usage(
-    user_id: UUID = Path(...),
-    days: int = Query(7, ge=1, le=90, description="Number of days to analyze"),
-    current_admin: AdminUser = Depends(require_view_analytics),
-    session: AsyncSession = Depends(get_db),
-):
-    """
-    Get API usage statistics for a specific user.
-
-    **Required Permission:** `view_analytics`
-
-    Returns:
-    - Request count by endpoint
-    - Response time statistics
-    - Error rate
-    - Rate limit hits
-    """
-    service = AdminMonitoringService(session)
-    api_usage = await service.get_user_api_usage(user_id, days)
-
-    return ApiResponse.success_response(
-        data=api_usage,
-        message=f"API usage for last {days} days"
     )
 
 
@@ -598,33 +570,6 @@ async def get_database_stats(
     )
 
 
-@router.get("/stats/api-usage", response_model=ApiResponse)
-async def get_api_usage_stats(
-    hours: int = Query(24, ge=1, le=168, description="Hours to analyze"),
-    current_admin: AdminUser = Depends(require_view_analytics),
-    session: AsyncSession = Depends(get_db),
-):
-    """
-    Get API usage statistics across all users.
-    
-    **Required Permission:** `view_analytics`
-    
-    Returns:
-    - Total requests
-    - Requests by endpoint
-    - Average response time
-    - Error rate by status code
-    - Top users by request count
-    """
-    service = AdminMonitoringService(session)
-    api_stats = await service.get_api_usage_statistics(hours)
-    
-    return ApiResponse.success_response(
-        data=api_stats,
-        message=f"API usage for last {hours} hours"
-    )
-
-
 # ============================================================================
 # Audit Log Endpoints
 # ============================================================================
@@ -672,80 +617,18 @@ async def get_detailed_health(
 ):
     """
     Get detailed system health check.
-    
+
     **Required Permission:** `view_system_stats`
-    
+
     Checks:
-    - Database connectivity and performance
-    - Redis connectivity
-    - External API status (market data, etc.)
-    - Disk space
-    - Memory usage
+    - Database round trip, version and size
+    - Whether any worker holds the scheduler lock
+    - How old the wallet snapshots, historical prices and FX rates are
     """
     service = AdminMonitoringService(session)
     health = await service.get_system_health()
-    
+
     return ApiResponse.success_response(
         data=health,
         message="System health check complete"
-    )
-
-
-# ============================================================================
-# Admin Management Endpoints (Super Admin Only)
-# ============================================================================
-
-@router.get("/admins", response_model=ApiResponse)
-async def list_admins(
-    skip: int = Query(0, ge=0),
-    limit: int = Query(50, ge=1, le=100),
-    is_active: Optional[bool] = Query(None),
-    current_admin: AdminUser = Depends(require_super_admin),
-    session: AsyncSession = Depends(get_db),
-):
-    """
-    List all admin users.
-
-    **Required Role:** `super_admin`
-    """
-    service = UserManagementService(session)
-    admins = await service.get_all_admins(skip=skip, limit=limit, is_active=is_active)
-
-    return ApiResponse.success_response(
-        data=admins,
-        message=f"Found {admins['total']} admin users"
-    )
-
-
-@router.post("/admins", response_model=ApiResponse)
-async def create_admin(
-    user_id: UUID,
-    role: str,
-    current_admin: AdminUser = Depends(require_super_admin),
-    session: AsyncSession = Depends(get_db),
-):
-    """
-    Create new admin user.
-    
-    **Required Role:** `super_admin`
-    """
-    service = UserManagementService(session)
-    new_admin = await service.create_admin(
-        user_id=user_id,
-        role=role,
-        created_by=current_admin.id
-    )
-    
-    # Log the action
-    await service.log_admin_action(
-        admin_id=current_admin.id,
-        action="admin.create",
-        resource_type="admin",
-        resource_id=str(new_admin.id),
-        metadata={"role": role, "user_id": str(user_id)}
-    )
-    
-    return ApiResponse.success_response(
-        data={"admin_id": str(new_admin.id)},
-        message="Admin user created successfully"
     )

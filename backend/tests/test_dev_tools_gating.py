@@ -214,59 +214,20 @@ class TestDevToolsToken:
         assert getattr(excinfo.value, "status_code", None) == 404
 
 
-class TestDevDbSyncGating:
-    """`/dev/db-sync/*` TRUNCATEs whole databases and has no user auth.
+class TestDevDbSyncRemoved:
+    """`/dev/db-sync/*` TRUNCATEd and replaced whole databases with no user auth.
+    It was removed with the Supabase and Pi sync; it must not come back mounted,
+    even with dev tools on."""
 
-    It used to be mounted on `is_development` alone, which is true on the
-    self-hosted Pi — making `POST /dev/db-sync/pull` an unauthenticated,
-    internet-reachable "replace this database" button.
-    """
-
-    @staticmethod
-    def _app_with(monkeypatch, *, active: bool):
+    def test_not_mounted_even_with_dev_tools_active(self, monkeypatch):
         import app.main as main_module
 
         monkeypatch.setattr(
-            type(main_module.settings),
-            "dev_tools_active",
-            property(lambda self: active),
+            type(main_module.settings), "dev_tools_active", property(lambda self: True)
         )
         monkeypatch.setattr(
-            type(main_module.settings),
-            "dev_login_active",
-            property(lambda self: False),
+            type(main_module.settings), "dev_login_active", property(lambda self: False)
         )
-        return main_module.create_app()
+        paths = main_module.create_app().openapi().get("paths", {})
+        assert not [p for p in paths if p.startswith("/api/v1/dev/db-sync")]
 
-    DB_SYNC_PATHS = (
-        "/api/v1/dev/db-sync/status",
-        "/api/v1/dev/db-sync/push",
-        "/api/v1/dev/db-sync/pull",
-        "/api/v1/dev/db-sync/status-pi",
-        "/api/v1/dev/db-sync/push-pi",
-        "/api/v1/dev/db-sync/pull-pi",
-    )
-
-    def test_not_mounted_when_dev_tools_inactive(self, monkeypatch):
-        app = self._app_with(monkeypatch, active=False)
-        paths = app.openapi().get("paths", {})
-        for path in self.DB_SYNC_PATHS:
-            assert path not in paths, f"{path} must not exist without dev tools"
-
-    def test_destructive_routes_unreachable_when_inactive(self, monkeypatch):
-        client = TestClient(self._app_with(monkeypatch, active=False))
-        assert client.get("/api/v1/dev/db-sync/status").status_code == 404
-        assert client.post("/api/v1/dev/db-sync/pull").status_code == 404
-        assert client.post("/api/v1/dev/db-sync/pull-pi").status_code == 404
-
-    def test_mounted_but_token_gated_when_active(self, monkeypatch):
-        app = self._app_with(monkeypatch, active=True)
-        paths = app.openapi().get("paths", {})
-        for path in self.DB_SYNC_PATHS:
-            assert path in paths
-
-        # Mounted is not the same as open: the router-level dependency still
-        # demands the secret, and the real settings have none configured.
-        client = TestClient(app)
-        assert client.get("/api/v1/dev/db-sync/status").status_code == 404
-        assert client.post("/api/v1/dev/db-sync/pull").status_code == 404

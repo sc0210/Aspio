@@ -255,14 +255,6 @@ class Settings(BaseSettings):
         "CNY",
     ]
 
-    # Supabase direct connection URL (used by dev db-sync tool)
-    SUPABASE_DB_URL: Optional[str] = None
-
-    # LAN peer DB URL for the dev db-sync tool (e.g. a Raspberry Pi self-host at
-    # postgresql://user:pass@<pi-ip>:5433/aspiro_db). PEER_DB_LABEL is shown in the UI.
-    PEER_DB_URL: Optional[str] = None
-    PEER_DB_LABEL: str = "Peer"
-
     # Admin settings — must be set via ADMIN_EMAILS env var, no default email in source
     # Format: "email1:role1,email2:role2"  e.g. "admin@example.com:super_admin"
     ADMIN_EMAILS: str = ""
