@@ -18,10 +18,6 @@ Dangerous surfaces use an explicit opt-in secret instead:
 | `DEV_LOGIN_ENABLED` | `false` | Password-less `/auth/dev-login`. The flag alone is not sufficient — see `dev_login_active` |
 | `ENABLE_API_DOCS` | `false` | `/docs`, `/redoc`, `/openapi.json`. A published schema is a map of every route and payload shape, so it is opt-in |
 
-`/dev/db-sync/*` truncates and replaces whole databases and has no user auth. It requires the
-full `dev_tools_active` gate (explicit token *and* a local DB), not merely a development
-environment.
-
 ## Authentication
 
 - JWT, `HS256`, access token 30 min (`ACCESS_TOKEN_EXPIRE_MINUTES`), refresh token 7 days

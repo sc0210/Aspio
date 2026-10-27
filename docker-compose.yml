@@ -12,7 +12,7 @@ services:
       # "5433:5432" publishes the database to every device on the network with a
       # password that falls back to "aspiro_password". The backend reaches it over
       # the compose network (postgres:5432), so no host exposure is needed —
-      # host-side psql and db_sync.sh both go through loopback.
+      # host-side psql goes through loopback.
       - "127.0.0.1:5433:5432"
     volumes:
       - postgres_data:/var/lib/postgresql/data
@@ -42,12 +42,12 @@ services:
     environment:
       - ENVIRONMENT=development
       - DEBUG=true
-      # Developer-only routes: password-less sign-in (/auth/dev-login) and DB
-      # sync (/dev/db-sync/*). DEV_TOOLS_TOKEN gates BOTH and must be presented
-      # as X-Dev-Tools-Token; with it unset neither is even mounted.
+      # Developer-only route: password-less sign-in (/auth/dev-login).
+      # DEV_TOOLS_TOKEN gates it and must be presented as X-Dev-Tools-Token;
+      # with it unset the route is not even mounted.
       # NOTE: ENVIRONMENT above is `development` for every deployment that uses
       # this file — including the self-hosted Pi behind Caddy — so the token, not
-      # the environment, is what keeps these shut. Leave unset unless you are
+      # the environment, is what keeps it shut. Leave unset unless you are
       # actively developing.
       - DEV_LOGIN_ENABLED=${DEV_LOGIN_ENABLED:-false}
       - DEV_TOOLS_TOKEN=${DEV_TOOLS_TOKEN:-}

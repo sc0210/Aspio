@@ -61,30 +61,6 @@ class AdminRepository:
             .values(last_login_at=datetime.now(timezone.utc))
         )
 
-    async def get_all(
-        self,
-        skip: int = 0,
-        limit: int = 100,
-        is_active: Optional[bool] = None
-    ) -> tuple[List[AdminUser], int]:
-        """Get all admin users with pagination"""
-        query = select(AdminUser)
-
-        if is_active is not None:
-            query = query.where(AdminUser.is_active == is_active)
-
-        # Get total count
-        count_query = select(func.count()).select_from(query.subquery())
-        total_result = await self.session.execute(count_query)
-        total = total_result.scalar()
-
-        # Get paginated results
-        query = query.offset(skip).limit(limit)
-        result = await self.session.execute(query)
-        admins = result.scalars().all()
-
-        return list(admins), total
-
 
 class AuditLogRepository:
     """Repository for audit log operations"""

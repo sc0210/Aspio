@@ -38,4 +38,3 @@ one by hand or on a host with `ENABLE_SCHEDULER=false`.
 | Script | What it does |
 |---|---|
 | `create_admin.py` | Grants admin role to an existing user |
-| `db_sync.sh` | Pushes the local Docker DB to Supabase (cold standby) |

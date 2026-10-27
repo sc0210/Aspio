@@ -5,10 +5,8 @@
   "approveAll": "Approve All",
   "cancel": "Cancel",
   "cleanup": {
-    "completed": "Completed successfully",
     "confirmRun": "Yes, clean up",
     "demoProtected": "Demo user (demo@aspiro.dev) is protected and will not be affected.",
-    "exitedWithError": "Exited with error — see log above",
     "lineCacheCleared": "LINE profile cache cleared",
     "nothingToClean": "Nothing to clean up — database is already tidy.",
     "preview": "Preview Cleanup",
@@ -17,7 +15,6 @@
     "run": "Run Cleanup",
     "runAgain": "Run again",
     "running": "Running cleanup…",
-    "runningShort": "Running…",
     "scanning": "Scanning database…",
     "subtitle": "Remove soft-deleted records, stale caches, and old notifications",
     "title": "Data Cleanup"
@@ -105,5 +102,75 @@
   "selectAllUsers": "Select all users",
   "selectUser": "Select user",
   "selectAllPending": "Select all pending users",
-  "selectPendingUser": "Select pending user"
+  "selectPendingUser": "Select pending user",
+  "health": {
+    "title": "System Health",
+    "subtitle": "Database, scheduler and data feeds on this instance",
+    "checking": "Checking…",
+    "loadFailed": "Failed to load system health",
+    "unknown": "Unknown",
+    "status": "Status",
+    "database": "Database",
+    "latency": "Round trip",
+    "postgres": "PostgreSQL",
+    "scheduler": "Scheduler",
+    "jobs": "Jobs in this worker",
+    "dataFreshness": "Data freshness",
+    "daysAgo_one": "{{count}} day ago",
+    "daysAgo_other": "{{count}} days ago",
+    "lineBotOn": "LINE bot on",
+    "lineBotOff": "LINE bot off",
+    "overall": {
+      "healthy": "Healthy",
+      "degraded": "Degraded",
+      "unhealthy": "Unhealthy"
+    },
+    "schedulerStatus": {
+      "healthy": "Running",
+      "unhealthy": "Not running",
+      "disabled": "Disabled",
+      "unknown": "Unknown"
+    },
+    "feed": {
+      "fresh": "Fresh",
+      "stale": "Stale",
+      "empty": "No data yet",
+      "unknown": "Unknown"
+    },
+    "feeds": {
+      "historical_prices": "Historical prices",
+      "fx_rates": "FX rates"
+    }
+  },
+  "audit": {
+    "tab": "Audit Log",
+    "title": "Audit Log",
+    "subtitle": "Every admin action, newest first",
+    "count_one": "{{count}} entry",
+    "count_other": "{{count}} entries",
+    "loadFailed": "Failed to load the audit log",
+    "empty": "No admin actions recorded yet.",
+    "filterLabel": "Filter by action",
+    "allActions": "All actions",
+    "when": "When",
+    "action": "Action",
+    "target": "Target",
+    "admin": "Admin",
+    "result": "Result",
+    "success": "Success",
+    "previous": "← Previous",
+    "page": "Page {{page}} of {{total}}",
+    "actions": {
+      "approve_user": "Approve user",
+      "reject_user": "Reject user",
+      "delete_user": "Delete user",
+      "toggle_active": "Toggle active",
+      "vacuum": "Vacuum",
+      "cleanup": "Cleanup"
+    },
+    "status": {
+      "failure": "Failed",
+      "partial": "Partial"
+    }
+  }
 }
