@@ -204,6 +204,34 @@ docker exec -i aspiro-backend tar -C /app/uploads -xzf - < backups/db/aspiro_<st
 
 Test a restore once, before you need it.
 
+### Moving the dev stack's data to a new host
+
+`scripts/export_for_migration.sh` stops the dev backend and frontend, writes a dump, the
+uploads archive, a per-table row-count file and checksums to `backups/migrate/`, then
+starts them again. Copy the four files over, then on the new host, in this order:
+
+1. `shasum -a 256 -c aspiro_<stamp>.sha256`
+2. `scripts/aspiro setup`, then start only the database:
+   `docker compose --env-file .env -f docker-compose.pi.yml up -d postgres`
+3. Restore the SQL with the `gunzip … | psql` command above. If it stops on an error, or
+   `--check` fails, start over on an empty database. This deletes that database, so do it
+   only on the **new host**, only before step 5, and only once step 1 has passed:
+
+   ```bash
+   vol=$(docker inspect aspiro-postgres --format '{{range .Mounts}}{{.Name}}{{end}}')
+   echo "$vol"    # the database's own volume, read off the container
+   docker compose --env-file .env -f docker-compose.pi.yml rm -sf postgres
+   docker volume rm "$vol"
+   ```
+
+   Then go back to step 2.
+4. `scripts/export_for_migration.sh --check aspiro_<stamp>.counts`. Run it now, while
+   nothing else touches the database, so the comparison is exact.
+5. `scripts/aspiro update`, **without `--init`**: it migrates the restored database to
+   head and starts the stack.
+6. Restore the uploads with the `docker exec -i aspiro-backend tar …` command above. It
+   needs the backend running, which is why it comes last.
+
 ## Rollback
 
 `scripts/aspiro update --ref <earlier tag or commit>`. Migrations are **not** reversed: an
