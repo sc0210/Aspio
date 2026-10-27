@@ -54,7 +54,6 @@ def import_all_models() -> None:
     """
     from app.modules.admin.models import AdminUser  # noqa: F401
     from app.modules.chat.models import ChatSession  # noqa: F401
-    from app.modules.dashboard.models import DailyWalletSnapshot  # noqa: F401
     from app.modules.goals.models import Goal  # noqa: F401
     from app.modules.line_bot.models import LineGroup  # noqa: F401
     from app.modules.loans.models import DebtAccount  # noqa: F401

@@ -152,13 +152,12 @@ authenticated page in a browser, set the `demo-mode=true` cookie.
 
 ## Data model
 
-49 tables. The ones worth knowing before touching financial logic:
+48 tables. The ones worth knowing before touching financial logic:
 
 | Table | Note |
 |---|---|
 | `transactions` | Life/Emergency cash movements. `transfer_group_id` links the two legs of a transfer; `holding_id` links the expense that bought a holding; `loan_id` links a repayment |
 | `portfolio_holdings` · `portfolio_transactions` | Holdings live in the Portfolio or Emergency wallet, never as cash |
-| `daily_wallet_snapshots` | Nightly balances; dashboard trends read these instead of recomputing |
 | `transaction_categories` | Global rows (`user_id IS NULL`) plus per-user rows |
 | `historical_prices` · `market_data` | Two independent pipelines — a live quote and a previous close can go stale separately |
 | `line_*` | `line_group_members.line_user_id` is a plain string, not an FK — clean it up explicitly on unlink |
