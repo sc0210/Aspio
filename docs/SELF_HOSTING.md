@@ -204,6 +204,14 @@ docker exec -i aspiro-backend tar -C /app/uploads -xzf - < backups/db/aspiro_<st
 
 Test a restore once, before you need it.
 
+### Moving the dev stack's data to a new host
+
+`scripts/export_for_migration.sh` stops the dev backend and frontend, writes a dump, the
+uploads archive, a per-table row-count file and checksums to `backups/migrate/`, then
+starts them again. On the new host, run `scripts/aspiro setup`, start only `postgres`,
+restore with the commands above, then `scripts/aspiro update` (without `--init`) and
+`scripts/export_for_migration.sh --check aspiro_<stamp>.counts`.
+
 ## Rollback
 
 `scripts/aspiro update --ref <earlier tag or commit>`. Migrations are **not** reversed: an
