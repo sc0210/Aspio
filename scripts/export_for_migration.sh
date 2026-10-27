@@ -53,7 +53,8 @@ if [ "${1:-}" = "--check" ]; then
     echo "OK: $(grep -vc '^alembic_version=' "$ACTUAL") tables, every row count and the schema version match."
   else
     echo "MISMATCH: lines marked < are the export, > this database." >&2
-    echo "A newer alembic_version alone is expected if 'aspiro update' migrated past the export." >&2
+    echo "The check is only exact before 'aspiro update': after it the backend migrates and writes rows." >&2
+    echo "If you already ran update, restore again into an empty database and check before updating." >&2
     exit 1
   fi
   exit 0
