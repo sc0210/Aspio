@@ -4,7 +4,7 @@
 #
 # Usage:
 #   ./scripts/export_for_migration.sh [OUT_DIR]       # on this host (default backups/migrate)
-#   ./scripts/export_for_migration.sh --check COUNTS  # on the new host, after the restore
+#   ./scripts/export_for_migration.sh --check COUNTS  # on the new host, right after the SQL restore
 #
 # Export writes four files, all mode 600 (they hold real financial data):
 #   aspiro_<stamp>.sql.gz          pg_dump --no-owner --no-privileges, gzip-verified
@@ -17,18 +17,22 @@
 # postgres_data volume: the raw data directory is tied to the Postgres major version
 # and is not safe to carry across architectures (arm64 Mac -> amd64 host).
 #
-# Restore on the new host: docs/SELF_HOSTING.md, "Backups" -> "Restore". Restore
-# BEFORE `scripts/aspiro update`, and never pass --init there.
+# Restore on the new host: docs/SELF_HOSTING.md, "Moving the dev stack's data to a
+# new host". Run --check BEFORE `scripts/aspiro update`: once the backend is up it
+# writes rows and may migrate, and the counts stop being an exact comparison. Never
+# pass --init there.
 set -euo pipefail
 
 CONTAINER="${PG_CONTAINER:-aspiro-postgres}"
 ROOT="$(cd "$(dirname "$0")/.." && pwd)"
 
 # Every public table's row count, plus the schema version, one "name count" per line.
-COUNTS_SQL="select table_name, (xpath('/row/c/text()', query_to_xml(format('select count(*) as c from public.%I', table_name), false, true, '')))[1]::text::bigint
+# Sorted with collation C so the line order does not depend on the host's locale.
+COUNTS_SQL="select name, n from (
+select table_name::text as name, (xpath('/row/c/text()', query_to_xml(format('select count(*) as c from public.%I', table_name), false, true, '')))[1]::text::bigint as n
 from information_schema.tables where table_schema='public' and table_type='BASE TABLE'
 union all select 'alembic_version=' || version_num, null from alembic_version
-order by 1;"
+) s order by name collate \"C\";"
 
 die() { echo "ERROR: $*" >&2; exit 1; }
 
@@ -89,7 +93,8 @@ mv "$BASE.sql.gz.partial" "$BASE.sql.gz"
 
 echo "==> archiving uploads to $BASE.uploads.tar.gz"
 mkdir -p "$UPLOADS_DIR"
-tar -C "$UPLOADS_DIR" -czf "$BASE.uploads.tar.gz" .
+# No macOS ._* AppleDouble files or xattr headers: GNU tar in the container would extract them as junk.
+COPYFILE_DISABLE=1 tar --no-xattrs -C "$UPLOADS_DIR" -czf "$BASE.uploads.tar.gz" .
 
 echo "==> recording row counts to $BASE.counts"
 echo "$COUNTS_SQL" | psql_c > "$BASE.counts"
@@ -103,8 +108,9 @@ cat <<EOF
 Done: $(grep -vc '^alembic_version=' "$BASE.counts") tables, $(awk '{s+=$2} END {print s}' "$BASE.counts") rows, $(grep '^alembic_version=' "$BASE.counts" | tr -d ' ').
 Next:
   scp $BASE.* user@newhost:~/
-  # on the new host, after the restore:
+  # on the new host (full steps: docs/SELF_HOSTING.md):
   shasum -a 256 -c aspiro_$STAMP.sha256
+  # ... start only postgres, restore the .sql.gz, then before 'aspiro update':
   scripts/export_for_migration.sh --check ~/aspiro_$STAMP.counts
 These files are plaintext financial data: delete them once the new host checks out.
 EOF

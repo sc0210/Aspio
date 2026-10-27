@@ -208,9 +208,18 @@ Test a restore once, before you need it.
 
 `scripts/export_for_migration.sh` stops the dev backend and frontend, writes a dump, the
 uploads archive, a per-table row-count file and checksums to `backups/migrate/`, then
-starts them again. On the new host, run `scripts/aspiro setup`, start only `postgres`,
-restore with the commands above, then `scripts/aspiro update` (without `--init`) and
-`scripts/export_for_migration.sh --check aspiro_<stamp>.counts`.
+starts them again. Copy the four files over, then on the new host, in this order:
+
+1. `shasum -a 256 -c aspiro_<stamp>.sha256`
+2. `scripts/aspiro setup`, then start only the database:
+   `docker compose --env-file .env -f docker-compose.pi.yml up -d postgres`
+3. Restore the SQL with the `gunzip … | psql` command above.
+4. `scripts/export_for_migration.sh --check aspiro_<stamp>.counts`. Run it now, while
+   nothing else touches the database, so the comparison is exact.
+5. `scripts/aspiro update`, **without `--init`**: it migrates the restored database to
+   head and starts the stack.
+6. Restore the uploads with the `docker exec -i aspiro-backend tar …` command above. It
+   needs the backend running, which is why it comes last.
 
 ## Rollback
 
