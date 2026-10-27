@@ -68,3 +68,5 @@ def downgrade() -> None:
             "user_id", "snapshot_date", name="uq_daily_wallet_snapshots_user_date"
         ),
     )
+    # A recreated table is a new table: RLS on, like every public table.
+    op.execute("ALTER TABLE daily_wallet_snapshots ENABLE ROW LEVEL SECURITY")
