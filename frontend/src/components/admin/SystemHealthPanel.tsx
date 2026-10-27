@@ -44,7 +44,7 @@ const FEED_TONE: Record<FeedFreshness['status'], Tone> = {
   unknown: 'muted',
 };
 
-const FEEDS = ['wallet_snapshots', 'historical_prices', 'fx_rates'] as const;
+const FEEDS = ['historical_prices', 'fx_rates'] as const;
 
 function Badge({ tone, children }: { tone: Tone; children: React.ReactNode }) {
   return (

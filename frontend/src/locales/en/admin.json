@@ -138,7 +138,6 @@
       "unknown": "Unknown"
     },
     "feeds": {
-      "wallet_snapshots": "Wallet snapshots",
       "historical_prices": "Historical prices",
       "fx_rates": "FX rates"
     }

@@ -117,7 +117,7 @@ export interface SystemHealth {
     running: boolean;
     jobs: { id: string; name: string; next_run: string | null }[];
   };
-  data_freshness: Record<'wallet_snapshots' | 'historical_prices' | 'fx_rates', FeedFreshness>;
+  data_freshness: Record<'historical_prices' | 'fx_rates', FeedFreshness>;
   timestamp: string;
 }
 

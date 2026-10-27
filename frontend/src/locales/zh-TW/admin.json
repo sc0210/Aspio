@@ -138,7 +138,6 @@
       "unknown": "未知"
     },
     "feeds": {
-      "wallet_snapshots": "錢包快照",
       "historical_prices": "歷史價格",
       "fx_rates": "匯率"
     }

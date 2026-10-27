@@ -623,7 +623,7 @@ async def get_detailed_health(
     Checks:
     - Database round trip, version and size
     - Whether any worker holds the scheduler lock
-    - How old the wallet snapshots, historical prices and FX rates are
+    - How old the historical prices and FX rates are
     """
     service = AdminMonitoringService(session)
     health = await service.get_system_health()

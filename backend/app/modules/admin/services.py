@@ -14,7 +14,6 @@ import time
 from app.core.config import get_settings
 from app.core.scheduler import SCHEDULER_ADVISORY_LOCK_KEY, get_scheduler_status
 from app.modules.users.models import User
-from app.modules.dashboard.models import DailyWalletSnapshot
 from app.modules.portfolio.models import (
     CurrencyRate,
     HistoricalPrice,
@@ -33,8 +32,9 @@ logger = logging.getLogger(__name__)
 _APP_START_TIME = time.time()
 
 # Days a feed may lag before the health check calls it stale. Prices allow for a
-# weekend plus a market holiday; snapshots and FX rates are written daily.
-STALE_AFTER_DAYS = {"wallet_snapshots": 2, "historical_prices": 4, "fx_rates": 2}
+# weekend plus a market holiday; FX rates are written daily. (daily_wallet_snapshots
+# is not a feed: nothing has written it since the dashboard stopped reading it.)
+STALE_AFTER_DAYS = {"historical_prices": 4, "fx_rates": 2}
 
 
 class AdminMonitoringService:
@@ -361,7 +361,7 @@ class AdminMonitoringService:
         """What a self-hosted operator needs to know is working.
 
         Only real signals: the database round trip, whether any worker holds the
-        scheduler lock, and how old the daily feeds are. Failures are logged, not
+        scheduler lock, and how old the daily price and FX feeds are. Failures are logged, not
         returned, so driver messages (hosts, DSN fragments) stay out of the page.
         """
         settings = get_settings()
@@ -452,7 +452,6 @@ class AdminMonitoringService:
         """Latest day each daily feed has data for, and whether that is stale."""
         today = business_today()
         sources = {
-            "wallet_snapshots": func.max(DailyWalletSnapshot.snapshot_date),
             "historical_prices": func.max(HistoricalPrice.date),
             "fx_rates": func.max(CurrencyRate.rate_timestamp),
         }
