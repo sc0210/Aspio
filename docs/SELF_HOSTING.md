@@ -214,9 +214,12 @@ starts them again. Copy the four files over, then on the new host, in this order
 2. `scripts/aspiro setup`, then start only the database:
    `docker compose --env-file .env -f docker-compose.pi.yml up -d postgres`
 3. Restore the SQL with the `gunzip … | psql` command above. If it stops on an error, or
-   `--check` fails, start over on an empty database: on the **new host only**, run
-   `docker compose --env-file .env -f docker-compose.pi.yml down`, then
-   `docker volume rm aspiro_postgres_data`, then go back to step 2.
+   `--check` fails, start over on an empty database. This deletes that database, so do it
+   only on the **new host**, only before step 5, and only once step 1 has passed:
+   `docker compose --env-file .env -f docker-compose.pi.yml rm -sf postgres`, then
+   `docker volume ls | grep postgres_data` to find the volume's name (it is the clone
+   directory's name in lowercase plus `_postgres_data`), `docker volume rm` that name, and
+   go back to step 2.
 4. `scripts/export_for_migration.sh --check aspiro_<stamp>.counts`. Run it now, while
    nothing else touches the database, so the comparison is exact.
 5. `scripts/aspiro update`, **without `--init`**: it migrates the restored database to
