@@ -168,6 +168,10 @@
       "toggle_active": "切換啟用狀態",
       "vacuum": "Vacuum",
       "cleanup": "清理"
+    },
+    "status": {
+      "failure": "失敗",
+      "partial": "部分完成"
     }
   }
 }

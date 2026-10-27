@@ -70,13 +70,13 @@ class TestSystemHealth:
         for feed in ("wallet_snapshots", "historical_prices", "fx_rates"):
             assert data["data_freshness"][feed]["status"] == "empty"
 
-    @pytest.mark.asyncio
-    async def test_old_snapshot_is_stale_and_degrades(self, client, seeded, async_session):  # noqa: F811
+    @staticmethod
+    async def _add_snapshot(session, user, days_ago):
         zero = Decimal("0")
-        async_session.add(
+        session.add(
             DailyWalletSnapshot(
-                user_id=seeded["active_user"].id,
-                snapshot_date=business_today() - timedelta(days=10),
+                user_id=user.id,
+                snapshot_date=business_today() - timedelta(days=days_ago),
                 life_balance=zero,
                 portfolio_value=zero,
                 emergency_value=zero,
@@ -84,7 +84,22 @@ class TestSystemHealth:
                 net_worth=zero,
             )
         )
-        await async_session.commit()
+        await session.commit()
+
+    @pytest.mark.asyncio
+    async def test_recent_snapshot_is_fresh(self, client, seeded, async_session):  # noqa: F811
+        await self._add_snapshot(async_session, seeded["active_user"], days_ago=1)
+
+        snapshots = client.get(
+            "/api/v1/admin/health/detailed", headers=seeded["admin_headers"]
+        ).json()["data"]["data_freshness"]["wallet_snapshots"]
+
+        assert snapshots["status"] == "fresh"
+        assert snapshots["age_days"] == 1
+
+    @pytest.mark.asyncio
+    async def test_old_snapshot_is_stale_and_degrades(self, client, seeded, async_session):  # noqa: F811
+        await self._add_snapshot(async_session, seeded["active_user"], days_ago=10)
 
         data = client.get(
             "/api/v1/admin/health/detailed", headers=seeded["admin_headers"]

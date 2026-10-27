@@ -61,6 +61,7 @@ class AdminRepository:
             .values(last_login_at=datetime.now(timezone.utc))
         )
 
+
 class AuditLogRepository:
     """Repository for audit log operations"""
 

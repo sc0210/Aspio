@@ -168,6 +168,10 @@
       "toggle_active": "Toggle active",
       "vacuum": "Vacuum",
       "cleanup": "Cleanup"
+    },
+    "status": {
+      "failure": "Failed",
+      "partial": "Partial"
     }
   }
 }

@@ -163,7 +163,9 @@ export function AuditLogPanel() {
                     {entry.status === 'success' ? (
                       <span className="text-success-700 dark:text-success-400">{t('admin:audit.success')}</span>
                     ) : (
-                      <span className="text-red-700 dark:text-red-400" title={entry.error_message ?? undefined}>{entry.status}</span>
+                      <span className="text-red-700 dark:text-red-400" title={entry.error_message ?? undefined}>
+                        {t(`admin:audit.status.${entry.status}`, { defaultValue: entry.status })}
+                      </span>
                     )}
                   </td>
                 </tr>
