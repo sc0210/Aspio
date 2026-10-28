@@ -35,5 +35,6 @@ logging.basicConfig(
 
 if __name__ == "__main__":
     days = int(sys.argv[1]) if len(sys.argv) > 1 else 7
-    # sync_historical_data_for_all_users logs a summary and swallows failures.
+    # Per-symbol failures are counted, not raised; a total failure (no database,
+    # say) raises, so the cron run exits non-zero.
     asyncio.run(sync_historical_data_for_all_users(days=days))

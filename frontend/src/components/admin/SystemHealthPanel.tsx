@@ -13,7 +13,8 @@ import {
 import { Card } from '@/components/ui/Card';
 import { apiClient } from '@/lib/api-client';
 import { cn } from '@/utils/cn';
-import type { FeedFreshness, SystemHealth } from '@/types/admin';
+import type { FeedFreshness, JobRun, SystemHealth } from '@/types/admin';
+import { formatTimeAgo } from './formatTimeAgo';
 
 type Tone = 'good' | 'warn' | 'bad' | 'muted';
 
@@ -44,7 +45,17 @@ const FEED_TONE: Record<FeedFreshness['status'], Tone> = {
   unknown: 'muted',
 };
 
+const JOB_TONE: Record<JobRun['status'], Tone> = {
+  ok: 'good',
+  partial: 'warn',
+  failed: 'bad',
+  unknown: 'muted',
+};
+
 const FEEDS = ['historical_prices', 'fx_rates'] as const;
+
+// The counts worth showing per run; "cached" (skipped as fresh) is noise.
+const SUMMARY_KEYS = ['updated', 'successful', 'created', 'failed'] as const;
 
 function Badge({ tone, children }: { tone: Tone; children: React.ReactNode }) {
   return (
@@ -81,7 +92,8 @@ function Section({ icon: Icon, title, children }: {
 
 /**
  * Live health of a self-hosted instance: the database round trip, whether the
- * scheduler is running in any worker, and how old the daily data feeds are.
+ * scheduler is running in any worker, each job's last run, and how old the
+ * daily data feeds are.
  */
 export function SystemHealthPanel() {
   const { t } = useTranslation(['admin']);
@@ -125,6 +137,11 @@ export function SystemHealthPanel() {
       </span>
     );
   };
+
+  const jobSummary = (run: JobRun) =>
+    SUMMARY_KEYS.filter((key) => run.summary[key])
+      .map((key) => t(`admin:health.jobSummary.${key}`, { count: run.summary[key] }))
+      .join(' · ');
 
   return (
     <Card padding="none" clip>
@@ -204,6 +221,42 @@ export function SystemHealthPanel() {
                 ))}
               </Section>
             </div>
+
+            {health.scheduler.enabled && (
+              <Section icon={ClockIcon} title={t('admin:health.jobRuns')}>
+                {health.job_runs.length === 0 ? (
+                  <p className="px-4 py-2.5 text-sm text-gray-500 dark:text-gray-400">
+                    {t('admin:health.jobRunsEmpty')}
+                  </p>
+                ) : (
+                  health.job_runs.map((run) => (
+                    <div key={run.id} className="flex flex-wrap items-center justify-between gap-x-3 gap-y-1 px-4 py-2.5">
+                      <div className="min-w-0">
+                        <p className="text-sm text-gray-700 dark:text-gray-300">
+                          {t(`admin:health.jobNames.${run.id}`, { defaultValue: run.name ?? run.id })}
+                        </p>
+                        {(run.error || jobSummary(run)) && (
+                          <p className="text-xs text-gray-500 dark:text-gray-400">
+                            {run.error ? t('admin:health.jobErrorHint', { error: run.error }) : jobSummary(run)}
+                          </p>
+                        )}
+                      </div>
+                      <span className="inline-flex items-center gap-2 text-sm">
+                        {run.last_run_at && (
+                          <span className="text-gray-600 dark:text-gray-400 tabular-nums">
+                            {formatTimeAgo(run.last_run_at)}
+                          </span>
+                        )}
+                        {run.overdue && <Badge tone="warn">{t('admin:health.jobOverdue')}</Badge>}
+                        <Badge tone={JOB_TONE[run.status] ?? 'muted'}>
+                          {t(`admin:health.jobStatus.${run.status}`)}
+                        </Badge>
+                      </span>
+                    </div>
+                  ))
+                )}
+              </Section>
+            )}
 
             <p className="text-xs text-gray-500 dark:text-gray-400">
               v{health.app.version}
