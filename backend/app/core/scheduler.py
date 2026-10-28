@@ -71,8 +71,9 @@ async def run_tracked_job(
 ) -> None:
     """Run a job and record how it went for the admin health panel.
 
-    A job returns a summary of counts or raises. A summary with failures marks the
-    run "partial" (some symbols failed); an exception marks it "failed". Only the
+    A job returns a summary of counts or raises. A summary with some failures marks
+    the run "partial"; an exception, or failures with no successful fetch, marks
+    it "failed". Only the
     exception's type is stored: the message can carry hosts or DSN fragments, so
     it stays in the log.
     """
@@ -89,10 +90,11 @@ async def run_tracked_job(
         }
         if not summary.get("failed"):
             status = "ok"
-        elif any(summary.get(k) for k in ("updated", "successful", "cached", "created")):
+        elif summary.get("updated") or summary.get("successful"):
             status = "partial"
         else:
-            # Every symbol failed: a provider outage, not a few bad symbols.
+            # Every fetch it attempted failed: a provider outage, not a few bad
+            # symbols. "cached" (skipped as fresh) made no call, so proves nothing.
             status = "failed"
         logger.info(f"Scheduled job {job_id} finished: {status}")
     except Exception as e:

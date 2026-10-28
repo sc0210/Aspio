@@ -165,11 +165,12 @@ class TestTrackedJobs:
     async def test_every_symbol_failing_is_a_failed_run(self, job_db):
         """A provider outage fails every symbol without raising; it must still degrade."""
         async def job():
-            return {"updated": 0, "cached": 0, "failed": 9}
+            # "cached" symbols were skipped as fresh: no fetch, so no evidence.
+            return {"updated": 0, "cached": 14, "failed": 3}
 
-        await scheduler.run_tracked_job("tw_prices", "TW prices", job)
+        await scheduler.run_tracked_job("crypto_prices", "Crypto prices", job)
 
-        assert (await _job_row(job_db, "tw_prices")).value["status"] == "failed"
+        assert (await _job_row(job_db, "crypto_prices")).value["status"] == "failed"
 
     @pytest.mark.asyncio
     async def test_an_exception_is_recorded_without_its_message(self, job_db):
