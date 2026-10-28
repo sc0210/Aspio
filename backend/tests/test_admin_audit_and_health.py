@@ -162,6 +162,16 @@ class TestTrackedJobs:
         assert (await _job_row(job_db, "hist")).value["status"] == "partial"
 
     @pytest.mark.asyncio
+    async def test_every_symbol_failing_is_a_failed_run(self, job_db):
+        """A provider outage fails every symbol without raising; it must still degrade."""
+        async def job():
+            return {"updated": 0, "cached": 0, "failed": 9}
+
+        await scheduler.run_tracked_job("tw_prices", "TW prices", job)
+
+        assert (await _job_row(job_db, "tw_prices")).value["status"] == "failed"
+
+    @pytest.mark.asyncio
     async def test_an_exception_is_recorded_without_its_message(self, job_db):
         async def job():
             raise ConnectionError("could not reach db.internal:5432")

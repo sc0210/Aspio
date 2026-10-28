@@ -87,7 +87,13 @@ async def run_tracked_job(
             for k, v in (result or {}).items()
             if isinstance(v, (int, float)) and not isinstance(v, bool)
         }
-        status = "partial" if summary.get("failed") else "ok"
+        if not summary.get("failed"):
+            status = "ok"
+        elif any(summary.get(k) for k in ("updated", "successful", "cached", "created")):
+            status = "partial"
+        else:
+            # Every symbol failed: a provider outage, not a few bad symbols.
+            status = "failed"
         logger.info(f"Scheduled job {job_id} finished: {status}")
     except Exception as e:
         logger.error(f"Scheduled job {job_id} failed", exc_info=True)
