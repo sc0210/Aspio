@@ -1,3 +1,6 @@
+-- SUPERSEDED by 2026_10_28_drop_daily_wallet_snapshots.sql, which drops this table.
+-- Do not apply on a new host.
+--
 -- Idempotent prod DDL for daily_wallet_snapshots.
 --
 -- Prod schema is NOT migrated by Alembic on deploy. Flow:

@@ -229,12 +229,14 @@ export function GrowthForecastCard({ stats, loading = false }: GrowthForecastCar
         return back; // back[i] = estimate i months before now
     }, [annualReturnPct, investedPct, monthlySavings, stats.portfolio_wallet, nowTotal, pastMonths]);
 
-    // The anchor is the newest bucket we hold data for, which equals the current
-    // month only while that data is fresh. daily_wallet_snapshots can fall behind
-    // when the nightly job doesn't run, and calling a stale bucket "Now" hides it
-    // completely: the axis reads … Jun · Jul · Now, where "Now" silently means
-    // July. Label the anchor with its real month whenever it isn't the current
-    // one, so a lag is visible on the axis instead of being papered over.
+    // The anchor is the newest bucket we hold data for. Trends are computed live
+    // through the server's business day, so that is normally the current month,
+    // but not always around a month boundary: a response cached before midnight,
+    // or a browser whose month differs from the business timezone's. Calling a
+    // stale bucket "Now" hides it completely: the axis reads … Jun · Jul · Now,
+    // where "Now" silently means July. Label the anchor with its real month
+    // whenever it isn't the current one, so a lag is visible on the axis instead
+    // of being papered over.
     const anchorIsCurrentMonth = useMemo(() => {
         if (!hasHistory) return true; // no history → anchorDate is literally new Date()
         const newest = monthly[monthly.length - 1]?.date;

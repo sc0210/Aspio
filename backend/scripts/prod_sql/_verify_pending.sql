@@ -20,11 +20,6 @@
 
 WITH checks(sort, object, source_file, present) AS (
     VALUES
-    -- 2026_07_04_daily_wallet_snapshots.sql
-    (1, 'table daily_wallet_snapshots', '2026_07_04_daily_wallet_snapshots.sql',
-        (SELECT count(*) > 0 FROM information_schema.tables
-          WHERE table_schema = 'public' AND table_name = 'daily_wallet_snapshots')),
-
     -- 2026_07_07_add_transfer_group_id.sql
     (2, 'column transactions.transfer_group_id', '2026_07_07_add_transfer_group_id.sql',
         (SELECT count(*) > 0 FROM information_schema.columns
@@ -112,7 +107,11 @@ WITH checks(sort, object, source_file, present) AS (
     (16, 'index users.uq_users_username_lower', '2026_10_22_username_lower_unique.sql',
         EXISTS (SELECT 1 FROM pg_indexes
                  WHERE schemaname = 'public' AND tablename = 'users'
-                   AND indexname = 'uq_users_username_lower'))
+                   AND indexname = 'uq_users_username_lower')),
+
+    -- 2026_10_28_drop_daily_wallet_snapshots.sql (present = the table is gone)
+    (17, 'table daily_wallet_snapshots dropped', '2026_10_28_drop_daily_wallet_snapshots.sql',
+        to_regclass('public.daily_wallet_snapshots') IS NULL)
 )
 SELECT
     CASE WHEN present THEN 'OK     ' ELSE 'MISSING' END AS status,

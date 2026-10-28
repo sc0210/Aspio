@@ -17,7 +17,6 @@ ALTER TABLE public.portfolio_holdings          ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.portfolio_analytics         ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.portfolio_transactions      ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.transactions                ENABLE ROW LEVEL SECURITY;
-ALTER TABLE public.daily_wallet_snapshots      ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.transaction_attachments     ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.transaction_import_batches  ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.recurring_transactions      ENABLE ROW LEVEL SECURITY;
