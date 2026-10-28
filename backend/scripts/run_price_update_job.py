@@ -53,5 +53,6 @@ if __name__ == "__main__":
             f"invalid market {market!r}; expected one of {sorted(VALID_MARKETS)}"
         )
     # update_all_users_prices logs a summary line and swallows per-symbol
-    # failures, so one bad symbol can't fail the whole cron run.
+    # failures, so one bad symbol can't fail the whole cron run. A total failure
+    # (no database, say) raises, so the cron run exits non-zero.
     asyncio.run(update_all_users_prices(market))

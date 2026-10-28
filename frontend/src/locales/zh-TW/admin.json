@@ -140,6 +140,30 @@
     "feeds": {
       "historical_prices": "歷史價格",
       "fx_rates": "匯率"
+    },
+    "jobRuns": "排程工作",
+    "jobRunsEmpty": "尚無執行紀錄。每項工作首次執行後會顯示在這裡。",
+    "jobOverdue": "逾時未執行",
+    "jobErrorHint": "{{error}}（詳見後端日誌）",
+    "jobStatus": {
+      "ok": "正常",
+      "partial": "部分失敗",
+      "failed": "失敗",
+      "unknown": "未知"
+    },
+    "jobNames": {
+      "tw_market_price_update": "台股價格",
+      "us_market_price_update": "美股價格",
+      "crypto_price_update": "加密貨幣價格",
+      "daily_historical_sync": "歷史價格同步",
+      "daily_payment_due_reminders": "還款到期提醒",
+      "daily_spending_alerts": "支出提醒"
+    },
+    "jobSummary": {
+      "updated": "已更新 {{count}}",
+      "successful": "已同步 {{count}}",
+      "failed": "失敗 {{count}}",
+      "created": "已發送 {{count}}"
     }
   },
   "audit": {

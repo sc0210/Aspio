@@ -12,7 +12,12 @@ import os
 import time
 
 from app.core.config import get_settings
-from app.core.scheduler import SCHEDULER_ADVISORY_LOCK_KEY, get_scheduler_status
+from app.core.scheduler import (
+    JOB_STATUS_CATEGORY,
+    JOB_STATUS_KEY_PREFIX,
+    SCHEDULER_ADVISORY_LOCK_KEY,
+    get_scheduler_status,
+)
 from app.modules.users.models import User
 from app.modules.portfolio.models import (
     CurrencyRate,
@@ -23,7 +28,7 @@ from app.modules.portfolio.models import (
 )
 from app.modules.transactions.models import Transaction
 from app.utils.datetime_helpers import business_day_of, business_today
-from .models import AdminUser, AdminAuditLog
+from .models import AdminUser, AdminAuditLog, SystemSetting
 from .repositories import AdminRepository, AuditLogRepository
 
 logger = logging.getLogger(__name__)
@@ -35,6 +40,10 @@ _APP_START_TIME = time.time()
 # weekend plus a market holiday; FX rates are written daily. (daily_wallet_snapshots
 # is not a feed: nothing has written it since the dashboard stopped reading it.)
 STALE_AFTER_DAYS = {"historical_prices": 4, "fx_rates": 2}
+
+# Every scheduled job runs at least daily, so a last run older than this means
+# runs are being missed (the scheduler grants a run up to 6 hours' grace).
+JOB_OVERDUE_AFTER_HOURS = 30
 
 
 class AdminMonitoringService:
@@ -361,7 +370,8 @@ class AdminMonitoringService:
         """What a self-hosted operator needs to know is working.
 
         Only real signals: the database round trip, whether any worker holds the
-        scheduler lock, and how old the daily price and FX feeds are. Failures are logged, not
+        scheduler lock, each job's last recorded run, and how old the daily price
+        and FX feeds are. Failures are logged, not
         returned, so driver messages (hosts, DSN fragments) stay out of the page.
         """
         settings = get_settings()
@@ -388,12 +398,15 @@ class AdminMonitoringService:
                 logger.warning("admin health: database version check failed", exc_info=True)
 
         scheduler = await self._scheduler_health(settings.ENABLE_SCHEDULER)
+        job_runs = await self._job_runs() if settings.ENABLE_SCHEDULER else []
         feeds = await self._feed_freshness()
 
         if database["status"] != "healthy":
             overall = "unhealthy"
-        elif scheduler["status"] == "unhealthy" or any(
-            f["status"] == "stale" for f in feeds.values()
+        elif (
+            scheduler["status"] == "unhealthy"
+            or any(f["status"] == "stale" for f in feeds.values())
+            or any(j["status"] == "failed" or j["overdue"] for j in job_runs)
         ):
             overall = "degraded"
         else:
@@ -410,6 +423,7 @@ class AdminMonitoringService:
             },
             "database": database,
             "scheduler": scheduler,
+            "job_runs": job_runs,
             "data_freshness": feeds,
             "timestamp": datetime.now(timezone.utc).isoformat(),
         }
@@ -447,6 +461,47 @@ class AdminMonitoringService:
             "running": bool(held),
             "jobs": local["jobs"] if local["running"] else [],
         }
+
+    async def _job_runs(self) -> List[Dict[str, Any]]:
+        """Each scheduled job's last recorded run (written by run_tracked_job).
+
+        A job that has never run has no row, so a new install lists nothing until
+        the first runs land.
+        """
+        try:
+            rows = (
+                await self.session.execute(
+                    select(SystemSetting.key, SystemSetting.description, SystemSetting.value)
+                    .where(SystemSetting.category == JOB_STATUS_CATEGORY)
+                    .order_by(SystemSetting.key)
+                )
+            ).all()
+        except Exception:
+            logger.warning("admin health: job run check failed", exc_info=True)
+            return []
+
+        now = datetime.now(timezone.utc)
+        runs = []
+        for key, name, value in rows:
+            value = value or {}
+            try:
+                started_at = datetime.fromisoformat(value["started_at"])
+                overdue = now - started_at > timedelta(hours=JOB_OVERDUE_AFTER_HOURS)
+            except (KeyError, TypeError, ValueError):
+                started_at, overdue = None, False
+            runs.append(
+                {
+                    "id": key.removeprefix(JOB_STATUS_KEY_PREFIX),
+                    "name": name,
+                    "status": value.get("status", "unknown"),
+                    "last_run_at": started_at.isoformat() if started_at else None,
+                    "duration_ms": value.get("duration_ms"),
+                    "summary": value.get("summary") or {},
+                    "error": value.get("error"),
+                    "overdue": overdue,
+                }
+            )
+        return runs
 
     async def _feed_freshness(self) -> Dict[str, Dict[str, Any]]:
         """Latest day each daily feed has data for, and whether that is stale."""

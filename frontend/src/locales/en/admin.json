@@ -140,6 +140,30 @@
     "feeds": {
       "historical_prices": "Historical prices",
       "fx_rates": "FX rates"
+    },
+    "jobRuns": "Scheduled jobs",
+    "jobRunsEmpty": "No runs recorded yet. Each job appears here after its first run.",
+    "jobOverdue": "Overdue",
+    "jobErrorHint": "{{error}} (details in the backend log)",
+    "jobStatus": {
+      "ok": "OK",
+      "partial": "Partial",
+      "failed": "Failed",
+      "unknown": "Unknown"
+    },
+    "jobNames": {
+      "tw_market_price_update": "Taiwan prices",
+      "us_market_price_update": "US prices",
+      "crypto_price_update": "Crypto prices",
+      "daily_historical_sync": "Historical price sync",
+      "daily_payment_due_reminders": "Payment-due reminders",
+      "daily_spending_alerts": "Spending alerts"
+    },
+    "jobSummary": {
+      "updated": "{{count}} updated",
+      "successful": "{{count}} synced",
+      "failed": "{{count}} failed",
+      "created": "{{count}} sent"
     }
   },
   "audit": {

@@ -96,6 +96,18 @@ export interface FeedFreshness {
   stale_after_days?: number;
 }
 
+// A scheduled job's last recorded run. `error` is the exception type only.
+export interface JobRun {
+  id: string;
+  name: string | null;
+  status: 'ok' | 'partial' | 'failed' | 'unknown';
+  last_run_at: string | null;
+  duration_ms: number | null;
+  summary: Record<string, number>;
+  error: string | null;
+  overdue: boolean;
+}
+
 export interface SystemHealth {
   status: HealthStatus;
   app: {
@@ -117,6 +129,7 @@ export interface SystemHealth {
     running: boolean;
     jobs: { id: string; name: string; next_run: string | null }[];
   };
+  job_runs: JobRun[];
   data_freshness: Record<'historical_prices' | 'fx_rates', FeedFreshness>;
   timestamp: string;
 }
