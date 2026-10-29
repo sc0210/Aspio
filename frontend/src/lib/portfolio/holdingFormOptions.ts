@@ -25,6 +25,8 @@ export const investmentTypes = [
   { value: 'reit', label: 'REIT', description: 'Real Estate Investment Trust' },
   { value: 'commodity', label: 'Commodity', description: 'Raw materials and commodities' },
   { value: 'cash', label: 'Cash/Savings', description: 'Cash holdings and savings accounts' },
+  // Manually priced: the backend skips the market fetch and starts it at cost.
+  { value: 'lending', label: 'Lending', description: 'Interest-earning lending positions' },
 ] satisfies { value: InvestmentType; label: string; description: string }[];
 
 export const currencies = [
