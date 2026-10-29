@@ -1,9 +1,11 @@
 'use client';
 
 import { useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import { ChevronDownIcon, ChevronUpIcon, PencilSquareIcon, TrashIcon } from '@heroicons/react/24/outline';
 import { usePaymentHistory, useDeletePayment } from '@/hooks/useLoans';
 import { EditPaymentModal } from './EditPaymentModal';
+import { ConfirmDialog } from '@/components/ui/ConfirmDialog';
 import type { LoanPaymentRecord } from '@/services/loanService';
 import { formatCurrency } from '@/utils/formatters';
 
@@ -25,6 +27,8 @@ function fmtDate(dateStr: string) {
 export function LoanPaymentHistory({ loanId, currency }: Props) {
   const [open, setOpen] = useState(false);
   const [editing, setEditing] = useState<LoanPaymentRecord | null>(null);
+  const [deleting, setDeleting] = useState<LoanPaymentRecord | null>(null);
+  const { t } = useTranslation('loans');
   const { payments, isLoading } = usePaymentHistory(open ? loanId : null);
   const deletePayment = useDeletePayment();
 
@@ -34,25 +38,25 @@ export function LoanPaymentHistory({ loanId, currency }: Props) {
         onClick={() => setOpen(v => !v)}
         className="w-full flex items-center justify-between text-xs font-medium text-gray-600 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200 py-1 transition-colors"
       >
-        <span>Payment History {payments.length > 0 && !isLoading ? `(${payments.length})` : ''}</span>
+        <span>{t('paymentHistory.toggle')} {payments.length > 0 && !isLoading ? `(${payments.length})` : ''}</span>
         {open ? <ChevronUpIcon className="w-3.5 h-3.5" /> : <ChevronDownIcon className="w-3.5 h-3.5" />}
       </button>
 
       {open && (
         <div className="mt-1">
           {isLoading ? (
-            <p className="text-xs text-gray-500 dark:text-gray-500 text-center py-3">Loading…</p>
+            <p className="text-xs text-gray-500 dark:text-gray-500 text-center py-3">{t('paymentHistory.loading')}</p>
           ) : payments.length === 0 ? (
-            <p className="text-xs text-gray-500 dark:text-gray-500 text-center py-3">No payments recorded yet.</p>
+            <p className="text-xs text-gray-500 dark:text-gray-500 text-center py-3">{t('paymentHistory.empty')}</p>
           ) : (
             <div className="overflow-x-auto rounded-lg border border-gray-100 dark:border-gray-700">
               <table className="w-full text-xs">
                 <thead>
                   <tr className="bg-gray-50 dark:bg-gray-700/50 text-gray-500 dark:text-gray-400">
-                    <th className="text-left px-3 py-2 font-medium">Date</th>
-                    <th className="text-right px-3 py-2 font-medium">Total</th>
-                    <th className="text-right px-3 py-2 font-medium">Principal</th>
-                    <th className="text-right px-3 py-2 font-medium">Interest</th>
+                    <th className="text-left px-3 py-2 font-medium">{t('paymentHistory.colDate')}</th>
+                    <th className="text-right px-3 py-2 font-medium">{t('paymentHistory.colTotal')}</th>
+                    <th className="text-right px-3 py-2 font-medium">{t('paymentHistory.colPrincipal')}</th>
+                    <th className="text-right px-3 py-2 font-medium">{t('paymentHistory.colInterest')}</th>
                     <th className="px-2 py-2"></th>
                   </tr>
                 </thead>
@@ -76,19 +80,15 @@ export function LoanPaymentHistory({ loanId, currency }: Props) {
                           <button
                             onClick={() => setEditing(p)}
                             className="p-1 text-gray-500 dark:text-gray-400 hover:text-primary-600 dark:hover:text-primary-400 rounded transition-colors"
-                            title="Edit payment"
+                            title={t('paymentHistory.editPayment')}
                           >
                             <PencilSquareIcon className="w-3.5 h-3.5" />
                           </button>
                           <button
-                            onClick={() => {
-                              if (confirm('Delete this payment? The loan balance will be restored.')) {
-                                deletePayment.mutate({ loanId, transactionId: p.transaction_id });
-                              }
-                            }}
+                            onClick={() => setDeleting(p)}
                             disabled={deletePayment.isPending}
                             className="p-1 text-gray-500 dark:text-gray-400 hover:text-red-600 dark:hover:text-red-400 rounded transition-colors disabled:opacity-40"
-                            title="Delete payment"
+                            title={t('paymentHistory.deletePayment')}
                           >
                             <TrashIcon className="w-3.5 h-3.5" />
                           </button>
@@ -110,6 +110,17 @@ export function LoanPaymentHistory({ loanId, currency }: Props) {
           onClose={() => setEditing(null)}
         />
       )}
+
+      <ConfirmDialog
+        isOpen={deleting !== null}
+        title={t('paymentHistory.deleteTitle')}
+        message={t('paymentHistory.deleteMessage')}
+        onCancel={() => setDeleting(null)}
+        onConfirm={() => {
+          if (deleting) deletePayment.mutate({ loanId, transactionId: deleting.transaction_id });
+          setDeleting(null);
+        }}
+      />
     </>
   );
 }

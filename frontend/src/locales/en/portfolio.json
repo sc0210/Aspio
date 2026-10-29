@@ -1,4 +1,51 @@
 {
+  "holdingModal": {
+    "editNameSector": "Edit name and sector",
+    "save": "Save",
+    "saveChanges": "Save changes",
+    "cancel": "Cancel",
+    "cancelEditing": "Cancel editing",
+    "sell": "Sell",
+    "sellShares": "Sell shares",
+    "sellHolding": "Sell holding",
+    "sellHoldingHint": "Sell shares of this holding",
+    "deleteInvestment": "Delete Investment",
+    "deleteInvestmentTitle_one": "Delete entire investment",
+    "deleteInvestmentTitle_other": "Delete investment ({{count}} lots)",
+    "deleteInvestmentLabel": "Delete investment",
+    "close": "Close",
+    "summary": "Portfolio Summary",
+    "totalQuantity": "Total Quantity",
+    "avgCost": "Avg. Cost",
+    "currentPrice": "Current Price",
+    "totalGainLoss": "Total Gain/Loss",
+    "roi": "ROI",
+    "purchaseHistory": "Purchase History",
+    "colPurchaseDate": "Purchase Date",
+    "colQuantity": "Quantity",
+    "colTotalCost": "Total Cost",
+    "colCurrentValue": "Current Value",
+    "colGainLoss": "Gain/Loss",
+    "colActions": "Actions",
+    "notSet": "Not set",
+    "editLot": "Edit lot",
+    "deleteLot": "Delete lot",
+    "total": "Total",
+    "tipLabel": "Tip:",
+    "tipBody": "The weighted average cost shows your true average purchase price across all lots. This is useful for tax reporting and understanding your overall investment performance."
+  },
+  "holdingDelete": {
+    "investmentTitle": "Delete Investment",
+    "investmentMessage": "Delete entire investment \"{{name}}\" ({{symbol}})? This action cannot be undone.",
+    "lotTitle": "Delete Lot",
+    "lotMessage": "Delete this lot ({{quantity}} shares purchased on {{date}})?",
+    "unknownDate": "unknown date"
+  },
+  "importReplaceConfirm": {
+    "title": "Replace All Holdings",
+    "message": "⚠️ This will DELETE all {{existing}} existing holdings and replace them with {{incoming}} new holdings.\n\nAre you sure you want to continue?",
+    "confirm": "Replace"
+  },
   "actions": {
     "addHolding": "Add Holding",
     "bulkEdit": "Bulk Edit",
@@ -142,8 +189,6 @@
     "trendTitle": "Asset Trend"
   },
   "confirmDelete": {
-    "cancel": "Cancel",
-    "confirm": "Delete",
     "message": "Are you sure you want to delete this holding? This action cannot be undone.",
     "title": "Delete Holding"
   },

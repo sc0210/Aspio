@@ -26,6 +26,33 @@ const FOCUSABLE = [
     '[tabindex]:not([tabindex="-1"])',
 ].join(',');
 
+// Open dialogs, innermost last. A confirm opened from inside another dialog
+// must own Escape and Tab: both listen on document, and the outer one, bound
+// first, would otherwise close itself (and the confirm) on the confirm's Escape.
+const openDialogs: object[] = [];
+
+/**
+ * Put a dialog on the open-dialog stack while it is open, and return its token.
+ * useDialog calls this itself; components/ui/Modal calls it so a hand-rolled
+ * overlay underneath a Headless UI dialog leaves Escape and Tab to that dialog.
+ * (The other way round needs nothing: Headless UI listens on window, which the
+ * overlay's stopPropagation on document already shields.)
+ */
+export function useDialogStackEntry(isOpen: boolean) {
+    // Joins on open only, so a keydown re-bind in useDialog (a changed
+    // closeOnEscape) cannot lift a dialog above a confirm it opened.
+    const tokenRef = useRef<object>({});
+    useEffect(() => {
+        if (!isOpen) return;
+        const token = tokenRef.current;
+        openDialogs.push(token);
+        return () => {
+            openDialogs.splice(openDialogs.indexOf(token), 1);
+        };
+    }, [isOpen]);
+    return tokenRef;
+}
+
 interface UseDialogOptions {
     isOpen: boolean;
     onClose: () => void;
@@ -57,6 +84,8 @@ export function useDialog<T extends HTMLElement = HTMLDivElement>({
     }, [onClose]);
 
     useScrollLock(isOpen);
+
+    const tokenRef = useDialogStackEntry(isOpen);
 
     const visibleFocusable = useCallback((): HTMLElement[] => {
         const panel = panelRef.current;
@@ -95,6 +124,7 @@ export function useDialog<T extends HTMLElement = HTMLDivElement>({
         if (!isOpen) return;
 
         const onKeyDown = (event: KeyboardEvent) => {
+            if (openDialogs[openDialogs.length - 1] !== tokenRef.current) return;
             if (event.key === 'Escape') {
                 if (!closeOnEscape) return;
                 event.stopPropagation();
@@ -127,7 +157,7 @@ export function useDialog<T extends HTMLElement = HTMLDivElement>({
 
         document.addEventListener('keydown', onKeyDown);
         return () => document.removeEventListener('keydown', onKeyDown);
-    }, [isOpen, closeOnEscape, visibleFocusable]);
+    }, [isOpen, closeOnEscape, visibleFocusable, tokenRef]);
 
     return {
         panelRef,

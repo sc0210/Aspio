@@ -6,6 +6,7 @@ import { cn } from '@/utils/cn';
 import { formatCurrency } from '@/utils/formatters';
 import { calculateCostBasis, CostBasisMethod, formatCostBasisMethod, Lot } from '@/utils/costBasis';
 import { useDialog } from '@/hooks/useDialog';
+import toast from 'react-hot-toast';
 
 interface LotSelectionModalProps {
   symbol: string;
@@ -91,7 +92,7 @@ export function LotSelectionModal({
 
   const handleConfirm = () => {
     if (method === 'SPECIFIC' && selectedLotIds.length === 0) {
-      alert('Please select at least one lot for specific lot identification');
+      toast.error('Please select at least one lot for specific lot identification');
       return;
     }
     onConfirm(selectedLotIds, method);
@@ -102,12 +103,13 @@ export function LotSelectionModal({
       <div
         ref={panelRef}
         {...dialogProps}
+        aria-labelledby="lot-selection-title"
         className="bg-white dark:bg-gray-900 rounded-2xl shadow-2xl border border-gray-200 dark:border-gray-700 max-w-4xl w-full max-h-[90vh] overflow-hidden flex flex-col"
       >
         {/* Header */}
         <div className="px-6 py-4 border-b border-gray-200 dark:border-gray-800 flex items-center justify-between">
           <div>
-            <h2 className="text-xl font-bold text-gray-900 dark:text-white">
+            <h2 id="lot-selection-title" className="text-xl font-bold text-gray-900 dark:text-white">
               Select Tax Lots - {symbol}
             </h2>
             <p className="text-sm text-gray-600 dark:text-gray-400 mt-1">

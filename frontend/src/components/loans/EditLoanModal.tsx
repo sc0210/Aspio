@@ -63,8 +63,8 @@ export function EditLoanModal({ loan, onClose }: Props) {
             <h2 id="edit-loan-modal-title" className="text-base font-semibold text-gray-900 dark:text-white">{t('editModal.title')}</h2>
             <p className="text-xs text-gray-500 dark:text-gray-400">{loan.name}</p>
           </div>
-          <button onClick={onClose} className="p-1.5 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700">
-            <XMarkIcon className="w-5 h-5 text-gray-500" />
+          <button type="button" onClick={onClose} aria-label={t('common.close', 'Close')} className="p-1.5 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700">
+            <XMarkIcon className="w-5 h-5 text-gray-500" aria-hidden="true" />
           </button>
         </div>
 

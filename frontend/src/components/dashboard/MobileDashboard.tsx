@@ -117,7 +117,7 @@ export function MobileDashboard() {
 
                 {/* TODAY'S HIGHLIGHTS — swipeable */}
                 <section>
-                    <p className="flex items-center px-1 mb-2.5 text-[13px] font-extrabold tracking-tight text-gray-900 dark:text-white">
+                    <p className="flex items-center px-1 mb-2.5 text-sm font-extrabold tracking-tight text-gray-900 dark:text-white">
                         {t('mobile.highlights', "Today's highlights")}
                         <span className="ml-auto text-xs font-semibold text-gray-500 dark:text-gray-500">
                             {t('mobile.swipe', 'Swipe ›')}
@@ -171,7 +171,7 @@ export function MobileDashboard() {
                                         </text>
                                     </svg>
                                     <div className="min-w-0">
-                                        <p className="text-[17px] font-extrabold tracking-tight tabular-nums text-gray-900 dark:text-white">
+                                        <p className="text-lg font-extrabold tracking-tight tabular-nums text-gray-900 dark:text-white">
                                             {isValueVisible ? formatTWDCompact(model.primaryGoal.currentAmount || 0) : '•••'}
                                         </p>
                                         <p className="text-xs font-semibold text-gray-500 dark:text-gray-500 tabular-nums">

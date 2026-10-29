@@ -23,7 +23,7 @@ import { DashboardLayout } from '@/components/layout/DashboardLayout';
 import { TOP_BAR_BUTTON, TOP_BAR_PRIMARY, TOP_BAR_SEGMENTED, topBarSegment } from '@/components/layout/topBarStyles';
 import { PortfolioPageSkeleton } from '@/components/portfolio/PortfolioSkeleton';
 import { RetirementProgressTracker } from '@/components/portfolio/RetirementProgressTracker';
-import { ConfirmDeleteDialog } from '@/components/portfolio/ConfirmDeleteDialog';
+import { ConfirmDialog } from '@/components/ui/ConfirmDialog';
 import {
   PortfolioHeader,
   PortfolioStatsSection,
@@ -385,8 +385,10 @@ function DesktopPortfolioPage() {
         />
 
         {/* Delete Confirmation Dialog */}
-        <ConfirmDeleteDialog
+        <ConfirmDialog
           isOpen={!!holdingOps.pendingDeleteId}
+          title={t('portfolio:confirmDelete.title')}
+          message={t('portfolio:confirmDelete.message')}
           onConfirm={holdingOps.handleConfirmDelete}
           onCancel={holdingOps.handleCancelDelete}
         />

@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, FormEvent } from 'react';
+import { useTranslation } from 'react-i18next';
 import { XMarkIcon } from '@heroicons/react/24/outline';
 import { useUpdatePayment } from '@/hooks/useLoans';
 import type { LoanPaymentRecord } from '@/services/loanService';
@@ -13,6 +14,7 @@ interface Props {
 }
 
 export function EditPaymentModal({ loanId, payment, onClose }: Props) {
+  const { t } = useTranslation('loans');
   const { panelRef, dialogProps } = useDialog({ isOpen: true, onClose: onClose });
 
   const updatePayment = useUpdatePayment();
@@ -61,8 +63,8 @@ export function EditPaymentModal({ loanId, payment, onClose }: Props) {
             <h2 id="edit-payment-modal-title" className="text-base font-semibold text-gray-900 dark:text-white">Edit Payment</h2>
             <p className="text-xs text-gray-500 dark:text-gray-400">{payment.payment_date}</p>
           </div>
-          <button onClick={onClose} className="p-1.5 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700">
-            <XMarkIcon className="w-5 h-5 text-gray-500" />
+          <button type="button" onClick={onClose} aria-label={t('common.close', 'Close')} className="p-1.5 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700">
+            <XMarkIcon className="w-5 h-5 text-gray-500" aria-hidden="true" />
           </button>
         </div>
 

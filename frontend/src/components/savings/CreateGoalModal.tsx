@@ -70,10 +70,11 @@ export default function CreateGoalModal({
       <div
         ref={panelRef}
         {...dialogProps}
+        aria-labelledby="create-savings-goal-title"
         className="relative bg-white dark:bg-gray-800 rounded-2xl shadow-xl w-full max-w-sm p-6"
       >
         <div className="flex items-center justify-between mb-5">
-          <h2 className="text-base font-semibold text-gray-900 dark:text-white">
+          <h2 id="create-savings-goal-title" className="text-base font-semibold text-gray-900 dark:text-white">
             {t('savings.createGoalTitle', 'New Savings Goal')}
           </h2>
           <button

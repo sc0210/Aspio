@@ -1,6 +1,7 @@
 import React from 'react';
 import { render, screen, fireEvent, act } from '@testing-library/react';
 import { useDialog } from '@/hooks/useDialog';
+import { Modal } from '@/components/ui/Modal';
 
 function Dialog({ isOpen, onClose, closeOnEscape }: {
   isOpen: boolean; onClose: () => void; closeOnEscape?: boolean;
@@ -109,5 +110,84 @@ describe('useDialog', () => {
     rerender(<Dialog isOpen={false} onClose={jest.fn()} />);
     expect(document.activeElement).toBe(trigger);
     trigger.remove();
+  });
+
+  it('gives Escape to the innermost dialog only, so cancelling a confirm keeps its parent open', () => {
+    const outerClose = jest.fn();
+    const innerClose = jest.fn();
+    const { rerender } = render(
+      <>
+        <Dialog isOpen onClose={outerClose} />
+        <Dialog isOpen onClose={innerClose} />
+      </>
+    );
+    fireEvent.keyDown(document, { key: 'Escape' });
+    expect(innerClose).toHaveBeenCalledTimes(1);
+    expect(outerClose).not.toHaveBeenCalled();
+
+    // once the inner one closes, the outer one owns Escape again
+    rerender(
+      <>
+        <Dialog isOpen onClose={outerClose} />
+        <Dialog isOpen={false} onClose={innerClose} />
+      </>
+    );
+    fireEvent.keyDown(document, { key: 'Escape' });
+    expect(outerClose).toHaveBeenCalledTimes(1);
+  });
+
+  it('keeps the inner dialog on top when the outer one re-binds its keys', () => {
+    const outerClose = jest.fn();
+    const innerClose = jest.fn();
+    const { rerender } = render(
+      <>
+        <Dialog isOpen onClose={outerClose} closeOnEscape />
+        <Dialog isOpen onClose={innerClose} />
+      </>
+    );
+    // a changed closeOnEscape re-runs the outer dialog's keydown effect
+    rerender(
+      <>
+        <Dialog isOpen onClose={outerClose} closeOnEscape={false} />
+        <Dialog isOpen onClose={innerClose} />
+      </>
+    );
+    rerender(
+      <>
+        <Dialog isOpen onClose={outerClose} closeOnEscape />
+        <Dialog isOpen onClose={innerClose} />
+      </>
+    );
+    fireEvent.keyDown(document, { key: 'Escape' });
+    expect(innerClose).toHaveBeenCalledTimes(1);
+    expect(outerClose).not.toHaveBeenCalled();
+  });
+
+  it('leaves Escape to a Headless UI Modal opened over a hand-rolled overlay', () => {
+    const overlayClose = jest.fn();
+    const modalClose = jest.fn();
+    render(
+      <>
+        <Dialog isOpen onClose={overlayClose} />
+        <Modal isOpen onClose={modalClose} title="Inner modal"><button>inside</button></Modal>
+      </>
+    );
+    fireEvent.keyDown(document.activeElement ?? document.body, { key: 'Escape' });
+    expect(modalClose).toHaveBeenCalledTimes(1);
+    expect(overlayClose).not.toHaveBeenCalled();
+  });
+
+  it('keeps a Headless UI Modal open when a hand-rolled confirm over it takes Escape', () => {
+    const modalClose = jest.fn();
+    const confirmClose = jest.fn();
+    render(
+      <>
+        <Modal isOpen onClose={modalClose} title="Outer modal"><button>inside</button></Modal>
+        <Dialog isOpen onClose={confirmClose} />
+      </>
+    );
+    fireEvent.keyDown(document.activeElement ?? document.body, { key: 'Escape' });
+    expect(confirmClose).toHaveBeenCalledTimes(1);
+    expect(modalClose).not.toHaveBeenCalled();
   });
 });
