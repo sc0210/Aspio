@@ -71,12 +71,12 @@ export function CompactDashboard() {
 
                 {/* HERO — net worth + wide sparkline */}
                 <section className="rounded-3xl bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 shadow-sm px-7 pt-6 pb-2 overflow-hidden">
-                    <p className="text-[13px] font-bold tracking-wide text-gray-500 dark:text-gray-500">{t('wallet.netWorth', 'Net Worth')}</p>
+                    <p className="text-sm font-bold tracking-wide text-gray-500 dark:text-gray-500">{t('wallet.netWorth', 'Net Worth')}</p>
                     <div className="flex flex-wrap items-end gap-x-4 gap-y-1">
                         <p className="text-[clamp(2.5rem,5vw,3.5rem)] leading-none font-extrabold tracking-tight tabular-nums text-gray-900 dark:text-white">
                             {isValueVisible ? formatTWD(m.netWorth) : hidden}
                         </p>
-                        <p className={cn('mb-1 text-[15px] font-bold tabular-nums', up ? 'text-prosperity-700 dark:text-prosperity-400' : 'text-error-700 dark:text-error-500')}>
+                        <p className={cn('mb-1 text-base font-bold tabular-nums', up ? 'text-prosperity-700 dark:text-prosperity-400' : 'text-error-700 dark:text-error-500')}>
                             {up ? '▲' : '▼'} {isValueVisible ? formatTWDCompact(Math.abs(m.changeAbs)) : '•••'}
                             <span className="text-gray-500 dark:text-gray-500 font-semibold ml-1.5">
                                 {up ? '+' : '−'}{Math.abs(m.changePct).toFixed(1)}% · {t('mobile.thisMonth', 'this month')}
@@ -119,11 +119,11 @@ export function CompactDashboard() {
 
                 {/* THREE INSIGHTS — all visible, no swipe */}
                 <section>
-                    <p className="mb-3 text-[15px] font-extrabold tracking-tight text-gray-900 dark:text-white">{t('mobile.highlights', "Today's highlights")}</p>
+                    <p className="mb-3 text-base font-extrabold tracking-tight text-gray-900 dark:text-white">{t('mobile.highlights', "Today's highlights")}</p>
                     <div className="grid grid-cols-3 gap-4">
                         {/* Cash flow */}
                         <article className="rounded-3xl bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 p-5">
-                            <p className="text-[13px] font-bold text-gray-500 dark:text-gray-500">{t('mobile.cashFlow', 'Cash flow this month')}</p>
+                            <p className="text-sm font-bold text-gray-500 dark:text-gray-500">{t('mobile.cashFlow', 'Cash flow this month')}</p>
                             <p className={cn('mt-2 text-[26px] font-extrabold tracking-tight tabular-nums', m.net >= 0 ? 'text-prosperity-700 dark:text-prosperity-400' : 'text-error-700 dark:text-error-500')}>
                                 {m.net >= 0 ? '+' : '−'}{isValueVisible ? formatTWDCompact(Math.abs(m.net)) : '•••'}
                             </p>
@@ -138,7 +138,7 @@ export function CompactDashboard() {
 
                         {/* Portfolio P/L */}
                         <article className="rounded-3xl bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 p-5">
-                            <p className="text-[13px] font-bold text-gray-500 dark:text-gray-500">{t('mobile.portfolioPnl', 'Portfolio gain / loss')}</p>
+                            <p className="text-sm font-bold text-gray-500 dark:text-gray-500">{t('mobile.portfolioPnl', 'Portfolio gain / loss')}</p>
                             <p className={cn('mt-2 text-[26px] font-extrabold tracking-tight tabular-nums', m.pnl >= 0 ? 'text-prosperity-700 dark:text-prosperity-400' : 'text-error-700 dark:text-error-500')}>
                                 {m.pnl >= 0 ? '▲' : '▼'} {isValueVisible ? formatTWDCompact(Math.abs(m.pnl)) : '•••'}
                             </p>
@@ -152,7 +152,7 @@ export function CompactDashboard() {
 
                         {/* Primary goal ring */}
                         <article className="rounded-3xl bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 p-5">
-                            <p className="text-[13px] font-bold text-gray-500 dark:text-gray-500 truncate">
+                            <p className="text-sm font-bold text-gray-500 dark:text-gray-500 truncate">
                                 {m.primaryGoal ? m.primaryGoal.title : t('mobile.noGoal', 'Set a goal')}
                             </p>
                             {m.primaryGoal ? (

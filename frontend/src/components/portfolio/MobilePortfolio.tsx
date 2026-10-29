@@ -153,7 +153,7 @@ export function MobilePortfolio() {
                             <p className="mt-1.5 text-[32px] leading-none font-extrabold tracking-tight tabular-nums text-gray-900 dark:text-white">
                                 {isValueVisible ? formatTWD(model.totalValue) : hidden}
                             </p>
-                            <p className={cn('mt-2 text-[13px] font-bold tabular-nums', totalUp ? 'text-prosperity-700 dark:text-prosperity-400' : 'text-error-700 dark:text-error-500')}>
+                            <p className={cn('mt-2 text-sm font-bold tabular-nums', totalUp ? 'text-prosperity-700 dark:text-prosperity-400' : 'text-error-700 dark:text-error-500')}>
                                 {totalUp ? '▲' : '▼'} {isValueVisible ? formatTWDCompact(Math.abs(model.totalGain)) : '•••'}
                                 <span className="text-gray-500 dark:text-gray-500 font-semibold ml-1">
                                     {totalUp ? '+' : '−'}{Math.abs(model.totalGainPct).toFixed(1)}%
@@ -174,7 +174,7 @@ export function MobilePortfolio() {
                     {/* Today's change */}
                     <div className="mt-4 pt-3 border-t border-gray-100 dark:border-gray-700 flex items-center justify-between">
                         <span className="text-xs font-semibold text-gray-500 dark:text-gray-500">{t('portfolio:todayChange', "Today")}</span>
-                        <span className={cn('text-[13px] font-bold tabular-nums', todayUp ? 'text-prosperity-700 dark:text-prosperity-400' : 'text-error-700 dark:text-error-500')}>
+                        <span className={cn('text-sm font-bold tabular-nums', todayUp ? 'text-prosperity-700 dark:text-prosperity-400' : 'text-error-700 dark:text-error-500')}>
                             {todayUp ? '▲' : '▼'} {isValueVisible ? formatTWDCompact(Math.abs(model.todayGain)) : '•••'} · {todayUp ? '+' : '−'}{Math.abs(model.todayGainPct).toFixed(2)}%
                         </span>
                     </div>
@@ -184,7 +184,7 @@ export function MobilePortfolio() {
                                 {t('portfolio:stats.cagrLabel', 'Annual return')}
                                 <span className="ml-1 font-normal">· {t('portfolio:stats.cagrCaption', 'Time-weighted, per year')}</span>
                             </span>
-                            <span className={cn('text-[13px] font-bold tabular-nums', annualPct >= 0 ? 'text-prosperity-700 dark:text-prosperity-400' : 'text-error-700 dark:text-error-500')}>
+                            <span className={cn('text-sm font-bold tabular-nums', annualPct >= 0 ? 'text-prosperity-700 dark:text-prosperity-400' : 'text-error-700 dark:text-error-500')}>
                                 {annualPct >= 0 ? '+' : '−'}{Math.abs(annualPct).toFixed(1)}%
                             </span>
                         </div>
@@ -207,7 +207,7 @@ export function MobilePortfolio() {
 
                 {/* Top holdings — compact rows */}
                 <section>
-                    <p className="px-1 mb-2.5 text-[13px] font-extrabold tracking-tight text-gray-900 dark:text-white">{t('portfolio:holdingsList', 'Holdings')}</p>
+                    <p className="px-1 mb-2.5 text-sm font-extrabold tracking-tight text-gray-900 dark:text-white">{t('portfolio:holdingsList', 'Holdings')}</p>
                     <Card padding="none" shadow="none" clip className="divide-y divide-gray-100 dark:divide-gray-700">
                         {model.holdings.slice(0, 8).map((h) => {
                             const up = (h.gainLoss || 0) >= 0;

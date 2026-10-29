@@ -120,7 +120,7 @@ export function MobileGoals() {
                                     <div className="min-w-0">
                                         <div className="flex items-center gap-1.5">
                                             <span className="text-base" aria-hidden="true">{meta.icon}</span>
-                                            <p className="text-[13px] font-bold text-gray-500 dark:text-gray-400 truncate">{g.title}</p>
+                                            <p className="text-sm font-bold text-gray-500 dark:text-gray-400 truncate">{g.title}</p>
                                         </div>
                                         <p className="mt-1 text-[30px] leading-none font-extrabold tracking-tight tabular-nums text-gray-900 dark:text-white">{Math.round(p)}%</p>
                                         <p className="mt-1.5 text-[12.5px] font-semibold text-gray-500 dark:text-gray-400 tabular-nums">
@@ -135,21 +135,21 @@ export function MobileGoals() {
                         {/* Other goals — compact cards with progress bars */}
                         {model.rest.length > 0 && (
                             <section className="space-y-2.5">
-                                <p className="px-1 text-[13px] font-extrabold tracking-tight text-gray-900 dark:text-white">{t('goals:sections.otherGoals', 'Other goals')}</p>
+                                <p className="px-1 text-sm font-extrabold tracking-tight text-gray-900 dark:text-white">{t('goals:sections.otherGoals', 'Other goals')}</p>
                                 {model.rest.map((g) => {
                                     const p = pct(g);
                                     const meta = catMeta(g.category);
                                     return (
                                         <Card key={g.id} padding="sm" shadow="none">
                                             <div className="flex items-center gap-3">
-                                                <span className="grid place-items-center w-9 h-9 rounded-xl bg-gray-100 dark:bg-gray-700 text-[17px] flex-shrink-0" aria-hidden="true">{meta.icon}</span>
+                                                <span className="grid place-items-center w-9 h-9 rounded-xl bg-gray-100 dark:bg-gray-700 text-lg flex-shrink-0" aria-hidden="true">{meta.icon}</span>
                                                 <div className="min-w-0 flex-1">
                                                     <p className="text-sm font-bold text-gray-900 dark:text-white truncate">{g.title}</p>
                                                     <p className="text-xs font-medium text-gray-500 dark:text-gray-500 tabular-nums">
                                                         {isValueVisible ? formatTWDCompact(g.currentAmount || 0) : '•••'} / {isValueVisible ? formatTWDCompact(g.targetAmount || 0) : '•••'}
                                                     </p>
                                                 </div>
-                                                <span className="text-[15px] font-extrabold tabular-nums text-prosperity-700 dark:text-prosperity-400 flex-shrink-0">{Math.round(p)}%</span>
+                                                <span className="text-base font-extrabold tabular-nums text-prosperity-700 dark:text-prosperity-400 flex-shrink-0">{Math.round(p)}%</span>
                                             </div>
                                             <div className="mt-3 h-2 rounded-full bg-gray-100 dark:bg-gray-700 overflow-hidden">
                                                 <div className="h-full rounded-full transition-all" style={{ width: `${p}%`, background: RING }} />

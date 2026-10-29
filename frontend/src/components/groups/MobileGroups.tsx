@@ -147,9 +147,9 @@ export function MobileGroups() {
                     <>
                         {/* HERO — net across every group, per currency */}
                         <section className="rounded-3xl bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 shadow-sm p-5">
-                            <p className="text-[13px] font-bold text-gray-500 dark:text-gray-400">{t('mobile.position')}</p>
+                            <p className="text-sm font-bold text-gray-500 dark:text-gray-400">{t('mobile.position')}</p>
                             {position.failedCount > 0 && (
-                                <p className="mt-1 text-[12px] font-semibold text-amber-700 dark:text-amber-300">
+                                <p className="mt-1 text-xs font-semibold text-amber-700 dark:text-amber-300">
                                     ⚠ {t('mobile.failedCaveat', { count: position.failedCount })}
                                 </p>
                             )}
@@ -173,11 +173,11 @@ export function MobileGroups() {
                                         <div className="mt-3 grid grid-cols-2 gap-2">
                                             <div className="rounded-2xl bg-green-50 dark:bg-green-900/20 px-3 py-2.5">
                                                 <p className="text-xs font-bold text-green-800 dark:text-green-200">{t('mobile.owedToYou')}</p>
-                                                <p className="text-[15px] font-extrabold tabular-nums text-green-900 dark:text-green-100">{hide(fmt(tot.owedToYou, tot.currency))}</p>
+                                                <p className="text-base font-extrabold tabular-nums text-green-900 dark:text-green-100">{hide(fmt(tot.owedToYou, tot.currency))}</p>
                                             </div>
                                             <div className="rounded-2xl bg-rose-50 dark:bg-rose-900/20 px-3 py-2.5">
                                                 <p className="text-xs font-bold text-rose-800 dark:text-rose-200">{t('mobile.youOwe')}</p>
-                                                <p className="text-[15px] font-extrabold tabular-nums text-rose-900 dark:text-rose-100">{hide(fmt(tot.youOwe, tot.currency))}</p>
+                                                <p className="text-base font-extrabold tabular-nums text-rose-900 dark:text-rose-100">{hide(fmt(tot.youOwe, tot.currency))}</p>
                                             </div>
                                         </div>
                                     </div>

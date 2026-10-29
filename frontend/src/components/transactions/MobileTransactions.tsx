@@ -129,14 +129,14 @@ export function MobileTransactions() {
                             <span className="w-2.5 h-2.5 rounded-sm bg-prosperity-500 flex-shrink-0" />
                             <div className="min-w-0">
                                 <p className="text-sm font-semibold text-gray-500 dark:text-gray-500">{t('dashboard:mobile.income', 'Income')}</p>
-                                <p className="text-[15px] font-extrabold tabular-nums text-gray-900 dark:text-white">{isValueVisible ? formatTWDCompact(model.income) : '•••'}</p>
+                                <p className="text-base font-extrabold tabular-nums text-gray-900 dark:text-white">{isValueVisible ? formatTWDCompact(model.income) : '•••'}</p>
                             </div>
                         </div>
                         <div className="flex items-center gap-2">
                             <span className="w-2.5 h-2.5 rounded-sm bg-error-400 flex-shrink-0" />
                             <div className="min-w-0">
                                 <p className="text-sm font-semibold text-gray-500 dark:text-gray-500">{t('dashboard:mobile.expense', 'Spent')}</p>
-                                <p className="text-[15px] font-extrabold tabular-nums text-gray-900 dark:text-white">{isValueVisible ? formatTWDCompact(model.expense) : '•••'}</p>
+                                <p className="text-base font-extrabold tabular-nums text-gray-900 dark:text-white">{isValueVisible ? formatTWDCompact(model.expense) : '•••'}</p>
                             </div>
                         </div>
                     </div>
@@ -144,7 +144,7 @@ export function MobileTransactions() {
 
                 {/* Recent transactions — grouped by day */}
                 <section>
-                    <p className="px-1 mb-2.5 text-[13px] font-extrabold tracking-tight text-gray-900 dark:text-white">{t('transactions:recent', 'Recent')}</p>
+                    <p className="px-1 mb-2.5 text-sm font-extrabold tracking-tight text-gray-900 dark:text-white">{t('transactions:recent', 'Recent')}</p>
                     {model.groups.length === 0 ? (
                         <Card padding="xl" shadow="none" className="text-center">
                             <p className="text-sm text-gray-500 dark:text-gray-500">{t('transactions:empty.title', 'No transactions yet')}</p>
@@ -160,7 +160,7 @@ export function MobileTransactions() {
                                             const isTransfer = tx.type === 'transfer';
                                             return (
                                                 <Link key={tx.id} href={editHref(tx.id)} className="flex items-center gap-3 px-4 py-3 active:bg-gray-50 dark:active:bg-gray-700/40 focus-visible:outline-none focus-visible:bg-gray-50 dark:focus-visible:bg-gray-700/40">
-                                                    <span className="grid place-items-center w-9 h-9 rounded-xl bg-gray-100 dark:bg-gray-700 text-[17px] flex-shrink-0" aria-hidden="true">
+                                                    <span className="grid place-items-center w-9 h-9 rounded-xl bg-gray-100 dark:bg-gray-700 text-lg flex-shrink-0" aria-hidden="true">
                                                         {getCategoryIcon(tx.category)}
                                                     </span>
                                                     <div className="min-w-0 flex-1">

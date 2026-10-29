@@ -77,14 +77,14 @@ export function MobileRebalancing({ allocations, actions, onBack }: MobileRebala
                 <section className="rounded-3xl bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 shadow-sm p-5">
                     {allocations.length === 0 ? (
                         <>
-                            <p className="text-[13px] font-bold text-gray-500 dark:text-gray-400">{t('allocation.title')}</p>
-                            <p className="mt-2 text-[13px] text-gray-500 dark:text-gray-400">
+                            <p className="text-sm font-bold text-gray-500 dark:text-gray-400">{t('allocation.title')}</p>
+                            <p className="mt-2 text-sm text-gray-500 dark:text-gray-400">
                                 {t('mobile.rebalance.noTargets', 'No target allocation yet. Set your targets on a tablet or desktop.')}
                             </p>
                         </>
                     ) : offTarget.length > 0 ? (
                         <>
-                            <p className="text-[13px] font-bold text-rose-600 dark:text-rose-400">⚠️ {t('allocation.needsRebalancing')}</p>
+                            <p className="text-sm font-bold text-rose-600 dark:text-rose-400">⚠️ {t('allocation.needsRebalancing')}</p>
                             <p className="mt-1 text-[32px] leading-none font-extrabold tracking-tight text-gray-900 dark:text-white">
                                 {t('mobile.rebalance.offTarget', { count: offTarget.length, defaultValue: '{{count}} off target' })}
                             </p>
@@ -96,7 +96,7 @@ export function MobileRebalancing({ allocations, actions, onBack }: MobileRebala
                                     <span className="text-[12.5px] font-bold text-gray-600 dark:text-gray-300">
                                         {t('mobile.rebalance.toMove', 'To move')}
                                     </span>
-                                    <span className="text-[17px] font-extrabold tabular-nums text-gray-900 dark:text-white">
+                                    <span className="text-lg font-extrabold tabular-nums text-gray-900 dark:text-white">
                                         {hide(fmt(toMove))}
                                     </span>
                                 </div>
@@ -104,8 +104,8 @@ export function MobileRebalancing({ allocations, actions, onBack }: MobileRebala
                         </>
                     ) : (
                         <>
-                            <p className="text-[13px] font-bold text-emerald-700 dark:text-emerald-400">✓ {t('rebalancing.balanced.title')}</p>
-                            <p className="mt-2 text-[13px] text-gray-500 dark:text-gray-400">{t('rebalancing.balanced.description')}</p>
+                            <p className="text-sm font-bold text-emerald-700 dark:text-emerald-400">✓ {t('rebalancing.balanced.title')}</p>
+                            <p className="mt-2 text-sm text-gray-500 dark:text-gray-400">{t('rebalancing.balanced.description')}</p>
                         </>
                     )}
                 </section>
@@ -113,7 +113,7 @@ export function MobileRebalancing({ allocations, actions, onBack }: MobileRebala
                 {/* Drift per asset: bar = current share, tick = target */}
                 {allocations.length > 0 && <section className="rounded-3xl bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 shadow-sm p-5">
                     <div className="flex items-baseline justify-between">
-                        <h2 className="text-[15px] font-extrabold text-gray-900 dark:text-white">{t('allocation.title')}</h2>
+                        <h2 className="text-base font-extrabold text-gray-900 dark:text-white">{t('allocation.title')}</h2>
                         <span className="text-xs font-semibold text-gray-500 dark:text-gray-500">
                             {t('mobile.rebalance.legend', 'Bar = now · Line = target')}
                         </span>
@@ -126,9 +126,9 @@ export function MobileRebalancing({ allocations, actions, onBack }: MobileRebala
                             return (
                                 <li key={a.asset}>
                                     <div className="flex items-baseline justify-between gap-3">
-                                        <p className="min-w-0 truncate text-[14px] font-bold text-gray-900 dark:text-white">
+                                        <p className="min-w-0 truncate text-sm font-bold text-gray-900 dark:text-white">
                                             {code}
-                                            {name && <span className="ml-1.5 text-[12px] font-semibold text-gray-500 dark:text-gray-500">{name}</span>}
+                                            {name && <span className="ml-1.5 text-xs font-semibold text-gray-500 dark:text-gray-500">{name}</span>}
                                         </p>
                                         <span className={`shrink-0 text-[12.5px] font-extrabold tabular-nums ${tone.text}`}>
                                             {d > 0 ? '+' : ''}{d.toFixed(1)} {t('mobile.rebalance.points', 'pp')}
@@ -157,7 +157,7 @@ export function MobileRebalancing({ allocations, actions, onBack }: MobileRebala
                 {/* The trades that close the gap: sells first, they fund the buys */}
                 {trades.length > 0 && (
                     <section className="rounded-3xl bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 shadow-sm p-5">
-                        <h2 className="text-[15px] font-extrabold text-gray-900 dark:text-white">{t('mobile.rebalance.trades', 'Suggested trades')}</h2>
+                        <h2 className="text-base font-extrabold text-gray-900 dark:text-white">{t('mobile.rebalance.trades', 'Suggested trades')}</h2>
                         <ul className="mt-2 divide-y divide-gray-100 dark:divide-gray-700">
                             {trades.map((a) => {
                                 const sell = a.action === 'SELL';
@@ -170,7 +170,7 @@ export function MobileRebalancing({ allocations, actions, onBack }: MobileRebala
                                             {sell ? t('allocation.action.sell') : t('allocation.action.buy')}
                                         </span>
                                         <div className="min-w-0 flex-1">
-                                            <p className="truncate text-[14px] font-bold text-gray-900 dark:text-white">{code}</p>
+                                            <p className="truncate text-sm font-bold text-gray-900 dark:text-white">{code}</p>
                                             {/* Hidden with the amount: shares × price gives it back.
                                                 Formatted as RebalancingPlanCard does on desktop. */}
                                             {isValueVisible && a.shares != null && a.shares > 0 && a.currentPrice != null && a.currentPrice > 0 ? (
@@ -182,7 +182,7 @@ export function MobileRebalancing({ allocations, actions, onBack }: MobileRebala
                                                 </p>
                                             ) : null}
                                         </div>
-                                        <span className="shrink-0 text-[15px] font-extrabold tabular-nums text-gray-900 dark:text-white">
+                                        <span className="shrink-0 text-base font-extrabold tabular-nums text-gray-900 dark:text-white">
                                             {hide(fmt(a.amount))}
                                         </span>
                                     </li>

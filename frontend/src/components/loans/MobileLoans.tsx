@@ -89,7 +89,7 @@ export function MobileLoans() {
                     <>
                         {/* HERO — what I owe, and what is due next */}
                         <section className="rounded-3xl bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 shadow-sm p-5">
-                            <p className="text-[13px] font-bold text-gray-500 dark:text-gray-400">{t('loans:summary.totalDebt')}</p>
+                            <p className="text-sm font-bold text-gray-500 dark:text-gray-400">{t('loans:summary.totalDebt')}</p>
                             <p className="mt-1 text-[32px] leading-none font-extrabold tracking-tight tabular-nums text-gray-900 dark:text-white">
                                 {hide(fmt(summary?.total_debt ?? 0))}
                             </p>
@@ -108,7 +108,7 @@ export function MobileLoans() {
                                     <span className="text-[12.5px] font-bold text-amber-800 dark:text-amber-200">
                                         🗓 {t('loans:summary.nextPayment')}{nextDate ? ` · ${nextDate}` : ''}
                                     </span>
-                                    <span className="text-[15px] font-extrabold tabular-nums text-amber-900 dark:text-amber-100">
+                                    <span className="text-base font-extrabold tabular-nums text-amber-900 dark:text-amber-100">
                                         {hide(fmt(summary.next_payment_amount))}
                                     </span>
                                 </div>
@@ -120,7 +120,7 @@ export function MobileLoans() {
 
                         {/* Each active loan — progress, and the one action a phone needs */}
                         <section className="space-y-2.5">
-                            <p className="px-1 text-[13px] font-extrabold tracking-tight text-gray-900 dark:text-white">
+                            <p className="px-1 text-sm font-extrabold tracking-tight text-gray-900 dark:text-white">
                                 {t('loans:sections.active', { count: active.length })}
                             </p>
                             {active.map((loan) => {
@@ -137,7 +137,7 @@ export function MobileLoans() {
                                                 </p>
                                             </div>
                                             <button type="button" onClick={() => setPaying(loan)}
-                                                className="flex-shrink-0 min-h-[44px] rounded-xl bg-primary-50 dark:bg-primary-900/30 px-3.5 text-[13px] font-bold text-primary-700 dark:text-primary-300 hover:bg-primary-100 dark:hover:bg-primary-900/50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-400">
+                                                className="flex-shrink-0 min-h-[44px] rounded-xl bg-primary-50 dark:bg-primary-900/30 px-3.5 text-sm font-bold text-primary-700 dark:text-primary-300 hover:bg-primary-100 dark:hover:bg-primary-900/50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-400">
                                                 {t('loans:card.recordPayment')}
                                             </button>
                                         </div>
