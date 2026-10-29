@@ -222,7 +222,12 @@
     "button": "匯出 / 匯入",
     "export": "匯出交易記錄",
     "import": "匯入交易記錄",
-    "title": "匯入 / 匯出交易記錄"
+    "title": "匯入 / 匯出交易記錄",
+    "replaceConfirm": {
+      "title": "取代所有交易",
+      "message": "⚠️ 這將刪除現有的 {{existing}} 筆交易，並以 {{incoming}} 筆新交易取代。\n\n確定要繼續嗎？",
+      "confirm": "取代"
+    }
   },
   "incomeCategories": {
     "business": "營業收入",

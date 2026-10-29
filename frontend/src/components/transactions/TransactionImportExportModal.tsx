@@ -17,7 +17,7 @@ import { useTranslation } from 'react-i18next';
 import toast from 'react-hot-toast';
 import { transactionService } from '@/services/transactionService';
 import { useDialog } from '@/hooks/useDialog';
-import { ConfirmDeleteDialog } from '@/components/portfolio/ConfirmDeleteDialog';
+import { ConfirmDialog } from '@/components/ui/ConfirmDialog';
 
 interface Transaction {
   id?: string;
@@ -745,11 +745,11 @@ export function TransactionImportExportModal({ transactions, onClose, onImport }
           </div>
         </div>
       </div>
-      <ConfirmDeleteDialog
+      <ConfirmDialog
         isOpen={confirmingReplace}
-        title="Replace All Transactions"
-        message={`⚠️ This will DELETE all ${transactions.length} existing transactions and replace them with ${importPreview.length} new transactions.\n\nAre you sure you want to continue?`}
-        confirmLabel="Replace"
+        title={t('transactions:importExport.replaceConfirm.title')}
+        message={t('transactions:importExport.replaceConfirm.message', { existing: transactions.length, incoming: importPreview.length })}
+        confirmLabel={t('transactions:importExport.replaceConfirm.confirm')}
         onCancel={() => setConfirmingReplace(false)}
         onConfirm={() => {
           setConfirmingReplace(false);

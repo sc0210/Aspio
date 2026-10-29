@@ -117,7 +117,7 @@ export function usePortfolioHoldingOperations(
   // Public handlers
   // ──────────────────────────────────────────────
 
-  /** Request deletion — opens ConfirmDeleteDialog (blocks life-wallet cash) */
+  /** Request deletion — opens ConfirmDialog (blocks life-wallet cash) */
   const handleDeleteHolding = (holdingId: string) => {
     const cachedPortfolio = queryClient.getQueryData<CachedPortfolio>(['portfolio', memoizedFilters, userKey]);
     const holding = cachedPortfolio?.holdings?.find((h) => h.id === holdingId);

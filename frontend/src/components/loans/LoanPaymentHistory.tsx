@@ -1,10 +1,11 @@
 'use client';
 
 import { useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import { ChevronDownIcon, ChevronUpIcon, PencilSquareIcon, TrashIcon } from '@heroicons/react/24/outline';
 import { usePaymentHistory, useDeletePayment } from '@/hooks/useLoans';
 import { EditPaymentModal } from './EditPaymentModal';
-import { ConfirmDeleteDialog } from '@/components/portfolio/ConfirmDeleteDialog';
+import { ConfirmDialog } from '@/components/ui/ConfirmDialog';
 import type { LoanPaymentRecord } from '@/services/loanService';
 import { formatCurrency } from '@/utils/formatters';
 
@@ -27,6 +28,7 @@ export function LoanPaymentHistory({ loanId, currency }: Props) {
   const [open, setOpen] = useState(false);
   const [editing, setEditing] = useState<LoanPaymentRecord | null>(null);
   const [deleting, setDeleting] = useState<LoanPaymentRecord | null>(null);
+  const { t } = useTranslation('loans');
   const { payments, isLoading } = usePaymentHistory(open ? loanId : null);
   const deletePayment = useDeletePayment();
 
@@ -109,10 +111,10 @@ export function LoanPaymentHistory({ loanId, currency }: Props) {
         />
       )}
 
-      <ConfirmDeleteDialog
+      <ConfirmDialog
         isOpen={deleting !== null}
-        title="Delete Payment"
-        message="Delete this payment? The loan balance will be restored."
+        title={t('paymentHistory.deleteTitle')}
+        message={t('paymentHistory.deleteMessage')}
         onCancel={() => setDeleting(null)}
         onConfirm={() => {
           if (deleting) deletePayment.mutate({ loanId, transactionId: deleting.transaction_id });

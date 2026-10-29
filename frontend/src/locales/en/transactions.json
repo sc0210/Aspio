@@ -222,7 +222,12 @@
     "button": "Export / Import",
     "export": "Export Transactions",
     "import": "Import Transactions",
-    "title": "Import / Export Transactions"
+    "title": "Import / Export Transactions",
+    "replaceConfirm": {
+      "title": "Replace All Transactions",
+      "message": "⚠️ This will DELETE all {{existing}} existing transactions and replace them with {{incoming}} new transactions.\n\nAre you sure you want to continue?",
+      "confirm": "Replace"
+    }
   },
   "incomeCategories": {
     "business": "Business",

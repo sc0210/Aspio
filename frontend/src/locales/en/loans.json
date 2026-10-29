@@ -157,5 +157,9 @@
     "inDays_other": "in {{count}} days",
     "overdue_one": "{{count}} day overdue",
     "overdue_other": "{{count}} days overdue"
+  },
+  "paymentHistory": {
+    "deleteTitle": "Delete Payment",
+    "deleteMessage": "Delete this payment? The loan balance will be restored."
   }
 }

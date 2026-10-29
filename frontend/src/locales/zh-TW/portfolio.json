@@ -1,4 +1,16 @@
 {
+  "holdingDelete": {
+    "investmentTitle": "刪除投資",
+    "investmentMessage": "確定刪除整筆投資「{{name}}」（{{symbol}}）？此操作無法復原。",
+    "lotTitle": "刪除批次",
+    "lotMessage": "確定刪除這一批（{{quantity}} 股，買入日 {{date}}）？",
+    "unknownDate": "未知日期"
+  },
+  "importReplaceConfirm": {
+    "title": "取代所有持股",
+    "message": "⚠️ 這將刪除現有的 {{existing}} 筆持股，並以 {{incoming}} 筆新持股取代。\n\n確定要繼續嗎？",
+    "confirm": "取代"
+  },
   "actions": {
     "addHolding": "新增持股",
     "bulkEdit": "批次編輯",

@@ -1,4 +1,16 @@
 {
+  "holdingDelete": {
+    "investmentTitle": "Delete Investment",
+    "investmentMessage": "Delete entire investment \"{{name}}\" ({{symbol}})? This action cannot be undone.",
+    "lotTitle": "Delete Lot",
+    "lotMessage": "Delete this lot ({{quantity}} shares purchased on {{date}})?",
+    "unknownDate": "unknown date"
+  },
+  "importReplaceConfirm": {
+    "title": "Replace All Holdings",
+    "message": "⚠️ This will DELETE all {{existing}} existing holdings and replace them with {{incoming}} new holdings.\n\nAre you sure you want to continue?",
+    "confirm": "Replace"
+  },
   "actions": {
     "addHolding": "Add Holding",
     "bulkEdit": "Bulk Edit",

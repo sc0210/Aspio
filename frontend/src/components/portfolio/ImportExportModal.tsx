@@ -24,7 +24,7 @@ import {
   ValidatedHolding,
 } from '@/utils/portfolioCsvUtils';
 import { useDialog } from '@/hooks/useDialog';
-import { ConfirmDeleteDialog } from './ConfirmDeleteDialog';
+import { ConfirmDialog } from '@/components/ui/ConfirmDialog';
 
 interface Holding {
   id?: string;
@@ -658,11 +658,11 @@ export function ImportExportModal({ holdings = [], onClose, onImport, onImportSu
           </div>
         </div>
       </div>
-      <ConfirmDeleteDialog
+      <ConfirmDialog
         isOpen={confirmingReplace}
-        title="Replace All Holdings"
-        message={`⚠️ This will DELETE all ${holdings.length} existing holdings and replace them with ${importPreview.length} new holdings.\n\nAre you sure you want to continue?`}
-        confirmLabel="Replace"
+        title={t('portfolio:importReplaceConfirm.title')}
+        message={t('portfolio:importReplaceConfirm.message', { existing: holdings.length, incoming: importPreview.length })}
+        confirmLabel={t('portfolio:importReplaceConfirm.confirm')}
         onCancel={() => setConfirmingReplace(false)}
         onConfirm={() => {
           setConfirmingReplace(false);

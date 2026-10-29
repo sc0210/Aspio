@@ -21,7 +21,7 @@ import { formatSectorLabel } from '@/utils/holdingLabels';
 import { LotSelectionModal } from './LotSelectionModal';
 import type { CostBasisMethod } from '@/utils/costBasis';
 import { useDialog } from '@/hooks/useDialog';
-import { ConfirmDeleteDialog } from './ConfirmDeleteDialog';
+import { ConfirmDialog } from '@/components/ui/ConfirmDialog';
 import { Card } from '@/components/ui/Card';
 import { editLotDraft, lotDraft, lotDraftErrors, type LotDraft, type LotDraftField } from '@/lib/portfolio/lotDraft';
 
@@ -342,7 +342,7 @@ export function HoldingDetailModal({
                         setPendingDelete({
                           lotId: holdings[0].id,
                           whole: true,
-                          message: `Delete entire investment "${aggregatedMetrics.name}" (${symbol})? This action cannot be undone.`,
+                          message: t('portfolio:holdingDelete.investmentMessage', { name: aggregatedMetrics.name, symbol }),
                         });
                       } else {
                         // Multiple lots: inform user to delete individual lots from the table below
@@ -747,7 +747,10 @@ export function HoldingDetailModal({
                                     onClick={() => setPendingDelete({
                                       lotId: lot.id,
                                       whole: false,
-                                      message: `Delete this lot (${lot.quantity} shares purchased on ${lot.purchaseDate ? new Date(lot.purchaseDate).toLocaleDateString() : 'unknown date'})?`,
+                                      message: t('portfolio:holdingDelete.lotMessage', {
+                                        quantity: lot.quantity,
+                                        date: lot.purchaseDate ? new Date(lot.purchaseDate).toLocaleDateString() : t('portfolio:holdingDelete.unknownDate'),
+                                      }),
                                     })}
                                     className="p-2 text-red-700 dark:text-red-400 hover:bg-red-100 dark:hover:bg-red-900/30 rounded-lg transition-colors"
                                     title="Delete lot"
@@ -873,10 +876,10 @@ export function HoldingDetailModal({
           />
         )}
       </div>
-      <ConfirmDeleteDialog
+      <ConfirmDialog
         isOpen={pendingDelete !== null}
-        title={pendingDelete?.whole ? 'Delete Investment' : 'Delete Lot'}
-        message={pendingDelete?.message}
+        title={t(pendingDelete?.whole ? 'portfolio:holdingDelete.investmentTitle' : 'portfolio:holdingDelete.lotTitle')}
+        message={pendingDelete?.message ?? ''}
         onCancel={() => setPendingDelete(null)}
         onConfirm={confirmPendingDelete}
       />
