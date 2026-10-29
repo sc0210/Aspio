@@ -160,6 +160,15 @@
   },
   "paymentHistory": {
     "deleteTitle": "刪除還款紀錄",
-    "deleteMessage": "確定刪除這筆還款？貸款餘額將會恢復。"
+    "deleteMessage": "確定刪除這筆還款？貸款餘額將會恢復。",
+    "toggle": "還款紀錄",
+    "loading": "載入中…",
+    "empty": "尚無還款紀錄。",
+    "colDate": "日期",
+    "colTotal": "總額",
+    "colPrincipal": "本金",
+    "colInterest": "利息",
+    "editPayment": "編輯還款",
+    "deletePayment": "刪除還款"
   }
 }

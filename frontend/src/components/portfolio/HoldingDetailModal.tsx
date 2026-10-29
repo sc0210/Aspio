@@ -234,13 +234,13 @@ export function HoldingDetailModal({
                     {symbol}
                   </h2>
                   <span className="px-3 py-1 bg-primary-100 dark:bg-primary-900/30 text-primary-700 dark:text-primary-300 text-sm font-semibold rounded-full">
-                    {holdings.length} {holdings.length === 1 ? 'Lot' : 'Lots'}
+                    {t('portfolio:holdingDetail.lotCount', { count: holdings.length })}
                   </span>
                   {onUpdateSymbol && !editingAggregate && (
                     <button
                       onClick={handleStartAggregateEdit}
                       className="p-1.5 text-gray-500 dark:text-gray-500 hover:text-primary-600 dark:hover:text-primary-400 hover:bg-primary-50 dark:hover:bg-primary-900/20 rounded-lg transition-all"
-                      title="Edit name and sector"
+                      title={t('portfolio:holdingModal.editNameSector')}
                     >
                       <PencilIcon className="w-4 h-4" />
                     </button>
@@ -273,14 +273,14 @@ export function HoldingDetailModal({
                         className="flex items-center gap-1 px-3 py-1.5 text-xs font-medium text-white bg-success-700 hover:bg-success-800 rounded-lg transition-colors"
                       >
                         <CheckIcon className="w-3.5 h-3.5" />
-                        Save
+                        {t('portfolio:holdingModal.save')}
                       </button>
                       <button
                         onClick={handleCancelAggregateEdit}
                         className="flex items-center gap-1 px-3 py-1.5 text-xs font-medium text-gray-700 dark:text-gray-300 bg-gray-100 dark:bg-gray-700 hover:bg-gray-200 dark:hover:bg-gray-600 rounded-lg transition-colors"
                       >
                         <CancelIcon className="w-3.5 h-3.5" />
-                        Cancel
+                        {t('portfolio:holdingModal.cancel')}
                       </button>
                     </div>
                   </div>
@@ -306,11 +306,11 @@ export function HoldingDetailModal({
                       setShowSellModal(true);
                     }}
                     className="flex items-center gap-2 px-3 py-2 text-sm font-medium text-white bg-orange-700 hover:bg-orange-800 dark:bg-orange-600 dark:hover:bg-orange-700 rounded-lg transition-all shadow-sm"
-                    title="Sell shares"
-                    aria-label="Sell shares"
+                    title={t('portfolio:holdingModal.sellShares')}
+                    aria-label={t('portfolio:holdingModal.sellShares')}
                   >
                     <ArrowTrendingDownIcon className="w-4 h-4" />
-                    <span>Sell</span>
+                    <span>{t('portfolio:holdingModal.sell')}</span>
                   </button>
                 )}
 
@@ -324,11 +324,11 @@ export function HoldingDetailModal({
                       onClose(); // Close detail modal before sell modal opens
                     }}
                     className="flex items-center gap-2 px-3 py-2 text-sm font-medium text-white bg-green-700 hover:bg-green-800 dark:bg-green-600 dark:hover:bg-green-700 rounded-lg transition-all shadow-sm"
-                    title="Sell shares of this holding"
-                    aria-label="Sell holding"
+                    title={t('portfolio:holdingModal.sellHoldingHint')}
+                    aria-label={t('portfolio:holdingModal.sellHolding')}
                   >
                     <CurrencyDollarIcon className="w-4 h-4" />
-                    <span>Sell</span>
+                    <span>{t('portfolio:holdingModal.sell')}</span>
                   </button>
                 )}
 
@@ -351,16 +351,16 @@ export function HoldingDetailModal({
                     }}
                     className="flex items-center gap-2 px-3 py-2 text-sm font-medium text-white bg-error-600 hover:bg-error-700 dark:bg-error-600 dark:hover:bg-error-700 rounded-lg transition-all shadow-sm"
                     title={holdings.length === 1 ? "Delete entire investment" : `Delete investment (${holdings.length} lots)`}
-                    aria-label="Delete investment"
+                    aria-label={t('portfolio:holdingModal.deleteInvestmentLabel')}
                   >
                     <TrashIcon className="w-4 h-4" />
-                    <span>Delete Investment</span>
+                    <span>{t('portfolio:holdingModal.deleteInvestment')}</span>
                   </button>
                 )}
                 <button
                   onClick={onClose}
                   className="flex-shrink-0 p-2 text-gray-500 dark:text-gray-500 hover:text-gray-600 dark:hover:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-800 rounded-lg transition-all"
-                  aria-label="Close"
+                  aria-label={t('portfolio:holdingModal.close')}
                 >
                   <XMarkIcon className="w-6 h-6" />
                 </button>
@@ -371,17 +371,17 @@ export function HoldingDetailModal({
           {/* Summary Cards */}
           <div className="p-6 bg-gradient-to-br from-primary-50 to-blue-50 dark:from-primary-900/20 dark:to-blue-900/20 border-b border-gray-200 dark:border-gray-700">
             <h3 className="text-sm font-semibold text-gray-700 dark:text-gray-300 mb-4 uppercase tracking-wide">
-              Portfolio Summary
+              {t('portfolio:holdingModal.summary')}
             </h3>
             <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
               <Card padding="sm" radius="xl">
-                <p className="text-xs font-medium text-gray-600 dark:text-gray-400 mb-1 uppercase tracking-wide">Total Quantity</p>
+                <p className="text-xs font-medium text-gray-600 dark:text-gray-400 mb-1 uppercase tracking-wide">{t('portfolio:holdingModal.totalQuantity')}</p>
                 <p className="text-xl font-bold text-gray-900 dark:text-white">
                   {isValueVisible ? aggregatedMetrics.totalQuantity.toLocaleString() : '•••'}
                 </p>
               </Card>
               <Card padding="sm" radius="xl">
-                <p className="text-xs font-medium text-gray-600 dark:text-gray-400 mb-1 uppercase tracking-wide">Avg. Cost</p>
+                <p className="text-xs font-medium text-gray-600 dark:text-gray-400 mb-1 uppercase tracking-wide">{t('portfolio:holdingModal.avgCost')}</p>
                 <p className="text-xl font-bold text-gray-900 dark:text-white">
                   {isValueVisible
                     ? formatCurrency(aggregatedMetrics.weightedAvgCost, aggregatedMetrics.currency)
@@ -390,7 +390,7 @@ export function HoldingDetailModal({
                 </p>
               </Card>
               <Card padding="sm" radius="xl">
-                <p className="text-xs font-medium text-gray-600 dark:text-gray-400 mb-1 uppercase tracking-wide">Current Price</p>
+                <p className="text-xs font-medium text-gray-600 dark:text-gray-400 mb-1 uppercase tracking-wide">{t('portfolio:holdingModal.currentPrice')}</p>
                 <p className="text-xl font-bold text-gray-900 dark:text-white">
                   {isValueVisible
                     ? formatCurrency(aggregatedMetrics.currentPrice, aggregatedMetrics.currency)
@@ -399,7 +399,7 @@ export function HoldingDetailModal({
                 </p>
               </Card>
               <Card padding="sm" radius="xl">
-                <p className="text-xs font-medium text-gray-600 dark:text-gray-400 mb-1 uppercase tracking-wide">Total Gain/Loss</p>
+                <p className="text-xs font-medium text-gray-600 dark:text-gray-400 mb-1 uppercase tracking-wide">{t('portfolio:holdingModal.totalGainLoss')}</p>
                 <p className={cn(
                   'text-xl font-bold',
                   aggregatedMetrics.gainLoss >= 0
@@ -422,7 +422,7 @@ export function HoldingDetailModal({
                     : '•••%'
                   }
                   {isValueVisible && (
-                    <span className="ml-1 text-xs opacity-70">ROI</span>
+                    <span className="ml-1 text-xs opacity-70">{t('portfolio:holdingModal.roi')}</span>
                   )}
                 </p>
               </Card>
@@ -433,10 +433,10 @@ export function HoldingDetailModal({
           <div className="p-6">
             <div className="flex items-center justify-between mb-4">
               <h3 className="text-sm font-semibold text-gray-700 dark:text-gray-300 uppercase tracking-wide">
-                Purchase History
+                {t('portfolio:holdingModal.purchaseHistory')}
               </h3>
               <span className="inline-flex items-center px-3 py-1 rounded-full text-sm font-semibold bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300">
-                {sortedLots.length} {sortedLots.length === 1 ? 'lot' : 'lots'}
+                {t('portfolio:holdingDetail.lotCount', { count: sortedLots.length })}
               </span>
             </div>
 
@@ -445,25 +445,25 @@ export function HoldingDetailModal({
                 <thead className="bg-gray-50 dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700">
                   <tr>
                     <th className="px-4 py-3 text-left text-xs font-semibold text-gray-600 dark:text-gray-400 uppercase tracking-wider">
-                      Purchase Date
+                      {t('portfolio:holdingModal.colPurchaseDate')}
                     </th>
                     <th className="px-4 py-3 text-right text-xs font-semibold text-gray-600 dark:text-gray-400 uppercase tracking-wider">
-                      Quantity
+                      {t('portfolio:holdingModal.colQuantity')}
                     </th>
                     <th className="px-4 py-3 text-right text-xs font-semibold text-gray-600 dark:text-gray-400 uppercase tracking-wider">
-                      Avg. Cost
+                      {t('portfolio:holdingModal.avgCost')}
                     </th>
                     <th className="px-4 py-3 text-right text-xs font-semibold text-gray-600 dark:text-gray-400 uppercase tracking-wider">
-                      Total Cost
+                      {t('portfolio:holdingModal.colTotalCost')}
                     </th>
                     <th className="px-4 py-3 text-right text-xs font-semibold text-gray-600 dark:text-gray-400 uppercase tracking-wider">
-                      Current Value
+                      {t('portfolio:holdingModal.colCurrentValue')}
                     </th>
                     <th className="px-4 py-3 text-right text-xs font-semibold text-gray-600 dark:text-gray-400 uppercase tracking-wider">
-                      Gain/Loss
+                      {t('portfolio:holdingModal.colGainLoss')}
                     </th>
                     <th className="px-4 py-3 text-right text-xs font-semibold text-gray-600 dark:text-gray-400 uppercase tracking-wider">
-                      Actions
+                      {t('portfolio:holdingModal.colActions')}
                     </th>
                   </tr>
                 </thead>
@@ -505,7 +505,7 @@ export function HoldingDetailModal({
                                     month: 'short',
                                     day: 'numeric'
                                   })
-                                  : 'Not set'
+                                  : t('portfolio:holdingModal.notSet')
                                 }
                               </span>
                             </div>
@@ -689,20 +689,20 @@ export function HoldingDetailModal({
                                     "inline-flex items-center gap-1.5 px-3 py-1.5 text-sm font-medium text-white bg-green-700 hover:bg-green-800 dark:bg-green-600 dark:hover:bg-green-700 rounded-lg transition-colors shadow-sm",
                                     draftHasErrors && "opacity-50 cursor-not-allowed"
                                   )}
-                                  title="Save changes"
-                                  aria-label="Save"
+                                  title={t('portfolio:holdingModal.saveChanges')}
+                                  aria-label={t('portfolio:holdingModal.save')}
                                 >
                                   <CheckIcon className="w-4 h-4" />
-                                  <span>Save</span>
+                                  <span>{t('portfolio:holdingModal.save')}</span>
                                 </button>
                                 <button
                                   onClick={() => { setEditingLotId(null); setDraft(null); }}
                                   className="inline-flex items-center gap-1.5 px-3 py-1.5 text-sm font-medium text-gray-700 dark:text-gray-300 bg-gray-200 hover:bg-gray-300 dark:bg-gray-700 dark:hover:bg-gray-600 rounded-lg transition-colors"
-                                  title="Cancel editing"
-                                  aria-label="Cancel"
+                                  title={t('portfolio:holdingModal.cancelEditing')}
+                                  aria-label={t('portfolio:holdingModal.cancel')}
                                 >
                                   <CancelIcon className="w-4 h-4" />
-                                  <span>Cancel</span>
+                                  <span>{t('portfolio:holdingModal.cancel')}</span>
                                 </button>
                               </div>
                             ) : (
@@ -723,8 +723,8 @@ export function HoldingDetailModal({
                                       setDraft(lotDraft(lot));
                                     }}
                                     className="p-2 text-blue-600 dark:text-blue-400 hover:bg-blue-100 dark:hover:bg-blue-900/30 rounded-lg transition-colors"
-                                    title="Edit lot"
-                                    aria-label="Edit lot"
+                                    title={t('portfolio:holdingModal.editLot')}
+                                    aria-label={t('portfolio:holdingModal.editLot')}
                                   >
                                     <PencilIcon className="w-4 h-4" />
                                   </button>
@@ -753,8 +753,8 @@ export function HoldingDetailModal({
                                       }),
                                     })}
                                     className="p-2 text-red-700 dark:text-red-400 hover:bg-red-100 dark:hover:bg-red-900/30 rounded-lg transition-colors"
-                                    title="Delete lot"
-                                    aria-label="Delete lot"
+                                    title={t('portfolio:holdingModal.deleteLot')}
+                                    aria-label={t('portfolio:holdingModal.deleteLot')}
                                   >
                                     <TrashIcon className="w-4 h-4" />
                                   </button>
@@ -773,7 +773,7 @@ export function HoldingDetailModal({
                 <tfoot className="bg-gray-100 dark:bg-gray-800 border-t-2 border-gray-300 dark:border-gray-600">
                   <tr className="font-semibold">
                     <td className="px-4 py-4 text-sm text-gray-900 dark:text-white">
-                      <span className="font-bold">Total</span>
+                      <span className="font-bold">{t('portfolio:holdingModal.total')}</span>
                     </td>
                     <td className="px-4 py-4 text-right text-sm text-gray-900 dark:text-white">
                       {isValueVisible ? aggregatedMetrics.totalQuantity.toLocaleString() : '•••'}
@@ -820,7 +820,7 @@ export function HoldingDetailModal({
                             : '•••%'
                           }
                           {isValueVisible && (
-                            <span className="ml-1 text-xs opacity-70">ROI</span>
+                            <span className="ml-1 text-xs opacity-70">{t('portfolio:holdingModal.roi')}</span>
                           )}
                         </span>
                       </div>
@@ -835,8 +835,7 @@ export function HoldingDetailModal({
             <div className="mt-6 p-4 bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-lg">
               <p className="text-sm text-blue-700 dark:text-blue-300 leading-relaxed">
                 <span className="text-base mr-1">💡</span>
-                <strong>Tip:</strong> The weighted average cost shows your true average purchase price across all lots.
-                This is useful for tax reporting and understanding your overall investment performance.
+                <strong>{t('portfolio:holdingModal.tipLabel')}</strong> {t('portfolio:holdingModal.tipBody')}
               </p>
             </div>
           </div>

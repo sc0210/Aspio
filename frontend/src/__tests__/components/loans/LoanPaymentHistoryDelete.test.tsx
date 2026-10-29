@@ -49,8 +49,8 @@ const openConfirm = () => {
       <LoanPaymentHistory loanId="loan-1" currency="TWD" />
     </I18nextProvider>,
   );
-  fireEvent.click(screen.getByRole('button', { name: /Payment History/ }));
-  fireEvent.click(screen.getByTitle('Delete payment'));
+  fireEvent.click(screen.getByRole('button', { name: new RegExp(loansZh.paymentHistory.toggle) }));
+  fireEvent.click(screen.getByTitle(loansZh.paymentHistory.deletePayment));
 };
 
 describe('LoanPaymentHistory delete', () => {

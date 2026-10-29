@@ -60,7 +60,7 @@ const open = () => {
             />
         </I18nextProvider>,
     );
-    fireEvent.click(screen.getAllByRole('button', { name: 'Delete lot' })[0]);
+    fireEvent.click(screen.getAllByRole('button', { name: zh.holdingModal.deleteLot })[0]);
     return { onDeleteLot, onClose };
 };
 

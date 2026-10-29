@@ -160,6 +160,15 @@
   },
   "paymentHistory": {
     "deleteTitle": "Delete Payment",
-    "deleteMessage": "Delete this payment? The loan balance will be restored."
+    "deleteMessage": "Delete this payment? The loan balance will be restored.",
+    "toggle": "Payment History",
+    "loading": "Loading…",
+    "empty": "No payments recorded yet.",
+    "colDate": "Date",
+    "colTotal": "Total",
+    "colPrincipal": "Principal",
+    "colInterest": "Interest",
+    "editPayment": "Edit payment",
+    "deletePayment": "Delete payment"
   }
 }
