@@ -26,6 +26,7 @@ import type { PortfolioHolding } from '@/shared/types';
 import { useModeAwareUI } from '@/hooks/useAppMode';
 import { invalidateDashboardData } from '@/hooks/useDataSynchronization';
 import { localDateString } from '@/utils/formatters';
+import { INVESTMENT_TYPES, investmentTypes, currencies, exchanges, sectors } from '@/lib/portfolio/holdingFormOptions';
 import { DashboardLayout } from '@/components/layout/DashboardLayout';
 
 // Built per-render so the messages follow the UI language, same as
@@ -38,10 +39,7 @@ const makeSchema = (t: TFunction) =>
     name: yup.string().required(t('portfolio:addHolding.validation.nameRequired')),
     type: yup
       .string()
-      .oneOf(
-        ['stock', 'etf', 'crypto', 'cryptocurrency', 'bond', 'mutual_fund', 'cash', 'reit', 'commodity', 'lending'],
-        t('portfolio:addHolding.validation.typeInvalid'),
-      )
+      .oneOf([...INVESTMENT_TYPES], t('portfolio:addHolding.validation.typeInvalid'))
       .required(t('portfolio:addHolding.validation.typeRequired')),
     walletType: yup
       .string()
@@ -69,53 +67,6 @@ const makeSchema = (t: TFunction) =>
 
 type FormData = yup.InferType<ReturnType<typeof makeSchema>>;
 
-const investmentTypes = [
-  { value: 'stock', label: 'Stock', description: 'Individual company shares' },
-  { value: 'etf', label: 'ETF', description: 'Exchange-traded funds' },
-  { value: 'crypto', label: 'Cryptocurrency', description: 'Digital assets' },
-  { value: 'bond', label: 'Bond', description: 'Government or corporate bonds' },
-  { value: 'mutual_fund', label: 'Mutual Fund', description: 'Managed investment funds' },
-];
-
-const currencies = [
-  { value: 'TWD', label: 'TWD - Taiwan Dollar' },
-  { value: 'SGD', label: 'SGD - Singapore Dollar' },
-  { value: 'USD', label: 'USD - US Dollar' },
-  { value: 'EUR', label: 'EUR - Euro' },
-  { value: 'GBP', label: 'GBP - British Pound' },
-  { value: 'JPY', label: 'JPY - Japanese Yen' },
-  { value: 'HKD', label: 'HKD - Hong Kong Dollar' },
-  { value: 'MYR', label: 'MYR - Malaysian Ringgit' },
-  { value: 'THB', label: 'THB - Thai Baht' },
-  { value: 'CNY', label: 'CNY - Chinese Yuan' },
-];
-
-const exchanges = [
-  { value: 'TWSE', label: 'Taiwan Stock Exchange (TWSE)' },
-  { value: 'SGX', label: 'Singapore Exchange (SGX)' },
-  { value: 'NYSE', label: 'New York Stock Exchange (NYSE)' },
-  { value: 'NASDAQ', label: 'NASDAQ' },
-  { value: 'LSE', label: 'London Stock Exchange (LSE)' },
-  { value: 'HKEX', label: 'Hong Kong Exchange (HKEX)' },
-  { value: 'TSE', label: 'Tokyo Stock Exchange (TSE)' },
-  { value: 'KLSE', label: 'Bursa Malaysia (KLSE)' },
-  { value: 'SET', label: 'Stock Exchange of Thailand (SET)' },
-];
-
-const sectors = [
-  'Technology',
-  'Healthcare',
-  'Financials',
-  'Consumer Discretionary',
-  'Consumer Staples',
-  'Energy',
-  'Materials',
-  'Industrials',
-  'Real Estate',
-  'Utilities',
-  'Communication Services',
-  'Telecommunications',
-];
 
 export default function EditHoldingPage() {
   const router = useRouter();
