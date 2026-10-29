@@ -3,6 +3,8 @@
  *
  * It used window.confirm until 2026-10-29. The confirm now opens inside this
  * modal, so Escape must cancel the delete without closing the modal too.
+ * Real i18next in zh-TW, so a key missing from that locale shows up as its
+ * English fallback and fails here.
  */
 
 import React from 'react';
@@ -11,7 +13,8 @@ import '@testing-library/jest-dom';
 import i18next from 'i18next';
 import { I18nextProvider, initReactI18next } from 'react-i18next';
 import { HoldingDetailModal } from '@/components/portfolio/HoldingDetailModal';
-import en from '@/locales/en/portfolio.json';
+import zh from '@/locales/zh-TW/portfolio.json';
+import commonZh from '@/locales/zh-TW/common.json';
 
 jest.mock('react-hot-toast', () => ({
     __esModule: true,
@@ -20,10 +23,10 @@ jest.mock('react-hot-toast', () => ({
 
 const i18n = i18next.createInstance();
 i18n.use(initReactI18next).init({
-    lng: 'en',
-    ns: ['portfolio'],
+    lng: 'zh-TW',
+    ns: ['portfolio', 'common'],
     defaultNS: 'portfolio',
-    resources: { en: { portfolio: en } },
+    resources: { 'zh-TW': { portfolio: zh, common: commonZh } },
     interpolation: { escapeValue: false },
     react: { useSuspense: false },
 });
@@ -75,7 +78,7 @@ describe('HoldingDetailModal lot delete', () => {
         const { onDeleteLot, onClose } = open();
         expect(onDeleteLot).not.toHaveBeenCalled();
 
-        fireEvent.click(screen.getByRole('button', { name: en.confirmDelete.confirm }));
+        fireEvent.click(screen.getByRole('button', { name: commonZh.common.delete }));
 
         await waitFor(() => expect(onDeleteLot).toHaveBeenCalledWith('lot-1'));
         expect(onClose).not.toHaveBeenCalled();
@@ -83,11 +86,11 @@ describe('HoldingDetailModal lot delete', () => {
 
     it('cancels on Escape without deleting or closing the holding modal', () => {
         const { onDeleteLot, onClose } = open();
-        expect(screen.getByRole('heading', { name: 'Delete Lot' })).toBeInTheDocument();
+        expect(screen.getByRole('heading', { name: zh.holdingDelete.lotTitle })).toBeInTheDocument();
 
         fireEvent.keyDown(document, { key: 'Escape' });
 
-        expect(screen.queryByRole('heading', { name: 'Delete Lot' })).not.toBeInTheDocument();
+        expect(screen.queryByRole('heading', { name: zh.holdingDelete.lotTitle })).not.toBeInTheDocument();
         expect(onDeleteLot).not.toHaveBeenCalled();
         expect(onClose).not.toHaveBeenCalled();
     });
