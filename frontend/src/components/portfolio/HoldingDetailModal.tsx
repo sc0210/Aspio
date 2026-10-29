@@ -207,6 +207,9 @@ export function HoldingDetailModal({
         onClose();
       } else {
         toast.success(t('portfolio:toast.lotDeleted'));
+        // The confirm handed focus back to this lot's delete button, which goes
+        // with the row; park it on the dialog so it doesn't fall to <body>.
+        panelRef.current?.focus();
       }
     } catch (error) {
       console.error(whole ? 'Failed to delete investment:' : 'Failed to delete lot:', error);
