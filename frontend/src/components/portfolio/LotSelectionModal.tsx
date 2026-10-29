@@ -6,6 +6,7 @@ import { cn } from '@/utils/cn';
 import { formatCurrency } from '@/utils/formatters';
 import { calculateCostBasis, CostBasisMethod, formatCostBasisMethod, Lot } from '@/utils/costBasis';
 import { useDialog } from '@/hooks/useDialog';
+import toast from 'react-hot-toast';
 
 interface LotSelectionModalProps {
   symbol: string;
@@ -91,7 +92,7 @@ export function LotSelectionModal({
 
   const handleConfirm = () => {
     if (method === 'SPECIFIC' && selectedLotIds.length === 0) {
-      alert('Please select at least one lot for specific lot identification');
+      toast.error('Please select at least one lot for specific lot identification');
       return;
     }
     onConfirm(selectedLotIds, method);

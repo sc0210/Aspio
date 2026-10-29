@@ -4,6 +4,7 @@ import { useState } from 'react';
 import { ChevronDownIcon, ChevronUpIcon, PencilSquareIcon, TrashIcon } from '@heroicons/react/24/outline';
 import { usePaymentHistory, useDeletePayment } from '@/hooks/useLoans';
 import { EditPaymentModal } from './EditPaymentModal';
+import { ConfirmDeleteDialog } from '@/components/portfolio/ConfirmDeleteDialog';
 import type { LoanPaymentRecord } from '@/services/loanService';
 import { formatCurrency } from '@/utils/formatters';
 
@@ -25,6 +26,7 @@ function fmtDate(dateStr: string) {
 export function LoanPaymentHistory({ loanId, currency }: Props) {
   const [open, setOpen] = useState(false);
   const [editing, setEditing] = useState<LoanPaymentRecord | null>(null);
+  const [deleting, setDeleting] = useState<LoanPaymentRecord | null>(null);
   const { payments, isLoading } = usePaymentHistory(open ? loanId : null);
   const deletePayment = useDeletePayment();
 
@@ -81,11 +83,7 @@ export function LoanPaymentHistory({ loanId, currency }: Props) {
                             <PencilSquareIcon className="w-3.5 h-3.5" />
                           </button>
                           <button
-                            onClick={() => {
-                              if (confirm('Delete this payment? The loan balance will be restored.')) {
-                                deletePayment.mutate({ loanId, transactionId: p.transaction_id });
-                              }
-                            }}
+                            onClick={() => setDeleting(p)}
                             disabled={deletePayment.isPending}
                             className="p-1 text-gray-500 dark:text-gray-400 hover:text-red-600 dark:hover:text-red-400 rounded transition-colors disabled:opacity-40"
                             title="Delete payment"
@@ -110,6 +108,17 @@ export function LoanPaymentHistory({ loanId, currency }: Props) {
           onClose={() => setEditing(null)}
         />
       )}
+
+      <ConfirmDeleteDialog
+        isOpen={deleting !== null}
+        title="Delete Payment"
+        message="Delete this payment? The loan balance will be restored."
+        onCancel={() => setDeleting(null)}
+        onConfirm={() => {
+          if (deleting) deletePayment.mutate({ loanId, transactionId: deleting.transaction_id });
+          setDeleting(null);
+        }}
+      />
     </>
   );
 }

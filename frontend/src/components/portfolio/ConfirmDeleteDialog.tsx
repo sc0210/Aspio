@@ -6,9 +6,13 @@ interface ConfirmDeleteDialogProps {
   isOpen: boolean;
   onConfirm: () => void;
   onCancel: () => void;
+  /** Defaults to the holding-delete copy the portfolio page was built with. */
+  title?: string;
+  message?: string;
+  confirmLabel?: string;
 }
 
-export function ConfirmDeleteDialog({ isOpen, onConfirm, onCancel }: ConfirmDeleteDialogProps) {
+export function ConfirmDeleteDialog({ isOpen, onConfirm, onCancel, title, message, confirmLabel }: ConfirmDeleteDialogProps) {
   const { t } = useTranslation(['portfolio']);
   const { panelRef, dialogProps } = useDialog({ isOpen: isOpen, onClose: onCancel });
 
@@ -26,10 +30,10 @@ export function ConfirmDeleteDialog({ isOpen, onConfirm, onCancel }: ConfirmDele
           id="confirm-delete-title"
           className="text-lg font-semibold text-gray-900 dark:text-gray-100 mb-2"
         >
-          {t('portfolio:confirmDelete.title')}
+          {title ?? t('portfolio:confirmDelete.title')}
         </h3>
-        <p className="text-sm text-gray-600 dark:text-gray-400 mb-6">
-          {t('portfolio:confirmDelete.message')}
+        <p className="text-sm text-gray-600 dark:text-gray-400 mb-6 whitespace-pre-line">
+          {message ?? t('portfolio:confirmDelete.message')}
         </p>
         <div className="flex justify-end gap-3">
           <button
@@ -44,7 +48,7 @@ export function ConfirmDeleteDialog({ isOpen, onConfirm, onCancel }: ConfirmDele
             onClick={onConfirm}
             className="px-4 py-2 text-sm font-medium text-white bg-error-600 rounded-lg hover:bg-error-700 transition-colors"
           >
-            {t('portfolio:confirmDelete.confirm')}
+            {confirmLabel ?? t('portfolio:confirmDelete.confirm')}
           </button>
         </div>
       </div>

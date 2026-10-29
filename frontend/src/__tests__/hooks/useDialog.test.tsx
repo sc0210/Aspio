@@ -110,4 +110,55 @@ describe('useDialog', () => {
     expect(document.activeElement).toBe(trigger);
     trigger.remove();
   });
+
+  it('gives Escape to the innermost dialog only, so cancelling a confirm keeps its parent open', () => {
+    const outerClose = jest.fn();
+    const innerClose = jest.fn();
+    const { rerender } = render(
+      <>
+        <Dialog isOpen onClose={outerClose} />
+        <Dialog isOpen onClose={innerClose} />
+      </>
+    );
+    fireEvent.keyDown(document, { key: 'Escape' });
+    expect(innerClose).toHaveBeenCalledTimes(1);
+    expect(outerClose).not.toHaveBeenCalled();
+
+    // once the inner one closes, the outer one owns Escape again
+    rerender(
+      <>
+        <Dialog isOpen onClose={outerClose} />
+        <Dialog isOpen={false} onClose={innerClose} />
+      </>
+    );
+    fireEvent.keyDown(document, { key: 'Escape' });
+    expect(outerClose).toHaveBeenCalledTimes(1);
+  });
+
+  it('keeps the inner dialog on top when the outer one re-binds its keys', () => {
+    const outerClose = jest.fn();
+    const innerClose = jest.fn();
+    const { rerender } = render(
+      <>
+        <Dialog isOpen onClose={outerClose} closeOnEscape />
+        <Dialog isOpen onClose={innerClose} />
+      </>
+    );
+    // a changed closeOnEscape re-runs the outer dialog's keydown effect
+    rerender(
+      <>
+        <Dialog isOpen onClose={outerClose} closeOnEscape={false} />
+        <Dialog isOpen onClose={innerClose} />
+      </>
+    );
+    rerender(
+      <>
+        <Dialog isOpen onClose={outerClose} closeOnEscape />
+        <Dialog isOpen onClose={innerClose} />
+      </>
+    );
+    fireEvent.keyDown(document, { key: 'Escape' });
+    expect(innerClose).toHaveBeenCalledTimes(1);
+    expect(outerClose).not.toHaveBeenCalled();
+  });
 });

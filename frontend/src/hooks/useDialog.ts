@@ -26,6 +26,11 @@ const FOCUSABLE = [
     '[tabindex]:not([tabindex="-1"])',
 ].join(',');
 
+// Open dialogs, innermost last. A confirm opened from inside another dialog
+// must own Escape and Tab: both listen on document, and the outer one, bound
+// first, would otherwise close itself (and the confirm) on the confirm's Escape.
+const openDialogs: object[] = [];
+
 interface UseDialogOptions {
     isOpen: boolean;
     onClose: () => void;
@@ -57,6 +62,18 @@ export function useDialog<T extends HTMLElement = HTMLDivElement>({
     }, [onClose]);
 
     useScrollLock(isOpen);
+
+    // Join the open-dialog stack on open only, so a keydown re-bind below (a
+    // changed closeOnEscape) cannot lift this dialog above a confirm it opened.
+    const tokenRef = useRef<object>({});
+    useEffect(() => {
+        if (!isOpen) return;
+        const token = tokenRef.current;
+        openDialogs.push(token);
+        return () => {
+            openDialogs.splice(openDialogs.indexOf(token), 1);
+        };
+    }, [isOpen]);
 
     const visibleFocusable = useCallback((): HTMLElement[] => {
         const panel = panelRef.current;
@@ -95,6 +112,7 @@ export function useDialog<T extends HTMLElement = HTMLDivElement>({
         if (!isOpen) return;
 
         const onKeyDown = (event: KeyboardEvent) => {
+            if (openDialogs[openDialogs.length - 1] !== tokenRef.current) return;
             if (event.key === 'Escape') {
                 if (!closeOnEscape) return;
                 event.stopPropagation();
