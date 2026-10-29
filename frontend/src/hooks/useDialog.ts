@@ -157,7 +157,7 @@ export function useDialog<T extends HTMLElement = HTMLDivElement>({
 
         document.addEventListener('keydown', onKeyDown);
         return () => document.removeEventListener('keydown', onKeyDown);
-    }, [isOpen, closeOnEscape, visibleFocusable]);
+    }, [isOpen, closeOnEscape, visibleFocusable, tokenRef]);
 
     return {
         panelRef,
