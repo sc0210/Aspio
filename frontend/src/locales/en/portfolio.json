@@ -10,6 +10,8 @@
     "sellHolding": "Sell holding",
     "sellHoldingHint": "Sell shares of this holding",
     "deleteInvestment": "Delete Investment",
+    "deleteInvestmentTitle_one": "Delete entire investment",
+    "deleteInvestmentTitle_other": "Delete investment ({{count}} lots)",
     "deleteInvestmentLabel": "Delete investment",
     "close": "Close",
     "summary": "Portfolio Summary",

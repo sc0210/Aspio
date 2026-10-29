@@ -10,6 +10,8 @@
     "sellHolding": "賣出持股",
     "sellHoldingHint": "賣出此持股的股份",
     "deleteInvestment": "刪除投資",
+    "deleteInvestmentTitle_one": "刪除整筆投資",
+    "deleteInvestmentTitle_other": "刪除投資（{{count}} 批）",
     "deleteInvestmentLabel": "刪除投資",
     "close": "關閉",
     "summary": "持倉摘要",

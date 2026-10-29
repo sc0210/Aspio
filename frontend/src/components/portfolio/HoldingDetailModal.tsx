@@ -350,7 +350,7 @@ export function HoldingDetailModal({
                       }
                     }}
                     className="flex items-center gap-2 px-3 py-2 text-sm font-medium text-white bg-error-600 hover:bg-error-700 dark:bg-error-600 dark:hover:bg-error-700 rounded-lg transition-all shadow-sm"
-                    title={holdings.length === 1 ? "Delete entire investment" : `Delete investment (${holdings.length} lots)`}
+                    title={t('portfolio:holdingModal.deleteInvestmentTitle', { count: holdings.length })}
                     aria-label={t('portfolio:holdingModal.deleteInvestmentLabel')}
                   >
                     <TrashIcon className="w-4 h-4" />
