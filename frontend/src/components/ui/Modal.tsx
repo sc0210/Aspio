@@ -6,6 +6,7 @@ import { XMarkIcon } from '@heroicons/react/24/outline';
 import { useTranslation } from 'react-i18next';
 import { cn } from '@/utils/cn';
 import { useScrollLock } from '@/hooks/useScrollLock';
+import { useDialogStackEntry } from '@/hooks/useDialog';
 
 interface ModalProps {
   isOpen: boolean;
@@ -41,6 +42,7 @@ export function Modal({
   // Headless UI locks the document element, but <main> is this app's scroll
   // container — lock that too or the page slides behind the dialog.
   useScrollLock(isOpen);
+  useDialogStackEntry(isOpen);
   const { t } = useTranslation('common');
 
   const sizeClasses = {

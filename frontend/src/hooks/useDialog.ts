@@ -31,6 +31,28 @@ const FOCUSABLE = [
 // first, would otherwise close itself (and the confirm) on the confirm's Escape.
 const openDialogs: object[] = [];
 
+/**
+ * Put a dialog on the open-dialog stack while it is open, and return its token.
+ * useDialog calls this itself; components/ui/Modal calls it so a hand-rolled
+ * overlay underneath a Headless UI dialog leaves Escape and Tab to that dialog.
+ * (The other way round needs nothing: Headless UI listens on window, which the
+ * overlay's stopPropagation on document already shields.)
+ */
+export function useDialogStackEntry(isOpen: boolean) {
+    // Joins on open only, so a keydown re-bind in useDialog (a changed
+    // closeOnEscape) cannot lift a dialog above a confirm it opened.
+    const tokenRef = useRef<object>({});
+    useEffect(() => {
+        if (!isOpen) return;
+        const token = tokenRef.current;
+        openDialogs.push(token);
+        return () => {
+            openDialogs.splice(openDialogs.indexOf(token), 1);
+        };
+    }, [isOpen]);
+    return tokenRef;
+}
+
 interface UseDialogOptions {
     isOpen: boolean;
     onClose: () => void;
@@ -63,17 +85,7 @@ export function useDialog<T extends HTMLElement = HTMLDivElement>({
 
     useScrollLock(isOpen);
 
-    // Join the open-dialog stack on open only, so a keydown re-bind below (a
-    // changed closeOnEscape) cannot lift this dialog above a confirm it opened.
-    const tokenRef = useRef<object>({});
-    useEffect(() => {
-        if (!isOpen) return;
-        const token = tokenRef.current;
-        openDialogs.push(token);
-        return () => {
-            openDialogs.splice(openDialogs.indexOf(token), 1);
-        };
-    }, [isOpen]);
+    const tokenRef = useDialogStackEntry(isOpen);
 
     const visibleFocusable = useCallback((): HTMLElement[] => {
         const panel = panelRef.current;

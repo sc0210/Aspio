@@ -1,6 +1,7 @@
 import React from 'react';
 import { render, screen, fireEvent, act } from '@testing-library/react';
 import { useDialog } from '@/hooks/useDialog';
+import { Modal } from '@/components/ui/Modal';
 
 function Dialog({ isOpen, onClose, closeOnEscape }: {
   isOpen: boolean; onClose: () => void; closeOnEscape?: boolean;
@@ -160,5 +161,33 @@ describe('useDialog', () => {
     fireEvent.keyDown(document, { key: 'Escape' });
     expect(innerClose).toHaveBeenCalledTimes(1);
     expect(outerClose).not.toHaveBeenCalled();
+  });
+
+  it('leaves Escape to a Headless UI Modal opened over a hand-rolled overlay', () => {
+    const overlayClose = jest.fn();
+    const modalClose = jest.fn();
+    render(
+      <>
+        <Dialog isOpen onClose={overlayClose} />
+        <Modal isOpen onClose={modalClose} title="Inner modal"><button>inside</button></Modal>
+      </>
+    );
+    fireEvent.keyDown(document.activeElement ?? document.body, { key: 'Escape' });
+    expect(modalClose).toHaveBeenCalledTimes(1);
+    expect(overlayClose).not.toHaveBeenCalled();
+  });
+
+  it('keeps a Headless UI Modal open when a hand-rolled confirm over it takes Escape', () => {
+    const modalClose = jest.fn();
+    const confirmClose = jest.fn();
+    render(
+      <>
+        <Modal isOpen onClose={modalClose} title="Outer modal"><button>inside</button></Modal>
+        <Dialog isOpen onClose={confirmClose} />
+      </>
+    );
+    fireEvent.keyDown(document.activeElement ?? document.body, { key: 'Escape' });
+    expect(confirmClose).toHaveBeenCalledTimes(1);
+    expect(modalClose).not.toHaveBeenCalled();
   });
 });
