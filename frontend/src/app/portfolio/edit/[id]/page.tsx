@@ -309,6 +309,13 @@ export default function EditHoldingPage() {
   };
 
   const watchedType = watch('type');
+  // A stored value the shared lists don't offer still shows, as its own choice.
+  const typeOptions = holding?.type && !investmentTypes.some((o) => o.value === holding.type)
+    ? [...investmentTypes, { value: holding.type, label: holding.type, description: 'Current type' }]
+    : investmentTypes;
+  const sectorOptions = holding?.sector && !sectors.includes(holding.sector)
+    ? [...sectors, holding.sector]
+    : sectors;
 
   if (isLoading) {
     return (
@@ -406,7 +413,7 @@ export default function EditHoldingPage() {
                 aria-labelledby="page-investment-type"
                 className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3"
               >
-                {investmentTypes.map((type) => (
+                {typeOptions.map((type) => (
                   <label
                     key={type.value}
                     className={`relative flex cursor-pointer rounded-lg border p-4 transition-all ${watchedType === type.value
@@ -586,7 +593,7 @@ export default function EditHoldingPage() {
                     className="input"
                   >
                     <option value="">Select sector</option>
-                    {sectors.map((sector) => (
+                    {sectorOptions.map((sector) => (
                       <option key={sector} value={sector}>
                         {sector}
                       </option>

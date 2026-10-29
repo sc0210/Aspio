@@ -5,10 +5,16 @@
  * commodity and cash, and the two sector lists disagreed. Saving still kept a
  * holding's stored value, but the edit page showed no type or sector picked for
  * anything outside its own list.
+ *
+ * The lists are what a new holding may be given. A holding can carry a value
+ * outside them (a legacy type, a demo or inline-edited sector), so the edit
+ * page appends the stored value as its own choice rather than rewriting it.
  */
 
 /** Every type the backend accepts. 'cryptocurrency' is a legacy alias of 'crypto' with no picker entry. */
 export const INVESTMENT_TYPES = ['stock', 'etf', 'crypto', 'cryptocurrency', 'bond', 'mutual_fund', 'reit', 'commodity', 'cash', 'lending'] as const;
+
+type InvestmentType = (typeof INVESTMENT_TYPES)[number];
 
 export const investmentTypes = [
   { value: 'stock', label: 'Stock', description: 'Individual company shares' },
@@ -19,8 +25,7 @@ export const investmentTypes = [
   { value: 'reit', label: 'REIT', description: 'Real Estate Investment Trust' },
   { value: 'commodity', label: 'Commodity', description: 'Raw materials and commodities' },
   { value: 'cash', label: 'Cash/Savings', description: 'Cash holdings and savings accounts' },
-  { value: 'lending', label: 'Lending', description: 'Interest-earning lending positions' },
-];
+] satisfies { value: InvestmentType; label: string; description: string }[];
 
 export const currencies = [
   { value: 'TWD', label: 'TWD - Taiwan Dollar' },
@@ -47,11 +52,11 @@ export const exchanges = [
   { value: 'SET', label: 'Stock Exchange of Thailand (SET)' },
 ];
 
-// The union of both old lists: holdings saved from either page carry these values.
+// One spelling per sector: allocation groups by the raw string, so offering
+// 'Financials' beside 'Financial Services' would split one slice in two.
 export const sectors = [
   'Technology',
   'Financial Services',
-  'Financials',
   'Healthcare',
   'Consumer Discretionary',
   'Consumer Staples',
@@ -61,6 +66,5 @@ export const sectors = [
   'Real Estate',
   'Utilities',
   'Communication Services',
-  'Telecommunications',
   'Cryptocurrency',
 ];

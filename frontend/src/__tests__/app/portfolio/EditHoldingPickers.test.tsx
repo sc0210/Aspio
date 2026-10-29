@@ -1,10 +1,12 @@
 /**
  * The edit page shows the type and sector a holding already has.
  *
- * Its pickers were a drifted copy of the add page's: no REIT, commodity, cash
- * or lending type, and a different sector list. Saving kept the stored value,
- * but the page showed nothing selected for any of those holdings. Both pages
- * now read lib/portfolio/holdingFormOptions.
+ * Its pickers were a drifted copy of the add page's: no REIT, commodity or
+ * cash type, and a different sector list. Saving kept the stored value, but the
+ * page showed nothing selected for any of those holdings. Both pages now read
+ * lib/portfolio/holdingFormOptions, and a stored value outside those lists (a
+ * legacy type, a demo or inline-edited sector) is shown as its own choice and
+ * saved back as it was, never rewritten.
  */
 
 
@@ -114,7 +116,7 @@ describe('the holding edit page pickers', () => {
         updateHolding.mockReset();
     });
 
-    it.each(['reit', 'commodity', 'cash', 'lending'])('shows a %s holding\'s type as selected', async (type) => {
+    it.each(['reit', 'commodity', 'cash', 'lending', 'cryptocurrency'])('shows a %s holding\'s type as selected', async (type) => {
         holdingType = type;
         sector = '';
         await renderPage();
@@ -123,10 +125,25 @@ describe('the holding edit page pickers', () => {
         expect(radio).toBeChecked();
     });
 
-    it.each(['Financial Services', 'Cryptocurrency', 'Financials'])('keeps sector %s selected', async (s) => {
+    it.each(['Financial Services', 'Financials', 'Taiwan Market ETF'])('keeps sector %s selected', async (s) => {
         holdingType = 'etf';
         sector = s;
         await renderPage();
         expect(screen.getByLabelText(/Sector/)).toHaveValue(s);
+    });
+
+    it('saves a stored type and sector outside the lists back unchanged', async () => {
+        holdingType = 'lending';
+        sector = 'Taiwan Market ETF';
+        await renderPage();
+        fireEvent.change(screen.getByLabelText(/Investment Name/), { target: { value: 'Renamed' } });
+        fireEvent.click(screen.getByRole('button', { name: /Update Holding/ }));
+
+        await waitFor(() => expect(updateHolding).toHaveBeenCalledTimes(1));
+        expect(updateHolding.mock.calls[0][0]).toMatchObject({
+            name: 'Renamed',
+            type: 'lending',
+            sector: 'Taiwan Market ETF',
+        });
     });
 });
