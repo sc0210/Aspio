@@ -38,9 +38,10 @@ const existing = [{ id: 'old-1', date: '2026-01-01', amount: 99, category: 'Food
 
 const reachConfirm = async () => {
   const onImport = jest.fn().mockResolvedValue(undefined);
+  const onClose = jest.fn();
   const { container } = render(
     <I18nextProvider i18n={i18n}>
-      <TransactionImportExportModal transactions={existing} onClose={jest.fn()} onImport={onImport} />
+      <TransactionImportExportModal transactions={existing} onClose={onClose} onImport={onImport} />
     </I18nextProvider>,
   );
   const input = container.querySelector('input[type="file"]') as HTMLInputElement;
@@ -48,7 +49,7 @@ const reachConfirm = async () => {
   const importButton = await screen.findByRole('button', { name: /Import 1 Transactions/ });
   fireEvent.click(container.querySelector('input[type="radio"][value="replace"]') as HTMLInputElement);
   fireEvent.click(importButton);
-  return onImport;
+  return { onImport, onClose };
 };
 
 describe('TransactionImportExportModal replace confirm', () => {
@@ -61,7 +62,7 @@ describe('TransactionImportExportModal replace confirm', () => {
   afterEach(() => jest.restoreAllMocks());
 
   it('does not import when the replace confirm is cancelled', async () => {
-    const onImport = await reachConfirm();
+    const { onImport, onClose } = await reachConfirm();
     const confirm = screen.getByRole('dialog', { name: txEn.importExport.replaceConfirm.title });
     expect(within(confirm).getByText(/DELETE all 1 existing transactions and replace them with 1 new/)).toBeInTheDocument();
 
@@ -70,10 +71,11 @@ describe('TransactionImportExportModal replace confirm', () => {
 
     expect(screen.queryByRole('dialog', { name: txEn.importExport.replaceConfirm.title })).not.toBeInTheDocument();
     expect(onImport).not.toHaveBeenCalled();
+    expect(onClose).not.toHaveBeenCalled();
   });
 
   it('imports in replace mode once confirmed', async () => {
-    const onImport = await reachConfirm();
+    const { onImport } = await reachConfirm();
     fireEvent.click(screen.getByRole('button', { name: txEn.importExport.replaceConfirm.confirm }));
 
     await waitFor(() => expect(onImport).toHaveBeenCalledTimes(1));

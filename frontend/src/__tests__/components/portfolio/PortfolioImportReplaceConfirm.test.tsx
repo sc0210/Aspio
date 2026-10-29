@@ -40,19 +40,21 @@ const existing = [
 
 const reachConfirm = async () => {
   const onImport = jest.fn().mockResolvedValue(undefined);
+  const onClose = jest.fn();
   const { container } = render(
     <I18nextProvider i18n={i18n}>
-      <ImportExportModal holdings={existing} onClose={jest.fn()} onImport={onImport} />
+      <ImportExportModal holdings={existing} onClose={onClose} onImport={onImport} />
     </I18nextProvider>,
   );
   const input = container.querySelector('input[type="file"]') as HTMLInputElement;
   // jsdom's File has no text(), which the modal reads the upload with.
   const file = Object.assign(new File([CSV], 'holdings.csv', { type: 'text/csv' }), { text: async () => CSV });
   fireEvent.change(input, { target: { files: [file] } });
+  // The import button's label is still a literal; switch to its key once translated.
   const importButton = await screen.findByRole('button', { name: /Import 1 Lot/ });
   fireEvent.click(container.querySelector('input[type="radio"][value="replace"]') as HTMLInputElement);
   fireEvent.click(importButton);
-  return onImport;
+  return { onImport, onClose };
 };
 
 describe('ImportExportModal replace confirm', () => {
@@ -65,7 +67,7 @@ describe('ImportExportModal replace confirm', () => {
   afterEach(() => jest.restoreAllMocks());
 
   it('does not import when the replace confirm is cancelled', async () => {
-    const onImport = await reachConfirm();
+    const { onImport, onClose } = await reachConfirm();
     const confirm = screen.getByRole('dialog', { name: pfZh.importReplaceConfirm.title });
     expect(within(confirm).getByText(/1 筆持股，並以 1 筆新持股取代/)).toBeInTheDocument();
 
@@ -74,10 +76,11 @@ describe('ImportExportModal replace confirm', () => {
 
     expect(screen.queryByRole('dialog', { name: pfZh.importReplaceConfirm.title })).not.toBeInTheDocument();
     expect(onImport).not.toHaveBeenCalled();
+    expect(onClose).not.toHaveBeenCalled();
   });
 
   it('imports in replace mode once confirmed', async () => {
-    const onImport = await reachConfirm();
+    const { onImport } = await reachConfirm();
     fireEvent.click(screen.getByRole('button', { name: pfZh.importReplaceConfirm.confirm }));
 
     await waitFor(() => expect(onImport).toHaveBeenCalledTimes(1));
