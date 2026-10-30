@@ -14,7 +14,7 @@ import { safeGetToken } from '@/lib/safe-get-token';
 jest.mock('next-auth/jwt', () => ({ getToken: jest.fn() }));
 
 const mockGetToken = getToken as jest.MockedFunction<typeof getToken>;
-const fakeRequest = {} as NextRequest;
+const fakeRequest = { cookies: { getAll: () => [] } } as unknown as NextRequest;
 
 describe('safeGetToken', () => {
   beforeEach(() => {
@@ -57,5 +57,37 @@ describe('safeGetToken', () => {
     await expect(safeGetToken(fakeRequest)).resolves.toBeNull();
     expect(consoleError).toHaveBeenCalled();
     consoleError.mockRestore();
+  });
+
+  describe('secureCookie selection', () => {
+    const originalUrl = process.env.NEXTAUTH_URL;
+    const withCookies = (...names: string[]) =>
+      ({ cookies: { getAll: () => names.map((name) => ({ name, value: 'x' })) } }) as unknown as NextRequest;
+    const secureCookieArg = () => mockGetToken.mock.calls[0][0]!.secureCookie;
+
+    beforeEach(() => {
+      mockGetToken.mockResolvedValue(null);
+    });
+    afterEach(() => {
+      if (originalUrl === undefined) delete process.env.NEXTAUTH_URL;
+      else process.env.NEXTAUTH_URL = originalUrl;
+    });
+
+    it('leaves the choice to next-auth when NEXTAUTH_URL is set', async () => {
+      process.env.NEXTAUTH_URL = 'https://app.example';
+      await safeGetToken(withCookies());
+      expect(secureCookieArg()).toBeUndefined();
+    });
+
+    it.each([
+      ['the secure cookie', ['__Secure-next-auth.session-token'], true],
+      ['a chunked secure cookie', ['__Secure-next-auth.session-token.0', '__Secure-next-auth.session-token.1'], true],
+      ['only the plain cookie', ['next-auth.session-token'], false],
+      ['no cookie', [], false],
+    ])('with NEXTAUTH_URL unset and %s, secureCookie is %s', async (_label, names, expected) => {
+      delete process.env.NEXTAUTH_URL;
+      await safeGetToken(withCookies(...names));
+      expect(secureCookieArg()).toBe(expected);
+    });
   });
 });

@@ -19,14 +19,19 @@ import type { NextRequest } from 'next/server';
  * token" and let the caller redirect to sign-in as it would for an anonymous
  * request.
  */
+const SECURE_SESSION_COOKIE = '__Secure-next-auth.session-token';
+
 export async function safeGetToken(req: NextRequest): Promise<JWT | null> {
   try {
     // getToken picks the cookie name from NEXTAUTH_URL alone. When that is unset
     // (AUTH_TRUST_HOST, one dev server on both http://localhost and an HTTPS
     // Tailscale name) it would miss the __Secure- cookie, so follow the cookie.
+    // A large JWT is split into `<name>.0`, `<name>.1`, … so match chunks too.
     const secureCookie = process.env.NEXTAUTH_URL
       ? undefined
-      : req.cookies.has('__Secure-next-auth.session-token');
+      : req.cookies
+          .getAll()
+          .some((c) => c.name === SECURE_SESSION_COOKIE || c.name.startsWith(`${SECURE_SESSION_COOKIE}.`));
     return await getToken({ req, secret: process.env.NEXTAUTH_SECRET, secureCookie });
   } catch (error) {
     // A URIError is the known malformed-header case above: expected, attacker

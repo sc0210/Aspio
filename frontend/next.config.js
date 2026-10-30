@@ -9,7 +9,7 @@ const nextConfig = {
   // Extra hosts the dev server accepts (e.g. a Tailscale name for phone testing).
   // Comma-separated; set from docker-compose.override.yml. Dev-only — ignored by builds.
   allowedDevOrigins: process.env.DEV_ALLOWED_ORIGINS
-    ? process.env.DEV_ALLOWED_ORIGINS.split(',').map((h) => h.trim())
+    ? process.env.DEV_ALLOWED_ORIGINS.split(',').map((h) => h.trim()).filter(Boolean)
     : undefined,
   // Remove console logs in production (but keep errors and warnings)
   compiler: {
