@@ -11,7 +11,9 @@
 #   docker compose -f docker-compose.prodlocal.yml down
 #
 # Requires the dev stack's Postgres to be up (./start-local.sh); this file has
-# no database of its own. It reaches it through the host, as
+# no database of its own, and runs no migrations. After pulling a new migration,
+# bring the shared DB to head first:
+#   docker exec aspiro-backend alembic upgrade head It reaches it through the host, as
 # host.docker.internal:5433 (Docker Desktop forwards that to the host's
 # 127.0.0.1:5433), rather than by joining the dev network: there its `backend`
 # and `frontend` service names would collide with the dev ones and the dev
