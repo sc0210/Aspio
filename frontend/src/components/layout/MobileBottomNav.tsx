@@ -243,7 +243,9 @@ export function MobileBottomNav() {
           'fixed bottom-0 left-0 right-0 z-40',
           'bg-white dark:bg-gray-800',
           'border-t border-gray-200 dark:border-gray-700',
-          'pb-safe'
+          // Was `pb-safe`, which no stylesheet defines. The mobile drawer
+          // (DashboardSidebar) stops at this bar's top: 3.5rem + 1px + this inset.
+          'pb-[env(safe-area-inset-bottom,0px)]'
         )}
       >
         <div className="flex items-stretch h-14">
