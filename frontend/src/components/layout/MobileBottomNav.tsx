@@ -214,7 +214,7 @@ function MoreSheet({ open, onClose, isDemoMode, onDisableDemo }: MoreSheetProps)
           )}
         </div>
 
-        <div className="pb-safe" />
+        <div className="pb-[env(safe-area-inset-bottom,0px)]" />
       </div>
     </>
   );
