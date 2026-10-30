@@ -1,0 +1,126 @@
+# docker-compose.prodlocal.yml
+# ---------------------------------------------------------------------------
+# PRODUCTION-MODE copy of the app on a dev laptop, running BESIDE the dev stack
+# (docker-compose.yml) and using the dev stack's database. Use it to see what
+# the precompiled Next.js build and the multi-worker backend actually do —
+# speed, prod-only code paths — without deploying.
+#
+#   docker compose -f docker-compose.prodlocal.yml build
+#   docker compose -f docker-compose.prodlocal.yml up -d
+#   open http://localhost:8080
+#   docker compose -f docker-compose.prodlocal.yml down
+#
+# Requires the dev stack's Postgres to be up (./start-local.sh); this file has
+# no database of its own, and runs no migrations. After pulling a new migration,
+# bring the shared DB to head first:
+#   docker exec aspiro-backend alembic upgrade head It reaches it through the host, as
+# host.docker.internal:5433 (Docker Desktop forwards that to the host's
+# 127.0.0.1:5433), rather than by joining the dev network: there its `backend`
+# and `frontend` service names would collide with the dev ones and the dev
+# frontend could end up talking to this backend.
+#
+# Separate from docker-compose.pi.yml on purpose: that file reuses the dev
+# container names (aspiro-postgres, aspiro-backend…) and the aspiro-backend:latest
+# tag, so starting it here would replace the dev stack. Everything below is
+# named aspiro-prodlocal-*.
+#
+# Same database means same data: anything you change at :8080 is changed at
+# :3000 too. SECRET_KEY and NEXTAUTH_SECRET use the dev values so a session
+# works on both (cookies are shared per host, not per port).
+#
+# Google sign-in needs http://localhost:8080/api/auth/callback/google in the
+# OAuth client's Authorized redirect URIs.
+# ---------------------------------------------------------------------------
+name: aspiro-prodlocal
+
+services:
+  backend:
+    image: aspiro-prodlocal-backend:latest
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+      args:
+        - GIT_SHA=${GIT_SHA:-local}
+        - INSTALL_FINLAB=${INSTALL_FINLAB:-${FINLAB_API_TOKEN:+true}}
+    container_name: aspiro-prodlocal-backend
+    environment:
+      - ENVIRONMENT=production
+      - SKIP_DB_SCHEMA_INIT=true
+      - DEBUG=false
+      - LOG_LEVEL=${LOG_LEVEL:-INFO}
+      - DATABASE_URL=postgresql+asyncpg://${POSTGRES_USER:-aspiro_user}:${POSTGRES_PASSWORD:-aspiro_password}@host.docker.internal:5433/${POSTGRES_DB:-aspiro_db}
+      - DATABASE_POOL_SIZE=5
+      - DATABASE_MAX_OVERFLOW=5
+      - SECRET_KEY=${SECRET_KEY:-dev-only-key-do-not-use-in-production-abc123xyz}
+      # The dev defaults above are placeholders the production config refuses;
+      # this is the documented opt-out. Acceptable only because every port here
+      # is loopback-bound and the data is the dev database.
+      - ALLOW_INSECURE_DEFAULTS=${ALLOW_INSECURE_DEFAULTS:-true}
+      # The dev backend already runs the cron jobs against this database; a
+      # second scheduler would double every price refresh and notification.
+      - ENABLE_SCHEDULER=false
+      - ALGORITHM=HS256
+      - ACCESS_TOKEN_EXPIRE_MINUTES=30
+      - REFRESH_TOKEN_EXPIRE_DAYS=7
+      - CORS_ORIGINS=["http://localhost:8080"]
+      - TRUSTED_PROXY_COUNT=1   # caddy only
+      - GOOGLE_CLIENT_ID=${GOOGLE_CLIENT_ID:-}
+      - GOOGLE_CLIENT_SECRET=${GOOGLE_CLIENT_SECRET:-}
+      - GOOGLE_REDIRECT_URI=http://localhost:8080/api/auth/callback/google
+      - LINE_CHANNEL_SECRET=${LINE_CHANNEL_SECRET:-}
+      - LINE_CHANNEL_ACCESS_TOKEN=${LINE_CHANNEL_ACCESS_TOKEN:-}
+      - FINLAB_API_TOKEN=${FINLAB_API_TOKEN:-}
+      - ADMIN_EMAILS=${ADMIN_EMAILS:-}
+      - DEMO_ACCOUNT_ENABLED=${DEMO_ACCOUNT_ENABLED:-false}
+      - FRONTEND_URL=http://localhost:8080
+      # The dev quickchart container is on the dev network, out of reach.
+      - QUICKCHART_URL=https://quickchart.io/chart
+      # Receipts: the same directory the dev backend writes (./backend is its /app).
+      - UPLOAD_PATH=/app/uploads/transactions
+    volumes:
+      - ./backend/uploads:/app/uploads
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+      start_period: 40s
+    restart: unless-stopped
+    command: python -m uvicorn app.main:app --host 0.0.0.0 --port 8000 --workers 2
+
+  frontend:
+    image: aspiro-prodlocal-frontend:latest
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+      args:
+        - NEXT_PUBLIC_API_URL=   # same-origin /api/v1, routed by caddy
+        - GIT_SHA=${GIT_SHA:-local}
+    container_name: aspiro-prodlocal-frontend
+    environment:
+      - NODE_ENV=production
+      - INTERNAL_API_URL=http://backend:8000/api/v1
+      # NEXTAUTH_URL deliberately unset: with AUTH_TRUST_HOST NextAuth takes its
+      # URL from each request, so http://localhost:8080 and an HTTPS Tailscale
+      # Serve port (`tailscale serve --bg --https=8443 8080`) both work. Must be
+      # absent, not empty — next-auth/react crashes on NEXTAUTH_URL="".
+      - AUTH_TRUST_HOST=true
+      - NEXTAUTH_SECRET=${NEXTAUTH_SECRET:-change-me-in-production}
+      - GOOGLE_CLIENT_ID=${GOOGLE_CLIENT_ID:-}
+      - GOOGLE_CLIENT_SECRET=${GOOGLE_CLIENT_SECRET:-}
+    depends_on:
+      backend:
+        condition: service_healthy
+    restart: unless-stopped
+
+  caddy:
+    image: caddy:2-alpine
+    container_name: aspiro-prodlocal-caddy
+    ports:
+      - "127.0.0.1:8080:80"
+    volumes:
+      - ./caddy/Caddyfile.http:/etc/caddy/Caddyfile:ro
+    depends_on:
+      - frontend
+      - backend
+    restart: unless-stopped

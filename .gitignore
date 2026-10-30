@@ -189,3 +189,6 @@ backend/test-results/
 backend/htmlcov/
 # Jest JSON report produced by the dead-suite check in CI
 frontend/jest-results.json
+
+# Machine-local compose overrides (e.g. Tailscale phone access)
+docker-compose.override.yml

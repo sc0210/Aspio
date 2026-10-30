@@ -44,6 +44,8 @@ function isPublic(pathname: string): boolean {
   // Deliberately this one path, not /api/proxy/* — that would expose every
   // backend route to unauthenticated callers through the proxy.
   if (pathname === '/api/proxy/users/register') return true;
+  // Public feature flags (useFeatures) — read on the sign-in page before any session.
+  if (pathname === '/api/proxy/features') return true;
   if (pathname.startsWith('/_next/')) return true;
   if (pathname.startsWith('/favicon')) return true;
   // PWA / static assets served from /public must never be gated
