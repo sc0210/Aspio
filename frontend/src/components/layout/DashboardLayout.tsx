@@ -126,7 +126,7 @@ export function DashboardLayout({ children, rightSidebar, topBarActions }: Dashb
             <main
               id="main-content"
               tabIndex={-1}
-              className="flex-1 overflow-y-auto p-3 pb-[calc(5.5rem+env(safe-area-inset-bottom,0px))] sm:p-4 sm:pb-4 lg:p-6 focus:outline-none"
+              className="flex-1 overflow-y-auto p-3 pb-[calc(5.5rem+env(safe-area-inset-bottom,0px))] sm:p-4 sm:pb-[calc(5.5rem+env(safe-area-inset-bottom,0px))] md:pb-4 lg:p-6 focus:outline-none"
             >
               <div className="max-w-[1600px] mx-auto">
                 {children}
@@ -144,10 +144,10 @@ export function DashboardLayout({ children, rightSidebar, topBarActions }: Dashb
           </div>
         </div>
 
-        {/* Mobile Sidebar Overlay */}
+        {/* Mobile Sidebar Overlay — dims the bottom tab bar (z-40) too */}
         {sidebarOpen && (
           <div
-            className="fixed inset-0 bg-gray-600 bg-opacity-50 z-20 md:hidden"
+            className="fixed inset-0 bg-gray-600 bg-opacity-50 z-[41] md:hidden"
             onClick={() => setSidebarOpen(false)}
           />
         )}
