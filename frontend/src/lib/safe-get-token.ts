@@ -21,7 +21,13 @@ import type { NextRequest } from 'next/server';
  */
 export async function safeGetToken(req: NextRequest): Promise<JWT | null> {
   try {
-    return await getToken({ req, secret: process.env.NEXTAUTH_SECRET });
+    // getToken picks the cookie name from NEXTAUTH_URL alone. When that is unset
+    // (AUTH_TRUST_HOST, one dev server on both http://localhost and an HTTPS
+    // Tailscale name) it would miss the __Secure- cookie, so follow the cookie.
+    const secureCookie = process.env.NEXTAUTH_URL
+      ? undefined
+      : req.cookies.has('__Secure-next-auth.session-token');
+    return await getToken({ req, secret: process.env.NEXTAUTH_SECRET, secureCookie });
   } catch (error) {
     // A URIError is the known malformed-header case above: expected, attacker
     // controlled, and high volume — logging it would just hand over the logs.
