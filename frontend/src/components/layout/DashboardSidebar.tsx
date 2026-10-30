@@ -334,13 +334,13 @@ export function DashboardSidebar({ open, collapsed, onToggleCollapsed, onClose }
       </div>
 
       {/* Mobile sidebar — stops at the top of the bottom tab bar (h-14 + 1px
-          border, MobileBottomNav) rather than the screen edge, where the
+          border + safe-area inset, MobileBottomNav) rather than the screen edge, where the
           browser toolbar and home indicator cover it. z above the bar's
           backdrop, below dialogs (z-50). */}
       <div
         ref={mobileSidebarRef}
         className={cn(
-          'md:hidden fixed top-0 bottom-[calc(3.5rem+1px)] left-0 z-[45] w-72 max-w-[85vw]',
+          'md:hidden fixed top-0 bottom-[calc(3.5rem+1px+env(safe-area-inset-bottom,0px))] left-0 z-[45] w-72 max-w-[85vw]',
           // flex-col like the desktop wrapper: the nav list (flex-1) scrolls and
           // the account/level footer stays pinned instead of running off-screen.
           'flex flex-col',
