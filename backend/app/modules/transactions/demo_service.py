@@ -814,6 +814,14 @@ class DemoTransactionService:
             currency_breakdown=currency_breakdown,
         )
 
+    def _is_transfer_leg(self, tx) -> bool:
+        """The same rule the authenticated endpoint uses, on a fixture row."""
+        if tx.get("transfer_group_id") is not None:
+            return True
+        names = {cat["id"]: cat.get("name") for cat in self.demo_categories}
+        name = (names.get(tx.get("category_id")) or "").strip().lower()
+        return name in TransactionRepository.TRANSFER_CATEGORY_NAMES
+
     async def get_monthly_summary(self, year: int) -> List[Dict[str, Any]]:
         """Get monthly spending summary for demo mode"""
         # Same rules as the authenticated endpoint, from the same module — these sets
@@ -846,15 +854,7 @@ class DemoTransactionService:
             }
 
         category_map = {cat["id"]: cat for cat in self.demo_categories}
-
-        def _is_transfer(tx) -> bool:
-            """The same rule the authenticated endpoint uses, on a fixture row."""
-            if tx.get("transfer_group_id") is not None:
-                return True
-            name = (
-                category_map.get(tx.get("category_id"), {}).get("name") or ""
-            ).strip().lower()
-            return name in TransactionRepository.TRANSFER_CATEGORY_NAMES
+        _is_transfer = self._is_transfer_leg
 
         # Aggregate income by month. A transfer's inflow is the user's own money
         # arriving from their other wallet, not earnings.
@@ -917,7 +917,10 @@ class DemoTransactionService:
 
         filtered = transactions
 
-        if filter_params.type:
+        if filter_params.type == TransactionType.TRANSFER:
+            # Legs are income/expense rows; none is typed 'transfer'.
+            filtered = [tx for tx in filtered if self._is_transfer_leg(tx)]
+        elif filter_params.type:
             filtered = [tx for tx in filtered if tx["type"] == filter_params.type]
 
         if filter_params.category_ids:

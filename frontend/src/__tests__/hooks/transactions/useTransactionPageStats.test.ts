@@ -96,6 +96,22 @@ describe('demo computation', () => {
     expect(s.stats.totalExpenses).toBe(750);
   });
 
+  it('the Transfer type matches both legs, which are stored as expense and income', () => {
+    (useDemo as jest.Mock).mockReturnValue({
+      demoTransactions: [
+        ...fixtures,
+        tx({ id: 'out', category: 'Transfer', amount: 1000, transferGroupId: 'g1' }),
+        tx({ id: 'in', type: 'income', category: 'Transfer', amount: 1000, walletType: 'emergency', transferGroupId: 'g1' }),
+        tx({ id: 'fee', category: '轉帳手續費', amount: 15 }),
+      ],
+      demoRevision: 3,
+    });
+    const s = render({ ...all, type: 'transfer' }).demoFn();
+    expect(ids(s)).toEqual(['in', 'out']);
+    expect(s.stats.totalIncome).toBe(1000);
+    expect(s.stats.totalExpenses).toBe(1000);
+  });
+
   it.each([
     ['description', 'october', ['salary']],
     ['category', 'transport', ['taxi']],

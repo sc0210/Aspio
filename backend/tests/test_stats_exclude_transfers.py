@@ -170,3 +170,46 @@ async def test_hiding_transfers_from_the_totals_keeps_them_in_the_category_dropd
     categories = {row["category"] for row in stats["category_breakdown"]}
     assert "Transfer" in categories
     assert stats["stats"]["total_income"] == 85_000  # totals still exclude it
+
+
+@pytest.mark.asyncio
+@pytest.mark.database
+async def test_filtering_by_transfer_finds_legacy_legs_and_skips_lookalikes(async_session):
+    """type=transfer uses the same rule as exclusion: a group id, or a category that
+    IS a transfer. A legacy leg has only the name; a fee only mentions one."""
+    user_id = uuid_module.uuid4()
+    legacy = _category("轉帳支出")
+    fee = _category("轉帳手續費")
+    dining = _category("Dining")
+    async_session.add_all([legacy, fee, dining])
+    legacy_leg = _txn(user_id, 10_000, legacy, TransactionType.EXPENSE)
+    async_session.add_all([
+        legacy_leg,
+        _txn(user_id, 15, fee, TransactionType.EXPENSE),
+        _txn(user_id, 6_000, dining, TransactionType.EXPENSE),
+    ])
+    await async_session.commit()
+
+    rows, total = await TransactionRepository(async_session).get_all(
+        user_id, TransactionFilter(type=TransactionType.TRANSFER)
+    )
+    assert total == 1
+    assert [r.id for r in rows] == [legacy_leg.id]
+
+
+def test_demo_service_filters_transfer_legs_by_the_same_rule():
+    """Signed-out requests go through the demo service's own filter."""
+    from app.modules.transactions.demo_service import DemoTransactionService
+
+    service = DemoTransactionService()
+    service.demo_categories = [
+        {"id": "c-transfer", "name": "Transfer"},
+        {"id": "c-fee", "name": "轉帳手續費"},
+    ]
+    rows = [
+        {"id": "grouped", "type": TransactionType.EXPENSE, "category_id": "c-fee", "transfer_group_id": "g"},
+        {"id": "legacy", "type": TransactionType.INCOME, "category_id": "c-transfer", "transfer_group_id": None},
+        {"id": "fee", "type": TransactionType.EXPENSE, "category_id": "c-fee", "transfer_group_id": None},
+    ]
+    kept = service._apply_filters(rows, TransactionFilter(type=TransactionType.TRANSFER))
+    assert [r["id"] for r in kept] == ["grouped", "legacy"]

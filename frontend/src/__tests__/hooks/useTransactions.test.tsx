@@ -152,6 +152,19 @@ describe('demo filtering mirrors the server', () => {
   });
 });
 
+it('demo Transfer filter returns both legs, which are stored as expense and income', async () => {
+  setMode(true, [
+    tx('food', { category: 'Food' }),
+    tx('out', { category: 'Transfer', transferGroupId: 'g1' }),
+    tx('in', { type: 'income', category: 'Transfer', walletType: 'emergency', transferGroupId: 'g1' }),
+    tx('legacy', { category: '轉帳支出' }),
+    tx('fee', { category: '轉帳手續費' }),
+  ]);
+  const { result } = renderHook(() => useTransactions({ type: 'transfer' }), { wrapper: createQueryWrapper() });
+  await waitFor(() => expect(result.current.isLoading).toBe(false));
+  expect(result.current.transactions.map((t) => t.id)).toEqual(['out', 'in', 'legacy']);
+});
+
 describe('createTransaction', () => {
   const input = { type: 'expense', amount: 50, currency: 'TWD', category: 'Food', description: 'Tea', date: new Date(), walletType: 'life', tags: [] } as never;
 
