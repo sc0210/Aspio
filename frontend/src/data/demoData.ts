@@ -1,6 +1,7 @@
 import { Transaction, PortfolioHolding, User, PeerConnectionOut, SharedGoalOut, SavingRecord, CompareDataResponse, PeerStatCard } from '@/shared/types';
 import type { DebtAccount } from '@/services/loanService';
 import { minimumsOnly } from '@/lib/finance/payoffPlan';
+import { businessToday } from '@/lib/portfolio/businessDate';
 
 export const demoUser: User = {
   id: 'demo-user-1',
@@ -395,7 +396,7 @@ export const demoTransferPair: Transaction[] = [
     currency: 'TWD',
     category: 'Transfer',
     description: '\u7dca\u6025\u9810\u5099\u91d1\u8f49\u5165',
-    date: new Date().toISOString().slice(0, 10),
+    date: businessToday(), // the app day is Asia/Taipei; the UTC day lags it until 08:00
     walletType: 'life',
     transferGroupId: 'demo-transfer-1',
     createdAt: new Date(),
@@ -409,7 +410,7 @@ export const demoTransferPair: Transaction[] = [
     currency: 'TWD',
     category: 'Transfer',
     description: '\u7dca\u6025\u9810\u5099\u91d1\u8f49\u5165',
-    date: new Date().toISOString().slice(0, 10),
+    date: businessToday(), // the app day is Asia/Taipei; the UTC day lags it until 08:00
     walletType: 'emergency',
     transferGroupId: 'demo-transfer-1',
     createdAt: new Date(),

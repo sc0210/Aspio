@@ -1,4 +1,5 @@
 import {
+  isDayInRange,
   formatCurrency,
   formatTWD,
   formatTWDCompact,
@@ -95,4 +96,24 @@ describe('toTWD — stablecoins', () => {
         setExchangeRates({ USD: 30, USDT: 29.9 });
         expect(toTWD(1_000, 'USDT')).toBeCloseTo(29_900);
     });
+});
+
+describe('isDayInRange', () => {
+  // The suite runs at Asia/Taipei. 00:18 on 1 Nov there is 16:18 on 31 Oct UTC.
+  const now = new Date('2026-10-31T16:18:00Z');
+  const thisMonth = { start: new Date(2026, 10, 1, 0, 0, 0), end: now };
+
+  it('keeps a row dated today in the small hours, before UTC catches up', () => {
+    expect(isDayInRange('2026-11-01', thisMonth)).toBe(true);
+  });
+
+  it('drops the day before the range and the day after it', () => {
+    expect(isDayInRange('2026-10-31', thisMonth)).toBe(false);
+    expect(isDayInRange('2026-11-02', thisMonth)).toBe(false);
+  });
+
+  it('reads a timestamp or a Date by its local day', () => {
+    expect(isDayInRange('2026-10-31T16:30:00Z', thisMonth)).toBe(true); // 00:30 Nov 1 local
+    expect(isDayInRange(new Date(2026, 10, 1, 23, 0), thisMonth)).toBe(true);
+  });
 });

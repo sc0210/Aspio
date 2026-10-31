@@ -53,3 +53,17 @@ describe('demo /review months', () => {
         expect(demoReviewForMonth(shift(-12))).toBeNull();
     });
 });
+
+describe('demo transfer pair', () => {
+    afterEach(() => jest.useRealTimers());
+
+    it('is dated on the Taipei day, not the UTC day, in the hours they differ', () => {
+        // 00:30 on 1 Nov in Taipei is still 31 Oct in UTC.
+        jest.useFakeTimers({ now: new Date('2026-10-31T16:30:00Z') });
+        jest.isolateModules(() => {
+            // eslint-disable-next-line @typescript-eslint/no-require-imports
+            const { demoTransferPair } = require('@/data/demoData');
+            expect(demoTransferPair.map((t: { date: string }) => t.date)).toEqual(['2026-11-01', '2026-11-01']);
+        });
+    });
+});
