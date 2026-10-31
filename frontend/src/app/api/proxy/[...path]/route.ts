@@ -58,9 +58,11 @@ async function proxyRequest(
     // catch below, which would wrongly look like the backend was down.
     const token = await safeGetToken(request);
 
-    // Build headers
+    // Pass the caller's Content-Type through. Forcing application/json dropped a
+    // multipart upload's boundary, so the backend saw no `file` field and every
+    // receipt scan and CSV import through this proxy failed with a 422.
     const headers: Record<string, string> = {
-      'Content-Type': 'application/json',
+      'Content-Type': request.headers.get('content-type') || 'application/json',
     };
 
     // Forward authorization if available
@@ -80,12 +82,16 @@ async function proxyRequest(
       headers,
     };
 
-    // Add body for non-GET requests
+    // Add body for non-GET requests. Raw bytes, not text(): decoding an image as
+    // UTF-8 replaces every invalid byte, so the file would arrive corrupted. As a
+    // Blob, not the bare ArrayBuffer: fetch detaches an ArrayBuffer on the first
+    // send, so following a backend redirect (POST /transactions -> /transactions/)
+    // failed with "fetch failed"; a Blob can be sent again.
     if (method !== 'GET' && method !== 'HEAD') {
       try {
-        const body = await request.text();
-        if (body) {
-          fetchOptions.body = body;
+        const body = await request.arrayBuffer();
+        if (body.byteLength > 0) {
+          fetchOptions.body = new Blob([body]);
         }
       } catch {
         // No body to forward
