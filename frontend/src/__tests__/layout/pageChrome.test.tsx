@@ -113,6 +113,22 @@ describe('every page is named in the desktop top bar', () => {
         expect(heading!.textContent!.trim()).not.toBe('');
         expect(heading!.textContent).not.toMatch(/^navigation\./);
     });
+
+    // A sub-page's own back arrow lives in PageHeader, which is phone-only, so on
+    // desktop the breadcrumb parent is the way back and has to be a link.
+    it.each([
+        ['/transactions/add', '/transactions'],
+        ['/transactions/edit/abc', '/transactions'],
+        ['/portfolio/add', '/portfolio'],
+    ])('%s links back to %s', (route, parent) => {
+        pathname = route;
+        render(
+            <I18nextProvider i18n={i18n}>
+                <PageTitle />
+            </I18nextProvider>,
+        );
+        expect(screen.getByRole('link')).toHaveAttribute('href', parent);
+    });
 });
 
 const indentOf = (line: string) => line.length - line.trimStart().length;
