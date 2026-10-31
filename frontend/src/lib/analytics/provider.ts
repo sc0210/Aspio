@@ -15,6 +15,9 @@ interface AnalyticsEvent {
 /** Allowed in the CSP's script-src (next.config.js); change both together. */
 export const CLOUDFLARE_BEACON_SRC = 'https://static.cloudflareinsights.com/beacon.min.js';
 
+/** Routes whose URLs can carry tokens; the beacon is not started on them. */
+const SENSITIVE_PATH_PREFIXES = ['/link-line', '/liff', '/auth'];
+
 class AnalyticsProvider {
     private isInitialized = false;
     private eventQueue: AnalyticsEvent[] = [];
@@ -130,6 +133,11 @@ class AnalyticsProvider {
     private initializeCloudflare() {
         const { token } = defaultAnalyticsConfig.providers.cloudflare!;
         if (typeof document === 'undefined' || document.querySelector('script[data-cf-beacon]')) {
+            return;
+        }
+        // Pages reached by links that carry secrets (/link-line?token=…, sign-in and
+        // reset links): the beacon reports the page address, so it never starts there.
+        if (SENSITIVE_PATH_PREFIXES.some((prefix) => window.location.pathname.startsWith(prefix))) {
             return;
         }
         const script = document.createElement('script');
