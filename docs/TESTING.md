@@ -28,7 +28,9 @@ isolation`. `--strict-markers` is on, so an undeclared marker is an error, not a
 later.
 
 Tests run against in-memory SQLite (`tests/conftest.py`). Only `integration` tests need a real
-Postgres or live market-data APIs.
+Postgres or live market-data APIs. `conftest.py` sets `DATABASE_URL` to that SQLite before the app
+is imported, whatever the environment says, so a run inside the dev container never writes to the
+dev database. Set `ASPIRO_TEST_DATABASE_URL` to point a run at another database on purpose.
 
 Coverage is a ratchet: `pytest.ini` and CI both pass `--cov-fail-under` at the measured level
 rounded down (81 as of 2026-10-23), and the Jest floors live in `frontend/jest.config.js`. Raise
@@ -40,6 +42,16 @@ every DB fixture errors.
 
 `backend/.coveragerc` omits `app/modules/line_bot/` from the figure: the LINE bot is an
 optional add-on, so the floor measures the core app only. Its tests still run and must pass.
+
+### Generated-sequence checks
+
+`tests/test_loan_balance_invariant.py` uses Hypothesis to run generated sequences of loan-linked
+transaction requests against the real `TransactionService`, checking after every step that a
+loan's balance equals its principal minus its linked payments. It checks 200 fixed examples so
+CI reproduces; `LOAN_INVARIANT_EXPLORE=1 python -m pytest tests/test_loan_balance_invariant.py -o
+"addopts=" -s` draws 1000 random ones to look further. A failure prints the shortest sequence as
+API requests to replay. A second property makes the balance write fail mid-request and checks
+that nothing drifts after rollback, which holds because each request commits once.
 
 ### Mocks that hide bugs
 

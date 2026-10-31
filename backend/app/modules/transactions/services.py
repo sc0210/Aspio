@@ -183,16 +183,19 @@ class TransactionService:
         # (it's only used for lookup, not stored in the database)
         data.pop("category_name", None)
 
-        # Create transaction
-        transaction = await self.transaction_repo.create(data, user_id)
-
-        # Update category usage count
-        await self.category_repo.increment_usage(transaction.category_id)
-
-        # Reduce loan balance if this expense is linked to a loan
-        if data.get("loan_id") and transaction.type == TransactionType.EXPENSE:
-            reduction = data.get("principal_portion") or data["amount"]
-            await self._apply_loan_payment(str(data["loan_id"]), Decimal(str(reduction)), user_id)
+        # The row, its category's usage count and any loan balance it moves are one
+        # commit: a payment that is saved must also have moved its loan, or neither.
+        db = self.transaction_repo.db
+        try:
+            transaction = await self.transaction_repo.create(data, user_id, commit=False)
+            await self.category_repo.increment_usage(transaction.category_id, commit=False)
+            if data.get("loan_id") and transaction.type == TransactionType.EXPENSE:
+                reduction = data.get("principal_portion") or data["amount"]
+                await self._apply_loan_payment(str(data["loan_id"]), Decimal(str(reduction)), user_id)
+            await db.commit()
+        except Exception:
+            await db.rollback()
+            raise
 
         # Log transaction creation
         logger.info(f"Transaction created: {transaction.id} for user: {user_id}")
@@ -621,26 +624,33 @@ class TransactionService:
                     data["principal_portion"] = cap
 
         logger.info(f"🔍 UPDATE TRANSACTION - Final data before repo.update: {data}")
-        transaction = await self.transaction_repo.update(transaction_id, user_id, data)
+        # The row and the loan balance moves it causes are one commit (see create).
+        db = self.transaction_repo.db
+        try:
+            transaction = await self.transaction_repo.update(transaction_id, user_id, data, commit=False)
 
-        if transaction:
-            if "category_id" in data:
-                await self.category_repo.increment_usage(transaction.category_id)
+            if transaction:
+                if "category_id" in data:
+                    await self.category_repo.increment_usage(transaction.category_id, commit=False)
 
-            # Re-sync the loan balance: reverse the old effect, apply the new one.
-            if loan_relevant:
-                new_loan_id = str(transaction.loan_id) if transaction.loan_id else None
-                new_is_expense = transaction.type == TransactionType.EXPENSE
-                new_reduction = Decimal(str(transaction.principal_portion or transaction.amount))
-                if (
-                    old_loan_id != new_loan_id
-                    or old_reduction != new_reduction
-                    or old_is_expense != new_is_expense
-                ):
-                    if old_loan_id and old_is_expense:
-                        await self._apply_loan_payment(old_loan_id, -old_reduction, user_id)
-                    if new_loan_id and new_is_expense:
-                        await self._apply_loan_payment(new_loan_id, new_reduction, user_id)
+                # Re-sync the loan balance: reverse the old effect, apply the new one.
+                if loan_relevant:
+                    new_loan_id = str(transaction.loan_id) if transaction.loan_id else None
+                    new_is_expense = transaction.type == TransactionType.EXPENSE
+                    new_reduction = Decimal(str(transaction.principal_portion or transaction.amount))
+                    if (
+                        old_loan_id != new_loan_id
+                        or old_reduction != new_reduction
+                        or old_is_expense != new_is_expense
+                    ):
+                        if old_loan_id and old_is_expense:
+                            await self._apply_loan_payment(old_loan_id, -old_reduction, user_id)
+                        if new_loan_id and new_is_expense:
+                            await self._apply_loan_payment(new_loan_id, new_reduction, user_id)
+            await db.commit()
+        except Exception:
+            await db.rollback()
+            raise
 
         logger.info(f"Transaction updated: {transaction_id} by user: {user_id}")
 
@@ -655,32 +665,41 @@ class TransactionService:
         # Fetch before deleting so we can reverse any loan balance change
         existing = await self.transaction_repo.get_by_id(transaction_id, user_id)
 
-        success = await self.transaction_repo.soft_delete(transaction_id, user_id)
+        # The delete, the loan balance it restores and a transfer's other leg are one
+        # commit: no half-deleted transfer, no deleted payment still off its loan.
+        db = self.transaction_repo.db
+        try:
+            success = await self.transaction_repo.soft_delete(transaction_id, user_id, commit=False)
+
+            if success:
+                # Reverse the loan balance reduction if this was a linked loan expense
+                if (
+                    existing
+                    and existing.loan_id
+                    and existing.type == TransactionType.EXPENSE
+                ):
+                    restore = existing.principal_portion or existing.amount
+                    await self._apply_loan_payment(
+                        str(existing.loan_id), -Decimal(str(restore)), user_id
+                    )
+
+                # Cascade-delete the sibling leg of a wallet transfer so neither
+                # side is left as an orphaned half-transaction.
+                if existing and existing.transfer_group_id:
+                    siblings = await self.transaction_repo.get_by_transfer_group(
+                        str(existing.transfer_group_id), user_id
+                    )
+                    for sibling in siblings:
+                        if str(sibling.id) != str(transaction_id):
+                            await self.transaction_repo.soft_delete(
+                                str(sibling.id), user_id, commit=False
+                            )
+            await db.commit()
+        except Exception:
+            await db.rollback()
+            raise
 
         if success:
-            # Reverse the loan balance reduction if this was a linked loan expense
-            if (
-                existing
-                and existing.loan_id
-                and existing.type == TransactionType.EXPENSE
-            ):
-                restore = existing.principal_portion or existing.amount
-                await self._apply_loan_payment(
-                    str(existing.loan_id), -Decimal(str(restore)), user_id
-                )
-
-            # Cascade-delete the sibling leg of a wallet transfer so neither
-            # side is left as an orphaned half-transaction.
-            if existing and existing.transfer_group_id:
-                siblings = await self.transaction_repo.get_by_transfer_group(
-                    str(existing.transfer_group_id), user_id
-                )
-                for sibling in siblings:
-                    if str(sibling.id) != str(transaction_id):
-                        await self.transaction_repo.soft_delete(
-                            str(sibling.id), user_id
-                        )
-
             logger.info(f"Transaction deleted: {transaction_id} by user: {user_id}")
 
         return success
@@ -730,6 +749,7 @@ class TransactionService:
 
         Positive reduction = payment (balance goes down).
         Negative reduction = reversal (balance goes back up).
+        Only flushes; create/update/delete_transaction commit it with the row.
         """
         from app.modules.loans.models import LoanStatus
 
@@ -753,7 +773,8 @@ class TransactionService:
             # Reversal of a payment that triggered paid-off — re-activate
             loan.status = LoanStatus.ACTIVE
 
-        await db.commit()
+        # Flushed, not committed: the caller commits it with the row that moved it.
+        await db.flush()
         logger.info(
             f"Loan {loan_id} balance updated by -{reduction}: new_balance={loan.current_balance}"
         )
