@@ -74,6 +74,19 @@ export interface StreakUpdateResult {
   streak_bonus_points?: number;
 }
 
+/**
+ * A failure whose message the backend wrote for the user (its error envelope's
+ * `error.message`, or a FastAPI string `detail`). Anything else that `upload()`
+ * throws (a dropped connection, a timeout, the dev proxy's own 502) is a plain
+ * Error whose message is not fit to show.
+ */
+export class ApiError extends Error {
+  constructor(message: string, public readonly status: number) {
+    super(message);
+    this.name = 'ApiError';
+  }
+}
+
 class ApiClient {
   private baseUrl: string;
   private accessToken: string | null = null;
@@ -424,9 +437,13 @@ class ApiClient {
         // The backend's error envelope carries the reason at error.message; `detail`
         // is a string only for a bare HTTPException (a validation error makes it an
         // array, which would print as "[object Object]").
-        const errData = data as { error?: { message?: string }; detail?: unknown; message?: string };
+        // A top-level `message` is not trusted as user-facing: the dev proxy's 502
+        // puts "fetch failed" there.
+        const errData = data as { error?: { message?: string }; detail?: unknown };
         const detail = typeof errData.detail === 'string' ? errData.detail : undefined;
-        throw new Error(errData.error?.message || detail || errData.message || `HTTP error! status: ${response.status}`);
+        const serverMessage = errData.error?.message || detail;
+        if (serverMessage) throw new ApiError(serverMessage, response.status);
+        throw new Error(`HTTP error! status: ${response.status}`);
       }
       return (data && typeof data === 'object' && 'data' in data)
         ? (data as ApiResponse<T>)

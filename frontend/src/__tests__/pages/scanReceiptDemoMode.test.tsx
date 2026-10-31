@@ -12,6 +12,7 @@ import userEvent from '@testing-library/user-event';
 import ScanReceiptPage from '@/app/transactions/scan/page';
 import { useModeAwareUI } from '@/hooks/useAppMode';
 import { transactionService } from '@/services/transactionService';
+import { ApiError } from '@/lib/api-client';
 import toast from 'react-hot-toast';
 
 jest.mock('next/navigation', () => ({
@@ -28,6 +29,8 @@ jest.mock('@/services/transactionService', () => ({
 }));
 
 jest.mock('@/lib/api-client', () => ({
+  // The real class: the page tells a backend-written reason apart by instanceof.
+  ApiError: jest.requireActual('@/lib/api-client').ApiError,
   apiClient: { post: jest.fn() },
 }));
 
@@ -147,13 +150,27 @@ describe('ScanReceiptPage — a failed scan says why', () => {
     // Every failure used to read "automatic reading isn't available yet", so a
     // wrong file type looked exactly like OCR not existing.
     mockUseModeAwareUI.mockReturnValue({ isDemo: false });
-    mockScan.mockRejectedValue(new Error('Unsupported file type. Use JPG, PNG, or PDF'));
+    mockScan.mockRejectedValue(new ApiError('Unsupported file type. Use JPG, PNG, or PDF', 400));
     const user = userEvent.setup();
     render(<ScanReceiptPage />);
 
     await chooseReceiptAndProcess(user);
 
     expect(await screen.findByText('Unsupported file type. Use JPG, PNG, or PDF')).toBeInTheDocument();
+    expect(screen.queryByText('transactions:scan.failedBody')).not.toBeInTheDocument();
+  });
+
+  it('shows generic copy, not the raw string, when the request never reached the backend', async () => {
+    mockUseModeAwareUI.mockReturnValue({ isDemo: false });
+    mockScan.mockRejectedValue(new TypeError('Failed to fetch'));
+    const user = userEvent.setup();
+    render(<ScanReceiptPage />);
+
+    await chooseReceiptAndProcess(user);
+
+    expect(await screen.findByText('transactions:scan.error')).toBeInTheDocument();
+    expect(screen.queryByText('Failed to fetch')).not.toBeInTheDocument();
+    // Not the no-total advice either: OCR never ran.
     expect(screen.queryByText('transactions:scan.failedBody')).not.toBeInTheDocument();
   });
 

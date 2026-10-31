@@ -23,6 +23,7 @@ import { QUERY_KEYS, invalidateDashboardData } from '@/hooks/useDataSynchronizat
 import { toBackendPaymentMethod } from '@/utils/paymentMethods';
 import { LoadingSpinner } from '@/components/ui/LoadingSpinner';
 import { transactionService } from '@/services/transactionService';
+import { ApiError } from '@/lib/api-client';
 import { useModeAwareUI } from '@/hooks/useAppMode';
 
 interface ExtractedData {
@@ -48,8 +49,9 @@ export default function ScanReceiptPage() {
   const [extractedData, setExtractedData] = useState<ExtractedData | null>(null);
   const [isProcessing, setIsProcessing] = useState(false);
   const [scanFailed, setScanFailed] = useState(false);
-  // Why the request itself failed (bad type, too large, timeout), in the server's
-  // words. Null when OCR ran but found no total, which has its own advice.
+  // Why the request itself failed: the server's words when it gave a reason (bad
+  // type, too large), else generic copy. Null when OCR ran but found no total,
+  // which has its own advice.
   const [scanError, setScanError] = useState<string | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
@@ -180,7 +182,9 @@ export default function ScanReceiptPage() {
       });
       toast.success(t('transactions:scan.success'));
     } catch (error) {
-      setScanError(error instanceof Error && error.message ? error.message : null);
+      // Only a backend-written reason is shown as is; "Failed to fetch" or a
+      // timeout string would mean nothing to the user.
+      setScanError(error instanceof ApiError ? error.message : t('transactions:scan.error'));
       setScanFailed(true);
     } finally {
       setIsProcessing(false);
