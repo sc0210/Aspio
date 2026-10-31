@@ -90,6 +90,8 @@ export default function EditTransactionPage() {
     const loadTransaction = async () => {
       try {
         setIsLoading(true);
+        // Per load: moving between two edit pages keeps this page mounted.
+        setTransferUnlinked(false);
         let txn = null;
 
         if (isDemo) {

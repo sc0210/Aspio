@@ -154,9 +154,12 @@ export function revealFirstError(form: HTMLFormElement | null) {
     const first = alerts.reduce((a, b) => (b.getBoundingClientRect().top < a.getBoundingClientRect().top ? b : a));
     const reduceMotion = window.matchMedia?.('(prefers-reduced-motion: reduce)').matches;
     first.scrollIntoView({ block: 'center', behavior: reduceMotion ? 'auto' : 'smooth' });
-    // The field the message describes, or (for a chip group) its first chip.
+    // The field the message describes, or (for a chip group) its chosen chip, else
+    // the first: a chip further along the row would scroll the row back.
     const owner = first.id ? form.querySelector<HTMLElement>(`[aria-describedby~="${first.id}"]`) : null;
-    const target = owner?.matches('input, select, textarea, button') ? owner : owner?.querySelector<HTMLElement>('button');
+    const target = owner?.matches('input, select, textarea, button')
+      ? owner
+      : owner?.querySelector<HTMLElement>('[aria-pressed="true"]') ?? owner?.querySelector<HTMLElement>('button');
     target?.focus({ preventScroll: true });
   });
 }
