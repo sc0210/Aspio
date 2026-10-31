@@ -18,14 +18,8 @@ import { formatTWD, formatDate } from '@/utils/formatters';
 import type { Transaction } from '@/shared/types';
 import type { TransactionFilters } from '@/hooks/transactions/useTransactionFilters';
 import { topTransactionsByAmount } from './transactionRanking';
-import {
-  isTransferCategory,
-  FOOD_CATEGORIES,
-  TRANSPORT_CATEGORIES,
-  HOUSING_CATEGORIES,
-  INVESTMENT_CATEGORIES,
-  PRIORITY_CATEGORIES,
-} from '@/utils/expenseGroups';
+import { PRIORITY_CATEGORIES } from '@/utils/expenseGroups';
+import { categoryColorGroups, getCategoryColorGroup } from './categoryColorGroups';
 import { Card } from '@/components/ui/Card';
 import { chartTooltipStyle } from '@/lib/charts/tooltipStyle';
 import { useIsDark } from '@/contexts/ThemeContext';
@@ -98,83 +92,6 @@ const sortOrderOptions = [
   { value: 'asc', labelKey: 'transactions:filters.order.asc' },
 ];
 
-// Category color groups
-const categoryColorGroups = {
-  food: {
-    categories: FOOD_CATEGORIES,
-    color: '#f59e0b',
-    labelKey: 'transactions:filters.group.food',
-    icon: '🍔',
-    lightBg: 'bg-amber-100 dark:bg-amber-900/30',
-    lightText: 'text-amber-700 dark:text-amber-300',
-    lightRing: 'ring-amber-300 dark:ring-amber-700',
-    hoverBg: 'hover:bg-amber-50/50 dark:hover:bg-amber-900/10',
-  },
-  transportation: {
-    categories: TRANSPORT_CATEGORIES,
-    color: '#06b6d4',
-    labelKey: 'transactions:filters.group.transport',
-    icon: '🚗',
-    lightBg: 'bg-cyan-100 dark:bg-cyan-900/30',
-    lightText: 'text-cyan-700 dark:text-cyan-300',
-    lightRing: 'ring-cyan-300 dark:ring-cyan-700',
-    hoverBg: 'hover:bg-cyan-50/50 dark:hover:bg-cyan-900/10',
-  },
-  housing: {
-    categories: HOUSING_CATEGORIES,
-    color: '#3b82f6',
-    labelKey: 'transactions:filters.group.housing',
-    icon: '🏠',
-    lightBg: 'bg-blue-100 dark:bg-blue-900/30',
-    lightText: 'text-blue-700 dark:text-blue-300',
-    lightRing: 'ring-blue-300 dark:ring-blue-700',
-    hoverBg: 'hover:bg-blue-50/50 dark:hover:bg-blue-900/10',
-  },
-  investment: {
-    categories: INVESTMENT_CATEGORIES,
-    color: '#10b981',
-    labelKey: 'transactions:filters.group.investment',
-    icon: '📈',
-    lightBg: 'bg-prosperity-100 dark:bg-prosperity-900/30',
-    lightText: 'text-prosperity-700 dark:text-prosperity-300',
-    lightRing: 'ring-prosperity-300 dark:ring-prosperity-700',
-    hoverBg: 'hover:bg-prosperity-50/50 dark:hover:bg-prosperity-900/10',
-  },
-  // Its own slice, the way investment purchases already get one. A wallet transfer
-  // folded into "Others" reads as spending that never happened: a six-figure
-  // emergency-fund top-up sat inside the purple wedge with the shopping.
-  transfer: {
-    categories: [],
-    color: '#64748b',
-    labelKey: 'transactions:filters.group.transfer',
-    icon: '🔁',
-    lightBg: 'bg-slate-100 dark:bg-slate-800/60',
-    lightText: 'text-slate-700 dark:text-slate-300',
-    lightRing: 'ring-slate-300 dark:ring-slate-600',
-    hoverBg: 'hover:bg-slate-50/50 dark:hover:bg-slate-800/40',
-  },
-  others: {
-    categories: [],
-    color: '#8b5cf6',
-    labelKey: 'transactions:filters.group.other',
-    icon: '🎯',
-    lightBg: 'bg-purple-100 dark:bg-purple-900/30',
-    lightText: 'text-purple-700 dark:text-purple-300',
-    lightRing: 'ring-purple-300 dark:ring-purple-700',
-    hoverBg: 'hover:bg-purple-50/50 dark:hover:bg-purple-900/10',
-  },
-};
-
-const getCategoryColorGroup = (category: string) => {
-  if (categoryColorGroups.food.categories.includes(category)) return categoryColorGroups.food;
-  if (categoryColorGroups.transportation.categories.includes(category)) return categoryColorGroups.transportation;
-  if (categoryColorGroups.housing.categories.includes(category)) return categoryColorGroups.housing;
-  if (categoryColorGroups.investment.categories.includes(category)) return categoryColorGroups.investment;
-  // Matched by shape, not by a list: the spelling varies with whoever typed or
-  // imported it, and this is the same predicate the spending averages use.
-  if (isTransferCategory(category)) return categoryColorGroups.transfer;
-  return categoryColorGroups.others;
-};
 
 /**
  * The message a breakdown panel shows when it has nothing to draw. A failed
