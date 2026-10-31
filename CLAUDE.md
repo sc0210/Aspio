@@ -199,8 +199,8 @@ How agents (and parallel / concurrent sessions) operate in this repo. These exis
 - Prefer additive commits on the current branch. State which files you'll edit before editing so parallel agents don't collide.
 
 ### 3. "Done" means verified, not written
-- A green typecheck / lint is necessary, not sufficient. Before claiming a change works, drive the actual flow (`/verify` or `/run`) — several past runtime crashes compiled clean.
-- Preview frontend / UI changes via the `demo-mode=true` cookie before saying they work.
+- A green typecheck / lint is necessary, not sufficient. Before claiming a change works, drive the actual flow in a real browser (the local `verify-aspiro` skill when present, otherwise the Playwright suite in `frontend/tests`) — several past runtime crashes compiled clean.
+- Demo mode (the `demo-mode=true` cookie) proves rendering only; persistence needs a signed-in run, e.g. as the public demo account `demo@aspiro.dev` (dev stack only).
 
 ### 4. Prod follow-through (schema changes)
 - A schema change ships **three artifacts together**, never one: (a) the Alembic migration, (b) idempotent SQL in `backend/scripts/prod_sql/`, (c) a "PROD PENDING" note (memory + a running deploy backlog). Prod migrations are NOT auto-applied. **(A reminder fires from `post_tool_use.py` when a new migration is written.)**
