@@ -270,7 +270,11 @@ class TransactionRepository:
         if filters.exclude_transfers:
             conditions.append(~TransactionRepository.transfer_leg())
 
-        if filters.type:
+        if filters.type == TransactionType.TRANSFER:
+            # create_transfer writes an income leg and an expense leg, never a
+            # row typed 'transfer', so match the legs the same way exclusion does.
+            conditions.append(TransactionRepository.transfer_leg())
+        elif filters.type:
             conditions.append(Transaction.type == filters.type)
 
         if filters.category_ids:

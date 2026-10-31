@@ -107,6 +107,13 @@ class TestStats:
         assert stats(authenticated_client, wallet_type="emergency")["stats"]["transaction_count"] == 1
         assert stats(authenticated_client, search="ramen")["stats"]["transaction_count"] == 1
 
+    async def test_type_transfer_matches_both_legs(self, authenticated_client, ledger):
+        # The legs are stored as income + expense, never type 'transfer'.
+        assert stats(authenticated_client, type="transfer")["stats"]["transaction_count"] == 2
+        r = authenticated_client.get(f"{BASE}/", params={"type": "transfer"})
+        assert r.status_code == 200, r.text
+        assert r.json()["total"] == 2
+
     async def test_top_expenses_rank_by_twd_value(self, authenticated_client, ledger):
         top = stats(authenticated_client, exclude_transfers=True)["top_expenses"]
         # US$10 at 30 ties NT$300; both are listed, nothing else is.
