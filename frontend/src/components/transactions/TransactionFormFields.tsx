@@ -7,8 +7,6 @@
  */
 
 import React, { useState } from 'react';
-import Link from 'next/link';
-import { ArrowLeftIcon } from '@heroicons/react/24/outline';
 import { useTranslation } from 'react-i18next';
 import { cn } from '@/utils/cn';
 import { formatCurrency } from '@/utils/formatters';
@@ -396,30 +394,6 @@ export function CashFields({ idPrefix: p, formData, errors, onChange, activeLoan
         </div>
       )}
     </>
-  );
-}
-
-interface FormPageHeaderProps {
-  backHref: string;
-  title: string;
-}
-
-/** Back arrow + page title. On a phone the arrow alone carries the way back. */
-export function FormPageHeader({ backHref, title }: FormPageHeaderProps) {
-  const { t } = useTranslation(['transactions']);
-  const backLabel = t('transactions:form.backToList', 'Back to Transactions');
-  return (
-    <div className="flex items-center gap-1 mb-3 sm:mb-6">
-      <Link
-        href={backHref}
-        aria-label={backLabel}
-        className="-ml-2 flex items-center p-2 rounded-lg text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-100 hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors focus-visible:ring-2 focus-visible:ring-primary-500"
-      >
-        <ArrowLeftIcon className="w-5 h-5" aria-hidden="true" />
-        <span className="hidden sm:inline ml-2">{backLabel}</span>
-      </Link>
-      <h1 className="text-lg font-semibold text-gray-900 dark:text-white sm:hidden">{title}</h1>
-    </div>
   );
 }
 

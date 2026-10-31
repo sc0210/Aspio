@@ -9,7 +9,7 @@ import toast from 'react-hot-toast';
 import { useTranslation } from 'react-i18next';
 import { Button } from '@/components/ui/Button';
 import { LoadingSpinner } from '@/components/ui/LoadingSpinner';
-import { TRANSACTION_TYPES, CATEGORIES, PAYMENT_METHODS, CashFields, TagsField, validateCashFields, FormPageHeader, StickySubmitBar } from '@/components/transactions/TransactionFormFields';
+import { TRANSACTION_TYPES, CATEGORIES, PAYMENT_METHODS, CashFields, TagsField, validateCashFields, StickySubmitBar } from '@/components/transactions/TransactionFormFields';
 import { cn } from '@/utils/cn';
 import { transactionService } from '@/services/transactionService';
 import { Transaction } from '@/shared/types';
@@ -17,6 +17,7 @@ import { useDemo } from '@/contexts/DemoContext';
 import { useModeAwareUI } from '@/hooks/useAppMode';
 import { useCurrentUser } from '@/hooks/useCurrentUser';
 import { DashboardLayout } from '@/components/layout/DashboardLayout';
+import { PageHeader } from '@/components/layout/PageHeader';
 import { QUERY_KEYS, invalidateDashboardData } from '@/hooks/useDataSynchronization';
 import { portfolioService } from '@/services/portfolioService';
 import { loanService } from '@/services/loanService';
@@ -444,7 +445,13 @@ export default function EditTransactionPage() {
     <DashboardLayout>
       {/* Same frame as /transactions/add: the layout's own padding is the gutter. */}
       <div className="max-w-4xl mx-auto py-2 sm:py-4">
-        <FormPageHeader backHref={returnTo} title={t('transactions:edit', 'Edit Transaction')} />
+        {/* Phone title + back; on desktop the top bar's title and breadcrumb cover both. */}
+        <PageHeader
+          title={t('transactions:edit', 'Edit Transaction')}
+          backHref={returnTo}
+          backLabel={t('transactions:form.backToList', 'Back to Transactions')}
+          className="mb-3"
+        />
 
         <Card padding="none" radius="xl" shadow="none" className="p-4 sm:p-6">
           <form onSubmit={handleSubmit} className="space-y-5 sm:space-y-6">

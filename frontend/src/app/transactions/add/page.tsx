@@ -16,10 +16,11 @@ import { useModeAwareUI } from '@/hooks/useAppMode';
 import { useCurrentUser } from '@/hooks/useCurrentUser';
 import { useDemo } from '@/contexts/DemoContext';
 import { DashboardLayout } from '@/components/layout/DashboardLayout';
+import { PageHeader } from '@/components/layout/PageHeader';
 import { QUERY_KEYS, invalidateDashboardData } from '@/hooks/useDataSynchronization';
 import { localDateString } from '@/utils/formatters';
 import { Card } from '@/components/ui/Card';
-import { TRANSACTION_TYPES, CashFields, TagsField, validateCashFields, FormPageHeader, StickySubmitBar } from '@/components/transactions/TransactionFormFields';
+import { TRANSACTION_TYPES, CashFields, TagsField, validateCashFields, StickySubmitBar } from '@/components/transactions/TransactionFormFields';
 
 export default function AddTransactionPage() {
   const router = useRouter();
@@ -316,7 +317,13 @@ export default function AddTransactionPage() {
   return (
     <DashboardLayout>
       <div className="max-w-4xl mx-auto py-2 sm:py-4">
-        <FormPageHeader backHref="/transactions" title={t('transactions:add', 'Add Transaction')} />
+        {/* Phone title + back; on desktop the top bar's title and breadcrumb cover both. */}
+        <PageHeader
+          title={t('transactions:add', 'Add Transaction')}
+          backHref="/transactions"
+          backLabel={t('transactions:form.backToList', 'Back to Transactions')}
+          className="mb-3"
+        />
 
         <Card padding="none" radius="xl" shadow="none" className="p-4 sm:p-6">
           <form onSubmit={handleSubmit} className="space-y-5 sm:space-y-6">
