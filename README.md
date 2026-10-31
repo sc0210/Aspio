@@ -80,7 +80,7 @@ For development. You need Docker, Node 22 and Python 3.11.
 cp .env.sample .env
 cp backend/.env.sample backend/.env
 cp frontend/.env.sample frontend/.env.local
-./start-local.sh
+./scripts/start-local.sh
 ```
 
 | Service | URL |
@@ -97,7 +97,7 @@ cd frontend && npm test                           # frontend unit tests
 cd frontend && npm run lint && npm run type-check
 ```
 
-[DEVELOPMENT_GUIDE.md](DEVELOPMENT_GUIDE.md) covers the day-to-day workflow and the
+[docs/DEVELOPMENT.md](docs/DEVELOPMENT.md) covers the day-to-day workflow and the
 environment traps worth knowing about.
 
 ### Stack

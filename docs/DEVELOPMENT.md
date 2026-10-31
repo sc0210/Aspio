@@ -1,13 +1,13 @@
 # Development Guide
 
 Day-to-day workflow and the environment traps that keep costing time. For setup see
-[README.md](README.md), for sending a change [CONTRIBUTING.md](CONTRIBUTING.md), for deploys
-[docs/SELF_HOSTING.md](docs/SELF_HOSTING.md).
+[README.md](../README.md), for sending a change [CONTRIBUTING.md](../CONTRIBUTING.md), for deploys
+[SELF_HOSTING.md](SELF_HOSTING.md).
 
 ## Running the stack
 
 ```bash
-./start-local.sh              # everything in Docker (recommended)
+./scripts/start-local.sh              # everything in Docker (recommended)
 docker compose down           # stop, keep data
 docker compose down -v        # stop and DELETE the database
 ```
@@ -19,7 +19,7 @@ QuickChart renders the charts the LINE bot sends (no host URL — it's reached i
 emulation and prints a platform warning; that's expected. It can take ~15s to report healthy.
 
 To run the production shape locally, use the self-host stack in
-[docs/SELF_HOSTING.md](docs/SELF_HOSTING.md).
+[SELF_HOSTING.md](SELF_HOSTING.md).
 
 The frontend source is bind-mounted, so **code changes hot-reload; you do not rebuild the image
 for an edit.** Rebuild only when dependencies or the Dockerfile change.
@@ -113,7 +113,7 @@ cd backend && python -m pytest -m "not integration"
 ```
 
 Several past runtime crashes compiled and tested clean. Drive the actual flow in the running app
-before saying it works. See [docs/TESTING.md](docs/TESTING.md).
+before saying it works. See [TESTING.md](TESTING.md).
 
 ## Git
 
