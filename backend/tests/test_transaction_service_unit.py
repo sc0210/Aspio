@@ -112,6 +112,11 @@ def make_service(
     t_repo = transaction_repo or MagicMock()
     c_repo = category_repo or MagicMock()
     r_repo = recurring_repo or MagicMock()
+    # create/update/delete_transaction commit once on the transaction repo's session
+    # (and roll back on error), so that session must be awaitable like AsyncSession.
+    for method in ("commit", "rollback", "flush"):
+        if not isinstance(getattr(t_repo.db, method), AsyncMock):
+            setattr(t_repo.db, method, AsyncMock())
     return TransactionService(
         transaction_repo=t_repo,
         category_repo=c_repo,

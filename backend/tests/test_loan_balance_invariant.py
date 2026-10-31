@@ -25,7 +25,6 @@ from datetime import date
 from decimal import Decimal
 from uuid import UUID, uuid4
 
-import pytest
 from hypothesis import HealthCheck, event, given, settings
 from hypothesis import strategies as st
 from sqlalchemy import delete, select
@@ -267,19 +266,11 @@ def test_loan_balance_matches_its_linked_payments():
     _run(check)
 
 
-@pytest.mark.xfail(
-    strict=True,
-    reason=(
-        "FINDING: the transaction row and the loan balance commit separately "
-        "(TransactionRepository.create/update/soft_delete commit, then _apply_loan_payment "
-        "commits). A failed balance write leaves a linked payment that never moved the balance. "
-        "Strict: when the two writes become one commit this passes, and the marker must go."
-    ),
-)
 def test_a_failed_balance_write_leaves_no_drift():
     """The same promise when writing the loan balance fails mid-request (a dropped
     database connection, a crash). The request errors and its session rolls back; the
-    promise must still hold."""
+    promise must still hold. It did not while the row and the balance were separate
+    commits: a failed balance write left a linked payment that never moved its loan."""
     def check(loop, maker, ids):
         @SETTINGS
         @given(SEQUENCE, st.integers(min_value=1, max_value=6))

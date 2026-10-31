@@ -73,8 +73,11 @@ class TransactionRepository:
     def __init__(self, db: AsyncSession):
         self.db = db
 
-    async def create(self, transaction_data: dict, user_id: str) -> Transaction:
-        """Create a new transaction with improved error handling"""
+    async def create(self, transaction_data: dict, user_id: str, commit: bool = True) -> Transaction:
+        """Create a new transaction with improved error handling.
+
+        commit=False flushes instead, for a caller that commits several writes as one.
+        """
         try:
             # Convert user_id to UUID if it's a string
             if isinstance(user_id, str):
@@ -118,7 +121,7 @@ class TransactionRepository:
 
             transaction = Transaction(**transaction_data)
             self.db.add(transaction)
-            await self.db.commit()
+            await (self.db.commit() if commit else self.db.flush())
             await self.db.refresh(transaction)
 
             # Load relationships for complete response. category_obj.subcategories
@@ -423,9 +426,12 @@ class TransactionRepository:
         return [str(tid) for tid in ordered]
 
     async def update(
-        self, transaction_id: str, user_id: str, update_data: dict
+        self, transaction_id: str, user_id: str, update_data: dict, commit: bool = True
     ) -> Optional[Transaction]:
-        """Update a transaction with improved error handling"""
+        """Update a transaction with improved error handling.
+
+        commit=False flushes instead, for a caller that commits several writes as one.
+        """
         try:
             # Convert string UUIDs to UUID objects
             transaction_id_uuid = (
@@ -484,7 +490,7 @@ class TransactionRepository:
             )
 
             result = await self.db.execute(stmt)
-            await self.db.commit()
+            await (self.db.commit() if commit else self.db.flush())
 
             updated_transaction = result.scalar_one_or_none()
             if updated_transaction:
@@ -586,8 +592,8 @@ class TransactionRepository:
         result = await self.db.execute(stmt)
         return list(result.scalars().all())
 
-    async def soft_delete(self, transaction_id: str, user_id: str) -> bool:
-        """Soft delete a transaction"""
+    async def soft_delete(self, transaction_id: str, user_id: str, commit: bool = True) -> bool:
+        """Soft delete a transaction. commit=False flushes instead (see create)."""
         # Convert string UUIDs to UUID objects
         transaction_id_uuid = (
             uuid_module.UUID(transaction_id)
@@ -615,7 +621,7 @@ class TransactionRepository:
         )
 
         result = await self.db.execute(stmt)
-        await self.db.commit()
+        await (self.db.commit() if commit else self.db.flush())
 
         return result.rowcount > 0
 
@@ -1582,8 +1588,8 @@ class TransactionCategoryRepository:
         # model reads it, and a lazy load there fails outside the greenlet.
         return await self.get_by_id(category_uuid)
 
-    async def increment_usage(self, category_id: str):
-        """Increment category usage count"""
+    async def increment_usage(self, category_id: str, commit: bool = True):
+        """Increment category usage count. commit=False flushes instead."""
         stmt = (
             update(TransactionCategory)
             .where(TransactionCategory.id == category_id)
@@ -1594,7 +1600,7 @@ class TransactionCategoryRepository:
         )
 
         await self.db.execute(stmt)
-        await self.db.commit()
+        await (self.db.commit() if commit else self.db.flush())
 
     async def get_popular_categories(
         self, user_id: str, category_type: Optional[str] = None, limit: int = 10

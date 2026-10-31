@@ -48,8 +48,8 @@ transaction requests against the real `TransactionService`, checking after every
 loan's balance equals its principal minus its linked payments. It checks 200 fixed examples so
 CI reproduces; `LOAN_INVARIANT_EXPLORE=1 python -m pytest tests/test_loan_balance_invariant.py -o
 "addopts=" -s` draws 1000 random ones to look further. A failure prints the shortest sequence as
-API requests to replay. Its strict `xfail` records a known defect (the row and the balance commit
-separately); when that test starts passing, remove the marker.
+API requests to replay. A second property makes the balance write fail mid-request and checks
+that nothing drifts after rollback, which holds because each request commits once.
 
 ### Mocks that hide bugs
 
