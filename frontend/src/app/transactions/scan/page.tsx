@@ -23,6 +23,7 @@ import { QUERY_KEYS, invalidateDashboardData } from '@/hooks/useDataSynchronizat
 import { toBackendPaymentMethod } from '@/utils/paymentMethods';
 import { LoadingSpinner } from '@/components/ui/LoadingSpinner';
 import { transactionService } from '@/services/transactionService';
+import { ApiError } from '@/lib/api-client';
 import { useModeAwareUI } from '@/hooks/useAppMode';
 
 interface ExtractedData {
@@ -48,6 +49,10 @@ export default function ScanReceiptPage() {
   const [extractedData, setExtractedData] = useState<ExtractedData | null>(null);
   const [isProcessing, setIsProcessing] = useState(false);
   const [scanFailed, setScanFailed] = useState(false);
+  // Why the request itself failed: the server's words when it gave a reason (bad
+  // type, too large), else generic copy. Null when OCR ran but found no total,
+  // which has its own advice.
+  const [scanError, setScanError] = useState<string | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const queryClient = useQueryClient();
@@ -147,6 +152,7 @@ export default function ScanReceiptPage() {
 
     setIsProcessing(true);
     setScanFailed(false);
+    setScanError(null);
     try {
       const response = await transactionService.scanReceipt(selectedFile);
       // The endpoint answers in the backend's own shape (snake_case,
@@ -175,7 +181,10 @@ export default function ScanReceiptPage() {
         confidence: parsed.confidence ?? 0,
       });
       toast.success(t('transactions:scan.success'));
-    } catch {
+    } catch (error) {
+      // Only a backend-written reason is shown as is; "Failed to fetch" or a
+      // timeout string would mean nothing to the user.
+      setScanError(error instanceof ApiError ? error.message : t('transactions:scan.error'));
       setScanFailed(true);
     } finally {
       setIsProcessing(false);
@@ -315,7 +324,7 @@ export default function ScanReceiptPage() {
                   {t('transactions:scan.failedTitle')}
                 </p>
                 <p className="mt-1 text-sm text-warning-800 dark:text-warning-300">
-                  {t('transactions:scan.failedBody')}
+                  {scanError ?? t('transactions:scan.failedBody')}
                 </p>
                 <div className="mt-3 flex flex-wrap gap-2">
                   <Button onClick={() => router.push('/transactions/add')}>

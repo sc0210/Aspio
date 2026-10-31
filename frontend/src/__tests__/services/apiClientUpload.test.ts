@@ -2,7 +2,7 @@
  * Tests for ApiClient.upload() and the two transactionService upload methods.
  */
 
-import { ApiClient } from '@/lib/api-client';
+import { ApiClient, ApiError } from '@/lib/api-client';
 import { getSession } from 'next-auth/react';
 
 const mockGetSession = getSession as jest.Mock;
@@ -91,6 +91,29 @@ describe('ApiClient.upload()', () => {
     await expect(client.upload('/transactions/upload-import', makeFile('data.xlsx'))).rejects.toThrow(
       'Only CSV files are supported'
     );
+  });
+
+  it("throws the backend envelope's error.message", async () => {
+    // The receipt scan answers a bad file like this; the page shows the reason.
+    mockFetch.mockResolvedValue(jsonResponse(400, {
+      success: false,
+      error: { code: 'HTTP_ERROR', message: 'Unsupported file type. Use JPG, PNG, or PDF' },
+    }));
+    const thrown = client.upload('/transactions/scan-receipt', makeFile('r.heic', 'image/heic'));
+    await expect(thrown).rejects.toBeInstanceOf(ApiError);
+    await expect(thrown).rejects.toThrow('Unsupported file type. Use JPG, PNG, or PDF');
+  });
+
+  it("does not pass off the dev proxy's own failure as a backend reason", async () => {
+    mockFetch.mockResolvedValue(jsonResponse(502, { error: 'Proxy error', message: 'fetch failed' }));
+    const thrown = client.upload('/transactions/scan-receipt', makeFile());
+    await expect(thrown).rejects.not.toBeInstanceOf(ApiError);
+    await expect(thrown).rejects.toThrow('HTTP error! status: 502');
+  });
+
+  it('never throws "[object Object]" for a validation error whose detail is an array', async () => {
+    mockFetch.mockResolvedValue(jsonResponse(422, { detail: [{ field: 'body -> file', message: 'Field required' }] }));
+    await expect(client.upload('/transactions/scan-receipt', makeFile())).rejects.toThrow('HTTP error! status: 422');
   });
 
   it('throws timeout error when request is aborted', async () => {
