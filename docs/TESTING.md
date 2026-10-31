@@ -41,6 +41,16 @@ every DB fixture errors.
 `backend/.coveragerc` omits `app/modules/line_bot/` from the figure: the LINE bot is an
 optional add-on, so the floor measures the core app only. Its tests still run and must pass.
 
+### Generated-sequence checks
+
+`tests/test_loan_balance_invariant.py` uses Hypothesis to run generated sequences of loan-linked
+transaction requests against the real `TransactionService`, checking after every step that a
+loan's balance equals its principal minus its linked payments. It checks 200 fixed examples so
+CI reproduces; `LOAN_INVARIANT_EXPLORE=1 python -m pytest tests/test_loan_balance_invariant.py -o
+"addopts=" -s` draws 1000 random ones to look further. A failure prints the shortest sequence as
+API requests to replay. Its strict `xfail` records a known defect (the row and the balance commit
+separately); when that test starts passing, remove the marker.
+
 ### Mocks that hide bugs
 
 Two patterns have each shipped a real production break past a green suite:
