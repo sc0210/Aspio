@@ -174,10 +174,12 @@
         "etf": "ETF",
         "stock": "股票"
       },
-      "units": "單位"
+      "units": "單位",
+      "errSellTooMany": "你只持有 {{max}} 單位",
+      "holdingsLoadFailed": "無法載入你的持股。",
+      "retry": "重試"
     },
     "linkToLoan": "連結貸款",
-    "linkToLoanHint": "（選填 — 將減少貸款餘額）",
     "loanBalance": "餘額",
     "loanNone": "無",
     "optional": "（選填）",
@@ -189,7 +191,6 @@
       "digital_wallet": "電子錢包"
     },
     "tagPlaceholder": "新增標籤（按 Enter）",
-    "tagsHelp": "用標籤整理你的交易（例如 #旅遊、#工作）",
     "toWallet": "轉入錢包",
     "transferHint": {
       "end": "分頁。",
@@ -206,13 +207,9 @@
     "typesShort": {
       "investment": "投資"
     },
-    "walletDescriptions": {
-      "emergency": "緊急備用金",
-      "life": "日常收入與支出"
-    },
     "walletTypeLabel": "錢包類型",
     "wallets": {
-      "emergency": "緊急預備金",
+      "emergency": "緊急錢包",
       "life": "生活錢包"
     },
     "currency": "幣別",
@@ -220,7 +217,25 @@
     "errDescription": "請輸入說明",
     "errCategory": "請選擇分類",
     "errSameWallet": "來源與目標錢包不能相同",
-    "backToList": "返回交易記錄"
+    "backToList": "返回交易記錄",
+    "moreOptions": "選填項目",
+    "loanPickHint": "請選擇這筆款項償還的貸款，否則不會減少任何貸款餘額。",
+    "noActiveLoans": "目前沒有可連結的貸款。",
+    "addLoanLink": "前往貸款管理新增",
+    "paymentNone": "未設定",
+    "removeTag": "移除標籤 {{tag}}",
+    "transferTypeLocked": "轉帳的類型無法變更。若要修改，請刪除後重新新增。",
+    "transferUnlinked": "這筆較舊的轉帳沒有連結到另一筆，因此無法在此編輯。請刪除後重新新增轉帳。",
+    "saving": "儲存中…",
+    "updating": "更新中…",
+    "update": "更新交易",
+    "updateInvestment": "更新投資交易",
+    "buySubmit": "買入並加入投資組合",
+    "sellSubmit": "記錄賣出",
+    "investEdit": {
+      "title": "投資買入",
+      "note": "此處的修改只會更新交易紀錄。若要更新持股，請前往投資組合頁面。"
+    }
   },
   "importExport": {
     "button": "匯出 / 匯入",
@@ -412,7 +427,15 @@
     "transferUpdated": "轉帳已成功更新",
     "updateFailed": "更新交易失敗",
     "updated": "交易已成功更新",
-    "uploadCsvFile": "請上傳 CSV 檔案"
+    "uploadCsvFile": "請上傳 CSV 檔案",
+    "demoSimulated": "示範模式：已模擬變更，註冊後即可儲存真實資料",
+    "demoAdded": "已新增示範交易，註冊後即可儲存真實資料",
+    "bought": "已買入 {{symbol}}，持股與支出皆已記錄",
+    "sold": "已賣出 {{qty}} {{symbol}} · 淨額 {{net}} {{currency}} · 損益 {{pl}}",
+    "investSynced": "交易與持股皆已更新",
+    "investMultipleLots": "交易已更新。此代號有多筆買入批次，請到投資組合頁面編輯對應批次以更新圖表。",
+    "investHoldingMissing": "交易已更新。找不到對應持股，可能已從投資組合移除。",
+    "investSyncFailed": "交易已更新，但無法同步持股，請手動更新。"
   },
   "types": {
     "expense": "支出",

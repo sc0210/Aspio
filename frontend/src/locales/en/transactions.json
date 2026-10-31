@@ -174,10 +174,12 @@
         "etf": "ETF",
         "stock": "Stock"
       },
-      "units": "units"
+      "units": "units",
+      "errSellTooMany": "You hold only {{max}} units",
+      "holdingsLoadFailed": "Couldn't load your holdings.",
+      "retry": "Try again"
     },
     "linkToLoan": "Link to Loan",
-    "linkToLoanHint": "(optional — reduces loan balance)",
     "loanBalance": "Balance",
     "loanNone": "None",
     "optional": "(optional)",
@@ -189,7 +191,6 @@
       "digital_wallet": "E-Wallet"
     },
     "tagPlaceholder": "Add a tag (press Enter)",
-    "tagsHelp": "Use tags to organize your transactions (e.g., #vacation, #business)",
     "toWallet": "To Wallet",
     "transferHint": {
       "end": "tab instead.",
@@ -206,10 +207,6 @@
     "typesShort": {
       "investment": "Invest"
     },
-    "walletDescriptions": {
-      "emergency": "Emergency fund",
-      "life": "Daily income/expenses"
-    },
     "walletTypeLabel": "Wallet Type",
     "wallets": {
       "emergency": "Emergency Wallet",
@@ -220,7 +217,25 @@
     "errDescription": "Add description",
     "errCategory": "Select category",
     "errSameWallet": "Source and destination wallets must be different",
-    "backToList": "Back to Transactions"
+    "backToList": "Back to Transactions",
+    "moreOptions": "More options",
+    "loanPickHint": "Pick the loan this repays, or no loan balance goes down.",
+    "noActiveLoans": "No active loans to link.",
+    "addLoanLink": "Add one on Loans",
+    "paymentNone": "Not set",
+    "removeTag": "Remove tag {{tag}}",
+    "transferTypeLocked": "A transfer stays a transfer. To change it, delete it and add a new one.",
+    "transferUnlinked": "This older transfer isn't linked to its other half, so it can't be edited here. Delete it and add the transfer again.",
+    "saving": "Saving…",
+    "updating": "Updating…",
+    "update": "Update Transaction",
+    "updateInvestment": "Update Investment Transaction",
+    "buySubmit": "Buy & Add to Portfolio",
+    "sellSubmit": "Record Sale",
+    "investEdit": {
+      "title": "Investment purchase",
+      "note": "Changes here update the transaction record. To update the portfolio holding, visit the Portfolio page."
+    }
   },
   "importExport": {
     "button": "Export / Import",
@@ -412,7 +427,15 @@
     "transferUpdated": "Transfer updated successfully",
     "updateFailed": "Failed to update transaction",
     "updated": "Transaction updated successfully",
-    "uploadCsvFile": "Please upload a CSV file"
+    "uploadCsvFile": "Please upload a CSV file",
+    "demoSimulated": "Demo: changes simulated — sign up to save real data",
+    "demoAdded": "Demo transaction added — sign up to save real data",
+    "bought": "Bought {{symbol}} — holding & expense recorded",
+    "sold": "Sold {{qty}} {{symbol}} · net {{net}} {{currency}} · P/L {{pl}}",
+    "investSynced": "Transaction and portfolio holding updated",
+    "investMultipleLots": "Transaction updated. This symbol has multiple lots — edit the specific lot on the Portfolio page to update its chart.",
+    "investHoldingMissing": "Transaction updated. Holding not found — it may have been removed from Portfolio.",
+    "investSyncFailed": "Transaction updated. Could not sync portfolio holding — update it manually."
   },
   "types": {
     "expense": "Expense",

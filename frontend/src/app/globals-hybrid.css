@@ -507,3 +507,24 @@ body {
     padding: 0.75rem;
   }
 }
+/* Scrollable rows that swipe without a scrollbar (chip rows, tab strips).
+   Used before it existed: the rebalancing and trend tab strips named it and
+   got a visible scrollbar. */
+@layer utilities {
+  .scrollbar-hide {
+    scrollbar-width: none;
+    -ms-overflow-style: none;
+  }
+  .scrollbar-hide::-webkit-scrollbar {
+    display: none;
+  }
+  /* Fades a swipeable row's far edge, the cue that it continues. */
+  .fade-end {
+    -webkit-mask-image: linear-gradient(to right, #000 calc(100% - 2.5rem), transparent);
+    mask-image: linear-gradient(to right, #000 calc(100% - 2.5rem), transparent);
+  }
+  .fade-none {
+    -webkit-mask-image: none;
+    mask-image: none;
+  }
+}

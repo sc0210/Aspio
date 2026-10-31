@@ -27,6 +27,10 @@ describe('validateCashFields', () => {
     expect(validateCashFields({ ...base, amount: '0' }, t).amount).toBeDefined();
   });
 
+  it('needs no description for a transfer (the backend names it "Transfer to X Wallet")', () => {
+    expect(validateCashFields({ ...base, type: 'transfer', category: '', description: '' }, t)).toEqual({});
+  });
+
   it('needs no category for a transfer, but two different wallets', () => {
     const transfer = { ...base, type: 'transfer', category: '' };
     expect(validateCashFields(transfer, t)).toEqual({});

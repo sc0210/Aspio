@@ -157,13 +157,16 @@ jest.mock('@/components/ui/Button', () => ({
     type,
     onClick,
     isLoading,
+    disabled,
   }: {
     children: React.ReactNode;
     type?: string;
     onClick?: () => void;
     isLoading?: boolean;
+    disabled?: boolean;
   }) => (
-    <button type={(type as 'button' | 'submit' | 'reset') || 'button'} onClick={onClick} disabled={isLoading}>
+    // As the real Button: disabled while loading or when told to be.
+    <button type={(type as 'button' | 'submit' | 'reset') || 'button'} onClick={onClick} disabled={disabled || isLoading}>
       {children}
     </button>
   ),
@@ -171,6 +174,7 @@ jest.mock('@/components/ui/Button', () => ({
 jest.mock('@heroicons/react/24/outline', () => ({
   ArrowLeftIcon: () => <svg data-testid="arrow-left" />,
   CheckIcon: () => <svg data-testid="check-icon" />,
+  ChevronRightIcon: () => <svg data-testid="chevron-right" />,
 }));
 
 // ─── Component under test ─────────────────────────────────────────────────────
@@ -208,7 +212,7 @@ const expenseTx = {
  * Render the page and wait until the loading spinner disappears,
  * meaning all async state updates from loadTransaction() have been applied.
  */
-async function renderAndLoad(tx: typeof investTx | typeof expenseTx) {
+async function renderAndLoad(tx: Record<string, unknown>) {
   mockGetTransactionById.mockResolvedValue({ success: true, data: tx });
 
   await act(async () => {
@@ -240,12 +244,12 @@ describe('EditTransactionPage — Investment Mode', () => {
 
   it('enters invest mode when category is Investment Purchase', async () => {
     await renderAndLoad(investTx);
-    expect(screen.getByText(/Investment Purchase — Edit Asset Details/i)).toBeInTheDocument();
+    expect(screen.getByText('Investment purchase')).toBeInTheDocument();
   });
 
   it('pre-populates symbol from description', async () => {
     await renderAndLoad(investTx);
-    const symbolInput = screen.getByPlaceholderText(/e\.g\. 0050/i) as HTMLInputElement;
+    const symbolInput = screen.getByLabelText(/^Symbol/) as HTMLInputElement;
     expect(symbolInput.value).toBe('0050');
   });
 
@@ -296,7 +300,7 @@ describe('EditTransactionPage — Standard Expense Mode', () => {
 
   it('does NOT enter invest mode for a regular expense', async () => {
     await renderAndLoad(expenseTx);
-    expect(screen.queryByText(/Investment Purchase — Edit Asset Details/i)).not.toBeInTheDocument();
+    expect(screen.queryByText('Investment purchase')).not.toBeInTheDocument();
   });
 
   it('shows Transaction Type toggle for a regular expense', async () => {
@@ -316,7 +320,7 @@ describe('EditTransactionPage — Invest Mode Validation', () => {
   it('shows error when symbol is cleared', async () => {
     await renderAndLoad(investTx);
 
-    fireEvent.change(screen.getByPlaceholderText(/e\.g\. 0050/i), { target: { value: '' } });
+    fireEvent.change(screen.getByLabelText(/^Symbol/), { target: { value: '' } });
     fireEvent.click(screen.getByText('Update Investment Transaction'));
 
     await waitFor(() => expect(screen.getByText('Enter a symbol')).toBeInTheDocument());
@@ -490,5 +494,53 @@ describe('EditTransactionPage — Invest Submit: portfolio API failure', () => {
 
     await waitFor(() => expect(mockPush).toHaveBeenCalledWith('/transactions'));
     expect(mockUpdateHolding).not.toHaveBeenCalled();
+  });
+});
+
+// ─── Fixes from the UI/UX review ─────────────────────────────────────────────
+describe('EditTransactionPage — what an edit may and may not change', () => {
+  beforeEach(() => jest.clearAllMocks());
+
+  it('never offers Transfer for an expense (there is no pair to edit, so it could only fail at submit)', async () => {
+    await renderAndLoad(expenseTx);
+    expect(screen.getByRole('button', { name: 'Expense' })).toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: 'Transfer' })).not.toBeInTheDocument();
+  });
+
+  it("locks a transfer's type, so one leg cannot be saved as an expense and orphan its pair", async () => {
+    await renderAndLoad({ ...expenseTx, category: 'Transfer', description: 'Top up emergency fund' });
+    expect(screen.queryByRole('button', { name: 'Expense' })).not.toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: 'Income' })).not.toBeInTheDocument();
+  });
+
+  it('says up front that an unlinked transfer cannot be saved, and disables saving', async () => {
+    await renderAndLoad({ ...expenseTx, category: 'Transfer', description: 'Old transfer' });
+    expect(screen.getByRole('status')).toHaveTextContent(/isn't linked to its other half/);
+    expect(screen.getByRole('button', { name: 'Update Transaction' })).toBeDisabled();
+  });
+
+  it('says so when the update is rejected (it used to end in silence)', async () => {
+    mockUpdateTransaction.mockResolvedValue({ success: false, message: 'Category not found' });
+    await renderAndLoad(expenseTx);
+    fireEvent.click(screen.getByRole('button', { name: 'Update Transaction' }));
+    await waitFor(() => expect(mockToastError).toHaveBeenCalledWith('Category not found'));
+  });
+
+  it('keeps a category the form does not list, instead of re-categorising the row on save', async () => {
+    mockUpdateTransaction.mockResolvedValue({ success: true, data: {} });
+    await renderAndLoad({ ...expenseTx, category: 'Insurance' });
+    expect(screen.getByRole('button', { name: /Insurance/ })).toHaveAttribute('aria-pressed', 'true');
+    fireEvent.click(screen.getByRole('button', { name: 'Update Transaction' }));
+    await waitFor(() => expect(mockUpdateTransaction).toHaveBeenCalled());
+    expect(mockUpdateTransaction.mock.calls[0][1].category).toBe('Insurance');
+  });
+
+  it('sends null when the payment method is cleared, so the clear is saved', async () => {
+    mockUpdateTransaction.mockResolvedValue({ success: true, data: {} });
+    await renderAndLoad(expenseTx); // paid in cash, so More options opens by itself
+    fireEvent.click(screen.getByRole('button', { name: /Not set/ }));
+    fireEvent.click(screen.getByRole('button', { name: 'Update Transaction' }));
+    await waitFor(() => expect(mockUpdateTransaction).toHaveBeenCalled());
+    expect(mockUpdateTransaction.mock.calls[0][1].paymentMethod).toBeNull();
   });
 });

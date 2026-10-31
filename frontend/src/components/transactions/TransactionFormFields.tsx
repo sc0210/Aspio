@@ -8,45 +8,51 @@
 
 import React, { useState } from 'react';
 import { useTranslation } from 'react-i18next';
+import Link from 'next/link';
+import { CheckIcon, ChevronRightIcon } from '@heroicons/react/24/outline';
 import { cn } from '@/utils/cn';
 import { formatCurrency } from '@/utils/formatters';
+import { getCategoryColorGroup } from './categoryColorGroups';
 
-export const TRANSACTION_TYPES: { value: string; label: string; shortLabel?: string; icon: string; color: string }[] = [
-  { value: 'expense',    label: 'Expense',    icon: '💸', color: 'red'    },
-  { value: 'income',     label: 'Income',     icon: '💰', color: 'green'  },
-  { value: 'transfer',   label: 'Transfer',   icon: '🔄', color: 'blue'   },
-  { value: 'investment', label: 'Investment', shortLabel: 'Invest', icon: '📈', color: 'purple' },
+export const TRANSACTION_TYPES: { value: string; label: string; shortLabel?: string; color: string }[] = [
+  { value: 'expense',    label: 'Expense',    color: 'red'    },
+  { value: 'income',     label: 'Income',     color: 'green'  },
+  { value: 'transfer',   label: 'Transfer',   color: 'blue'   },
+  { value: 'investment', label: 'Investment', shortLabel: 'Invest', color: 'purple' },
 ];
 
+// Ordered by the pie's groups (see categoryColorGroups), so chips of one colour sit
+// together: food, transport, housing, then everything that lands in "others".
 export const CATEGORIES = {
   expense: [
     { value: 'Dining',          label: 'Dining',     icon: '🍽️' },
     { value: 'Groceries',       label: 'Groceries',  icon: '🛒' },
     { value: 'Transportation',  label: 'Transport',  icon: '🚗' },
+    { value: 'Housing',         label: 'Housing',    icon: '🏠' },
+    { value: 'Utilities',       label: 'Utilities',  icon: '💡' },
     { value: 'Shopping',        label: 'Shopping',   icon: '🛍️' },
     { value: 'Entertainment',   label: 'Fun',        icon: '🎬' },
     { value: 'Healthcare',      label: 'Health',     icon: '🏥' },
-    { value: 'Housing',         label: 'Housing',    icon: '🏠' },
-    { value: 'Utilities',       label: 'Utilities',  icon: '💡' },
     { value: 'Travel',          label: 'Travel',     icon: '✈️' },
     { value: 'Gift',            label: 'Gift',       icon: '🎁' },
     { value: 'Loan Payment',    label: 'Loan',       icon: '💳' },
     { value: 'Others',          label: 'Others',     icon: '📦' },
   ],
+  // Salary leads (the income entered most); the one green chip goes last.
   income: [
     { value: 'Salary',             label: 'Salary',     icon: '💼' },
     { value: 'Freelance',          label: 'Freelance',  icon: '💻' },
-    { value: 'Investment Returns', label: 'Investment', icon: '📈' },
     { value: 'Gift',               label: 'Gift',       icon: '🎁' },
     { value: 'Others',             label: 'Others',     icon: '💵' },
+    { value: 'Investment Returns', label: 'Investment', icon: '📈' },
   ],
 };
 
 export const PAYMENT_METHODS = [
-  { value: 'cash',           label: 'Cash',          icon: '💵' },
-  { value: 'credit_card',    label: 'Credit Card',   icon: '💳' },
-  { value: 'bank_transfer',  label: 'Bank Transfer', icon: '🏦' },
-  { value: 'digital_wallet', label: 'E-Wallet',      icon: '📱' },
+  { value: 'cash',           label: 'Cash'          },
+  { value: 'credit_card',    label: 'Credit Card'   },
+  { value: 'bank_transfer',  label: 'Bank Transfer' },
+  { value: 'digital_wallet', label: 'E-Wallet'      },
 ];
 
 // Life and Emergency are the only cash wallets. The Portfolio wallet holds
@@ -54,11 +60,13 @@ export const PAYMENT_METHODS = [
 // expense entries OR transfers. To move cash into investments you buy a holding
 // (which debits the Life Wallet).
 const WALLET_TYPES = [
-  { value: 'life',      label: 'Life Wallet',      icon: '💳', description: 'Daily income/expenses' },
-  { value: 'emergency', label: 'Emergency Wallet', icon: '🚨', description: 'Emergency fund'        },
+  { value: 'life',      label: 'Life Wallet'      },
+  { value: 'emergency', label: 'Emergency Wallet' },
 ];
 
 const CURRENCIES = ['TWD', 'USD', 'HKD', 'JPY', 'EUR', 'SGD'];
+
+const LOAN_CATEGORY = 'Loan Payment';
 
 export interface CashFormData {
   type: string;
@@ -91,7 +99,8 @@ export function validateCashFields(formData: CashFormData, t: T): Record<string,
   if (!formData.amount || isNaN(amount) || amount <= 0) {
     errors.amount = t('transactions:form.errAmount', 'Enter amount');
   }
-  if (!formData.description.trim()) {
+  // A transfer may go without one: the backend names it "Transfer to X Wallet".
+  if (formData.type !== 'transfer' && !formData.description.trim()) {
     errors.description = t('transactions:form.errDescription', 'Add description');
   }
   if (formData.type === 'transfer') {
@@ -108,13 +117,64 @@ export function validateCashFields(formData: CashFormData, t: T): Record<string,
 // into any focused input under 16px, which on this form meant every tap.
 export const FIELD_LABEL = 'block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1.5';
 export const FIELD_INPUT = 'w-full bg-transparent border border-gray-300 dark:border-gray-600 rounded-lg px-3 py-2.5 sm:py-2 text-base sm:text-sm text-gray-900 dark:text-white placeholder-gray-400 dark:placeholder-gray-500 focus-visible:ring-2 focus-visible:ring-primary-500 focus-visible:border-primary-500';
-const OPTIONAL_HINT = 'text-xs text-gray-500 dark:text-gray-400 font-normal italic';
 
-// One look for every single-select tile, so category, payment and wallet read as
-// the same kind of control.
-const TILE = 'rounded-xl border-2 transition-colors duration-150 touch-manipulation active:scale-[0.97]';
-const TILE_ON = 'border-primary-500 dark:border-primary-400 bg-primary-50 dark:bg-primary-900/30';
-const TILE_OFF = 'border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 hover:border-gray-300 dark:hover:border-gray-500';
+// A choice with more options than fit is one row of chips. On a phone it swipes,
+// bleeding to the card edge (-mx-4 against the card's p-4) with the far end faded
+// to show it continues. From sm the chips wrap: a mouse cannot swipe, and the
+// scrollbar is hidden. scroll-pl matches px, or snapping pulls the first chip
+// under the edge; scroll-pr keeps a focused chip clear of the fade. `relative`
+// makes the row the chips' offsetParent, for revealSelected.
+export const CHIP_ROW = 'relative flex gap-2 overflow-x-auto scrollbar-hide snap-x scroll-pl-4 scroll-pr-10 py-1 -mx-4 px-4 fade-end after:w-6 after:shrink-0 after:content-[""] sm:mx-0 sm:px-0 sm:flex-wrap sm:overflow-visible sm:fade-none sm:after:hidden';
+// min-h-11: 44px on touch screens; a laptop keeps the compact chip.
+export const CHIP = 'shrink-0 snap-start inline-flex items-center gap-1.5 rounded-full border px-3.5 py-2 min-h-11 lg:min-h-0 text-sm font-medium whitespace-nowrap transition-colors motion-reduce:transition-none touch-manipulation focus:outline-none focus-visible:ring-2 focus-visible:ring-primary-500';
+export const CHIP_ON = 'border-primary-500 dark:border-primary-400 bg-primary-50 dark:bg-primary-900/40 text-primary-700 dark:text-primary-300 font-semibold';
+export const CHIP_OFF = 'border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 text-gray-700 dark:text-gray-300 hover:border-gray-300 dark:hover:border-gray-500';
+
+// A choice of two is a segmented toggle.
+export const SEGMENTED = 'inline-flex rounded-lg bg-gray-100 dark:bg-gray-700/60 p-1';
+export const SEGMENT = 'rounded-md px-3 py-2 sm:py-1.5 min-h-11 lg:min-h-0 text-sm font-medium transition-colors motion-reduce:transition-none touch-manipulation focus:outline-none focus-visible:ring-2 focus-visible:ring-primary-500';
+export const SEGMENT_ON = 'bg-white dark:bg-gray-800 text-primary-700 dark:text-primary-300 shadow-sm';
+export const SEGMENT_OFF = 'text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-200';
+
+/** The selected chip's mark: a shape, so "chosen" is not carried by colour alone. */
+function ChipCheck() {
+  return <CheckIcon className="w-4 h-4 shrink-0" aria-hidden="true" />;
+}
+
+/**
+ * After a failed submit, scroll the topmost visible error into view and focus its
+ * field. Topmost on screen, not first in the markup: on a phone the category row
+ * sits above the description but after it in the DOM. Runs a frame later, once
+ * React has rendered the messages.
+ */
+export function revealFirstError(form: HTMLFormElement | null) {
+  requestAnimationFrame(() => {
+    const alerts = [...(form?.querySelectorAll<HTMLElement>('[role="alert"]') ?? [])].filter((a) => a.offsetParent !== null);
+    if (!form || alerts.length === 0) return;
+    const first = alerts.reduce((a, b) => (b.getBoundingClientRect().top < a.getBoundingClientRect().top ? b : a));
+    const reduceMotion = window.matchMedia?.('(prefers-reduced-motion: reduce)').matches;
+    first.scrollIntoView({ block: 'center', behavior: reduceMotion ? 'auto' : 'smooth' });
+    // The field the message describes, or (for a chip group) its chosen chip, else
+    // the first: a chip further along the row would scroll the row back.
+    const owner = first.id ? form.querySelector<HTMLElement>(`[aria-describedby~="${first.id}"]`) : null;
+    const target = owner?.matches('input, select, textarea, button')
+      ? owner
+      : owner?.querySelector<HTMLElement>('[aria-pressed="true"]') ?? owner?.querySelector<HTMLElement>('button');
+    target?.focus({ preventScroll: true });
+  });
+}
+
+/**
+ * Ref for a chip row: on mount, scroll its selected chip into view (an edited
+ * transaction's category can sit past the edge). Sets scrollLeft rather than
+ * calling scrollIntoView, which would also scroll the page to the row.
+ */
+export function revealSelected(row: HTMLDivElement | null) {
+  const chip = row?.querySelector<HTMLElement>('[aria-pressed="true"]');
+  if (row && chip && chip.offsetLeft + chip.offsetWidth > row.clientWidth) {
+    row.scrollLeft = chip.offsetLeft - 16;
+  }
+}
 
 interface CashFieldsProps {
   /** Prefix for element ids, so labels stay unique per page. */
@@ -128,104 +188,249 @@ interface CashFieldsProps {
   /** Focus the amount on mount. For a new entry only: on edit it would open the
    *  phone keyboard over a form the user may only want to re-categorise. */
   autoFocusAmount?: boolean;
+  onTagsChange: (tags: string[]) => void;
 }
 
 /**
- * Amount first (it is what the user came to type), then category or the transfer
- * wallets, description + date, and the optional loan / wallet / payment pickers.
+ * The essentials (amount, description, date, category, wallet) up front; loan
+ * link, payment method and tags behind a collapsed "More options".
  */
-export function CashFields({ idPrefix: p, formData, errors, onChange, activeLoans, showInvestmentHint = false, autoFocusAmount = false }: CashFieldsProps) {
+export function CashFields({ idPrefix: p, formData, errors, onChange, onTagsChange, activeLoans, showInvestmentHint = false, autoFocusAmount = false }: CashFieldsProps) {
   const { t } = useTranslation(['transactions']);
   const categories = formData.type === 'transfer' ? [] : CATEGORIES[formData.type as keyof typeof CATEGORIES] || [];
 
+  // A loan is paid down by the link, not the category, so a mortgage filed under
+  // Housing can still be linked. The picker sits inline for a Loan Payment
+  // expense, and in More options for any other expense.
+  const loanEligible = formData.type === 'expense' && activeLoans.length > 0;
+  const loanInline = loanEligible && formData.category === LOAN_CATEGORY;
+  const linkedLoan = activeLoans.find((loan) => loan.id === formData.loanId);
+  const payment = PAYMENT_METHODS.find((method) => method.value === formData.paymentMethod);
+  // A category this form does not list (an older or imported row) gets its own
+  // pressed chip, so an edit shows what the row is and saves it unchanged.
+  const unknownCategory = categories.length > 0 && formData.category && !categories.some((c) => c.value === formData.category)
+    ? formData.category
+    : null;
+
+  // Picking Loan Payment with exactly one loan links it: a repayment that reduces
+  // no balance is the mistake to avoid.
+  const pickCategory = (value: string) => {
+    onChange('category', value);
+    if (value === LOAN_CATEGORY && formData.type === 'expense' && !formData.loanId && activeLoans.length === 1) {
+      onChange('loanId', activeLoans[0].id);
+    }
+  };
+
+  // Each side of a transfer: picking one wallet puts the other on the far side,
+  // so the two can never match.
+  const pickTransferWallet = (side: 'fromWallet' | 'toWallet', wallet: string) => {
+    onChange(side, wallet);
+    const other = WALLET_TYPES.find((w) => w.value !== wallet)?.value;
+    if (other) onChange(side === 'fromWallet' ? 'toWallet' : 'fromWallet', other);
+  };
+
+  // Open from the start when it already holds something, as on edit (the edit page
+  // mounts this only once the transaction has loaded).
+  const [moreOpen, setMoreOpen] = useState(
+    () => !!formData.paymentMethod || formData.tags.length > 0 || (!!formData.loanId && formData.category !== LOAN_CATEGORY)
+  );
+  const moreSummary = [
+    ...(payment ? [t(`transactions:form.paymentMethods.${payment.value}`, payment.label)] : []),
+    ...(linkedLoan && !loanInline ? [linkedLoan.name] : []),
+    ...formData.tags.map((tag) => `#${tag}`),
+  ];
+
+  const loanPicker = (
+    <div>
+      <div id={`${p}-group-loan`} className={FIELD_LABEL}>
+        {t('transactions:form.linkToLoan', 'Link to Loan')}
+      </div>
+      <div role="group" aria-labelledby={`${p}-group-loan`} ref={revealSelected} className={CHIP_ROW}>
+        <button
+          aria-pressed={!formData.loanId}
+          type="button"
+          onClick={() => onChange('loanId', '')}
+          className={cn(CHIP, !formData.loanId ? CHIP_ON : CHIP_OFF)}
+        >
+          {!formData.loanId && <ChipCheck />}
+          {t('transactions:form.loanNone', 'None')}
+        </button>
+        {activeLoans.map(loan => (
+          <button
+            aria-pressed={formData.loanId === loan.id}
+            key={loan.id}
+            type="button"
+            onClick={() => onChange('loanId', loan.id)}
+            className={cn(CHIP, formData.loanId === loan.id ? CHIP_ON : CHIP_OFF)}
+          >
+            {formData.loanId === loan.id && <ChipCheck />}
+            {loan.name}
+            <span className="font-normal opacity-70">{formatCurrency(loan.current_balance, loan.currency, { precision: 0 })}</span>
+          </button>
+        ))}
+      </div>
+      {loanInline && !formData.loanId && (
+        <p className="mt-1.5 text-xs text-amber-700 dark:text-amber-400">
+          {t('transactions:form.loanPickHint', "Pick the loan this repays, or no loan balance goes down.")}
+        </p>
+      )}
+    </div>
+  );
+
   return (
     <>
-      {/* Amount */}
-      <div>
-        <label htmlFor={`${p}-amount`} className={FIELD_LABEL}>{t('transactions:fields.amount', 'Amount')}</label>
-        <div className={cn(
-          'flex items-center gap-2 rounded-xl border-2 px-2 py-1.5 focus-within:border-primary-500 dark:focus-within:border-primary-400',
-          errors.amount ? 'border-error-400' : 'border-gray-200 dark:border-gray-600'
-        )}>
-          <select
-            value={formData.currency}
-            onChange={(e) => onChange('currency', e.target.value)}
-            className="shrink-0 bg-gray-100 dark:bg-gray-700 rounded-lg px-2 py-2 text-base sm:text-sm font-bold text-gray-700 dark:text-gray-200 border-none focus:outline-none focus-visible:ring-2 focus-visible:ring-primary-500"
-            aria-label={t('transactions:form.currency', 'Currency')}
-          >
-            {CURRENCIES.map(c => (
-              <option key={c} value={c}>{c}</option>
-            ))}
-          </select>
-          <input
-            aria-invalid={!!errors.amount}
-            aria-describedby={errors.amount ? `${p}-amount-error` : undefined}
-            id={`${p}-amount`}
-            type="number"
-            inputMode="decimal"
-            onWheel={(e) => e.currentTarget.blur()}
-            step="0.01"
-            min="0"
-            value={formData.amount}
-            onChange={(e) => onChange('amount', e.target.value)}
-            placeholder="0"
-            className={cn(
-              'flex-1 min-w-0 py-1 text-3xl sm:text-2xl font-bold tabular-nums bg-transparent border-none outline-none [appearance:textfield] [&::-webkit-inner-spin-button]:appearance-none [&::-webkit-outer-spin-button]:appearance-none text-gray-900 dark:text-white placeholder-gray-300 dark:placeholder-gray-600 focus:ring-0',
-              errors.amount && 'text-error-700 dark:text-error-500'
-            )}
-            autoFocus={autoFocusAmount}
-          />
-        </div>
-        {errors.amount && <p id={`${p}-amount-error`} role="alert" className="text-xs text-error-700 dark:text-error-500 mt-1">{errors.amount}</p>}
-      </div>
-
-      {/* Category (income / expense) */}
-      {formData.type !== 'transfer' && (
-        <div>
-          <div id={`${p}-group-category`} className={FIELD_LABEL}>
-            {t('transactions:form.categoryLabel', 'Category')} {errors.category && <span className="text-error-700 dark:text-error-500 text-xs">*</span>}
+      {/* Amount, description and date are what gets typed: one row on a laptop,
+          right under the type, with the category grid below. On a phone the
+          grid sits between the amount and the description instead. The DOM
+          follows the laptop order, so Tab and the phone keyboard's "next" go
+          amount -> description. */}
+      <div className="grid grid-cols-1 gap-5 sm:gap-6 lg:grid-cols-[15rem_minmax(0,1fr)] lg:gap-x-3">
+        {/* Amount */}
+        <div className="order-1 lg:order-none">
+          <label htmlFor={`${p}-amount`} className={FIELD_LABEL}>{t('transactions:fields.amount', 'Amount')}</label>
+          <div className={cn(
+            'flex items-center gap-2 rounded-xl border-2 px-2 py-1.5 lg:h-11 lg:py-0 focus-within:border-primary-500 dark:focus-within:border-primary-400',
+            errors.amount ? 'border-error-400' : 'border-gray-200 dark:border-gray-600'
+          )}>
+            <select
+              value={formData.currency}
+              onChange={(e) => onChange('currency', e.target.value)}
+              className="shrink-0 bg-gray-100 dark:bg-gray-700 rounded-lg px-2 py-2 text-base sm:text-sm font-bold text-gray-700 dark:text-gray-200 border-none focus:outline-none focus-visible:ring-2 focus-visible:ring-primary-500"
+              aria-label={t('transactions:form.currency', 'Currency')}
+            >
+              {CURRENCIES.map(c => (
+                <option key={c} value={c}>{c}</option>
+              ))}
+            </select>
+            <input
+              aria-invalid={!!errors.amount}
+              aria-describedby={errors.amount ? `${p}-amount-error` : undefined}
+              id={`${p}-amount`}
+              type="number"
+              inputMode="decimal"
+              onWheel={(e) => e.currentTarget.blur()}
+              step="0.01"
+              min="0"
+              value={formData.amount}
+              onChange={(e) => onChange('amount', e.target.value)}
+              placeholder="0"
+              className={cn(
+                'flex-1 min-w-0 py-1 text-3xl sm:text-2xl lg:text-xl font-bold tabular-nums bg-transparent border-none outline-none [appearance:textfield] [&::-webkit-inner-spin-button]:appearance-none [&::-webkit-outer-spin-button]:appearance-none text-gray-900 dark:text-white placeholder-gray-300 dark:placeholder-gray-600 focus:ring-0',
+                errors.amount && 'text-error-700 dark:text-error-500'
+              )}
+              autoFocus={autoFocusAmount}
+            />
           </div>
-          <div role="group" aria-labelledby={`${p}-group-category`} className="grid grid-cols-4 sm:grid-cols-6 gap-1.5 sm:gap-2">
-            {categories.map((category) => {
-              const isSelected = formData.category === category.value;
-              return (
-                <button
-                  aria-pressed={isSelected}
-                  key={category.value}
-                  type="button"
-                  onClick={() => onChange('category', category.value)}
-                  className={cn('flex flex-col items-center justify-center gap-1 px-1 py-2 min-h-[64px]', TILE, isSelected ? TILE_ON : TILE_OFF)}
-                >
-                  <span className="text-xl sm:text-2xl leading-none" aria-hidden="true">{category.icon}</span>
-                  <span className={cn(
-                    'text-[11px] sm:text-xs font-medium text-center leading-tight',
-                    isSelected ? 'text-primary-700 dark:text-primary-300' : 'text-gray-700 dark:text-gray-300'
-                  )}>{t(`transactions:form.categories.${category.value}`, category.label)}</span>
-                </button>
-              );
-            })}
-          </div>
-          {errors.category && <p className="text-sm text-error-700 dark:text-error-500 mt-1" role="alert">{errors.category}</p>}
+          {errors.amount && <p id={`${p}-amount-error`} role="alert" className="text-xs text-error-700 dark:text-error-500 mt-1">{errors.amount}</p>}
         </div>
-      )}
 
-      {/* Transfer wallet selection: From → To side by side */}
-      {formData.type === 'transfer' && (
-        <div className="space-y-3">
-          {showInvestmentHint && (
-            <div className="flex items-start gap-2 p-3 rounded-lg bg-amber-50 dark:bg-amber-900/20 text-amber-700 dark:text-amber-300 text-xs">
-              <span className="text-base">💡</span>
-              <span>{t('transactions:form.transferHint.use', 'Use')} <strong>{t('transactions:form.types.transfer', 'Transfer')}</strong> {t('transactions:form.transferHint.mid', 'to move cash between wallets. To buy or sell assets, use the')} <strong>{t('transactions:form.types.investment', 'Investment')}</strong> {t('transactions:form.transferHint.end', 'tab instead.')}</span>
+        {/* Description + Date: one row, unless the phone is too narrow to give the description room */}
+        <div className="order-3 lg:order-none grid grid-cols-1 min-[360px]:grid-cols-[minmax(0,1fr)_auto] gap-2 sm:gap-3">
+          <div>
+            <label htmlFor={`${p}-description`} className={FIELD_LABEL}>{t('transactions:fields.description', 'Description')}</label>
+            <input
+              aria-invalid={!!errors.description}
+              aria-describedby={errors.description ? `${p}-description-error` : undefined}
+              id={`${p}-description`}
+              type="text"
+              value={formData.description}
+              onChange={(e) => onChange('description', e.target.value)}
+              placeholder={t('transactions:form.descriptionPlaceholder', "What's this for?")}
+              enterKeyHint="done"
+              className={cn(FIELD_INPUT, 'lg:h-11', errors.description && 'border-error-400')}
+            />
+            {errors.description && <p id={`${p}-description-error`} role="alert" className="text-xs text-error-700 dark:text-error-500 mt-1">{errors.description}</p>}
+          </div>
+          <div className="min-[360px]:w-[8.75rem] sm:w-40">
+            <label htmlFor={`${p}-date`} className={FIELD_LABEL}>{t('transactions:fields.date', 'Date')}</label>
+            <input
+              id={`${p}-date`}
+              type="date"
+              value={formData.date}
+              onChange={(e) => onChange('date', e.target.value)}
+              className={cn(FIELD_INPUT, 'px-2 min-h-[2.75rem] sm:min-h-0 lg:h-11')}
+            />
+          </div>
+        </div>
+
+        {/* Category (income / expense) */}
+        {formData.type !== 'transfer' && (
+          <div className="order-2 lg:order-none lg:col-span-2">
+            <div id={`${p}-group-category`} className={FIELD_LABEL}>
+              {t('transactions:form.categoryLabel', 'Category')} {errors.category && <span className="text-error-700 dark:text-error-500 text-xs">*</span>}
             </div>
-          )}
-          {(['fromWallet', 'toWallet'] as const).map((side) => {
-            const tone = side === 'fromWallet' ? 'expense' : 'income';
-            return (
-              <div key={side}>
-                <div id={`${p}-group-${side}`} className={FIELD_LABEL}>
-                  {side === 'fromWallet' ? t('transactions:form.fromWallet', 'From Wallet') : t('transactions:form.toWallet', 'To Wallet')} <span className="text-error-700 dark:text-error-500">*</span>
-                </div>
-                <div role="group" aria-labelledby={`${p}-group-${side}`} className="grid grid-cols-2 gap-2">
+            <div
+              role="group"
+              aria-labelledby={`${p}-group-category`}
+              aria-describedby={errors.category ? `${p}-category-error` : undefined}
+              ref={revealSelected}
+              className={CHIP_ROW}
+            >
+              {unknownCategory && (
+                <button
+                  aria-pressed={true}
+                  type="button"
+                  className={cn(CHIP, 'font-semibold', getCategoryColorGroup(unknownCategory).lightBg, getCategoryColorGroup(unknownCategory).lightText, getCategoryColorGroup(unknownCategory).borderOn)}
+                >
+                  <ChipCheck />
+                  {unknownCategory}
+                </button>
+              )}
+              {categories.map((category) => {
+                const isSelected = formData.category === category.value;
+                // Outlined in the colour of the pie slice this category lands in,
+                // filled with it once chosen.
+                const group = getCategoryColorGroup(category.value);
+                return (
+                  <button
+                    aria-pressed={isSelected}
+                    key={category.value}
+                    type="button"
+                    onClick={() => pickCategory(category.value)}
+                    className={cn(
+                      CHIP,
+                      isSelected
+                        ? cn('font-semibold', group.lightBg, group.lightText, group.borderOn)
+                        : cn('bg-white dark:bg-gray-800 text-gray-700 dark:text-gray-300', group.border)
+                    )}
+                  >
+                    {/* A fixed slot: emoji glyphs render wider than their box and crowd the label. */}
+                    {isSelected
+                      ? <span className="w-5 flex justify-center"><ChipCheck /></span>
+                      : <span aria-hidden="true" className="w-5 text-center leading-none">{category.icon}</span>}
+                    {t(`transactions:form.categories.${category.value}`, category.label)}
+                  </button>
+                );
+              })}
+            </div>
+            {errors.category && <p id={`${p}-category-error`} className="text-sm text-error-700 dark:text-error-500 mt-1" role="alert">{errors.category}</p>}
+            {/* Loan Payment with no loan to link: say where loans come from. */}
+            {formData.type === 'expense' && formData.category === LOAN_CATEGORY && activeLoans.length === 0 && (
+              <p className="mt-1.5 text-xs text-gray-500 dark:text-gray-400">
+                {t('transactions:form.noActiveLoans', 'No active loans to link.')}{' '}
+                <Link href="/loans" className="font-medium text-primary-700 dark:text-primary-400 underline-offset-2 hover:underline focus-visible:ring-2 focus-visible:ring-primary-500 rounded">
+                  {t('transactions:form.addLoanLink', 'Add one on Loans')}
+                </Link>
+              </p>
+            )}
+          </div>
+        )}
+
+        {/* Transfer wallet selection: From → To side by side */}
+        {formData.type === 'transfer' && (
+          <div className="order-2 lg:order-none lg:col-span-2 space-y-3">
+            {showInvestmentHint && (
+              <div className="flex items-start gap-2 p-3 rounded-lg bg-amber-50 dark:bg-amber-900/20 text-amber-700 dark:text-amber-300 text-xs">
+                <span className="text-base">💡</span>
+                <span>{t('transactions:form.transferHint.use', 'Use')} <strong>{t('transactions:form.types.transfer', 'Transfer')}</strong> {t('transactions:form.transferHint.mid', 'to move cash between wallets. To buy or sell assets, use the')} <strong>{t('transactions:form.types.investment', 'Investment')}</strong> {t('transactions:form.transferHint.end', 'tab instead.')}</span>
+              </div>
+            )}
+            {(['fromWallet', 'toWallet'] as const).map((side) => (
+              <div key={side} className="flex flex-wrap items-center gap-x-3 gap-y-2">
+                <span id={`${p}-group-${side}`} className="min-w-16 text-sm font-medium text-gray-700 dark:text-gray-300">
+                  {side === 'fromWallet' ? t('transactions:form.fromWallet', 'From Wallet') : t('transactions:form.toWallet', 'To Wallet')}
+                </span>
+                <div role="group" aria-labelledby={`${p}-group-${side}`} className={SEGMENTED}>
                   {WALLET_TYPES.map((wallet) => {
                     const isSelected = formData[side] === wallet.value;
                     return (
@@ -233,118 +438,39 @@ export function CashFields({ idPrefix: p, formData, errors, onChange, activeLoan
                         aria-pressed={isSelected}
                         key={wallet.value}
                         type="button"
-                        onClick={() => onChange(side, wallet.value)}
+                        onClick={() => pickTransferWallet(side, wallet.value)}
                         className={cn(
-                          'flex items-center gap-2 px-3 py-2.5',
-                          TILE,
+                          SEGMENT,
+                          // Money leaves the From wallet and arrives in the To wallet.
                           isSelected
-                            ? tone === 'expense'
-                              ? 'border-expense-500 bg-expense-50 dark:bg-expense-900/30'
-                              : 'border-income-500 bg-income-50 dark:bg-income-900/30'
-                            : TILE_OFF
+                            ? side === 'fromWallet'
+                              ? 'bg-white dark:bg-gray-800 shadow-sm text-expense-700 dark:text-expense-300'
+                              : 'bg-white dark:bg-gray-800 shadow-sm text-income-700 dark:text-income-300'
+                            : SEGMENT_OFF
                         )}
                       >
-                        <span className="text-lg" aria-hidden="true">{wallet.icon}</span>
-                        <span className={cn(
-                          'text-sm font-semibold text-left leading-tight',
-                          isSelected
-                            ? tone === 'expense' ? 'text-expense-700 dark:text-expense-300' : 'text-income-700 dark:text-income-300'
-                            : 'text-gray-700 dark:text-gray-300'
-                        )}>{t(`transactions:form.wallets.${wallet.value}`, wallet.label)}</span>
+                        {t(`transactions:form.wallets.${wallet.value}`, wallet.label)}
                       </button>
                     );
                   })}
                 </div>
               </div>
-            );
-          })}
-          {errors.transfer && <p role="alert" className="text-sm text-error-700 dark:text-error-500 text-center">{errors.transfer}</p>}
-        </div>
-      )}
-
-      {/* Description + Date: one row, unless the phone is too narrow to give the description room */}
-      <div className="grid grid-cols-1 min-[360px]:grid-cols-[minmax(0,1fr)_auto] gap-2 sm:gap-3">
-        <div>
-          <label htmlFor={`${p}-description`} className={FIELD_LABEL}>{t('transactions:fields.description', 'Description')}</label>
-          <input
-            aria-invalid={!!errors.description}
-            aria-describedby={errors.description ? `${p}-description-error` : undefined}
-            id={`${p}-description`}
-            type="text"
-            value={formData.description}
-            onChange={(e) => onChange('description', e.target.value)}
-            placeholder={t('transactions:form.descriptionPlaceholder', "What's this for?")}
-            enterKeyHint="done"
-            className={cn(FIELD_INPUT, errors.description && 'border-error-400')}
-          />
-          {errors.description && <p id={`${p}-description-error`} role="alert" className="text-xs text-error-700 dark:text-error-500 mt-1">{errors.description}</p>}
-        </div>
-        <div className="min-[360px]:w-[8.75rem] sm:w-40">
-          <label htmlFor={`${p}-date`} className={FIELD_LABEL}>{t('transactions:fields.date', 'Date')}</label>
-          <input
-            id={`${p}-date`}
-            type="date"
-            value={formData.date}
-            onChange={(e) => onChange('date', e.target.value)}
-            className={cn(FIELD_INPUT, 'px-2 min-h-[2.75rem] sm:min-h-0')}
-          />
-        </div>
+            ))}
+            {errors.transfer && <p role="alert" className="text-sm text-error-700 dark:text-error-500 text-center">{errors.transfer}</p>}
+          </div>
+        )}
       </div>
 
-      {/* Loan Link (expense only): linking reduces the loan balance, unlinking restores it */}
-      {formData.type === 'expense' && activeLoans.length > 0 && (
-        <div>
-          <div id={`${p}-group-loan`} className={FIELD_LABEL}>
-            {t('transactions:form.linkToLoan', 'Link to Loan')} <span className={OPTIONAL_HINT}>{t('transactions:form.linkToLoanHint', '(optional — reduces loan balance)')}</span>
-          </div>
-          <div role="group" aria-labelledby={`${p}-group-loan`} className="grid grid-cols-2 sm:grid-cols-3 gap-2">
-            <button
-              aria-pressed={!formData.loanId}
-              type="button"
-              onClick={() => onChange('loanId', '')}
-              className={cn(
-                'flex items-center gap-2 px-3 py-2.5 text-sm font-medium',
-                TILE,
-                !formData.loanId
-                  ? 'border-gray-400 bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-200'
-                  : cn(TILE_OFF, 'text-gray-500 dark:text-gray-400')
-              )}
-            >
-              <span aria-hidden="true">🚫</span> {t('transactions:form.loanNone', 'None')}
-            </button>
-            {activeLoans.map(loan => (
-              <button
-                aria-pressed={formData.loanId === loan.id}
-                key={loan.id}
-                type="button"
-                onClick={() => onChange('loanId', loan.id)}
-                className={cn(
-                  'flex flex-col items-start gap-0.5 px-3 py-2 text-sm min-w-0',
-                  TILE,
-                  formData.loanId === loan.id
-                    ? 'border-purple-500 bg-purple-50 dark:bg-purple-900/30'
-                    : cn(TILE_OFF, 'hover:border-purple-300 dark:hover:border-purple-700')
-                )}
-              >
-                <span className={cn('font-semibold truncate max-w-full', formData.loanId === loan.id ? 'text-purple-700 dark:text-purple-300' : 'text-gray-700 dark:text-gray-300')}>
-                  💳 {loan.name}
-                </span>
-                <span className="text-xs text-gray-500 dark:text-gray-400">
-                  {t('transactions:form.loanBalance', 'Balance')}: {formatCurrency(loan.current_balance, loan.currency, { precision: 0 })}
-                </span>
-              </button>
-            ))}
-          </div>
-        </div>
-      )}
+      {/* Loan picker inline only where it is the point: a Loan Payment expense. */}
+      {loanInline && loanPicker}
 
-      {/* Wallet Type (income / expense only) */}
+      {/* Wallet: a small toggle, not two cards. It is Life for almost every entry. */}
       {formData.type !== 'transfer' && (
-        <div>
-          <div id={`${p}-group-wallet-type`} className={FIELD_LABEL}>
-            {t('transactions:form.walletTypeLabel', 'Wallet Type')} <span className="text-error-700 dark:text-error-500">*</span>
-          </div>
-          <div role="group" aria-labelledby={`${p}-group-wallet-type`} className="grid grid-cols-2 gap-2 sm:gap-3">
+        <div className="flex flex-wrap items-center gap-x-3 gap-y-2">
+          <span id={`${p}-group-wallet-type`} className="text-sm font-medium text-gray-700 dark:text-gray-300">
+            {t('transactions:form.walletTypeLabel', 'Wallet Type')}
+          </span>
+          <div role="group" aria-labelledby={`${p}-group-wallet-type`} className={SEGMENTED}>
             {WALLET_TYPES.map((wallet) => {
               const isSelected = formData.walletType === wallet.value;
               return (
@@ -353,14 +479,9 @@ export function CashFields({ idPrefix: p, formData, errors, onChange, activeLoan
                   key={wallet.value}
                   type="button"
                   onClick={() => onChange('walletType', wallet.value)}
-                  className={cn('flex flex-col items-start gap-1 px-3 py-2.5 sm:p-4', TILE, isSelected ? TILE_ON : TILE_OFF)}
+                  className={cn(SEGMENT, isSelected ? SEGMENT_ON : SEGMENT_OFF)}
                 >
-                  <div className="flex items-center gap-2 w-full">
-                    <span className="text-lg sm:text-xl" aria-hidden="true">{wallet.icon}</span>
-                    <span className={cn('text-sm font-semibold text-left leading-tight', isSelected ? 'text-primary-700 dark:text-primary-300' : 'text-gray-700 dark:text-gray-300')}>{t(`transactions:form.wallets.${wallet.value}`, wallet.label)}</span>
-                  </div>
-                  {/* The description is a second line of small print a phone has no room for. */}
-                  <p className={cn('hidden sm:block text-xs w-full text-left', isSelected ? 'text-primary-700 dark:text-primary-400' : 'text-gray-500 dark:text-gray-400')}>{t(`transactions:form.walletDescriptions.${wallet.value}`, wallet.description)}</p>
+                  {t(`transactions:form.wallets.${wallet.value}`, wallet.label)}
                 </button>
               );
             })}
@@ -368,28 +489,65 @@ export function CashFields({ idPrefix: p, formData, errors, onChange, activeLoan
         </div>
       )}
 
-      {/* Payment Method (income / expense only) */}
+      {/* Everything optional, collapsed. While closed, chips say what is set inside,
+          so nothing chosen is out of sight. Not for a transfer: its only optional
+          field would be tags, which the transfer API does not store. */}
       {formData.type !== 'transfer' && (
         <div>
-          <div id={`${p}-group-payment`} className={FIELD_LABEL}>
-            {t('transactions:form.paymentMethodLabel', 'Payment Method')} <span className={OPTIONAL_HINT}>{t('transactions:form.optional', '(optional)')}</span>
-          </div>
-          <div role="group" aria-labelledby={`${p}-group-payment`} className="grid grid-cols-4 gap-1.5 sm:gap-2">
-            {PAYMENT_METHODS.map((method) => {
-              const isSelected = formData.paymentMethod === method.value;
-              return (
-                <button
-                  aria-pressed={isSelected}
-                  key={method.value}
-                  type="button"
-                  onClick={() => onChange('paymentMethod', method.value)}
-                  className={cn('flex flex-col items-center justify-center gap-1 px-1 py-2 min-h-[64px]', TILE, isSelected ? TILE_ON : TILE_OFF)}
-                >
-                  <span className="text-xl sm:text-2xl leading-none" aria-hidden="true">{method.icon}</span>
-                  <span className={cn('text-[11px] sm:text-xs font-medium text-center leading-tight', isSelected ? 'text-primary-700 dark:text-primary-300' : 'text-gray-700 dark:text-gray-300')}>{t(`transactions:form.paymentMethods.${method.value}`, method.label)}</span>
-                </button>
-              );
-            })}
+          <button
+            type="button"
+            aria-expanded={moreOpen}
+            aria-controls={`${p}-more`}
+            onClick={() => setMoreOpen((open) => !open)}
+            className="flex w-full min-w-0 min-h-11 items-center gap-2 rounded-lg py-1 text-left text-sm font-medium text-gray-700 dark:text-gray-300 hover:text-gray-900 dark:hover:text-white focus:outline-none focus-visible:ring-2 focus-visible:ring-primary-500"
+          >
+            <ChevronRightIcon className={cn('w-4 h-4 shrink-0 transition-transform motion-reduce:transition-none', moreOpen && 'rotate-90')} aria-hidden="true" />
+            <span className="shrink-0">{t('transactions:form.moreOptions', 'More options')}</span>
+            {!moreOpen && moreSummary.length > 0 && (
+              <span className="flex min-w-0 flex-wrap gap-1.5">
+                {moreSummary.map((chip) => (
+                  <span key={chip} className="max-w-[10rem] truncate rounded-full bg-gray-100 dark:bg-gray-700 px-2 py-0.5 text-xs font-normal text-gray-600 dark:text-gray-300">{chip}</span>
+                ))}
+              </span>
+            )}
+          </button>
+          {/* hidden, not unmounted: a half-typed tag survives closing the section. */}
+          <div id={`${p}-more`} hidden={!moreOpen} className="mt-3 space-y-5">
+            {loanEligible && !loanInline && loanPicker}
+
+            <div>
+                <div id={`${p}-group-payment`} className={FIELD_LABEL}>
+                  {t('transactions:form.paymentMethodLabel', 'Payment Method')}
+                </div>
+                <div role="group" aria-labelledby={`${p}-group-payment`} ref={revealSelected} className={CHIP_ROW}>
+                  <button
+                    aria-pressed={!formData.paymentMethod}
+                    type="button"
+                    onClick={() => onChange('paymentMethod', '')}
+                    className={cn(CHIP, !formData.paymentMethod ? CHIP_ON : CHIP_OFF)}
+                  >
+                    {!formData.paymentMethod && <ChipCheck />}
+                    {t('transactions:form.paymentNone', 'Not set')}
+                  </button>
+                  {PAYMENT_METHODS.map((method) => {
+                    const isSelected = formData.paymentMethod === method.value;
+                    return (
+                      <button
+                        aria-pressed={isSelected}
+                        key={method.value}
+                        type="button"
+                        onClick={() => onChange('paymentMethod', method.value)}
+                        className={cn(CHIP, isSelected ? CHIP_ON : CHIP_OFF)}
+                      >
+                        {isSelected && <ChipCheck />}
+                        {t(`transactions:form.paymentMethods.${method.value}`, method.label)}
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
+
+            <TagsField idPrefix={p} tags={formData.tags} onChange={onTagsChange} />
           </div>
         </div>
       )}
@@ -434,7 +592,7 @@ export function TagsField({ idPrefix: p, tags, onChange }: TagsFieldProps) {
   return (
     <div>
       <label htmlFor={`${p}-tags`} className={FIELD_LABEL}>
-        {t('transactions:fields.tags', 'Tags')} <span className={OPTIONAL_HINT}>{t('transactions:form.optional', '(optional)')}</span>
+        {t('transactions:fields.tags', 'Tags')}
       </label>
       <div className="flex items-center gap-2">
         <div className="flex-1 relative">
@@ -461,7 +619,7 @@ export function TagsField({ idPrefix: p, tags, onChange }: TagsFieldProps) {
           type="button"
           onClick={addTag}
           disabled={!tagInput.trim()}
-          className={cn('px-4 py-2.5 sm:py-2 rounded-lg text-sm font-medium transition-colors', tagInput.trim() ? 'bg-primary-500 text-white hover:bg-primary-600' : 'bg-gray-200 dark:bg-gray-700 text-gray-400 cursor-not-allowed')}
+          className={cn('px-4 py-2.5 sm:py-2 min-h-11 lg:min-h-0 rounded-lg text-sm font-medium transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-primary-500', tagInput.trim() ? 'bg-primary-500 text-white hover:bg-primary-600' : 'bg-gray-200 dark:bg-gray-700 text-gray-400 cursor-not-allowed')}
         >{t('transactions:form.addTag', 'Add')}</button>
       </div>
       {tags.length > 0 && (
@@ -469,14 +627,19 @@ export function TagsField({ idPrefix: p, tags, onChange }: TagsFieldProps) {
           {tags.map((tag) => (
             <div key={tag} className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-primary-100 dark:bg-primary-900/30 text-primary-700 dark:text-primary-300 rounded-full text-sm">
               <span>#{tag}</span>
-              <button type="button" onClick={() => removeTag(tag)} aria-label={`Remove tag ${tag}`} className="hover:text-primary-900 dark:hover:text-primary-100 transition-colors">
+              <button
+                type="button"
+                onClick={() => removeTag(tag)}
+                aria-label={t('transactions:form.removeTag', { tag, defaultValue: 'Remove tag {{tag}}' })}
+                // The padding is the tap area; the negative margin keeps the pill's size.
+                className="p-1.5 -m-1.5 rounded-full hover:text-primary-900 dark:hover:text-primary-100 transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-primary-500"
+              >
                 <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" /></svg>
               </button>
             </div>
           ))}
         </div>
       )}
-      <p className="hidden sm:block text-xs text-gray-500 dark:text-gray-400 mt-2">{t('transactions:form.tagsHelp', 'Use tags to organize your transactions (e.g., #vacation, #business)')}</p>
     </div>
   );
 }
