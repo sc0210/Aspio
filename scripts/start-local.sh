@@ -1,9 +1,9 @@
 #!/bin/bash
-# start-local.sh - Quick start Aspiro (localhost only, no ngrok)
-# Usage: ./start-local.sh
+# scripts/start-local.sh - Quick start Aspiro (localhost only, no ngrok)
+# Usage: ./scripts/start-local.sh
 
 set -e
-cd "$(dirname "$0")"
+cd "$(dirname "$0")/.."
 
 echo "Starting Aspiro (localhost)..."
 

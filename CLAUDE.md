@@ -19,7 +19,7 @@ Aspiro is a full-stack personal finance app targeting Asian markets. Users track
 
 ### Full stack (Docker — recommended for local dev)
 ```bash
-./start-local.sh          # starts all services
+./scripts/start-local.sh          # starts all services
 ```
 Services: frontend :3000 · backend :8000 · Swagger :8000/docs · pgAdmin :5050
 

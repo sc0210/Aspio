@@ -10,7 +10,7 @@
 #   open http://localhost:8080
 #   docker compose -f docker-compose.prodlocal.yml down
 #
-# Requires the dev stack's Postgres to be up (./start-local.sh); this file has
+# Requires the dev stack's Postgres to be up (./scripts/start-local.sh); this file has
 # no database of its own, and runs no migrations. After pulling a new migration,
 # bring the shared DB to head first:
 #   docker exec aspiro-backend alembic upgrade head It reaches it through the host, as

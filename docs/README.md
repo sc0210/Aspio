@@ -9,11 +9,27 @@
 | [TESTING.md](TESTING.md) | You're running or writing tests, or CI went red |
 | [SECURITY.md](SECURITY.md) | You're touching auth, middleware, a raw query, or adding a table |
 | [SELF_HOSTING.md](SELF_HOSTING.md) | You're running your own Aspiro, built from a clone of this repo: setup, updates, backups, rollback |
+| [DEVELOPMENT.md](DEVELOPMENT.md) | You're working on the code day to day: running the stack, the environment traps, schema changes |
 
 At the repo root: [README.md](../README.md) for the overview, self-host quick start and local setup,
-[CONTRIBUTING.md](../CONTRIBUTING.md) for sending a change,
-[DEVELOPMENT_GUIDE.md](../DEVELOPMENT_GUIDE.md) for day-to-day workflow, and
+[CONTRIBUTING.md](../CONTRIBUTING.md) for sending a change, and
 [CLAUDE.md](../CLAUDE.md) for agent conventions.
+
+## Scripts
+
+Scripts live in three places, by what they run against:
+
+- `scripts/` — the repo and the Docker stacks: `aspiro` (self-host CLI, tested by `aspiro_test.sh`),
+  `start-local.sh` and `rebuild-fresh.sh` (dev stack), `backup_db.sh` / `restore_db.sh` (cron-able
+  dumps of a dev or Pi database; a self-hosted instance uses `aspiro backup`),
+  `export_for_migration.sh` (moving a stack to a new host), `install-git-hooks.sh` with
+  `commit_review.py` (the advisory commit review), and `ci/` (CI-only checks).
+- `backend/scripts/` — the database, run with the backend's env. Indexed in its own
+  [README](../backend/scripts/README.md).
+- `frontend/scripts/` — the Next.js app: npm-script helpers, the README screenshot and GIF
+  capture, and the font CSS build.
+
+Each script's header comment is its usage.
 
 The API reference is generated at `/docs` on a running backend, so it is never written down.
 
