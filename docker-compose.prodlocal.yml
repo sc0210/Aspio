@@ -95,6 +95,7 @@ services:
       dockerfile: Dockerfile
       args:
         - NEXT_PUBLIC_API_URL=   # same-origin /api/v1, routed by caddy
+        - NEXT_PUBLIC_CF_ANALYTICS_TOKEN=${NEXT_PUBLIC_CF_ANALYTICS_TOKEN:-}
         - GIT_SHA=${GIT_SHA:-local}
     container_name: aspiro-prodlocal-frontend
     environment:
