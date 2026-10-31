@@ -133,7 +133,7 @@ async function fillAndSubmitExpenseForm(user: ReturnType<typeof userEvent.setup>
   // Category — click the button whose accessible name includes 'Dining'
   await user.click(screen.getByRole('button', { name: /Dining/i }));
   // Submit
-  await user.click(screen.getByText(/Add Transaction/i));
+  await user.click(screen.getByRole('button', { name: /Add Transaction/i }));
 }
 
 describe('AddTransactionPage — demo mode', () => {
@@ -205,7 +205,7 @@ describe('AddTransactionPage — demo mode', () => {
       await user.clear(descriptionInput);
       await user.type(descriptionInput, 'Wallet transfer');
     }
-    await user.click(screen.getByText(/Add Transaction/i));
+    await user.click(screen.getByRole('button', { name: /Add Transaction/i }));
 
     await waitFor(() => {
       expect(mockToast.success).toHaveBeenCalledWith('common:demoAlert.changesSimulated');
