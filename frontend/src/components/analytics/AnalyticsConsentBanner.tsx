@@ -10,7 +10,7 @@
 import { useState, useEffect } from 'react';
 import { useTranslation } from 'react-i18next';
 import { XMarkIcon, ShieldCheckIcon } from '@heroicons/react/24/outline';
-import { setAnalyticsConsent, isAnalyticsAvailable, defaultAnalyticsConfig } from '@/lib/analytics/config';
+import { setAnalyticsConsent, isAnalyticsAvailable, defaultAnalyticsConfig, ANALYTICS_CONSENT_EVENT } from '@/lib/analytics/config';
 import { analyticsProvider } from '@/lib/analytics/provider';
 import { Button } from '@/components/ui/Button';
 import { cn } from '@/utils/cn';
@@ -29,9 +29,22 @@ export function AnalyticsConsentBanner() {
 
         // Show banner if no consent decision has been made
         if (!consent) {
+            // A choice made elsewhere (Settings, another tab) retires the banner, so a
+            // later tap here cannot silently overwrite it.
+            const hideOnChoice = () => {
+                if (localStorage.getItem(consentKey)) setIsVisible(false);
+            };
+            window.addEventListener(ANALYTICS_CONSENT_EVENT, hideOnChoice);
+            window.addEventListener('storage', hideOnChoice);
             // Delay showing banner slightly for better UX
-            const timer = setTimeout(() => setIsVisible(true), 1000);
-            return () => clearTimeout(timer);
+            const timer = setTimeout(() => {
+                if (!localStorage.getItem(consentKey)) setIsVisible(true);
+            }, 1000);
+            return () => {
+                clearTimeout(timer);
+                window.removeEventListener(ANALYTICS_CONSENT_EVENT, hideOnChoice);
+                window.removeEventListener('storage', hideOnChoice);
+            };
         }
     }, []);
 

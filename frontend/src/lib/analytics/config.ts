@@ -201,4 +201,10 @@ export function setAnalyticsConsent(granted: boolean): void {
     if (!granted) {
         sessionStorage.removeItem('aspiro_session_id');
     }
+
+    // Same-tab notice (the `storage` event fires only in other tabs), so a banner
+    // still on screen steps aside once the choice is made in Settings.
+    window.dispatchEvent(new Event(ANALYTICS_CONSENT_EVENT));
 }
+
+export const ANALYTICS_CONSENT_EVENT = 'aspiro:analytics-consent';

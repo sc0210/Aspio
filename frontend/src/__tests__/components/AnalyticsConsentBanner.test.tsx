@@ -6,6 +6,7 @@ let mockAvailable = true;
 let mockCloudflare = true;
 jest.mock('@/lib/analytics/config', () => ({
   setAnalyticsConsent: jest.fn(),
+  ANALYTICS_CONSENT_EVENT: 'aspiro:analytics-consent',
   isAnalyticsAvailable: () => mockAvailable,
   get defaultAnalyticsConfig() {
     return { providers: { cloudflare: { enabled: mockCloudflare, token: 't' } } };
@@ -115,5 +116,15 @@ describe('AnalyticsConsentBanner — mobile UX fixes', () => {
     act(() => { screen.getByRole('button', { name: /learn more/i }).click(); });
     expect(screen.getByText(/Settings → Privacy & Display/)).toBeInTheDocument();
     expect(screen.queryByText(/Cloudflare Web Analytics/)).not.toBeInTheDocument();
+  });
+
+  it('steps aside when the choice is made elsewhere, so a later tap cannot overwrite it', () => {
+    renderAndShowBanner();
+    expect(screen.getByRole('region', { name: /privacy and analytics consent/i })).toBeInTheDocument();
+    act(() => {
+      localStorage.setItem('aspiro_analytics_consent', 'denied');
+      window.dispatchEvent(new Event('aspiro:analytics-consent'));
+    });
+    expect(screen.queryByRole('region', { name: /privacy and analytics consent/i })).not.toBeInTheDocument();
   });
 });
