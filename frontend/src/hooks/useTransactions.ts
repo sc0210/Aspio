@@ -11,6 +11,7 @@ import { useDualModeQuery } from './useAuthenticatedQuery';
 import { QUERY_KEYS, invalidateDashboardData } from './useDataSynchronization';
 import toast from 'react-hot-toast';
 import { log } from '@/utils/logger';
+import { isWalletTransfer } from '@/utils/expenseGroups';
 
 interface UseTransactionsOptions extends PaginationParams {
   category?: string;
@@ -93,7 +94,10 @@ export function useTransactions(options: UseTransactionsOptions = {}) {
       // Filter demo transactions based on options
       let filteredTransactions = demoTransactions;
 
-      if (options.type) {
+      if (options.type === 'transfer') {
+        // Transfer legs are stored as expense/income rows, never type 'transfer'.
+        filteredTransactions = filteredTransactions.filter(isWalletTransfer);
+      } else if (options.type) {
         filteredTransactions = filteredTransactions.filter(t => t.type === options.type);
       }
 

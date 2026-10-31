@@ -114,7 +114,10 @@ function filterDemoTransactions(
   dateRange?: { start: Date; end: Date },
 ): { raw: Transaction[]; filtered: Transaction[] } {
   const raw = transactions.filter(t => {
-    if (filters.type !== 'all' && t.type !== filters.type) return false;
+    // Transfer legs are stored as expense/income rows, never type 'transfer'.
+    if (filters.type === 'transfer') {
+      if (!isWalletTransfer(t)) return false;
+    } else if (filters.type !== 'all' && t.type !== filters.type) return false;
     if (dateRange) {
       const d = typeof t.date === 'string' ? new Date(t.date) : t.date;
       if (d < dateRange.start || d > dateRange.end) return false;

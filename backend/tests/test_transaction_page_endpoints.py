@@ -71,8 +71,8 @@ async def ledger(async_session, test_user):
             txn(50000, salary, TransactionType.INCOME, desc="salary"),
             txn(300, dining, TransactionType.EXPENSE, desc="ramen"),
             txn(10, dining_dup, TransactionType.EXPENSE, currency="USD", desc="burger"),
-            txn(1000, transfer, TransactionType.EXPENSE, grp=group),
-            txn(1000, transfer, TransactionType.INCOME, wallet=TransactionWalletType.EMERGENCY, grp=group),
+            txn(1000, transfer, TransactionType.EXPENSE, grp=group, desc="top-up"),
+            txn(1000, transfer, TransactionType.INCOME, wallet=TransactionWalletType.EMERGENCY, grp=group, desc="top-up"),
         ]
     )
     await async_session.commit()
@@ -109,10 +109,20 @@ class TestStats:
 
     async def test_type_transfer_matches_both_legs(self, authenticated_client, ledger):
         # The legs are stored as income + expense, never type 'transfer'.
-        assert stats(authenticated_client, type="transfer")["stats"]["transaction_count"] == 2
+        s = stats(authenticated_client, type="transfer")["stats"]
+        assert s["transaction_count"] == 2
+        assert s["total_income"] == pytest.approx(1000)
+        assert s["total_expenses"] == pytest.approx(1000)
         r = authenticated_client.get(f"{BASE}/", params={"type": "transfer"})
         assert r.status_code == 200, r.text
-        assert r.json()["total"] == 2
+        rows = r.json()["transactions"]
+        assert sorted((t["type"], t["description"]) for t in rows) == [
+            ("expense", "top-up"), ("income", "top-up"),
+        ]
+
+    async def test_type_transfer_with_exclude_transfers_counts_nothing(self, authenticated_client, ledger):
+        # Asking for only transfers and also leaving them out is empty, by design.
+        assert stats(authenticated_client, type="transfer", exclude_transfers=True)["stats"]["transaction_count"] == 0
 
     async def test_top_expenses_rank_by_twd_value(self, authenticated_client, ledger):
         top = stats(authenticated_client, exclude_transfers=True)["top_expenses"]
