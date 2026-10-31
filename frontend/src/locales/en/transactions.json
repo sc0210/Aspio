@@ -345,7 +345,7 @@
     "demoLocked": "Receipt scanning is available after signing in.",
     "enterManually": "Enter it manually",
     "error": "Failed to process receipt. Please try again or enter manually.",
-    "failedBody": "Automatic receipt reading isn't available yet. You can still add the transaction yourself — it only takes a moment.",
+    "failedBody": "No total was found on this receipt. Try a sharp, well-lit photo of the whole receipt, or add the transaction yourself.",
     "failedTitle": "Couldn't read this receipt automatically",
     "items": "Items",
     "merchant": "Merchant",

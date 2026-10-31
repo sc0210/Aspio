@@ -421,8 +421,12 @@ class ApiClient {
 
       const data = await response.json().catch(() => ({}));
       if (!response.ok) {
-        const errData = data as { detail?: string; message?: string };
-        throw new Error(errData.detail || errData.message || `HTTP error! status: ${response.status}`);
+        // The backend's error envelope carries the reason at error.message; `detail`
+        // is a string only for a bare HTTPException (a validation error makes it an
+        // array, which would print as "[object Object]").
+        const errData = data as { error?: { message?: string }; detail?: unknown; message?: string };
+        const detail = typeof errData.detail === 'string' ? errData.detail : undefined;
+        throw new Error(errData.error?.message || detail || errData.message || `HTTP error! status: ${response.status}`);
       }
       return (data && typeof data === 'object' && 'data' in data)
         ? (data as ApiResponse<T>)

@@ -139,3 +139,32 @@ describe('ScanReceiptPage — demo mode', () => {
     expect(mockCreate.mock.calls[0][0].paymentMethod).toBe('gcash');
   });
 });
+
+describe('ScanReceiptPage — a failed scan says why', () => {
+  beforeEach(() => jest.clearAllMocks());
+
+  it("shows the server's reason when the upload is rejected", async () => {
+    // Every failure used to read "automatic reading isn't available yet", so a
+    // wrong file type looked exactly like OCR not existing.
+    mockUseModeAwareUI.mockReturnValue({ isDemo: false });
+    mockScan.mockRejectedValue(new Error('Unsupported file type. Use JPG, PNG, or PDF'));
+    const user = userEvent.setup();
+    render(<ScanReceiptPage />);
+
+    await chooseReceiptAndProcess(user);
+
+    expect(await screen.findByText('Unsupported file type. Use JPG, PNG, or PDF')).toBeInTheDocument();
+    expect(screen.queryByText('transactions:scan.failedBody')).not.toBeInTheDocument();
+  });
+
+  it('gives photo advice when OCR ran but found no total', async () => {
+    mockUseModeAwareUI.mockReturnValue({ isDemo: false });
+    mockScan.mockResolvedValue({ data: { amount: null, merchant_name: null, confidence: 0 } });
+    const user = userEvent.setup();
+    render(<ScanReceiptPage />);
+
+    await chooseReceiptAndProcess(user);
+
+    expect(await screen.findByText('transactions:scan.failedBody')).toBeInTheDocument();
+  });
+});

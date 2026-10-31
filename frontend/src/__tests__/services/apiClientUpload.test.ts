@@ -93,6 +93,22 @@ describe('ApiClient.upload()', () => {
     );
   });
 
+  it("throws the backend envelope's error.message", async () => {
+    // The receipt scan answers a bad file like this; the page shows the reason.
+    mockFetch.mockResolvedValue(jsonResponse(400, {
+      success: false,
+      error: { code: 'HTTP_ERROR', message: 'Unsupported file type. Use JPG, PNG, or PDF' },
+    }));
+    await expect(client.upload('/transactions/scan-receipt', makeFile('r.heic', 'image/heic'))).rejects.toThrow(
+      'Unsupported file type. Use JPG, PNG, or PDF'
+    );
+  });
+
+  it('never throws "[object Object]" for a validation error whose detail is an array', async () => {
+    mockFetch.mockResolvedValue(jsonResponse(422, { detail: [{ field: 'body -> file', message: 'Field required' }] }));
+    await expect(client.upload('/transactions/scan-receipt', makeFile())).rejects.toThrow('HTTP error! status: 422');
+  });
+
   it('throws timeout error when request is aborted', async () => {
     mockFetch.mockImplementation(() => new Promise((_, reject) => {
       const err = new Error('AbortError');
