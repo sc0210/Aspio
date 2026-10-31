@@ -192,3 +192,6 @@ frontend/jest-results.json
 
 # Machine-local compose overrides (e.g. Tailscale phone access)
 docker-compose.override.yml
+
+# Evidence from .claude/skills/verify-aspiro runs (screenshots, run.json)
+.verify-evidence/
