@@ -1230,6 +1230,16 @@ class TestOneCommitPerRequest:
         t_repo.db.rollback.assert_awaited_once()
 
     @pytest.mark.asyncio
+    async def test_delete_commits_once(self):
+        svc, t_repo = self._linked()
+
+        await svc.delete_transaction("tx", "user")
+
+        assert t_repo.soft_delete.await_args.kwargs == {"commit": False}
+        t_repo.db.commit.assert_awaited_once()
+        t_repo.db.rollback.assert_not_awaited()
+
+    @pytest.mark.asyncio
     async def test_delete_rolls_back_when_the_balance_restore_fails(self):
         svc, t_repo = self._linked()
         svc._apply_loan_payment = AsyncMock(side_effect=ConnectionError("database lost"))

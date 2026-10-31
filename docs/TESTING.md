@@ -28,7 +28,9 @@ isolation`. `--strict-markers` is on, so an undeclared marker is an error, not a
 later.
 
 Tests run against in-memory SQLite (`tests/conftest.py`). Only `integration` tests need a real
-Postgres or live market-data APIs.
+Postgres or live market-data APIs. `conftest.py` sets `DATABASE_URL` to that SQLite before the app
+is imported, whatever the environment says, so a run inside the dev container never writes to the
+dev database. Set `ASPIRO_TEST_DATABASE_URL` to point a run at another database on purpose.
 
 Coverage is a ratchet: `pytest.ini` and CI both pass `--cov-fail-under` at the measured level
 rounded down (81 as of 2026-10-23), and the Jest floors live in `frontend/jest.config.js`. Raise
