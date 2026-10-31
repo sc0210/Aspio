@@ -14,6 +14,12 @@ import os
 # Must be set before app.main is imported so the middleware is never added.
 os.environ.setdefault("RATE_LIMIT_ENABLED", "false")
 
+# Tests never reach a real database: the in-memory SQLite CI uses, whatever the
+# environment says. Inside the dev container DATABASE_URL is the developer's own
+# Postgres, and a bare TestClient(app) registered test accounts in it.
+# ASPIRO_TEST_DATABASE_URL opts a run into another database on purpose.
+os.environ["DATABASE_URL"] = os.environ.get("ASPIRO_TEST_DATABASE_URL", "sqlite+aiosqlite:///:memory:")
+
 import asyncio
 import pytest
 import pytest_asyncio

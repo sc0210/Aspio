@@ -404,35 +404,21 @@ class TestAuthenticationEndpoints:
             # Check for validation errors
             assert response.status_code in [400, 422]
 
-    def test_login_with_valid_credentials(self):
-        """Test login with valid credentials."""
-        client = TestClient(app)
+    @pytest.mark.asyncio
+    async def test_login_with_valid_credentials(self, client, test_user):
+        """An active account signs in and gets both tokens.
 
-        # First register a user
-        user_data = {
-            "email": "testlogin@example.com",
-            "password": "TestPassword123!",
-            "confirm_password": "TestPassword123!",
-            "name": "Test Login",
-            "terms_accepted": True,
-        }
-        register_response = client.post("/api/v1/users/register", json=user_data)
+        This used to register a new account first and assert only if registering
+        succeeded. A new account awaits approval and cannot sign in, and a second
+        run found the email taken and asserted nothing.
+        """
+        response = client.post("/api/v1/auth/login", json={"email": test_user.email, "password": "secret"})
+        assert response.status_code == 200, response.text
 
-        if register_response.status_code == 200:
-            # Try to login
-            login_data = {
-                "email": user_data["email"],
-                "password": user_data["password"],
-            }
-
-            response = client.post("/api/v1/auth/login", json=login_data)
-            assert response.status_code == 200
-
-            data = response.json()
-            assert "access_token" in data
-            assert "refresh_token" in data
-            assert "user" in data
-            assert data["token_type"] == "bearer"
+        data = response.json()
+        assert data["access_token"] and data["refresh_token"]
+        assert data["user"]["email"] == test_user.email
+        assert data["token_type"] == "bearer"
 
     def test_login_with_invalid_credentials(self):
         """Test login with invalid credentials."""

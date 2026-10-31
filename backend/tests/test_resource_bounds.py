@@ -173,9 +173,17 @@ async def test_auth_rate_limit_cannot_be_tuned_from_the_query_string():
         assert not names & {"limit", "window"}, route.path
 
 
-async def test_registration_has_its_own_strict_middleware_rule():
+async def test_registration_has_its_own_strict_middleware_rule(monkeypatch):
+    from app.core.config import Settings
+    from app.middleware import rate_limit
     from app.middleware.rate_limit import RateLimitMiddleware
 
+    # The production limits, not the environment's: the dev stack multiplies every
+    # limit by RATE_LIMIT_DEV_MULTIPLIER (10 there), which turns 3 into 30.
+    monkeypatch.setattr(
+        rate_limit.settings, "RATE_LIMIT_DEV_MULTIPLIER",
+        Settings.model_fields["RATE_LIMIT_DEV_MULTIPLIER"].default,
+    )
     rules = RateLimitMiddleware(app=None).rate_limits
     assert rules["/api/v1/users/register"]["requests"] <= 10
     assert "/api/v1/auth/register" not in rules

@@ -1169,3 +1169,74 @@ class TestUpdateTransactionLoanSync:
         await svc.update_transaction("tx", "user", TransactionUpdate(description="new note"))
 
         svc._apply_loan_payment.assert_not_awaited()
+
+
+class TestOneCommitPerRequest:
+    """A transaction and the loan balance it moves are committed together, or not
+    at all. Each repository write used to commit on its own, so a failed balance write
+    left a saved payment that never moved its loan (test_loan_balance_invariant.py)."""
+
+    @pytest.mark.asyncio
+    async def test_create_writes_without_committing_then_commits_once(self):
+        svc, t_repo = TestLoanPaymentBiggerThanBalance._service("3000.00")
+
+        await svc.create_transaction(TestLoanPaymentBiggerThanBalance._create_data("1000.00"), "user")
+
+        assert t_repo.create.await_args.kwargs == {"commit": False}
+        svc.category_repo.increment_usage.assert_awaited_once_with(ANY, commit=False)
+        t_repo.db.commit.assert_awaited_once()
+        t_repo.db.rollback.assert_not_awaited()
+
+    @pytest.mark.asyncio
+    async def test_create_rolls_back_when_the_balance_write_fails(self):
+        svc, t_repo = TestLoanPaymentBiggerThanBalance._service("3000.00")
+        svc._apply_loan_payment = AsyncMock(side_effect=ConnectionError("database lost"))
+
+        with pytest.raises(ConnectionError):
+            await svc.create_transaction(TestLoanPaymentBiggerThanBalance._create_data("1000.00"), "user")
+
+        t_repo.db.commit.assert_not_awaited()
+        t_repo.db.rollback.assert_awaited_once()
+
+    @staticmethod
+    def _linked(amount_after="150.00"):
+        t_repo = MagicMock()
+        t_repo.get_by_id = AsyncMock(return_value=_make_loan_expense(loan_id="loan-123", amount="100.00"))
+        t_repo.update = AsyncMock(return_value=_make_loan_expense(loan_id="loan-123", amount=amount_after))
+        t_repo.soft_delete = AsyncMock(return_value=True)
+        svc = make_service(transaction_repo=t_repo)
+        svc._get_loan = AsyncMock(return_value=_loan("1000.00"))
+        svc._apply_loan_payment = AsyncMock()
+        return svc, t_repo
+
+    @pytest.mark.asyncio
+    async def test_update_commits_once(self):
+        svc, t_repo = self._linked()
+
+        await svc.update_transaction("tx", "user", TransactionUpdate(amount=Decimal("150.00")))
+
+        assert t_repo.update.await_args.kwargs == {"commit": False}
+        t_repo.db.commit.assert_awaited_once()
+
+    @pytest.mark.asyncio
+    async def test_update_rolls_back_when_the_balance_write_fails(self):
+        svc, t_repo = self._linked()
+        svc._apply_loan_payment = AsyncMock(side_effect=ConnectionError("database lost"))
+
+        with pytest.raises(ConnectionError):
+            await svc.update_transaction("tx", "user", TransactionUpdate(amount=Decimal("150.00")))
+
+        t_repo.db.commit.assert_not_awaited()
+        t_repo.db.rollback.assert_awaited_once()
+
+    @pytest.mark.asyncio
+    async def test_delete_rolls_back_when_the_balance_restore_fails(self):
+        svc, t_repo = self._linked()
+        svc._apply_loan_payment = AsyncMock(side_effect=ConnectionError("database lost"))
+
+        with pytest.raises(ConnectionError):
+            await svc.delete_transaction("tx", "user")
+
+        assert t_repo.soft_delete.await_args.kwargs == {"commit": False}
+        t_repo.db.commit.assert_not_awaited()
+        t_repo.db.rollback.assert_awaited_once()

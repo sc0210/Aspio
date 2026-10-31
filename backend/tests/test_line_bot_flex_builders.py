@@ -181,7 +181,11 @@ def test_liff_url():
         assert svc._liff_url("g1") == "https://liff.line.me/123-abc?gid=g1"
 
 
-def test_category_pie_url_is_short_https_and_carries_labels():
+def test_category_pie_url_is_short_https_and_carries_labels(monkeypatch):
+    # The shipped chart endpoint, not the environment's: the dev stack points
+    # QUICKCHART_URL at a local http container, which LINE could not fetch anyway.
+    from app.core.config import Settings
+    monkeypatch.setattr(svc.settings, "QUICKCHART_URL", Settings.model_fields["QUICKCHART_URL"].default)
     rows = [{"category_name": f"cat{i}", "total_amount": 100 + i} for i in range(8)]
     url = svc._category_pie_url(rows)
     assert url.startswith("https://") and len(url) < 2000
