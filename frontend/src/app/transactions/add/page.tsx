@@ -20,7 +20,10 @@ import { PageHeader } from '@/components/layout/PageHeader';
 import { QUERY_KEYS, invalidateDashboardData } from '@/hooks/useDataSynchronization';
 import { localDateString } from '@/utils/formatters';
 import { Card } from '@/components/ui/Card';
-import { TRANSACTION_TYPES, CashFields, TagsField, validateCashFields, StickySubmitBar } from '@/components/transactions/TransactionFormFields';
+import {
+  TRANSACTION_TYPES, CashFields, validateCashFields, StickySubmitBar, revealFirstError,
+  FIELD_LABEL, FIELD_INPUT, CHIP_ROW, CHIP, CHIP_ON, CHIP_OFF, SEGMENTED, SEGMENT, SEGMENT_ON, SEGMENT_OFF, revealSelected,
+} from '@/components/transactions/TransactionFormFields';
 
 export default function AddTransactionPage() {
   const router = useRouter();
@@ -63,17 +66,22 @@ export default function AddTransactionPage() {
 
   const [portfolioHoldings, setPortfolioHoldings] = useState<PortfolioHolding[]>([]);
   const [holdingsLoading, setHoldingsLoading] = useState(false);
+  // A failed load used to read as "No holdings to sell yet".
+  const [holdingsError, setHoldingsError] = useState(false);
+  const [holdingsReload, setHoldingsReload] = useState(0);
 
   useEffect(() => {
     if (formData.type !== 'investment' || investSide !== 'sell' || isDemo) return;
     setHoldingsLoading(true);
+    setHoldingsError(false);
     portfolioService.getPortfolio()
       .then(res => {
         if (res.success && res.data) setPortfolioHoldings(res.data.holdings ?? []);
+        else setHoldingsError(true);
       })
-      .catch(() => {})
+      .catch(() => setHoldingsError(true))
       .finally(() => setHoldingsLoading(false));
-  }, [formData.type, investSide, isDemo]);
+  }, [formData.type, investSide, isDemo, holdingsReload]);
 
   const [activeLoans, setActiveLoans] = useState<{ id: string; name: string; current_balance: number; currency: string }[]>([]);
   useEffect(() => {
@@ -112,7 +120,9 @@ export default function AddTransactionPage() {
   const handleInputChange = (field: string, value: string) => {
     if (field === 'currency') hasUserSetCurrencyRef.current = true;
     setFormData(prev => ({ ...prev, [field]: value }));
-    if (errors[field]) setErrors(prev => ({ ...prev, [field]: '' }));
+    // The wallet pair shares one message, keyed `transfer`.
+    const errorKey = field === 'fromWallet' || field === 'toWallet' ? 'transfer' : field;
+    if (errors[errorKey]) setErrors(prev => ({ ...prev, [errorKey]: '' }));
   };
 
   const validateForm = () => {
@@ -128,7 +138,10 @@ export default function AddTransactionPage() {
       } else {
         if (!investHoldingId) newErrors.investHolding = t('transactions:form.invest.errHolding', 'Select a holding to sell');
         const sq = parseFloat(investSellQty);
+        const held = Number(portfolioHoldings.find((h) => h.id === investHoldingId)?.quantity);
         if (!investSellQty || isNaN(sq) || sq <= 0) newErrors.investSellQty = t('transactions:form.invest.errSellQty', 'Enter a quantity to sell');
+        // Caught here rather than as a server error after the round trip.
+        else if (held > 0 && sq > held) newErrors.investSellQty = t('transactions:form.invest.errSellTooMany', { max: held, defaultValue: 'You hold only {{max}} units' });
       }
     } else {
       Object.assign(newErrors, validateCashFields(formData, t));
@@ -138,9 +151,12 @@ export default function AddTransactionPage() {
     return Object.keys(newErrors).length === 0;
   };
 
-  const handleSubmit = async (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
-    if (!validateForm()) return;
+    if (!validateForm()) {
+      revealFirstError(e.currentTarget);
+      return;
+    }
 
     if (isDemo) {
       if (formData.type === 'transfer') {
@@ -163,7 +179,7 @@ export default function AddTransactionPage() {
       } else if (formData.type === 'investment') {
         // Add-holding in demo is the portfolio flow's to simulate; nothing lands
         // in the demo portfolio yet.
-        toast.success('Demo: action simulated — sign up to save real data');
+        toast.success(t('transactions:toast.demoSimulated', 'Demo: changes simulated — sign up to save real data'));
       } else {
         addDemoTransaction({
           type: formData.type as 'income' | 'expense',
@@ -176,7 +192,7 @@ export default function AddTransactionPage() {
           walletType: formData.walletType as 'life' | 'emergency' | undefined,
           tags: formData.tags,
         });
-        toast.success('Demo transaction added — sign up to save real data');
+        toast.success(t('transactions:toast.demoAdded', 'Demo transaction added — sign up to save real data'));
       }
       router.push('/transactions');
       return;
@@ -234,7 +250,7 @@ export default function AddTransactionPage() {
             await queryClient.invalidateQueries({ queryKey: [QUERY_KEYS.TRANSACTIONS] });
             await queryClient.invalidateQueries({ queryKey: [QUERY_KEYS.PORTFOLIO] });
             invalidateDashboardData(queryClient);
-            toast.success(`Bought ${sym} — holding & expense recorded`);
+            toast.success(t('transactions:toast.bought', { symbol: sym, defaultValue: 'Bought {{symbol}} — holding & expense recorded' }));
             router.push('/transactions');
           } else {
             toast.error(holdingResponse.message || t('transactions:toast.createFailed'));
@@ -257,9 +273,14 @@ export default function AddTransactionPage() {
             invalidateDashboardData(queryClient);
             const d = response.data;
             const pl = Math.round(d.realizedGainLoss);
-            toast.success(
-              `Sold ${d.quantitySold} ${d.symbol} · net ${Math.round(d.netProceeds).toLocaleString()} ${investCurrency} · P/L ${pl >= 0 ? '+' : ''}${pl.toLocaleString()}`
-            );
+            toast.success(t('transactions:toast.sold', {
+              qty: d.quantitySold,
+              symbol: d.symbol,
+              net: Math.round(d.netProceeds).toLocaleString(),
+              currency: investCurrency,
+              pl: `${pl >= 0 ? '+' : ''}${pl.toLocaleString()}`,
+              defaultValue: 'Sold {{qty}} {{symbol}} · net {{net}} {{currency}} · P/L {{pl}}',
+            }));
             router.push('/transactions');
           } else {
             toast.error(response.message || t('transactions:toast.createFailed'));
@@ -311,8 +332,10 @@ export default function AddTransactionPage() {
 
   const submitLabel =
     formData.type === 'investment'
-      ? investSide === 'buy' ? 'Buy & Add to Portfolio' : 'Record Sale'
-      : 'Add Transaction';
+      ? investSide === 'buy'
+        ? t('transactions:form.buySubmit', 'Buy & Add to Portfolio')
+        : t('transactions:form.sellSubmit', 'Record Sale')
+      : t('transactions:add', 'Add Transaction');
 
   return (
     <DashboardLayout>
@@ -330,7 +353,8 @@ export default function AddTransactionPage() {
 
             {/* ── Transaction Type ── */}
             <div>
-              <div id="tx-group-type" className="text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">{t('transactions:form.typeLabel', 'Transaction Type')}</div>
+              {/* Named for screen readers only: the four buttons say what they are. */}
+              <div id="tx-group-type" className="sr-only">{t('transactions:form.typeLabel', 'Transaction Type')}</div>
               <div role="group" aria-labelledby="tx-group-type" className="grid grid-cols-4 gap-1.5 sm:gap-2">
                 {TRANSACTION_TYPES.map((type) => (
                   <button
@@ -340,18 +364,19 @@ export default function AddTransactionPage() {
                     onClick={() => {
                       handleInputChange('type', type.value);
                       handleInputChange('category', '');
+                      // A loan link is an expense's; it must not ride along to another type.
+                      if (type.value !== 'expense') handleInputChange('loanId', '');
                     }}
                     className={cn(
-                      'py-2 px-1 sm:py-2.5 sm:px-3 rounded-lg font-medium transition-all duration-200 flex flex-col sm:flex-row items-center justify-center gap-0.5 sm:gap-2 text-xs sm:text-sm touch-manipulation',
+                      'py-2.5 px-1 sm:px-3 min-h-11 lg:min-h-0 rounded-lg font-medium transition-all duration-200 motion-reduce:transition-none flex items-center justify-center text-xs sm:text-sm touch-manipulation',
                       formData.type === type.value ? activeClass[type.color] : inactiveClass
                     )}
                   >
-                    <span className="text-lg leading-none" aria-hidden="true">{type.icon}</span>
-                    {/* A 320px phone has ~53px per button: too narrow for "Investment". */}
+                    {/* A phone has ~55-80px per button: too narrow for "Investment". */}
                     {type.shortLabel && (
-                      <span className="truncate max-w-full min-[360px]:hidden">{t(`transactions:form.typesShort.${type.value}`, type.shortLabel)}</span>
+                      <span className="truncate max-w-full sm:hidden">{t(`transactions:form.typesShort.${type.value}`, type.shortLabel)}</span>
                     )}
-                    <span className={cn('truncate max-w-full', type.shortLabel && 'max-[359px]:hidden')}>{t(`transactions:form.types.${type.value}`, type.label)}</span>
+                    <span className={cn('truncate max-w-full', type.shortLabel && 'max-sm:hidden')}>{t(`transactions:form.types.${type.value}`, type.label)}</span>
                   </button>
                 ))}
               </div>
@@ -374,26 +399,18 @@ export default function AddTransactionPage() {
 
               return (
                 <>
-                  {/* Buy / Sell toggle */}
-                  <div>
-                    <div id="tx-group-invest-side" className="text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">{t('transactions:form.invest.action', 'Action')}</div>
-                    <div role="group" aria-labelledby="tx-group-invest-side" className="flex gap-2">
+                  {/* Buy / Sell: a choice of two, so a segmented toggle */}
+                  <div className="flex flex-wrap items-center gap-x-3 gap-y-2">
+                    <span id="tx-group-invest-side" className="text-sm font-medium text-gray-700 dark:text-gray-300">{t('transactions:form.invest.action', 'Action')}</span>
+                    <div role="group" aria-labelledby="tx-group-invest-side" className={SEGMENTED}>
                       {(['buy', 'sell'] as const).map((side) => (
                         <button
                           aria-pressed={investSide === side}
                           key={side}
                           type="button"
                           onClick={() => setInvestSide(side)}
-                          className={cn(
-                            'flex-1 py-3 rounded-xl font-semibold text-sm flex items-center justify-center gap-2 border-2 transition-all',
-                            investSide === side
-                              ? side === 'buy'
-                                ? 'border-violet-500 bg-violet-50 dark:bg-violet-900/30 text-violet-700 dark:text-violet-300'
-                                : 'border-emerald-500 bg-emerald-50 dark:bg-emerald-900/30 text-emerald-700 dark:text-emerald-300'
-                              : 'border-gray-200 dark:border-gray-700 text-gray-600 dark:text-gray-400 hover:border-gray-300'
-                          )}
+                          className={cn(SEGMENT, 'px-4', investSide === side ? SEGMENT_ON : SEGMENT_OFF)}
                         >
-                          <span className="text-xl">{side === 'buy' ? '📥' : '📤'}</span>
                           {side === 'buy' ? t('transactions:form.invest.buyAsset', 'Buy Asset') : t('transactions:form.invest.sellAsset', 'Sell Asset')}
                         </button>
                       ))}
@@ -405,27 +422,21 @@ export default function AddTransactionPage() {
                     <>
                       {/* Asset Type */}
                       <div>
-                        <div id="tx-group-asset-type" className="text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">{t('transactions:form.invest.assetType', 'Asset Type')}</div>
-                        <div role="group" aria-labelledby="tx-group-asset-type" className="grid grid-cols-4 gap-2">
+                        <div id="tx-group-asset-type" className={FIELD_LABEL}>{t('transactions:form.invest.assetType', 'Asset Type')}</div>
+                        <div role="group" aria-labelledby="tx-group-asset-type" className={CHIP_ROW}>
                           {([
-                            { value: 'stock',  label: 'Stock',  icon: '📊' },
-                            { value: 'etf',    label: 'ETF',    icon: '📦' },
-                            { value: 'crypto', label: 'Crypto', icon: '₿'  },
-                            { value: 'bond',   label: 'Bond',   icon: '📋' },
+                            { value: 'stock',  label: 'Stock'  },
+                            { value: 'etf',    label: 'ETF'    },
+                            { value: 'crypto', label: 'Crypto' },
+                            { value: 'bond',   label: 'Bond'   },
                           ] as const).map((opt) => (
                             <button
                               aria-pressed={investAssetType === opt.value}
                               key={opt.value}
                               type="button"
                               onClick={() => setInvestAssetType(opt.value)}
-                              className={cn(
-                                'py-2 rounded-lg text-xs font-semibold flex flex-col items-center gap-1 border-2 transition-all',
-                                investAssetType === opt.value
-                                  ? 'border-violet-500 bg-violet-50 dark:bg-violet-900/30 text-violet-700 dark:text-violet-300'
-                                  : 'border-gray-200 dark:border-gray-700 text-gray-600 dark:text-gray-400 hover:border-violet-300'
-                              )}
+                              className={cn(CHIP, investAssetType === opt.value ? CHIP_ON : CHIP_OFF)}
                             >
-                              <span className="text-base">{opt.icon}</span>
                               {t(`transactions:form.invest.types.${opt.value}`, opt.label)}
                             </button>
                           ))}
@@ -435,7 +446,7 @@ export default function AddTransactionPage() {
                       {/* Symbol + Name row */}
                       <div className="flex flex-col sm:flex-row gap-3">
                         <div className="flex-1">
-                          <label htmlFor="tx-invest-symbol" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                          <label htmlFor="tx-invest-symbol" className={FIELD_LABEL}>
                             {t('transactions:form.invest.symbol', 'Symbol')} <span className="text-error-700 dark:text-error-500">*</span>
                           </label>
                           <input
@@ -447,16 +458,13 @@ export default function AddTransactionPage() {
                             onChange={(e) => setInvestSymbol(e.target.value.toUpperCase())}
                             placeholder={t('transactions:form.invest.symbolPlaceholder', 'e.g. 006208, AAPL, BTC')}
                             autoFocus
-                            className={cn(
-                              'w-full bg-transparent border rounded-lg px-3 py-2.5 sm:py-2 text-base sm:text-sm font-mono font-semibold text-gray-900 dark:text-white placeholder-gray-400 dark:placeholder-gray-500 focus-visible:ring-2 focus-visible:ring-violet-500 focus-visible:border-violet-500 uppercase placeholder:normal-case',
-                              errors.investSymbol ? 'border-error-400' : 'border-gray-300 dark:border-gray-600'
-                            )}
+                            className={cn(FIELD_INPUT, 'font-mono font-semibold uppercase placeholder:normal-case placeholder:font-sans placeholder:font-normal', errors.investSymbol && 'border-error-400')}
                           />
                           {errors.investSymbol && <p id="tx-invest-symbol-error" role="alert" className="text-xs text-error-700 dark:text-error-500 mt-1">{errors.investSymbol}</p>}
                         </div>
                         <div className="flex-1">
-                          <label htmlFor="tx-invest-name" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                            {t('transactions:form.invest.name', 'Name')} <span className="text-xs text-gray-500 dark:text-gray-400 font-normal italic">{t('transactions:form.optional', '(optional)')}</span>
+                          <label htmlFor="tx-invest-name" className={FIELD_LABEL}>
+                            {t('transactions:form.invest.name', 'Name')} <span className="text-xs font-normal text-gray-500 dark:text-gray-400">{t('transactions:form.optional', '(optional)')}</span>
                           </label>
                           <input
                             id="tx-invest-name"
@@ -464,7 +472,7 @@ export default function AddTransactionPage() {
                             value={investName}
                             onChange={(e) => setInvestName(e.target.value)}
                             placeholder={t('transactions:form.invest.namePlaceholder', 'e.g. 富邦台灣50')}
-                            className="w-full bg-transparent border border-gray-300 dark:border-gray-600 rounded-lg px-3 py-2.5 sm:py-2 text-base sm:text-sm text-gray-900 dark:text-white placeholder-gray-400 dark:placeholder-gray-500 focus-visible:ring-2 focus-visible:ring-violet-500 focus-visible:border-violet-500"
+                            className={FIELD_INPUT}
                           />
                         </div>
                       </div>
@@ -472,7 +480,7 @@ export default function AddTransactionPage() {
                       {/* Quantity + Price row */}
                       <div className="flex flex-col sm:flex-row gap-3">
                         <div className="flex-1">
-                          <label htmlFor="tx-invest-quantity" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                          <label htmlFor="tx-invest-quantity" className={FIELD_LABEL}>
                             {t('transactions:form.invest.quantity', 'Quantity')} <span className="text-error-700 dark:text-error-500">*</span>
                           </label>
                           <input
@@ -487,15 +495,12 @@ export default function AddTransactionPage() {
                             value={investQty}
                             onChange={(e) => setInvestQty(e.target.value)}
                             placeholder={t('transactions:form.invest.quantityPlaceholder', 'e.g. 100')}
-                            className={cn(
-                              'w-full bg-transparent border rounded-lg px-3 py-2.5 sm:py-2 text-base sm:text-sm font-semibold text-gray-900 dark:text-white placeholder-gray-400 dark:placeholder-gray-500 focus-visible:ring-2 focus-visible:ring-violet-500 focus-visible:border-violet-500',
-                              errors.investQty ? 'border-error-400' : 'border-gray-300 dark:border-gray-600'
-                            )}
+                            className={cn(FIELD_INPUT, 'font-semibold', errors.investQty && 'border-error-400')}
                           />
                           {errors.investQty && <p id="tx-invest-quantity-error" role="alert" className="text-xs text-error-700 dark:text-error-500 mt-1">{errors.investQty}</p>}
                         </div>
                         <div className="flex-1">
-                          <label htmlFor="tx-invest-priceperunit" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                          <label htmlFor="tx-invest-priceperunit" className={FIELD_LABEL}>
                             {t('transactions:form.invest.pricePerUnit', 'Price / Unit')} <span className="text-error-700 dark:text-error-500">*</span>
                           </label>
                           <div className="flex items-center gap-1.5">
@@ -503,7 +508,7 @@ export default function AddTransactionPage() {
                               aria-label={t('transactions:form.currency', 'Currency')}
                               value={investCurrency}
                               onChange={(e) => { hasUserSetInvestCurrencyRef.current = true; setInvestCurrency(e.target.value); }}
-                              className="bg-transparent border border-gray-300 dark:border-gray-600 rounded-lg px-2 py-2.5 sm:py-2 text-base sm:text-xs font-semibold text-gray-700 dark:text-gray-300 focus-visible:ring-2 focus-visible:ring-violet-500"
+                              className={cn(FIELD_INPUT, 'w-auto px-2 font-semibold')}
                             >
                               {['TWD', 'USD', 'HKD', 'JPY', 'EUR', 'SGD'].map(c => (
                                 <option key={c} value={c}>{c}</option>
@@ -521,10 +526,7 @@ export default function AddTransactionPage() {
                               value={investPrice}
                               onChange={(e) => setInvestPrice(e.target.value)}
                               placeholder="0.00"
-                              className={cn(
-                                'flex-1 bg-transparent border rounded-lg px-3 py-2.5 sm:py-2 text-base sm:text-sm font-semibold text-gray-900 dark:text-white placeholder-gray-400 focus-visible:ring-2 focus-visible:ring-violet-500 focus-visible:border-violet-500',
-                                errors.investPrice ? 'border-error-400' : 'border-gray-300 dark:border-gray-600'
-                              )}
+                              className={cn(FIELD_INPUT, 'flex-1 min-w-0 font-semibold', errors.investPrice && 'border-error-400')}
                             />
                           </div>
                           {errors.investPrice && <p id="tx-invest-priceperunit-error" role="alert" className="text-xs text-error-700 dark:text-error-500 mt-1">{errors.investPrice}</p>}
@@ -534,24 +536,24 @@ export default function AddTransactionPage() {
                       {/* Auto-calculated total + Date */}
                       <div className="flex flex-col sm:flex-row gap-3 sm:items-end">
                         <div className="flex-1">
-                          <div className="text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">{t('transactions:form.invest.totalCost', 'Total Cost')}</div>
+                          <div className={FIELD_LABEL}>{t('transactions:form.invest.totalCost', 'Total Cost')}</div>
                           <div className="flex items-center gap-2 border-2 border-violet-300 dark:border-violet-700 bg-violet-50 dark:bg-violet-900/20 rounded-xl px-4 py-3">
                             <span className="text-sm font-bold text-violet-600 dark:text-violet-400">{investCurrency}</span>
                             <span className="flex-1 text-2xl font-black text-violet-700 dark:text-violet-300 tabular-nums">{fmtTotal}</span>
                             <span className="text-xs font-semibold px-2 py-1 rounded-md bg-violet-100 dark:bg-violet-900/40 text-violet-600 dark:text-violet-400">{t('transactions:form.invest.expenseBadge', 'EXPENSE')}</span>
                           </div>
-                          <p className="text-xs text-gray-500 dark:text-gray-500 mt-1.5">
+                          <p className="text-xs text-gray-500 dark:text-gray-400 mt-1.5">
                             {qty > 0 && price > 0 ? `${qty} × ${price} = ` : ''}<strong>{t('transactions:form.wallets.life', 'Life Wallet')}</strong> {t('transactions:form.invest.buyFlowSuffix', 'outflow → Portfolio')}
                           </p>
                         </div>
-                        <div className="w-full sm:w-36">
-                          <label htmlFor="tx-invest-date" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">{t('transactions:form.invest.date', 'Date')}</label>
+                        <div className="w-full sm:w-40">
+                          <label htmlFor="tx-invest-date" className={FIELD_LABEL}>{t('transactions:form.invest.date', 'Date')}</label>
                           <input
                             id="tx-invest-date"
                             type="date"
                             value={formData.date}
                             onChange={(e) => handleInputChange('date', e.target.value)}
-                            className="w-full bg-transparent border border-gray-300 dark:border-gray-600 rounded-lg px-2 py-2.5 sm:py-2 text-base sm:text-sm text-gray-900 dark:text-white focus-visible:ring-2 focus-visible:ring-violet-500"
+                            className={cn(FIELD_INPUT, 'px-2 min-h-11 sm:min-h-0')}
                           />
                         </div>
                       </div>
@@ -561,13 +563,23 @@ export default function AddTransactionPage() {
                   {/* ── SELL fields ── */}
                   {investSide === 'sell' && (
                     <>
-                      <div className="flex items-start gap-3 p-3 rounded-lg text-sm bg-emerald-50 dark:bg-emerald-900/20 text-emerald-700 dark:text-emerald-300">
-                        <span className="text-base mt-0.5">💡</span>
-                        <span>{t('transactions:form.invest.sellHintPrefix', 'Sells units from your portfolio (oldest lots first), records the realized gain/loss, and returns the net proceeds to your')} <strong>{t('transactions:form.wallets.life', 'Life Wallet')}</strong>.</span>
-                      </div>
+                      <p className="rounded-lg bg-emerald-50 dark:bg-emerald-900/20 p-3 text-sm text-emerald-700 dark:text-emerald-300">
+                        {t('transactions:form.invest.sellHintPrefix', 'Sells units from your portfolio (oldest lots first), records the realized gain/loss, and returns the net proceeds to your')} <strong>{t('transactions:form.wallets.life', 'Life Wallet')}</strong>.
+                      </p>
 
                       {holdingsLoading ? (
-                        <p className="text-xs text-gray-500 dark:text-gray-500 text-center py-2">{t('transactions:form.invest.loadingHoldings', 'Loading holdings…')}</p>
+                        <p className="text-xs text-gray-500 dark:text-gray-400 text-center py-2">{t('transactions:form.invest.loadingHoldings', 'Loading holdings…')}</p>
+                      ) : holdingsError ? (
+                        <div role="alert" className="flex flex-wrap items-center justify-center gap-3 rounded-xl border-2 border-dashed border-gray-200 dark:border-gray-700 px-4 py-6 text-sm text-gray-600 dark:text-gray-300">
+                          {t('transactions:form.invest.holdingsLoadFailed', "Couldn't load your holdings.")}
+                          <button
+                            type="button"
+                            onClick={() => setHoldingsReload((n) => n + 1)}
+                            className={cn(CHIP, CHIP_OFF)}
+                          >
+                            {t('transactions:form.invest.retry', 'Try again')}
+                          </button>
+                        </div>
                       ) : sellableHoldings.length === 0 ? (
                         <div className="text-center text-sm text-gray-500 dark:text-gray-400 border-2 border-dashed border-gray-200 dark:border-gray-700 rounded-xl py-6 px-4">
                           {t('transactions:form.invest.noHoldingsPrefix', 'No holdings to sell yet. Use')} <strong>{t('transactions:form.invest.buyAsset', 'Buy Asset')}</strong> {t('transactions:form.invest.noHoldingsSuffix', '(or the Portfolio page) to add one first.')}
@@ -576,10 +588,16 @@ export default function AddTransactionPage() {
                         <>
                           {/* Holding picker (required) */}
                           <div>
-                            <div id="tx-group-holding" className="text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                            <div id="tx-group-holding" className={FIELD_LABEL}>
                               {t('transactions:form.invest.selectHolding', 'Select Holding')} <span className="text-error-700 dark:text-error-500">*</span>
                             </div>
-                            <div role="group" aria-labelledby="tx-group-holding" className="flex gap-2 overflow-x-auto pb-1 snap-x">
+                            <div
+                              role="group"
+                              aria-labelledby="tx-group-holding"
+                              aria-describedby={errors.investHolding ? 'tx-invest-holding-error' : undefined}
+                              ref={revealSelected}
+                              className={CHIP_ROW}
+                            >
                               {sellableHoldings.map((h) => (
                                 <button
                                   aria-pressed={investHoldingId === h.id}
@@ -591,30 +609,27 @@ export default function AddTransactionPage() {
                                     setInvestName(h.name);
                                     setInvestCurrency(h.currency);
                                     setInvestSellQty(String(h.quantity));
+                                    if (errors.investHolding) setErrors(prev => ({ ...prev, investHolding: '' }));
                                   }}
-                                  className={cn(
-                                    'flex-shrink-0 snap-start flex flex-col items-start gap-0.5 px-3 py-2 rounded-xl border-2 text-left transition-all min-w-[100px]',
-                                    investHoldingId === h.id
-                                      ? 'border-emerald-500 bg-emerald-50 dark:bg-emerald-900/30'
-                                      : 'border-gray-200 dark:border-gray-700 hover:border-emerald-300 dark:hover:border-emerald-700 bg-white dark:bg-gray-800'
-                                  )}
+                                  className={cn(CHIP, investHoldingId === h.id ? CHIP_ON : CHIP_OFF)}
                                 >
-                                  <span className="text-xs font-bold font-mono text-gray-900 dark:text-white">{h.symbol}</span>
-                                  <span className="text-xs text-gray-500 dark:text-gray-400 truncate max-w-[88px]">{h.name}</span>
-                                  <span className="text-xs font-semibold text-emerald-700 dark:text-emerald-400">{h.quantity} {t('transactions:form.invest.units', 'units')}</span>
+                                  <span className="font-mono font-bold">{h.symbol}</span>
+                                  <span className="font-normal opacity-70">{h.quantity} {t('transactions:form.invest.units', 'units')}</span>
                                 </button>
                               ))}
                             </div>
-                            {errors.investHolding && <p className="text-xs text-error-700 dark:text-error-500 mt-1">{errors.investHolding}</p>}
+                            {errors.investHolding && <p id="tx-invest-holding-error" role="alert" className="text-xs text-error-700 dark:text-error-500 mt-1">{errors.investHolding}</p>}
                           </div>
 
                           {/* Quantity + optional price */}
                           <div className="flex flex-col sm:flex-row gap-3">
                             <div className="flex-1">
-                              <label htmlFor="tx-invest-quantitytosell" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                              <label htmlFor="tx-invest-quantitytosell" className={FIELD_LABEL}>
                                 {t('transactions:form.invest.quantityToSell', 'Quantity to Sell')} <span className="text-error-700 dark:text-error-500">*</span>
                               </label>
                               <input
+                                aria-invalid={!!errors.investSellQty}
+                                aria-describedby={errors.investSellQty ? 'tx-invest-sellqty-error' : undefined}
                                 id="tx-invest-quantitytosell"
                                 type="number"
                                 inputMode="decimal"
@@ -624,23 +639,20 @@ export default function AddTransactionPage() {
                                 value={investSellQty}
                                 onChange={(e) => setInvestSellQty(e.target.value)}
                                 placeholder={t('transactions:form.invest.units', 'units')}
-                                className={cn(
-                                  'w-full bg-transparent border rounded-lg px-3 py-2.5 sm:py-2 text-base sm:text-sm font-semibold text-gray-900 dark:text-white placeholder-gray-400 focus-visible:ring-2 focus-visible:ring-emerald-500 focus-visible:border-emerald-500',
-                                  errors.investSellQty ? 'border-error-400' : 'border-gray-300 dark:border-gray-600'
-                                )}
+                                className={cn(FIELD_INPUT, 'font-semibold', errors.investSellQty && 'border-error-400')}
                               />
-                              {selectedHolding ? (
-                                <p className="text-xs text-gray-500 dark:text-gray-500 mt-1">{t('transactions:form.invest.availablePrefix', 'Available:')} <strong>{selectedHolding.quantity}</strong> {t('transactions:form.invest.units', 'units')}</p>
-                              ) : errors.investSellQty ? (
-                                <p className="text-xs text-error-700 dark:text-error-500 mt-1">{errors.investSellQty}</p>
-                              ) : null}
+                              {/* Both lines: the error used to replace "Available" and so never showed once a holding was picked. */}
+                              {errors.investSellQty && <p id="tx-invest-sellqty-error" role="alert" className="text-xs text-error-700 dark:text-error-500 mt-1">{errors.investSellQty}</p>}
+                              {selectedHolding && (
+                                <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">{t('transactions:form.invest.availablePrefix', 'Available:')} <strong>{selectedHolding.quantity}</strong> {t('transactions:form.invest.units', 'units')}</p>
+                              )}
                             </div>
                             <div className="flex-1">
-                              <label htmlFor="tx-invest-sell-price" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                                {t('transactions:form.invest.pricePerUnit', 'Price / Unit')} <span className="text-xs text-gray-500 dark:text-gray-400 font-normal italic">{t('transactions:form.optional', '(optional)')}</span>
+                              <label htmlFor="tx-invest-sell-price" className={FIELD_LABEL}>
+                                {t('transactions:form.invest.pricePerUnit', 'Price / Unit')} <span className="text-xs font-normal text-gray-500 dark:text-gray-400">{t('transactions:form.optional', '(optional)')}</span>
                               </label>
                               <div className="flex items-center gap-1.5">
-                                <span className="text-xs font-bold text-emerald-700 dark:text-emerald-400 px-1">{investCurrency}</span>
+                                <span className="text-xs font-bold text-gray-600 dark:text-gray-300 px-1">{investCurrency}</span>
                                 <input
                                   id="tx-invest-sell-price"
                                   type="number"
@@ -651,22 +663,22 @@ export default function AddTransactionPage() {
                                   value={investPrice}
                                   onChange={(e) => setInvestPrice(e.target.value)}
                                   placeholder={t('transactions:form.invest.marketPricePlaceholder', 'market price')}
-                                  className="flex-1 bg-transparent border border-gray-300 dark:border-gray-600 rounded-lg px-3 py-2.5 sm:py-2 text-base sm:text-sm font-semibold text-gray-900 dark:text-white placeholder-gray-400 focus-visible:ring-2 focus-visible:ring-emerald-500 focus-visible:border-emerald-500"
+                                  className={cn(FIELD_INPUT, 'flex-1 min-w-0 font-semibold')}
                                 />
                               </div>
-                              <p className="text-xs text-gray-500 dark:text-gray-500 mt-1">{t('transactions:form.invest.leaveBlankMarket', 'Leave blank to use the current market price.')}</p>
+                              <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">{t('transactions:form.invest.leaveBlankMarket', 'Leave blank to use the current market price.')}</p>
                             </div>
                           </div>
 
                           {/* Date */}
-                          <div className="w-full sm:w-36">
-                            <label htmlFor="tx-invest-sell-date" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">{t('transactions:form.invest.date', 'Date')}</label>
+                          <div className="w-full sm:w-40">
+                            <label htmlFor="tx-invest-sell-date" className={FIELD_LABEL}>{t('transactions:form.invest.date', 'Date')}</label>
                             <input
                               id="tx-invest-sell-date"
                               type="date"
                               value={formData.date}
                               onChange={(e) => handleInputChange('date', e.target.value)}
-                              className="w-full bg-transparent border border-gray-300 dark:border-gray-600 rounded-lg px-2 py-2.5 sm:py-2 text-base sm:text-sm text-gray-900 dark:text-white focus-visible:ring-2 focus-visible:ring-emerald-500"
+                              className={cn(FIELD_INPUT, 'px-2 min-h-11 sm:min-h-0')}
                             />
                           </div>
                         </>
@@ -681,18 +693,16 @@ export default function AddTransactionPage() {
                 STANDARD FORM — expense / income / transfer
             ══════════════════════════════════════════════════════════════ */}
             {formData.type !== 'investment' && (
-              <>
-                <CashFields
-                  idPrefix="tx"
-                  formData={formData}
-                  errors={errors}
-                  onChange={handleInputChange}
-                  activeLoans={activeLoans}
-                  showInvestmentHint
-                  autoFocusAmount
-                />
-                <TagsField idPrefix="tx" tags={formData.tags} onChange={(tags) => setFormData(prev => ({ ...prev, tags }))} />
-              </>
+              <CashFields
+                idPrefix="tx"
+                formData={formData}
+                errors={errors}
+                onChange={handleInputChange}
+                onTagsChange={(tags) => setFormData(prev => ({ ...prev, tags }))}
+                activeLoans={activeLoans}
+                showInvestmentHint
+                autoFocusAmount
+              />
             )}
 
             <StickySubmitBar>
@@ -704,7 +714,7 @@ export default function AddTransactionPage() {
                 isLoading={isSubmitting}
                 leftIcon={<CheckIcon className="w-5 h-5" />}
               >
-                {isSubmitting ? 'Saving…' : submitLabel}
+                {isSubmitting ? t('transactions:form.saving', 'Saving…') : submitLabel}
               </Button>
             </StickySubmitBar>
           </form>

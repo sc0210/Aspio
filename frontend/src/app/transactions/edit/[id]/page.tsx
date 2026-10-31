@@ -9,7 +9,7 @@ import toast from 'react-hot-toast';
 import { useTranslation } from 'react-i18next';
 import { Button } from '@/components/ui/Button';
 import { LoadingSpinner } from '@/components/ui/LoadingSpinner';
-import { TRANSACTION_TYPES, CATEGORIES, PAYMENT_METHODS, CashFields, TagsField, validateCashFields, StickySubmitBar } from '@/components/transactions/TransactionFormFields';
+import { TRANSACTION_TYPES, CATEGORIES, PAYMENT_METHODS, CashFields, TagsField, validateCashFields, StickySubmitBar, revealFirstError, FIELD_LABEL, FIELD_INPUT } from '@/components/transactions/TransactionFormFields';
 import { cn } from '@/utils/cn';
 import { transactionService } from '@/services/transactionService';
 import { Transaction } from '@/shared/types';
@@ -81,7 +81,9 @@ export default function EditTransactionPage() {
   // missed it), this stays null and submit falls back to the "not
   // supported" message rather than risk editing only one leg.
   const [transferGroupId, setTransferGroupId] = useState<string | null>(null);
-  const [transferCurrency, setTransferCurrency] = useState('TWD');
+  // A real (not demo) transfer leg with no link to its pair. It cannot be saved,
+  // so the page says so up front instead of refusing after the user has edited it.
+  const [transferUnlinked, setTransferUnlinked] = useState(false);
 
   // Load transaction data
   useEffect(() => {
@@ -141,7 +143,6 @@ export default function EditTransactionPage() {
             }
 
             if (transfer) {
-              setTransferCurrency(transfer.currency || defaultCurrency);
               setFormData({
                 type: 'transfer',
                 amount: String(transfer.amount),
@@ -167,6 +168,7 @@ export default function EditTransactionPage() {
               // it) — load what this single row has. Submit stays blocked
               // (see handleSubmit) rather than risk silently editing only
               // one leg of the pair.
+              setTransferUnlinked(!isDemo);
               setFormData({
                 type: 'transfer',
                 amount: txn.amount.toString(),
@@ -194,27 +196,10 @@ export default function EditTransactionPage() {
               )?.value;
             }
 
-            // Fallback: Map old categories to major categories or keep original
-            let categoryValue = matchedCategory || txn.category;
-
-            // Map deprecated categories to existing ones for better UX
-            const categoryMappings: Record<string, string> = {
-              'Education': 'Others',
-              'Insurance': 'Others',
-              'Other Expense': 'Others',
-              'Other Income': 'Others',
-              'Food & Dining': 'Dining',
-              'Travel': 'Entertainment',
-              'Personal Care': 'Healthcare',
-              'Business Income': 'Others',
-              'Rental Income': 'Others',
-              'Gift': 'Others',
-              'Refund': 'Others',
-            };
-
-            if (!matchedCategory && categoryMappings[txn.category]) {
-              categoryValue = categoryMappings[txn.category];
-            }
+            // A category the form does not list is kept as it is (the form shows it
+            // as its own chip). It used to be mapped to a listed one here, so saving
+            // any change, even the amount, quietly re-categorised the row.
+            const categoryValue = matchedCategory || txn.category;
 
             // Match payment method to our format
             let paymentMethodValue = '';
@@ -282,8 +267,10 @@ export default function EditTransactionPage() {
 
   const handleInputChange = (field: string, value: string) => {
     setFormData(prev => ({ ...prev, [field]: value }));
-    if (errors[field]) {
-      setErrors(prev => ({ ...prev, [field]: '' }));
+    // The wallet pair shares one message, keyed `transfer`.
+    const errorKey = field === 'fromWallet' || field === 'toWallet' ? 'transfer' : field;
+    if (errors[errorKey]) {
+      setErrors(prev => ({ ...prev, [errorKey]: '' }));
     }
   };
 
@@ -302,12 +289,15 @@ export default function EditTransactionPage() {
     return Object.keys(newErrors).length === 0;
   };
 
-  const handleSubmit = async (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
-    if (!validateForm()) return;
+    if (!validateForm()) {
+      revealFirstError(e.currentTarget);
+      return;
+    }
 
     if (isDemo) {
-      toast.success('Demo: changes simulated — sign up to save real data');
+      toast.success(t('transactions:toast.demoSimulated', 'Demo: changes simulated — sign up to save real data'));
       router.push(returnTo);
       return;
     }
@@ -327,7 +317,8 @@ export default function EditTransactionPage() {
           fromWallet: formData.fromWallet as 'life' | 'emergency',
           toWallet: formData.toWallet as 'life' | 'emergency',
           amount: parseFloat(formData.amount),
-          currency: transferCurrency,
+          // What the form shows; it used to send the loaded currency whatever was picked.
+          currency: formData.currency,
           date: formData.date,
           notes: formData.description,
         });
@@ -369,7 +360,9 @@ export default function EditTransactionPage() {
           description: formData.description,
           date: formData.date,
           category: formData.category,
-          paymentMethod: formData.paymentMethod || undefined,
+          // null, not undefined: undefined is left out of the request, so a payment
+          // method cleared in the form stayed saved.
+          paymentMethod: (formData.paymentMethod || null) as string | undefined,
           walletType: formData.walletType as 'life' | 'emergency',
           tags: formData.tags,
           // Link/unlink the loan (expenses only). Sending null unlinks and
@@ -408,22 +401,25 @@ export default function EditTransactionPage() {
                 ...(formData.date ? { purchaseDate: new Date(formData.date).toISOString() } : {}),
               });
               await queryClient.invalidateQueries({ queryKey: [QUERY_KEYS.PORTFOLIO] });
-              toast.success('Transaction and portfolio holding updated');
+              toast.success(t('transactions:toast.investSynced', 'Transaction and portfolio holding updated'));
             } else if (matches.length > 1) {
               // Multiple lots for this symbol — we can't tell which lot this
               // transaction maps to, so don't silently overwrite the wrong one.
-              toast('Transaction updated. This symbol has multiple lots — edit the specific lot on the Portfolio page to update its chart.', { icon: 'ℹ️' });
+              toast(t('transactions:toast.investMultipleLots', 'Transaction updated. This symbol has multiple lots — edit the specific lot on the Portfolio page to update its chart.'), { icon: 'ℹ️' });
             } else {
-              toast.success('Transaction updated. Holding not found — it may have been removed from Portfolio.');
+              toast.success(t('transactions:toast.investHoldingMissing', 'Transaction updated. Holding not found — it may have been removed from Portfolio.'));
             }
           } catch {
-            toast.success('Transaction updated. Could not sync portfolio holding — update it manually.');
+            toast.success(t('transactions:toast.investSyncFailed', 'Transaction updated. Could not sync portfolio holding — update it manually.'));
           }
         } else {
           toast.success(t('transactions:toast.updated'));
         }
 
         router.push(returnTo);
+      } else {
+        // A rejected update used to end in silence: the spinner stopped, nothing said.
+        toast.error(response.message || t('transactions:toast.updateFailed'));
       }
     } catch (error) {
       log.error('Error updating transaction:', error);
@@ -435,9 +431,11 @@ export default function EditTransactionPage() {
 
   if (isLoading) {
     return (
-      <div className="min-h-screen bg-gray-50 dark:bg-gray-900 flex items-center justify-center">
-        <LoadingSpinner size="lg" />
-      </div>
+      <DashboardLayout>
+        <div className="flex min-h-[50vh] items-center justify-center">
+          <LoadingSpinner size="lg" />
+        </div>
+      </DashboardLayout>
     );
   }
 
@@ -455,14 +453,28 @@ export default function EditTransactionPage() {
 
         <Card padding="none" radius="xl" shadow="none" className="p-4 sm:p-6">
           <form onSubmit={handleSubmit} className="space-y-5 sm:space-y-6">
-            {/* Transaction Type - Compact Toggle (hidden in invest mode) */}
-            {!isInvestMode && (
+            {/* Transaction type. A transfer's type is locked: saving one leg as an
+                expense or income would orphan its pair and throw both wallets off.
+                Nor can an expense or income become a transfer here: there is no pair
+                to edit, so it could only fail at submit. */}
+            {!isInvestMode && formData.type === 'transfer' && (
+              <div className="flex flex-wrap items-center gap-2">
+                <span className="rounded-lg bg-blue-700 dark:bg-blue-500 px-3 py-1.5 text-sm font-medium text-white">
+                  {t('transactions:form.types.transfer', 'Transfer')}
+                </span>
+                <span className="text-xs text-gray-500 dark:text-gray-400">
+                  {t('transactions:form.transferTypeLocked', 'A transfer stays a transfer. To change it, delete it and add a new one.')}
+                </span>
+              </div>
+            )}
+            {!isInvestMode && formData.type !== 'transfer' && (
               <div>
-                <div id="txe-group-type" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                {/* Named for screen readers only: the buttons say what they are. */}
+                <div id="txe-group-type" className="sr-only">
                   {t('transactions:form.typeLabel', 'Transaction Type')}
                 </div>
                 <div role="group" aria-labelledby="txe-group-type" className="flex gap-1.5 sm:gap-2">
-                  {TRANSACTION_TYPES.filter((type) => type.value !== 'investment').map((type) => (
+                  {TRANSACTION_TYPES.filter((type) => type.value === 'expense' || type.value === 'income').map((type) => (
                     <button
                       key={type.value}
                       type="button"
@@ -470,19 +482,18 @@ export default function EditTransactionPage() {
                       onClick={() => {
                         handleInputChange('type', type.value);
                         handleInputChange('category', '');
+                        // A loan link is an expense's; an income would keep it otherwise.
+                        if (type.value !== 'expense') handleInputChange('loanId', '');
                       }}
                       className={cn(
-                        'flex-1 min-w-0 py-2 px-1 sm:py-2.5 sm:px-3 rounded-lg font-medium transition-all duration-200 flex flex-col sm:flex-row items-center justify-center gap-0.5 sm:gap-2 text-xs sm:text-sm touch-manipulation',
+                        'flex-1 min-w-0 py-2.5 px-1 sm:px-3 min-h-11 lg:min-h-0 rounded-lg font-medium transition-all duration-200 motion-reduce:transition-none flex items-center justify-center text-xs sm:text-sm touch-manipulation',
                         formData.type === type.value
                           ? type.color === 'red'
                             ? 'bg-expense-700 dark:bg-expense-500 text-white shadow-md'
-                            : type.color === 'green'
-                              ? 'bg-income-700 dark:bg-income-500 text-white shadow-md'
-                              : 'bg-blue-700 dark:bg-blue-500 text-white shadow-md'
+                            : 'bg-income-700 dark:bg-income-500 text-white shadow-md'
                           : 'bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-400 hover:bg-gray-200 dark:hover:bg-gray-600'
                       )}
                     >
-                      <span className="text-lg leading-none" aria-hidden="true">{type.icon}</span>
                       <span className="truncate max-w-full">{t(`transactions:form.types.${type.value}`, type.label)}</span>
                     </button>
                   ))}
@@ -490,21 +501,29 @@ export default function EditTransactionPage() {
               </div>
             )}
 
+            {transferUnlinked && (
+              <div role="status" className="rounded-lg bg-amber-50 dark:bg-amber-900/20 p-3 text-sm text-amber-800 dark:text-amber-300">
+                {t('transactions:form.transferUnlinked', "This older transfer isn't linked to its other half, so it can't be edited here. Delete it and add the transfer again.")}
+              </div>
+            )}
+
             {/* Investment Purchase Section */}
             {isInvestMode && (
-              <div className="space-y-4 border border-purple-200 dark:border-purple-800 rounded-lg p-4 bg-purple-50 dark:bg-purple-900/20">
-                <div className="text-sm font-semibold text-purple-700 dark:text-purple-300 mb-1">
-                  📈 Investment Purchase — Edit Asset Details
+              <div className="space-y-4 rounded-lg border border-purple-200 dark:border-purple-800 p-4 bg-purple-50 dark:bg-purple-900/20">
+                <div>
+                  <div className="text-sm font-semibold text-purple-700 dark:text-purple-300">
+                    {t('transactions:form.investEdit.title', 'Investment purchase')}
+                  </div>
+                  <p className="mt-1 text-xs text-purple-700 dark:text-purple-400">
+                    {t('transactions:form.investEdit.note', 'Changes here update the transaction record. To update the portfolio holding, visit the Portfolio page.')}
+                  </p>
                 </div>
-                <p className="text-xs text-purple-600 dark:text-purple-400 mb-3">
-                  Changes here update the transaction record. To update the portfolio holding, visit the Portfolio page.
-                </p>
 
                 {/* Symbol + Currency row */}
                 <div className="flex gap-3">
                   <div className="flex-1 min-w-0">
-                    <label htmlFor="page-symbol" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                      Symbol <span className="text-error-700 dark:text-error-500">*</span>
+                    <label htmlFor="page-symbol" className={FIELD_LABEL}>
+                      {t('transactions:form.invest.symbol', 'Symbol')} <span className="text-error-700 dark:text-error-500">*</span>
                     </label>
                     <input
                       aria-invalid={!!errors.investSymbol}
@@ -513,21 +532,21 @@ export default function EditTransactionPage() {
                       type="text"
                       value={investSymbol}
                       onChange={e => setInvestSymbol(e.target.value.toUpperCase())}
-                      placeholder="e.g. 0050, AAPL"
+                      placeholder={t('transactions:form.invest.symbolPlaceholder', 'e.g. 006208, AAPL, BTC')}
                       className={cn(
-                        'w-full bg-transparent border border-gray-300 dark:border-gray-600 rounded-lg px-3 py-2.5 sm:py-2 text-base sm:text-sm text-gray-900 dark:text-white placeholder-gray-400 focus-visible:ring-2 focus-visible:ring-purple-500 focus-visible:border-purple-500 font-mono uppercase',
+                        FIELD_INPUT, 'font-mono uppercase placeholder:normal-case placeholder:font-sans',
                         errors.investSymbol && 'border-error-400'
                       )}
                     />
                     {errors.investSymbol && <p id="page-symbol-error" role="alert" className="text-xs text-error-700 dark:text-error-500 mt-1">{errors.investSymbol}</p>}
                   </div>
                   <div className="w-28">
-                    <label htmlFor="page-currency" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Currency</label>
+                    <label htmlFor="page-currency" className={FIELD_LABEL}>{t('transactions:form.currency', 'Currency')}</label>
                     <select
                       id="page-currency"
                       value={investCurrency}
                       onChange={e => setInvestCurrency(e.target.value)}
-                      className="w-full bg-transparent border border-gray-300 dark:border-gray-600 rounded-lg px-2 py-2.5 sm:py-2 text-base sm:text-sm text-gray-900 dark:text-white focus-visible:ring-2 focus-visible:ring-purple-500 focus-visible:border-purple-500"
+                      className={cn(FIELD_INPUT, 'px-2')}
                     >
                       {['TWD', 'USD', 'HKD', 'JPY', 'SGD', 'EUR'].map(c => (
                         <option key={c} value={c}>{c}</option>
@@ -539,8 +558,8 @@ export default function EditTransactionPage() {
                 {/* Qty + Price row */}
                 <div className="grid grid-cols-2 gap-3">
                   <div>
-                    <label htmlFor="page-quantity" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                      Quantity <span className="text-error-700 dark:text-error-500">*</span>
+                    <label htmlFor="page-quantity" className={FIELD_LABEL}>
+                      {t('transactions:form.invest.quantity', 'Quantity')} <span className="text-error-700 dark:text-error-500">*</span>
                     </label>
                     <input
                       aria-invalid={!!errors.investQty}
@@ -555,15 +574,15 @@ export default function EditTransactionPage() {
                       onChange={e => setInvestQty(e.target.value)}
                       placeholder="100"
                       className={cn(
-                        'w-full bg-transparent border border-gray-300 dark:border-gray-600 rounded-lg px-3 py-2.5 sm:py-2 text-base sm:text-sm text-gray-900 dark:text-white placeholder-gray-400 focus-visible:ring-2 focus-visible:ring-purple-500 focus-visible:border-purple-500',
+                        FIELD_INPUT,
                         errors.investQty && 'border-error-400'
                       )}
                     />
                     {errors.investQty && <p id="page-quantity-error" role="alert" className="text-xs text-error-700 dark:text-error-500 mt-1">{errors.investQty}</p>}
                   </div>
                   <div>
-                    <label htmlFor="page-price-unit" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                      Price/Unit <span className="text-error-700 dark:text-error-500">*</span>
+                    <label htmlFor="page-price-unit" className={FIELD_LABEL}>
+                      {t('transactions:form.invest.pricePerUnit', 'Price / Unit')} <span className="text-error-700 dark:text-error-500">*</span>
                     </label>
                     <input
                       aria-invalid={!!errors.investPrice}
@@ -578,7 +597,7 @@ export default function EditTransactionPage() {
                       onChange={e => setInvestPrice(e.target.value)}
                       placeholder="100.00"
                       className={cn(
-                        'w-full bg-transparent border border-gray-300 dark:border-gray-600 rounded-lg px-3 py-2.5 sm:py-2 text-base sm:text-sm text-gray-900 dark:text-white placeholder-gray-400 focus-visible:ring-2 focus-visible:ring-purple-500 focus-visible:border-purple-500',
+                        FIELD_INPUT,
                         errors.investPrice && 'border-error-400'
                       )}
                     />
@@ -588,7 +607,7 @@ export default function EditTransactionPage() {
 
                 {/* Auto-calculated total */}
                 <div className="flex items-center justify-between rounded-lg bg-purple-100 dark:bg-purple-900/40 px-4 py-3">
-                  <span className="text-sm text-purple-700 dark:text-purple-300">Total (auto)</span>
+                  <span className="text-sm text-purple-700 dark:text-purple-300">{t('transactions:form.invest.totalCost', 'Total Cost')}</span>
                   <span className="text-lg font-bold text-purple-900 dark:text-purple-100">
                     {investCurrency} {investTotal.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                   </span>
@@ -596,13 +615,13 @@ export default function EditTransactionPage() {
 
                 {/* Date (still editable in invest mode) */}
                 <div className="w-full sm:w-36">
-                  <label htmlFor="page-date" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Date</label>
+                  <label htmlFor="page-date" className={FIELD_LABEL}>{t('transactions:form.invest.date', 'Date')}</label>
                   <input
                     id="page-date"
                     type="date"
                     value={formData.date}
                     onChange={(e) => handleInputChange('date', e.target.value)}
-                    className="w-full bg-transparent border border-gray-300 dark:border-gray-600 rounded-lg px-2 py-2.5 sm:py-2 text-base sm:text-sm text-gray-900 dark:text-white focus-visible:ring-2 focus-visible:ring-purple-500 focus-visible:border-purple-500"
+                    className={cn(FIELD_INPUT, 'px-2')}
                   />
                 </div>
               </div>
@@ -614,11 +633,15 @@ export default function EditTransactionPage() {
                 formData={formData}
                 errors={errors}
                 onChange={handleInputChange}
+                onTagsChange={(tags) => setFormData(prev => ({ ...prev, tags }))}
                 activeLoans={activeLoans}
               />
             )}
 
-            <TagsField idPrefix="txe" tags={formData.tags} onChange={(tags) => setFormData(prev => ({ ...prev, tags }))} />
+            {/* The cash form carries tags under More options; an investment edit has no such section. */}
+            {isInvestMode && (
+              <TagsField idPrefix="txe" tags={formData.tags} onChange={(tags) => setFormData(prev => ({ ...prev, tags }))} />
+            )}
 
             <StickySubmitBar>
               <Button
@@ -627,9 +650,14 @@ export default function EditTransactionPage() {
                 size="lg"
                 fullWidth
                 isLoading={isSubmitting}
+                disabled={transferUnlinked}
                 leftIcon={<CheckIcon className="w-5 h-5" />}
               >
-                {isSubmitting ? 'Updating...' : isInvestMode ? 'Update Investment Transaction' : 'Update Transaction'}
+                {isSubmitting
+                  ? t('transactions:form.updating', 'Updating…')
+                  : isInvestMode
+                    ? t('transactions:form.updateInvestment', 'Update Investment Transaction')
+                    : t('transactions:form.update', 'Update Transaction')}
               </Button>
             </StickySubmitBar>
           </form>
