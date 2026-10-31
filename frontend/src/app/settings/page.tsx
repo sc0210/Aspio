@@ -31,6 +31,8 @@ import { useFeatures } from '@/hooks/useFeatures';
 import { QUERY_KEYS } from '@/hooks/useDataSynchronization';
 import { cn } from '@/utils/cn';
 import { Card } from '@/components/ui/Card';
+import { hasAnalyticsConsent, isAnalyticsAvailable, setAnalyticsConsent } from '@/lib/analytics/config';
+import { analyticsProvider } from '@/lib/analytics/provider';
 
 // Currencies offered for the account default. Kept in sync with the backend
 // RegionalPreferencesUpdate pattern — trimmed to the two common ones for our
@@ -374,6 +376,22 @@ export default function SettingsPage() {
   const { prefs: notif, set: setNotif } = useNotifPrefs();
   const queryClient = useQueryClient();
 
+  // Usage analytics, the switch the consent banner points to. Shown only where
+  // analytics can run at all. Read on first render: this page renders only on the
+  // client (SessionInitProvider holds the tree while the session is 'loading').
+  const [analyticsAvailable] = useState(() => typeof window !== 'undefined' && isAnalyticsAvailable());
+  const [analyticsOn, setAnalyticsOn] = useState(() => typeof window !== 'undefined' && hasAnalyticsConsent());
+  const handleAnalyticsChange = (on: boolean) => {
+    setAnalyticsConsent(on);
+    setAnalyticsOn(on);
+    if (on) {
+      analyticsProvider.initialize().catch(() => {});
+    } else if (document.querySelector('script[data-cf-beacon]')) {
+      // A loaded beacon cannot be unloaded; reloading is what stops it.
+      window.location.reload();
+    }
+  };
+
   // Profile edit state
   const [displayName, setDisplayName] = useState('');
   const [username, setUsername] = useState('');
@@ -642,6 +660,14 @@ export default function SettingsPage() {
           >
             <Toggle checked={isValueVisible} onChange={setValueVisible} label={t('settings.showValues', 'Show Financial Values')} />
           </SettingRow>
+          {analyticsAvailable && (
+            <SettingRow
+              label={t('settings.analytics', 'Usage analytics')}
+              description={t('settings.analyticsDesc', 'Count page views and load speed to improve Aspiro. Never includes your financial data.')}
+            >
+              <Toggle checked={analyticsOn} onChange={handleAnalyticsChange} label={t('settings.analytics', 'Usage analytics')} />
+            </SettingRow>
+          )}
         </SectionCard>
 
         {/* ── Portfolio Preferences ────────────────────────────────────── */}

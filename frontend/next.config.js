@@ -73,7 +73,10 @@ const nextConfig = {
               key: 'Content-Security-Policy',
               value: [
                 "default-src 'self'",
-                "script-src 'self' 'unsafe-inline' 'unsafe-eval'",
+                // static.cloudflareinsights.com: the Cloudflare Web Analytics beacon,
+                // loaded only after analytics consent (lib/analytics/provider.ts). It
+                // reports to cloudflareinsights.com, which connect-src https: allows.
+                "script-src 'self' 'unsafe-inline' 'unsafe-eval' https://static.cloudflareinsights.com",
                 "style-src 'self' 'unsafe-inline'",
                 "img-src 'self' data: https:",
                 "font-src 'self' data:",

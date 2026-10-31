@@ -912,7 +912,9 @@
         "history": "Last 5 group expenses",
         "undo": "Remove your last expense"
       }
-    }
+    },
+    "analytics": "Usage analytics",
+    "analyticsDesc": "Count page views and load speed to improve Aspiro. Never includes your financial data."
   },
   "status": {
     "active": "Active",
@@ -1080,5 +1082,22 @@
     "emptyTitle": "Nothing recorded this month",
     "emptyBody": "No income or spending was logged in this month, so there is nothing to review yet.",
     "addTransaction": "Add a transaction"
+  },
+  "analyticsConsent": {
+    "title": "Privacy & Analytics",
+    "body": "May Aspiro count which pages are used and how fast they load? It helps us improve the app, and never includes your financial data.",
+    "learnMore": "Learn more",
+    "collectedTitle": "What is collected:",
+    "collectedPages": "Pages visited and the site you came from",
+    "collectedDevice": "Browser, device type and country",
+    "collectedSpeed": "How fast pages load",
+    "notCollectedTitle": "What is never collected:",
+    "notAmounts": "Amounts, balances or transactions",
+    "notIdentity": "Your name, email or account details",
+    "cloudflare": "Analytics is provided by Cloudflare Web Analytics, which sets no cookies and does not fingerprint visitors.",
+    "dnt": "Nothing is sent if your browser asks sites not to track you.",
+    "changeLater": "You can change this anytime in Settings → Privacy & Display.",
+    "accept": "Accept Analytics",
+    "decline": "Decline"
   }
 }

@@ -2,8 +2,14 @@ import React from 'react';
 import { render, screen, act } from '@testing-library/react';
 import { AnalyticsConsentBanner } from '@/components/analytics/AnalyticsConsentBanner';
 
+let mockAvailable = true;
+let mockCloudflare = true;
 jest.mock('@/lib/analytics/config', () => ({
   setAnalyticsConsent: jest.fn(),
+  isAnalyticsAvailable: () => mockAvailable,
+  get defaultAnalyticsConfig() {
+    return { providers: { cloudflare: { enabled: mockCloudflare, token: 't' } } };
+  },
 }));
 
 jest.mock('@/lib/analytics/provider', () => ({
@@ -33,6 +39,8 @@ describe('AnalyticsConsentBanner — mobile UX fixes', () => {
     jest.useFakeTimers();
     localStorage.clear();
     jest.clearAllMocks();
+    mockAvailable = true;
+    mockCloudflare = true;
   });
 
   afterEach(() => {
@@ -87,5 +95,25 @@ describe('AnalyticsConsentBanner — mobile UX fixes', () => {
       jest.advanceTimersByTime(1100);
     });
     expect(screen.queryByRole('button', { name: /dismiss privacy banner/i })).not.toBeInTheDocument();
+  });
+
+  it('asks nothing where analytics cannot run (no provider configured, or Do Not Track on)', () => {
+    mockAvailable = false;
+    renderAndShowBanner();
+    expect(screen.queryByRole('region', { name: /privacy and analytics consent/i })).not.toBeInTheDocument();
+  });
+
+  it('names Cloudflare Web Analytics in the details when it is the provider', () => {
+    renderAndShowBanner();
+    act(() => { screen.getByRole('button', { name: /learn more/i }).click(); });
+    expect(screen.getByText(/Cloudflare Web Analytics/)).toBeInTheDocument();
+  });
+
+  it('points to the Settings switch for changing the choice later', () => {
+    mockCloudflare = false;
+    renderAndShowBanner();
+    act(() => { screen.getByRole('button', { name: /learn more/i }).click(); });
+    expect(screen.getByText(/Settings → Privacy & Display/)).toBeInTheDocument();
+    expect(screen.queryByText(/Cloudflare Web Analytics/)).not.toBeInTheDocument();
   });
 });

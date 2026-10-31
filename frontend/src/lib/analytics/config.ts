@@ -7,6 +7,10 @@ interface AnalyticsConfig {
     enabled: boolean;
     debug: boolean;
     providers: {
+        cloudflare?: {
+            enabled: boolean;
+            token: string;
+        };
         plausible?: {
             enabled: boolean;
             domain: string;
@@ -33,11 +37,29 @@ interface AnalyticsConfig {
     };
 }
 
+// NEXT_PUBLIC_* are inlined at build time, so each must be read by its literal name.
+const cloudflareToken = process.env.NEXT_PUBLIC_CF_ANALYTICS_TOKEN || '';
+const anyProviderConfigured = !!(
+    cloudflareToken ||
+    process.env.NEXT_PUBLIC_PLAUSIBLE_DOMAIN ||
+    process.env.NEXT_PUBLIC_MIXPANEL_TOKEN ||
+    process.env.NEXT_PUBLIC_ANALYTICS_ENDPOINT
+);
+
 // Default configuration
 export const defaultAnalyticsConfig: AnalyticsConfig = {
-    enabled: process.env.NEXT_PUBLIC_ANALYTICS_ENABLED === 'true' || false,
+    // On once a provider is configured (still only with the visitor's consent);
+    // NEXT_PUBLIC_ANALYTICS_ENABLED=false switches it off regardless. With no
+    // provider there is nothing to send, so there is nothing to ask consent for.
+    enabled: anyProviderConfigured && process.env.NEXT_PUBLIC_ANALYTICS_ENABLED !== 'false',
     debug: process.env.NODE_ENV === 'development',
     providers: {
+        // Cloudflare Web Analytics: cookieless, page views and Core Web Vitals.
+        // The token is the one in the site's JS snippet in the Cloudflare dashboard.
+        cloudflare: {
+            enabled: !!cloudflareToken,
+            token: cloudflareToken,
+        },
         plausible: {
             enabled: !!process.env.NEXT_PUBLIC_PLAUSIBLE_DOMAIN,
             domain: process.env.NEXT_PUBLIC_PLAUSIBLE_DOMAIN || '',
@@ -64,8 +86,12 @@ export const defaultAnalyticsConfig: AnalyticsConfig = {
     },
 };
 
-// Check if analytics should be enabled
-export function shouldTrackAnalytics(): boolean {
+/**
+ * Whether analytics can run here at all, consent aside: a provider is configured,
+ * this is a browser, and Do Not Track is off. The consent banner and the Settings
+ * switch show only when this is true; asking otherwise would be for nothing.
+ */
+export function isAnalyticsAvailable(): boolean {
     // Guard: must be in a browser context
     if (typeof window === 'undefined' || typeof navigator === 'undefined') {
         return false;
@@ -81,8 +107,12 @@ export function shouldTrackAnalytics(): boolean {
         }
     }
 
-    // Check if analytics is enabled
-    if (!defaultAnalyticsConfig.enabled) {
+    return defaultAnalyticsConfig.enabled;
+}
+
+// Check if analytics should be enabled
+export function shouldTrackAnalytics(): boolean {
+    if (!isAnalyticsAvailable()) {
         return false;
     }
 
