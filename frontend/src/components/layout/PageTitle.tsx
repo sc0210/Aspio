@@ -1,5 +1,6 @@
 'use client';
 
+import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { useTranslation } from 'react-i18next';
 import { getNavigationItems } from '@/lib/navigation';
@@ -77,9 +78,16 @@ export function PageTitle() {
 
   return (
     <div className="flex items-center gap-1.5 min-w-0">
-      {parentKey && (
+      {parentKey && entry.parentHref && (
         <>
-          <span className="text-sm text-gray-500 dark:text-gray-500 truncate">{t(parentKey)}</span>
+          {/* A link, not a label: on desktop this is the only way back from a sub-page,
+              whose own PageHeader (and its back arrow) is phone-only. */}
+          <Link
+            href={entry.parentHref}
+            className="text-sm text-gray-500 dark:text-gray-500 truncate rounded hover:text-gray-800 dark:hover:text-gray-200 hover:underline focus:outline-none focus-visible:ring-2 focus-visible:ring-primary-500"
+          >
+            {t(parentKey)}
+          </Link>
           <span className="text-sm text-gray-500 dark:text-gray-500" aria-hidden="true">/</span>
         </>
       )}

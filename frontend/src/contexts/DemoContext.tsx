@@ -529,8 +529,12 @@ interface DemoContextType {
 
 const DemoContext = createContext<DemoContextType | undefined>(undefined);
 
+function readDemoCookie(): boolean {
+  return typeof document !== 'undefined' && document.cookie.split('; ').includes('demo-mode=true');
+}
+
 export function DemoProvider({ children }: { children: ReactNode }) {
-  const [isDemoMode, setIsDemoMode] = useState(false);
+  const [demoModeState, setIsDemoMode] = useState(false);
   const [demoTransactions, setDemoTransactions] = useState(DEMO_TRANSACTIONS);
   const [demoGoals, setDemoGoals] = useState(DEMO_GOALS);
   const [demoRevision, setDemoRevision] = useState(0);
@@ -573,6 +577,14 @@ export function DemoProvider({ children }: { children: ReactNode }) {
       }
     }
   }, [session, status]);
+
+  // A signed-out visitor's demo cookie is read during render too, not only in the
+  // effect above. Child effects run before a parent's, so with the effect alone the
+  // first render after NextAuth resolved showed a demo visitor as plain signed-out,
+  // and any page fetching on `!isDemo` in that render raced the cookie and 401'd.
+  // Safe for hydration: status is 'loading' until after it, and SessionInitProvider
+  // renders only an overlay until then.
+  const isDemoMode = demoModeState || (status === 'unauthenticated' && readDemoCookie());
 
   const enableDemo = useCallback(() => {
     setIsDemoMode(true);

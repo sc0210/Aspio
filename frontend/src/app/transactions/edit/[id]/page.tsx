@@ -1,16 +1,15 @@
 'use client';
 
 import React, { useState, useEffect, useMemo } from 'react';
-import { ArrowLeftIcon, CheckIcon } from '@heroicons/react/24/outline';
+import { CheckIcon } from '@heroicons/react/24/outline';
 import { useRouter, useParams, useSearchParams } from 'next/navigation';
 import { RETURN_TO_PARAM, safeReturnTo } from '@/lib/transactions/returnTo';
-import Link from 'next/link';
 import { useQueryClient } from '@tanstack/react-query';
 import toast from 'react-hot-toast';
 import { useTranslation } from 'react-i18next';
 import { Button } from '@/components/ui/Button';
 import { LoadingSpinner } from '@/components/ui/LoadingSpinner';
-import { TRANSACTION_TYPES, CATEGORIES, PAYMENT_METHODS, CashFields, TagsField, validateCashFields } from '@/components/transactions/TransactionFormFields';
+import { TRANSACTION_TYPES, CATEGORIES, PAYMENT_METHODS, CashFields, TagsField, validateCashFields, StickySubmitBar } from '@/components/transactions/TransactionFormFields';
 import { cn } from '@/utils/cn';
 import { transactionService } from '@/services/transactionService';
 import { Transaction } from '@/shared/types';
@@ -18,6 +17,7 @@ import { useDemo } from '@/contexts/DemoContext';
 import { useModeAwareUI } from '@/hooks/useAppMode';
 import { useCurrentUser } from '@/hooks/useCurrentUser';
 import { DashboardLayout } from '@/components/layout/DashboardLayout';
+import { PageHeader } from '@/components/layout/PageHeader';
 import { QUERY_KEYS, invalidateDashboardData } from '@/hooks/useDataSynchronization';
 import { portfolioService } from '@/services/portfolioService';
 import { loanService } from '@/services/loanService';
@@ -443,27 +443,25 @@ export default function EditTransactionPage() {
 
   return (
     <DashboardLayout>
-      <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-        {/* Header */}
-        <div className="flex items-center mb-8">
-          <Link
-            href="/transactions"
-            className="flex items-center text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-100 transition-colors mr-4"
-          >
-            <ArrowLeftIcon className="w-5 h-5 mr-2" />
-            Back to Transactions
-          </Link>
-        </div>
+      {/* Same frame as /transactions/add: the layout's own padding is the gutter. */}
+      <div className="max-w-4xl mx-auto py-2 sm:py-4">
+        {/* Phone title + back; on desktop the top bar's title and breadcrumb cover both. */}
+        <PageHeader
+          title={t('transactions:edit', 'Edit Transaction')}
+          backHref={returnTo}
+          backLabel={t('transactions:form.backToList', 'Back to Transactions')}
+          className="mb-3"
+        />
 
-        <Card padding="lg" radius="xl" shadow="none">
-          <form onSubmit={handleSubmit} className="space-y-6">
+        <Card padding="none" radius="xl" shadow="none" className="p-4 sm:p-6">
+          <form onSubmit={handleSubmit} className="space-y-5 sm:space-y-6">
             {/* Transaction Type - Compact Toggle (hidden in invest mode) */}
             {!isInvestMode && (
               <div>
-                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                <div id="txe-group-type" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
                   {t('transactions:form.typeLabel', 'Transaction Type')}
-                </label>
-                <div className="flex gap-2">
+                </div>
+                <div role="group" aria-labelledby="txe-group-type" className="flex gap-1.5 sm:gap-2">
                   {TRANSACTION_TYPES.filter((type) => type.value !== 'investment').map((type) => (
                     <button
                       key={type.value}
@@ -474,7 +472,7 @@ export default function EditTransactionPage() {
                         handleInputChange('category', '');
                       }}
                       className={cn(
-                        'flex-1 py-2.5 px-3 rounded-lg font-medium transition-all duration-200 flex items-center justify-center gap-2 text-sm',
+                        'flex-1 min-w-0 py-2 px-1 sm:py-2.5 sm:px-3 rounded-lg font-medium transition-all duration-200 flex flex-col sm:flex-row items-center justify-center gap-0.5 sm:gap-2 text-xs sm:text-sm touch-manipulation',
                         formData.type === type.value
                           ? type.color === 'red'
                             ? 'bg-expense-700 dark:bg-expense-500 text-white shadow-md'
@@ -484,8 +482,8 @@ export default function EditTransactionPage() {
                           : 'bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-400 hover:bg-gray-200 dark:hover:bg-gray-600'
                       )}
                     >
-                      <span className="text-lg">{type.icon}</span>
-                      <span>{t(`transactions:form.types.${type.value}`, type.label)}</span>
+                      <span className="text-lg leading-none" aria-hidden="true">{type.icon}</span>
+                      <span className="truncate max-w-full">{t(`transactions:form.types.${type.value}`, type.label)}</span>
                     </button>
                   ))}
                 </div>
@@ -504,7 +502,7 @@ export default function EditTransactionPage() {
 
                 {/* Symbol + Currency row */}
                 <div className="flex gap-3">
-                  <div className="flex-1">
+                  <div className="flex-1 min-w-0">
                     <label htmlFor="page-symbol" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
                       Symbol <span className="text-error-700 dark:text-error-500">*</span>
                     </label>
@@ -517,7 +515,7 @@ export default function EditTransactionPage() {
                       onChange={e => setInvestSymbol(e.target.value.toUpperCase())}
                       placeholder="e.g. 0050, AAPL"
                       className={cn(
-                        'w-full bg-transparent border border-gray-300 dark:border-gray-600 rounded-lg px-3 py-2 text-sm text-gray-900 dark:text-white placeholder-gray-400 focus-visible:ring-2 focus-visible:ring-purple-500 focus-visible:border-purple-500 font-mono uppercase',
+                        'w-full bg-transparent border border-gray-300 dark:border-gray-600 rounded-lg px-3 py-2.5 sm:py-2 text-base sm:text-sm text-gray-900 dark:text-white placeholder-gray-400 focus-visible:ring-2 focus-visible:ring-purple-500 focus-visible:border-purple-500 font-mono uppercase',
                         errors.investSymbol && 'border-error-400'
                       )}
                     />
@@ -529,7 +527,7 @@ export default function EditTransactionPage() {
                       id="page-currency"
                       value={investCurrency}
                       onChange={e => setInvestCurrency(e.target.value)}
-                      className="w-full bg-transparent border border-gray-300 dark:border-gray-600 rounded-lg px-2 py-2 text-sm text-gray-900 dark:text-white focus-visible:ring-2 focus-visible:ring-purple-500 focus-visible:border-purple-500"
+                      className="w-full bg-transparent border border-gray-300 dark:border-gray-600 rounded-lg px-2 py-2.5 sm:py-2 text-base sm:text-sm text-gray-900 dark:text-white focus-visible:ring-2 focus-visible:ring-purple-500 focus-visible:border-purple-500"
                     >
                       {['TWD', 'USD', 'HKD', 'JPY', 'SGD', 'EUR'].map(c => (
                         <option key={c} value={c}>{c}</option>
@@ -539,8 +537,8 @@ export default function EditTransactionPage() {
                 </div>
 
                 {/* Qty + Price row */}
-                <div className="flex gap-3">
-                  <div className="flex-1">
+                <div className="grid grid-cols-2 gap-3">
+                  <div>
                     <label htmlFor="page-quantity" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
                       Quantity <span className="text-error-700 dark:text-error-500">*</span>
                     </label>
@@ -557,13 +555,13 @@ export default function EditTransactionPage() {
                       onChange={e => setInvestQty(e.target.value)}
                       placeholder="100"
                       className={cn(
-                        'w-full bg-transparent border border-gray-300 dark:border-gray-600 rounded-lg px-3 py-2 text-sm text-gray-900 dark:text-white placeholder-gray-400 focus-visible:ring-2 focus-visible:ring-purple-500 focus-visible:border-purple-500',
+                        'w-full bg-transparent border border-gray-300 dark:border-gray-600 rounded-lg px-3 py-2.5 sm:py-2 text-base sm:text-sm text-gray-900 dark:text-white placeholder-gray-400 focus-visible:ring-2 focus-visible:ring-purple-500 focus-visible:border-purple-500',
                         errors.investQty && 'border-error-400'
                       )}
                     />
                     {errors.investQty && <p id="page-quantity-error" role="alert" className="text-xs text-error-700 dark:text-error-500 mt-1">{errors.investQty}</p>}
                   </div>
-                  <div className="flex-1">
+                  <div>
                     <label htmlFor="page-price-unit" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
                       Price/Unit <span className="text-error-700 dark:text-error-500">*</span>
                     </label>
@@ -580,7 +578,7 @@ export default function EditTransactionPage() {
                       onChange={e => setInvestPrice(e.target.value)}
                       placeholder="100.00"
                       className={cn(
-                        'w-full bg-transparent border border-gray-300 dark:border-gray-600 rounded-lg px-3 py-2 text-sm text-gray-900 dark:text-white placeholder-gray-400 focus-visible:ring-2 focus-visible:ring-purple-500 focus-visible:border-purple-500',
+                        'w-full bg-transparent border border-gray-300 dark:border-gray-600 rounded-lg px-3 py-2.5 sm:py-2 text-base sm:text-sm text-gray-900 dark:text-white placeholder-gray-400 focus-visible:ring-2 focus-visible:ring-purple-500 focus-visible:border-purple-500',
                         errors.investPrice && 'border-error-400'
                       )}
                     />
@@ -604,7 +602,7 @@ export default function EditTransactionPage() {
                     type="date"
                     value={formData.date}
                     onChange={(e) => handleInputChange('date', e.target.value)}
-                    className="w-full bg-transparent border border-gray-300 dark:border-gray-600 rounded-lg px-2 py-2 text-sm text-gray-900 dark:text-white focus-visible:ring-2 focus-visible:ring-purple-500 focus-visible:border-purple-500"
+                    className="w-full bg-transparent border border-gray-300 dark:border-gray-600 rounded-lg px-2 py-2.5 sm:py-2 text-base sm:text-sm text-gray-900 dark:text-white focus-visible:ring-2 focus-visible:ring-purple-500 focus-visible:border-purple-500"
                   />
                 </div>
               </div>
@@ -622,8 +620,7 @@ export default function EditTransactionPage() {
 
             <TagsField idPrefix="txe" tags={formData.tags} onChange={(tags) => setFormData(prev => ({ ...prev, tags }))} />
 
-            {/* Submit Button */}
-            <div className="pt-4">
+            <StickySubmitBar>
               <Button
                 type="submit"
                 variant="primary"
@@ -634,7 +631,7 @@ export default function EditTransactionPage() {
               >
                 {isSubmitting ? 'Updating...' : isInvestMode ? 'Update Investment Transaction' : 'Update Transaction'}
               </Button>
-            </div>
+            </StickySubmitBar>
           </form>
         </Card>
       </div>

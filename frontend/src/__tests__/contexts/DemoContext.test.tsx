@@ -59,6 +59,42 @@ describe('DemoContext — isDemoMode state', () => {
     expect(screen.getByTestId('is-demo').textContent).toBe('false');
   });
 
+  it('a demo visitor already reads as demo in the first effect a page runs', () => {
+    // The cookie used to be read only in DemoProvider's own effect, which runs after
+    // its children's, so a page fetching on `!isDemo` in its first effect hit the API.
+    document.cookie = 'demo-mode=true';
+    const seen: boolean[] = [];
+    function Page() {
+      const { isDemoMode } = useDemo();
+      React.useEffect(() => { seen.push(isDemoMode); }, []); // eslint-disable-line react-hooks/exhaustive-deps
+      return null;
+    }
+    useSession.mockReturnValue({ data: null, status: 'unauthenticated' });
+    render(<DemoProvider><Page /></DemoProvider>);
+    expect(seen[0]).toBe(true);
+  });
+
+  it('a signed-in user with a stale demo cookie never reads as demo, even in the first effect', () => {
+    // Guards the "logged in but seeing demo data" bug: the cookie only counts when signed out.
+    document.cookie = 'demo-mode=true';
+    const seen: boolean[] = [];
+    function Page() {
+      const { isDemoMode } = useDemo();
+      React.useEffect(() => { seen.push(isDemoMode); }, []); // eslint-disable-line react-hooks/exhaustive-deps
+      return null;
+    }
+    useSession.mockReturnValue({ data: { user: { email: 'a@b.c' } }, status: 'authenticated' });
+    render(<DemoProvider><Page /></DemoProvider>);
+    expect(seen[0]).toBe(false);
+  });
+
+  it('ignores the demo cookie while the session is still loading', () => {
+    // The server renders with status 'loading'; reading the cookie then would break hydration.
+    document.cookie = 'demo-mode=true';
+    renderWithSession(null, 'loading');
+    expect(screen.getByTestId('is-demo').textContent).toBe('false');
+  });
+
   it('enables demo mode and sets SameSite cookie', () => {
     const cookieJar: string[] = [];
     Object.defineProperty(document, 'cookie', {
@@ -75,11 +111,16 @@ describe('DemoContext — isDemoMode state', () => {
   });
 
   it('disables demo mode and clears cookie', () => {
+    // A jar that behaves like the browser's: the last write wins, and an
+    // expired write deletes. The provider reads the cookie, so it must clear.
     const cookieJar: string[] = [];
     Object.defineProperty(document, 'cookie', {
       configurable: true,
       set: (v: string) => cookieJar.push(v),
-      get: () => 'demo-mode=true',
+      get: () => {
+        const last = cookieJar[cookieJar.length - 1] ?? 'demo-mode=true';
+        return last.includes('expires=Thu, 01 Jan 1970') ? '' : last.split(';')[0];
+      },
     });
 
     renderWithSession(null);

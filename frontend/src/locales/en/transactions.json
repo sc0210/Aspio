@@ -203,6 +203,9 @@
       "investment": "Investment",
       "transfer": "Transfer"
     },
+    "typesShort": {
+      "investment": "Invest"
+    },
     "walletDescriptions": {
       "emergency": "Emergency fund",
       "life": "Daily income/expenses"
@@ -216,7 +219,8 @@
     "errAmount": "Enter amount",
     "errDescription": "Add description",
     "errCategory": "Select category",
-    "errSameWallet": "Source and destination wallets must be different"
+    "errSameWallet": "Source and destination wallets must be different",
+    "backToList": "Back to Transactions"
   },
   "importExport": {
     "button": "Export / Import",

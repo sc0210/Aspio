@@ -203,6 +203,9 @@
       "investment": "投資",
       "transfer": "轉帳"
     },
+    "typesShort": {
+      "investment": "投資"
+    },
     "walletDescriptions": {
       "emergency": "緊急備用金",
       "life": "日常收入與支出"
@@ -216,7 +219,8 @@
     "errAmount": "請輸入金額",
     "errDescription": "請輸入說明",
     "errCategory": "請選擇分類",
-    "errSameWallet": "來源與目標錢包不能相同"
+    "errSameWallet": "來源與目標錢包不能相同",
+    "backToList": "返回交易記錄"
   },
   "importExport": {
     "button": "匯出 / 匯入",

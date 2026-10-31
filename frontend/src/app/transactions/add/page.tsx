@@ -1,9 +1,8 @@
 'use client';
 
 import React, { useState, useEffect, useRef } from 'react';
-import { ArrowLeftIcon, CheckIcon } from '@heroicons/react/24/outline';
+import { CheckIcon } from '@heroicons/react/24/outline';
 import { useRouter } from 'next/navigation';
-import Link from 'next/link';
 import { useQueryClient } from '@tanstack/react-query';
 import toast from 'react-hot-toast';
 import { useTranslation } from 'react-i18next';
@@ -17,10 +16,11 @@ import { useModeAwareUI } from '@/hooks/useAppMode';
 import { useCurrentUser } from '@/hooks/useCurrentUser';
 import { useDemo } from '@/contexts/DemoContext';
 import { DashboardLayout } from '@/components/layout/DashboardLayout';
+import { PageHeader } from '@/components/layout/PageHeader';
 import { QUERY_KEYS, invalidateDashboardData } from '@/hooks/useDataSynchronization';
 import { localDateString } from '@/utils/formatters';
 import { Card } from '@/components/ui/Card';
-import { TRANSACTION_TYPES, CashFields, TagsField, validateCashFields } from '@/components/transactions/TransactionFormFields';
+import { TRANSACTION_TYPES, CashFields, TagsField, validateCashFields, StickySubmitBar } from '@/components/transactions/TransactionFormFields';
 
 export default function AddTransactionPage() {
   const router = useRouter();
@@ -317,24 +317,21 @@ export default function AddTransactionPage() {
   return (
     <DashboardLayout>
       <div className="max-w-4xl mx-auto py-2 sm:py-4">
-        {/* Header */}
-        <div className="flex items-center mb-4 sm:mb-6">
-          <Link
-            href="/transactions"
-            className="flex items-center text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-100 transition-colors mr-4"
-          >
-            <ArrowLeftIcon className="w-5 h-5 mr-2" />
-            Back to Transactions
-          </Link>
-        </div>
+        {/* Phone title + back; on desktop the top bar's title and breadcrumb cover both. */}
+        <PageHeader
+          title={t('transactions:add', 'Add Transaction')}
+          backHref="/transactions"
+          backLabel={t('transactions:form.backToList', 'Back to Transactions')}
+          className="mb-3"
+        />
 
-        <Card padding="lg" radius="xl" shadow="none">
-          <form onSubmit={handleSubmit} className="space-y-6">
+        <Card padding="none" radius="xl" shadow="none" className="p-4 sm:p-6">
+          <form onSubmit={handleSubmit} className="space-y-5 sm:space-y-6">
 
             {/* ── Transaction Type ── */}
             <div>
               <div id="tx-group-type" className="text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">{t('transactions:form.typeLabel', 'Transaction Type')}</div>
-              <div role="group" aria-labelledby="tx-group-type" className="grid grid-cols-2 sm:grid-cols-4 gap-2">
+              <div role="group" aria-labelledby="tx-group-type" className="grid grid-cols-4 gap-1.5 sm:gap-2">
                 {TRANSACTION_TYPES.map((type) => (
                   <button
                     aria-pressed={formData.type === type.value}
@@ -345,12 +342,16 @@ export default function AddTransactionPage() {
                       handleInputChange('category', '');
                     }}
                     className={cn(
-                      'py-2.5 px-3 rounded-lg font-medium transition-all duration-200 flex items-center justify-center gap-2 text-sm',
+                      'py-2 px-1 sm:py-2.5 sm:px-3 rounded-lg font-medium transition-all duration-200 flex flex-col sm:flex-row items-center justify-center gap-0.5 sm:gap-2 text-xs sm:text-sm touch-manipulation',
                       formData.type === type.value ? activeClass[type.color] : inactiveClass
                     )}
                   >
-                    <span className="text-lg">{type.icon}</span>
-                    <span>{t(`transactions:form.types.${type.value}`, type.label)}</span>
+                    <span className="text-lg leading-none" aria-hidden="true">{type.icon}</span>
+                    {/* A 320px phone has ~53px per button: too narrow for "Investment". */}
+                    {type.shortLabel && (
+                      <span className="truncate max-w-full min-[360px]:hidden">{t(`transactions:form.typesShort.${type.value}`, type.shortLabel)}</span>
+                    )}
+                    <span className={cn('truncate max-w-full', type.shortLabel && 'max-[359px]:hidden')}>{t(`transactions:form.types.${type.value}`, type.label)}</span>
                   </button>
                 ))}
               </div>
@@ -447,7 +448,7 @@ export default function AddTransactionPage() {
                             placeholder={t('transactions:form.invest.symbolPlaceholder', 'e.g. 006208, AAPL, BTC')}
                             autoFocus
                             className={cn(
-                              'w-full bg-transparent border rounded-lg px-3 py-2 text-sm font-mono font-semibold text-gray-900 dark:text-white placeholder-gray-400 dark:placeholder-gray-500 focus-visible:ring-2 focus-visible:ring-violet-500 focus-visible:border-violet-500 uppercase',
+                              'w-full bg-transparent border rounded-lg px-3 py-2.5 sm:py-2 text-base sm:text-sm font-mono font-semibold text-gray-900 dark:text-white placeholder-gray-400 dark:placeholder-gray-500 focus-visible:ring-2 focus-visible:ring-violet-500 focus-visible:border-violet-500 uppercase placeholder:normal-case',
                               errors.investSymbol ? 'border-error-400' : 'border-gray-300 dark:border-gray-600'
                             )}
                           />
@@ -463,7 +464,7 @@ export default function AddTransactionPage() {
                             value={investName}
                             onChange={(e) => setInvestName(e.target.value)}
                             placeholder={t('transactions:form.invest.namePlaceholder', 'e.g. 富邦台灣50')}
-                            className="w-full bg-transparent border border-gray-300 dark:border-gray-600 rounded-lg px-3 py-2 text-sm text-gray-900 dark:text-white placeholder-gray-400 dark:placeholder-gray-500 focus-visible:ring-2 focus-visible:ring-violet-500 focus-visible:border-violet-500"
+                            className="w-full bg-transparent border border-gray-300 dark:border-gray-600 rounded-lg px-3 py-2.5 sm:py-2 text-base sm:text-sm text-gray-900 dark:text-white placeholder-gray-400 dark:placeholder-gray-500 focus-visible:ring-2 focus-visible:ring-violet-500 focus-visible:border-violet-500"
                           />
                         </div>
                       </div>
@@ -487,7 +488,7 @@ export default function AddTransactionPage() {
                             onChange={(e) => setInvestQty(e.target.value)}
                             placeholder={t('transactions:form.invest.quantityPlaceholder', 'e.g. 100')}
                             className={cn(
-                              'w-full bg-transparent border rounded-lg px-3 py-2 text-sm font-semibold text-gray-900 dark:text-white placeholder-gray-400 dark:placeholder-gray-500 focus-visible:ring-2 focus-visible:ring-violet-500 focus-visible:border-violet-500',
+                              'w-full bg-transparent border rounded-lg px-3 py-2.5 sm:py-2 text-base sm:text-sm font-semibold text-gray-900 dark:text-white placeholder-gray-400 dark:placeholder-gray-500 focus-visible:ring-2 focus-visible:ring-violet-500 focus-visible:border-violet-500',
                               errors.investQty ? 'border-error-400' : 'border-gray-300 dark:border-gray-600'
                             )}
                           />
@@ -502,7 +503,7 @@ export default function AddTransactionPage() {
                               aria-label={t('transactions:form.currency', 'Currency')}
                               value={investCurrency}
                               onChange={(e) => { hasUserSetInvestCurrencyRef.current = true; setInvestCurrency(e.target.value); }}
-                              className="bg-transparent border border-gray-300 dark:border-gray-600 rounded-lg px-2 py-2 text-xs font-semibold text-gray-700 dark:text-gray-300 focus-visible:ring-2 focus-visible:ring-violet-500"
+                              className="bg-transparent border border-gray-300 dark:border-gray-600 rounded-lg px-2 py-2.5 sm:py-2 text-base sm:text-xs font-semibold text-gray-700 dark:text-gray-300 focus-visible:ring-2 focus-visible:ring-violet-500"
                             >
                               {['TWD', 'USD', 'HKD', 'JPY', 'EUR', 'SGD'].map(c => (
                                 <option key={c} value={c}>{c}</option>
@@ -521,7 +522,7 @@ export default function AddTransactionPage() {
                               onChange={(e) => setInvestPrice(e.target.value)}
                               placeholder="0.00"
                               className={cn(
-                                'flex-1 bg-transparent border rounded-lg px-3 py-2 text-sm font-semibold text-gray-900 dark:text-white placeholder-gray-400 focus-visible:ring-2 focus-visible:ring-violet-500 focus-visible:border-violet-500',
+                                'flex-1 bg-transparent border rounded-lg px-3 py-2.5 sm:py-2 text-base sm:text-sm font-semibold text-gray-900 dark:text-white placeholder-gray-400 focus-visible:ring-2 focus-visible:ring-violet-500 focus-visible:border-violet-500',
                                 errors.investPrice ? 'border-error-400' : 'border-gray-300 dark:border-gray-600'
                               )}
                             />
@@ -531,7 +532,7 @@ export default function AddTransactionPage() {
                       </div>
 
                       {/* Auto-calculated total + Date */}
-                      <div className="flex flex-col sm:flex-row gap-3 items-end">
+                      <div className="flex flex-col sm:flex-row gap-3 sm:items-end">
                         <div className="flex-1">
                           <div className="text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">{t('transactions:form.invest.totalCost', 'Total Cost')}</div>
                           <div className="flex items-center gap-2 border-2 border-violet-300 dark:border-violet-700 bg-violet-50 dark:bg-violet-900/20 rounded-xl px-4 py-3">
@@ -550,7 +551,7 @@ export default function AddTransactionPage() {
                             type="date"
                             value={formData.date}
                             onChange={(e) => handleInputChange('date', e.target.value)}
-                            className="w-full bg-transparent border border-gray-300 dark:border-gray-600 rounded-lg px-2 py-2 text-sm text-gray-900 dark:text-white focus-visible:ring-2 focus-visible:ring-violet-500"
+                            className="w-full bg-transparent border border-gray-300 dark:border-gray-600 rounded-lg px-2 py-2.5 sm:py-2 text-base sm:text-sm text-gray-900 dark:text-white focus-visible:ring-2 focus-visible:ring-violet-500"
                           />
                         </div>
                       </div>
@@ -624,7 +625,7 @@ export default function AddTransactionPage() {
                                 onChange={(e) => setInvestSellQty(e.target.value)}
                                 placeholder={t('transactions:form.invest.units', 'units')}
                                 className={cn(
-                                  'w-full bg-transparent border rounded-lg px-3 py-2 text-sm font-semibold text-gray-900 dark:text-white placeholder-gray-400 focus-visible:ring-2 focus-visible:ring-emerald-500 focus-visible:border-emerald-500',
+                                  'w-full bg-transparent border rounded-lg px-3 py-2.5 sm:py-2 text-base sm:text-sm font-semibold text-gray-900 dark:text-white placeholder-gray-400 focus-visible:ring-2 focus-visible:ring-emerald-500 focus-visible:border-emerald-500',
                                   errors.investSellQty ? 'border-error-400' : 'border-gray-300 dark:border-gray-600'
                                 )}
                               />
@@ -650,7 +651,7 @@ export default function AddTransactionPage() {
                                   value={investPrice}
                                   onChange={(e) => setInvestPrice(e.target.value)}
                                   placeholder={t('transactions:form.invest.marketPricePlaceholder', 'market price')}
-                                  className="flex-1 bg-transparent border border-gray-300 dark:border-gray-600 rounded-lg px-3 py-2 text-sm font-semibold text-gray-900 dark:text-white placeholder-gray-400 focus-visible:ring-2 focus-visible:ring-emerald-500 focus-visible:border-emerald-500"
+                                  className="flex-1 bg-transparent border border-gray-300 dark:border-gray-600 rounded-lg px-3 py-2.5 sm:py-2 text-base sm:text-sm font-semibold text-gray-900 dark:text-white placeholder-gray-400 focus-visible:ring-2 focus-visible:ring-emerald-500 focus-visible:border-emerald-500"
                                 />
                               </div>
                               <p className="text-xs text-gray-500 dark:text-gray-500 mt-1">{t('transactions:form.invest.leaveBlankMarket', 'Leave blank to use the current market price.')}</p>
@@ -665,7 +666,7 @@ export default function AddTransactionPage() {
                               type="date"
                               value={formData.date}
                               onChange={(e) => handleInputChange('date', e.target.value)}
-                              className="w-full bg-transparent border border-gray-300 dark:border-gray-600 rounded-lg px-2 py-2 text-sm text-gray-900 dark:text-white focus-visible:ring-2 focus-visible:ring-emerald-500"
+                              className="w-full bg-transparent border border-gray-300 dark:border-gray-600 rounded-lg px-2 py-2.5 sm:py-2 text-base sm:text-sm text-gray-900 dark:text-white focus-visible:ring-2 focus-visible:ring-emerald-500"
                             />
                           </div>
                         </>
@@ -688,13 +689,13 @@ export default function AddTransactionPage() {
                   onChange={handleInputChange}
                   activeLoans={activeLoans}
                   showInvestmentHint
+                  autoFocusAmount
                 />
                 <TagsField idPrefix="tx" tags={formData.tags} onChange={(tags) => setFormData(prev => ({ ...prev, tags }))} />
               </>
             )}
 
-            {/* Submit */}
-            <div className="pt-2">
+            <StickySubmitBar>
               <Button
                 type="submit"
                 variant="primary"
@@ -705,7 +706,7 @@ export default function AddTransactionPage() {
               >
                 {isSubmitting ? 'Saving…' : submitLabel}
               </Button>
-            </div>
+            </StickySubmitBar>
           </form>
         </Card>
       </div>
