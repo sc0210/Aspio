@@ -1001,6 +1001,9 @@ def _make_loan_expense(loan_id=None, amount="100.00", principal=None):
     t.amount = Decimal(amount)
     t.principal_portion = Decimal(principal) if principal is not None else None
     t.category_id = str(uuid4())
+    # A loan expense, not a transfer leg: a bare MagicMock attribute is truthy and
+    # would send delete_transaction looking for the transfer's other leg.
+    t.transfer_group_id = None
     return t
 
 
