@@ -26,6 +26,12 @@ COPY . .
 ARG NEXT_PUBLIC_API_URL=""
 ENV NEXT_PUBLIC_API_URL=${NEXT_PUBLIC_API_URL}
 
+# Optional Cloudflare Web Analytics token (docs/SELF_HOSTING.md, "Analytics").
+# Empty (the default) = no analytics and no consent banner. Inlined at build time
+# like the URL above, so changing it means rebuilding the image.
+ARG NEXT_PUBLIC_CF_ANALYTICS_TOKEN=""
+ENV NEXT_PUBLIC_CF_ANALYTICS_TOKEN=${NEXT_PUBLIC_CF_ANALYTICS_TOKEN}
+
 RUN npm run build
 
 # sharp (next/image optimisation) is the one runtime dependency with a native binary,

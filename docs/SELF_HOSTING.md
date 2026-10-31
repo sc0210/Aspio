@@ -145,6 +145,23 @@ and the previous checkout. What it ran is recorded in `.aspiro-state/`.
 To update on a schedule, run `scripts/aspiro backup && scripts/aspiro update` from a systemd
 timer or cron as a user in the `docker` group.
 
+### Analytics (optional)
+
+Aspiro can count page views and page-load speed with Cloudflare Web Analytics: free, no
+cookies, no fingerprinting. It is off until you set a token. Even then, each visitor has to
+accept it in the consent banner, and can turn it off later in Settings → Privacy & Display.
+Browsers with Do Not Track on send nothing, and amounts or account details are never sent.
+
+1. In the Cloudflare dashboard, open **Analytics & Logs → Web Analytics → Add a site**, enter
+   your hostname and choose the manual **JS snippet**. Leave automatic setup off: it makes
+   Cloudflare inject the beacon at its edge for every visitor, before anyone has agreed.
+2. Copy the `token` value from the snippet (`data-cf-beacon='{"token": "…"}'`).
+3. Add it to `.env`: `NEXT_PUBLIC_CF_ANALYTICS_TOKEN=<token>`
+4. Run `scripts/aspiro update`. The token is built into the frontend image, so a restart alone
+   does not pick it up.
+
+Clear the variable and update again to switch analytics off; the banner disappears with it.
+
 ## 4b. Run it without Docker
 
 Mirror what the images do. Create a Postgres database and user, then:

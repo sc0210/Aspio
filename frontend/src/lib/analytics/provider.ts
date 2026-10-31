@@ -12,6 +12,12 @@ interface AnalyticsEvent {
     timestamp?: Date;
 }
 
+/** Allowed in the CSP's script-src (next.config.js); change both together. */
+export const CLOUDFLARE_BEACON_SRC = 'https://static.cloudflareinsights.com/beacon.min.js';
+
+/** Routes whose URLs can carry tokens; the beacon is not started on them. */
+const SENSITIVE_PATH_PREFIXES = ['/link-line', '/liff', '/auth'];
+
 class AnalyticsProvider {
     private isInitialized = false;
     private eventQueue: AnalyticsEvent[] = [];
@@ -31,6 +37,11 @@ class AnalyticsProvider {
         }
 
         try {
+            // Initialize Cloudflare Web Analytics
+            if (defaultAnalyticsConfig.providers.cloudflare?.enabled) {
+                this.initializeCloudflare();
+            }
+
             // Initialize Plausible
             if (defaultAnalyticsConfig.providers.plausible?.enabled) {
                 await this.initializePlausible();
@@ -110,6 +121,30 @@ class AnalyticsProvider {
             userId: hashedUserId,
             ...traits,
         });
+    }
+
+    /**
+     * Load the Cloudflare Web Analytics beacon. It counts page views (with `spa`,
+     * in-app navigations too) and Core Web Vitals by itself, and takes no custom
+     * events, so `track` sends nothing to it. Not awaited: the beacon need not
+     * block the app. Once loaded it cannot be unloaded; withdrawing consent in
+     * Settings reloads the page to stop it.
+     */
+    private initializeCloudflare() {
+        const { token } = defaultAnalyticsConfig.providers.cloudflare!;
+        if (typeof document === 'undefined' || document.querySelector('script[data-cf-beacon]')) {
+            return;
+        }
+        // Pages reached by links that carry secrets (/link-line?token=…, sign-in and
+        // reset links): the beacon reports the page address, so it never starts there.
+        if (SENSITIVE_PATH_PREFIXES.some((prefix) => window.location.pathname.startsWith(prefix))) {
+            return;
+        }
+        const script = document.createElement('script');
+        script.defer = true;
+        script.src = CLOUDFLARE_BEACON_SRC;
+        script.dataset.cfBeacon = JSON.stringify({ token, spa: true });
+        document.head.appendChild(script);
     }
 
     /**

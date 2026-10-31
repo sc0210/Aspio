@@ -912,7 +912,9 @@
         "history": "最近 5 筆群組支出",
         "undo": "刪除你的上一筆支出"
       }
-    }
+    },
+    "analytics": "使用分析",
+    "analyticsDesc": "統計頁面瀏覽與載入速度以改進 Aspiro，絕不包含你的財務資料。"
   },
   "status": {
     "active": "啟用",
@@ -1078,5 +1080,22 @@
     "emptyTitle": "這個月沒有任何記錄",
     "emptyBody": "這個月沒有收入或支出記錄，還沒有東西可以回顧。",
     "addTransaction": "新增一筆交易"
+  },
+  "analyticsConsent": {
+    "title": "隱私與使用分析",
+    "body": "允許 Aspiro 統計哪些頁面被使用、載入速度如何嗎？這能幫助我們改進 App，且絕不包含你的財務資料。",
+    "learnMore": "了解更多",
+    "collectedTitle": "會收集：",
+    "collectedPages": "瀏覽的頁面與來源網站",
+    "collectedDevice": "瀏覽器、裝置類型與國家",
+    "collectedSpeed": "頁面載入速度",
+    "notCollectedTitle": "絕不收集：",
+    "notAmounts": "金額、餘額或交易紀錄",
+    "notIdentity": "你的姓名、電子郵件或帳號資料",
+    "cloudflare": "使用分析由 Cloudflare Web Analytics 提供，不使用 Cookie，也不會辨識個別訪客。",
+    "dnt": "若你的瀏覽器開啟「不要追蹤」，就不會傳送任何資料。",
+    "changeLater": "你隨時可以在「設定 → 隱私與顯示」中變更。",
+    "accept": "同意分析",
+    "decline": "拒絕"
   }
 }

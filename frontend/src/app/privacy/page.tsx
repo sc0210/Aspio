@@ -37,12 +37,12 @@ export default function PrivacyPolicyPage() {
               into the app.
             </li>
             <li>
-              <strong>Usage data:</strong> Pages visited, features used, and interactions within the app, collected to
-              improve our service.
+              <strong>Usage data:</strong> Only if you allow analytics: pages visited, the site you came from, and how
+              fast pages load, collected to improve the app (see section 9).
             </li>
             <li>
-              <strong>Device information:</strong> Browser type, operating system, and IP address for security and
-              analytics purposes.
+              <strong>Device information:</strong> Browser type, operating system, and IP address, used for security
+              (for example, limiting repeated sign-in attempts).
             </li>
           </ul>
         </section>
@@ -126,8 +126,14 @@ export default function PrivacyPolicyPage() {
         <section>
           <h2 className="text-xl font-semibold text-gray-900 dark:text-gray-100 mb-3">9. Cookies and Analytics</h2>
           <p>
-            We use cookies and similar tracking technologies to maintain your session and understand how the app is used.
-            You can manage cookie preferences through the consent banner displayed when you first visit the app.
+            Aspiro uses a cookie to keep you signed in. It sets no advertising or tracking cookies.
+          </p>
+          <p className="mt-3">
+            Usage analytics are optional and off until you accept them in the banner shown on your first visit. You can
+            change your choice at any time in Settings → Privacy &amp; Display. Each Aspiro installation decides whether
+            to offer analytics at all; when it does, it uses Cloudflare Web Analytics, which sets no cookies and does not
+            fingerprint visitors. It records the pages you visit, the site you came from, your browser, device type and
+            country, and how fast pages load. It never receives your financial data, name, email or account details.
           </p>
         </section>
 

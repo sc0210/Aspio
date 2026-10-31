@@ -204,6 +204,8 @@ services:
       args:
         # Empty = same-origin /api/v1 (see the header).
         - NEXT_PUBLIC_API_URL=${NEXT_PUBLIC_API_URL:-}
+        # Optional; empty = no analytics (docs/SELF_HOSTING.md, "Analytics").
+        - NEXT_PUBLIC_CF_ANALYTICS_TOKEN=${NEXT_PUBLIC_CF_ANALYTICS_TOKEN:-}
         - GIT_SHA=${GIT_SHA:-unknown}
     container_name: aspiro-frontend
     environment:
