@@ -71,7 +71,9 @@ services:
       - LINE_CHANNEL_ACCESS_TOKEN=${LINE_CHANNEL_ACCESS_TOKEN:-}
       - FINLAB_API_TOKEN=${FINLAB_API_TOKEN:-}
       - ADMIN_EMAILS=${ADMIN_EMAILS:-}
-      - DEMO_ACCOUNT_ENABLED=${DEMO_ACCOUNT_ENABLED:-false}
+      # Same default as the dev stack whose database this shares: off here, this backend
+      # deactivated demo@aspiro.dev at every start and the dev stack's sign-in broke.
+      - DEMO_ACCOUNT_ENABLED=${DEMO_ACCOUNT_ENABLED:-true}
       - FRONTEND_URL=http://localhost:8080
       # The dev quickchart container is on the dev network, out of reach.
       - QUICKCHART_URL=https://quickchart.io/chart
