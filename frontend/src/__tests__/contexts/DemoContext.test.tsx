@@ -74,6 +74,20 @@ describe('DemoContext — isDemoMode state', () => {
     expect(seen[0]).toBe(true);
   });
 
+  it('a signed-in user with a stale demo cookie never reads as demo, even in the first effect', () => {
+    // Guards the "logged in but seeing demo data" bug: the cookie only counts when signed out.
+    document.cookie = 'demo-mode=true';
+    const seen: boolean[] = [];
+    function Page() {
+      const { isDemoMode } = useDemo();
+      React.useEffect(() => { seen.push(isDemoMode); }, []); // eslint-disable-line react-hooks/exhaustive-deps
+      return null;
+    }
+    useSession.mockReturnValue({ data: { user: { email: 'a@b.c' } }, status: 'authenticated' });
+    render(<DemoProvider><Page /></DemoProvider>);
+    expect(seen[0]).toBe(false);
+  });
+
   it('ignores the demo cookie while the session is still loading', () => {
     // The server renders with status 'loading'; reading the cookie then would break hydration.
     document.cookie = 'demo-mode=true';
