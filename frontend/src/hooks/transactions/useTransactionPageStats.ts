@@ -8,7 +8,7 @@ import {
   TransactionPageStats,
   PageStatsCategoryItem,
 } from '@/services/transactionService';
-import { toTWD } from '@/utils/formatters';
+import { isDayInRange, toTWD } from '@/utils/formatters';
 import type { Transaction } from '@/shared/types';
 import type { TransactionFilters } from './useTransactionFilters';
 import { isWalletTransfer } from '@/utils/expenseGroups';
@@ -118,10 +118,7 @@ function filterDemoTransactions(
     if (filters.type === 'transfer') {
       if (!isWalletTransfer(t)) return false;
     } else if (filters.type !== 'all' && t.type !== filters.type) return false;
-    if (dateRange) {
-      const d = typeof t.date === 'string' ? new Date(t.date) : t.date;
-      if (d < dateRange.start || d > dateRange.end) return false;
-    }
+    if (dateRange && !isDayInRange(t.date, dateRange)) return false;
     if (searchQuery && !matchesSearch(t, searchQuery)) return false;
     return true;
   });

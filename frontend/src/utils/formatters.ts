@@ -70,6 +70,17 @@ export function localDateString(date: Date = new Date()): string {
   return `${y}-${m}-${d}`;
 }
 
+// True when a row's date falls on a calendar day from range.start to range.end,
+// both inclusive, the way the server compares date_from/date_to. A bare
+// "YYYY-MM-DD" is that day as written: new Date() would read it as UTC midnight,
+// which in Taipei is 08:00, so a row dated today sat "after now" until morning.
+export function isDayInRange(date: string | Date, range: { start: Date; end: Date }): boolean {
+  const day = typeof date === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(date)
+    ? date
+    : localDateString(typeof date === 'string' ? new Date(date) : date);
+  return day >= localDateString(range.start) && day <= localDateString(range.end);
+}
+
 // Currency formatting with Taiwan-first approach
 export function formatCurrency(amount: number, currency: string = DEFAULT_CURRENCY, options: {
   showSymbol?: boolean;

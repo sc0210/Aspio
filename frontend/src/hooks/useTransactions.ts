@@ -12,6 +12,7 @@ import { QUERY_KEYS, invalidateDashboardData } from './useDataSynchronization';
 import toast from 'react-hot-toast';
 import { log } from '@/utils/logger';
 import { isWalletTransfer } from '@/utils/expenseGroups';
+import { isDayInRange } from '@/utils/formatters';
 
 interface UseTransactionsOptions extends PaginationParams {
   category?: string;
@@ -112,10 +113,8 @@ export function useTransactions(options: UseTransactionsOptions = {}) {
       }
 
       if (options.dateRange) {
-        filteredTransactions = filteredTransactions.filter(t => {
-          const dateValue = typeof t.date === 'string' ? new Date(t.date) : t.date;
-          return dateValue >= options.dateRange!.start && dateValue <= options.dateRange!.end;
-        });
+        const range = options.dateRange;
+        filteredTransactions = filteredTransactions.filter(t => isDayInRange(t.date, range));
       }
 
       // Demo fallback: support server-side search param as well
