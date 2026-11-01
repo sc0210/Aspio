@@ -237,22 +237,23 @@ pg_dump's closing marker as a line of its own, then into `psql` in one transacti
 `ON_ERROR_STOP`. The check matters because a pipe reports only `psql`'s status: a dump cut
 off part-way, or one whose decryption or decompression stops early, would otherwise still
 run and commit what it got. The marker is matched as a whole line near the end, because a
-row of data can hold the same words. Stop `backend` and `frontend` first. The `DROP SCHEMA`
-line empties the existing database in the same transaction, so a failure changes nothing;
-it is harmless on an empty one. The apps start again only after the database restore succeeded.
+row of data can hold the same words. The `DROP SCHEMA` line empties the existing database in
+the same transaction, so a failure changes nothing; it is harmless on an empty one.
+
+On a running stack, stop the apps first (`docker stop aspiro-backend aspiro-frontend`) and
+start them again (`docker start aspiro-backend aspiro-frontend`) once the restore succeeded.
+If the check refuses the dump, the database is as it was, so starting them again is safe.
 
 ```bash
-docker stop aspiro-backend aspiro-frontend
 dump=backups/db/aspiro_<stamp>.sql.gz
 read_dump() { gzip -t "$dump" && gunzip -c "$dump"; }
 read_dump | tail -n 5 | grep -qx -- '-- PostgreSQL database dump complete' \
   && { echo 'DROP SCHEMA public CASCADE; CREATE SCHEMA public;'; read_dump; } \
-  | docker exec -i aspiro-postgres sh -c 'psql -U "$POSTGRES_USER" -d "$POSTGRES_DB" --single-transaction -v ON_ERROR_STOP=1' \
-  && docker start aspiro-backend aspiro-frontend
+  | docker exec -i aspiro-postgres sh -c 'psql -U "$POSTGRES_USER" -d "$POSTGRES_DB" --single-transaction -v ON_ERROR_STOP=1'
 ```
 
-Then, if the backup has an uploads archive (`aspiro backup` writes one; the pre-update dump
-does not), restore it into the running backend:
+Only after that restore succeeded and the backend is running again, restore the uploads
+archive if the backup has one (`aspiro backup` writes one; the pre-update dump does not):
 
 ```bash
 gzip -t backups/db/aspiro_<stamp>.uploads.tar.gz \
@@ -281,7 +282,7 @@ starts them again. Copy the four files over, then on the new host, in this order
 1. `shasum -a 256 -c aspiro_<stamp>.sha256`
 2. `scripts/aspiro setup`, then start only the database:
    `docker compose --env-file .env -f docker-compose.pi.yml up -d postgres`
-3. Restore the SQL with the `gunzip … | psql` command above. If it stops on an error, or
+3. Restore the SQL with the `read_dump … | psql` restore command above. If it stops on an error, or
    `--check` fails, start over on an empty database. This deletes that database, so do it
    only on the **new host**, only before step 5, and only once step 1 has passed:
 
