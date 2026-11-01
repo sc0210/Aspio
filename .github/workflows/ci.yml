@@ -366,3 +366,28 @@ jobs:
       # adds info-level notes cannot turn CI red.)
       - name: shellcheck (aspiro CLI, migrate.sh)
         run: shellcheck -S warning scripts/aspiro scripts/aspiro_test.sh backend/scripts/migrate.sh
+
+  # Known vulnerabilities in what ships: backend requirements and the frontend's
+  # production dependencies. Runs on every push, not just dependency changes, since
+  # advisories land against unchanged lockfiles. Non-blocking (continue-on-error)
+  # until the current findings are triaged; then drop that line to make it a gate.
+  dependency-audit:
+    name: Dependency audit (advisory)
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    continue-on-error: true
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-python@v7
+        with:
+          python-version: "3.11"
+      - name: pip-audit (backend)
+        run: pipx run pip-audit -r backend/requirements.txt
+      - uses: actions/setup-node@v7
+        if: ${{ !cancelled() }}
+        with:
+          node-version: "22"
+      - name: npm audit (frontend, production deps)
+        if: ${{ !cancelled() }}
+        working-directory: frontend
+        run: npm audit --omit=dev --audit-level=high

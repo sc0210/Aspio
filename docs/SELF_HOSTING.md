@@ -101,6 +101,12 @@ Pass `--init` on the first install only. It is the only mode allowed to build th
 an empty database, so a lost volume or a wrong `DATABASE_URL` later fails loudly instead of
 coming up as a fresh, empty app.
 
+Caddy publishes ports 80 and 443 on every interface unless `CADDY_BIND` says otherwise, which
+the LAN-HTTPS setup (the custom Caddy build serving your network directly) needs. A Cloudflare
+Tunnel or Tailscale host needs only loopback: keep `CADDY_BIND=127.0.0.1` from
+`production.env.sample`, so the plain-HTTP origin is not reachable from the LAN. `aspiro update`
+warns when the `tunnel` or `tailscale` profile is on and `CADDY_BIND` is unset.
+
 The first build compiles Caddy from source and the frontend from scratch: a few minutes on
 x86, much longer on a Pi. Then `https://aspiro.example.com/` should load and
 `https://aspiro.example.com/api/v1/users/me` should answer `401`.
@@ -136,14 +142,22 @@ scripts/aspiro update --ref v1.2.0    # a specific tag, branch or commit (also a
 1. fetches and fast-forwards the branch (or checks out `--ref`);
 2. tags the running images `aspiro-<svc>:previous`;
 3. builds `backend` and `frontend` here;
-4. runs the migrations (`--init` only when you pass it);
-5. restarts the stack and waits until `/health` is healthy and the schema is at head.
+4. dumps the database to `backups/pre-update/` (not with `--init`), starting `postgres` first
+   if it is down, and records the dump's path in `.aspiro-state/backup`. This dump is the
+   database only, stays on this machine, and keeps the newest 3, apart from `aspiro backup`'s
+   own rotation;
+5. runs the migrations (`--init` only when you pass it);
+6. restarts the stack and waits until `/health` is healthy and the schema is at head;
+7. prunes this project's dangling images and trims the build cache to 3 GB.
 
-If the build, the migration or the health check fails, it puts back both the previous images
-and the previous checkout. What it ran is recorded in `.aspiro-state/`.
+If the backup, the build, the migration or the health check fails, it puts back both the
+previous images and the previous checkout. Migrations are not reversed, so a failure after
+step 5 also prints the exact commands that restore the step 4 dump. What it ran is recorded
+in `.aspiro-state/`.
 
-To update on a schedule, run `scripts/aspiro backup && scripts/aspiro update` from a systemd
-timer or cron as a user in the `docker` group.
+To update on a schedule, run `scripts/aspiro update` from a systemd timer or cron as a user
+in the `docker` group. The pre-update dump is not a backup schedule: keep running
+`aspiro backup` for that, and for the receipt attachments and offsite copy it alone makes.
 
 ### Analytics (optional)
 
@@ -201,23 +215,49 @@ scripts/aspiro backup --keep 14
 
 Each run writes `backups/db/aspiro_<stamp>.sql.gz` (a `pg_dump`) and
 `aspiro_<stamp>.uploads.tar.gz` (receipt attachments; the database only points at them, so
-a restore needs both), and keeps the newest N of each.
+a restore needs both), and keeps the newest N of each. Both are mode 600 in a mode 700
+directory.
 
 | Variable | Effect |
 |---|---|
 | `ASPIRO_BACKUP_DIR` | Where backups go (default `backups/db`) |
 | `ASPIRO_BACKUP_AGE_RECIPIENT` / `ASPIRO_BACKUP_GPG_RECIPIENT` | Encrypt both files; on failure nothing is uploaded and the plaintext is kept at mode 600 |
-| `ASPIRO_BACKUP_S3_URI` | Upload to S3-compatible storage, e.g. `s3://my-bucket/aspiro` |
+| `ASPIRO_BACKUP_S3_URI` | Upload to S3-compatible storage, e.g. `s3://my-bucket/aspiro`. Refused unless a recipient above is set |
 | `ASPIRO_BACKUP_S3_ENDPOINT` | For Cloudflare R2: `https://<account-id>.r2.cloudflarestorage.com` |
 | `AWS_ACCESS_KEY_ID` / `AWS_SECRET_ACCESS_KEY` | Credentials for the upload |
 
-Restore (decrypt first if needed):
+`scripts/backup_db.sh` is the cron-able dump for a dev or Pi stack that is not managed by
+`aspiro`. It writes the same `backups/db/aspiro_<stamp>.sql.gz` (the database only, kept
+`KEEP_DAYS`), and sends an offsite copy (`RCLONE_REMOTE` or `BACKUP_SCP_DEST`) only when
+`BACKUP_AGE_RECIPIENT` is set, as `<dump>.age`. Plaintext dumps uploaded before encryption
+was required stay in the bucket or on the remote host until you delete them.
+
+Restore by reading the dump twice: once to check it ends with pg_dump's closing marker,
+then into `psql` in one transaction with `ON_ERROR_STOP`. The check matters because a pipe
+reports only `psql`'s status: a dump cut off part-way, or one whose decryption or
+decompression stops early, would otherwise still run and commit what it got. Stop `backend` and `frontend` first. The
+`DROP SCHEMA` line empties the existing database in the same transaction, so a failure
+changes nothing; it is harmless on an empty one.
 
 ```bash
-gunzip -c backups/db/aspiro_<stamp>.sql.gz \
-  | docker exec -i aspiro-postgres psql -U aspiro_user -d aspiro_db -v ON_ERROR_STOP=1
+dump=backups/db/aspiro_<stamp>.sql.gz
+read_dump() { gunzip -c "$dump"; }
+read_dump | grep -q 'PostgreSQL database dump complete' \
+  && { echo 'DROP SCHEMA public CASCADE; CREATE SCHEMA public;'; read_dump; } \
+  | docker exec -i aspiro-postgres sh -c 'psql -U "$POSTGRES_USER" -d "$POSTGRES_DB" --single-transaction -v ON_ERROR_STOP=1'
 docker exec -i aspiro-backend tar -C /app/uploads -xzf - < backups/db/aspiro_<stamp>.uploads.tar.gz
 ```
+
+If the first line of the pipe fails, nothing ran: the dump is incomplete. An encrypted copy
+(from `aspiro backup` with a recipient, or `backup_db.sh`'s offsite `.age`) restores the same
+way with `read_dump` decrypting in the pipe:
+
+```bash
+read_dump() { age -d -i <your age identity file> "$dump" | gunzip -c; }   # .age
+read_dump() { gpg -d "$dump" | gunzip -c; }                               # .gpg
+```
+
+`read_dump` runs twice, so a passphrase-protected key asks twice.
 
 Test a restore once, before you need it.
 
@@ -252,8 +292,15 @@ starts them again. Copy the four files over, then on the new host, in this order
 ## Rollback
 
 `scripts/aspiro update --ref <earlier tag or commit>`. Migrations are **not** reversed: an
-older backend usually tolerates a newer schema, but not always, so back up before every
-update and restore that backup when rolling back across a schema change.
+older backend usually tolerates a newer schema, but not always. Every update backs up first
+(`.aspiro-state/backup` names the dump), so restore that dump, over the existing database
+as shown under Backups, when rolling back across a schema change. The rollback update takes
+its own dump of the migrated database, so right after it `.aspiro-state/backup.prev` names the
+one taken before the bad update: restore that one before running any other update, which
+rotates the pointer again (the file itself stays in `backups/pre-update/`, newest three kept).
+
+Caddy caps request bodies at 11 MiB, the backend's `MAX_FILE_SIZE_MB` (10) plus 1 MiB. Raise
+`max_size` in both `caddy/Caddyfile` and `caddy/Caddyfile.http` if you raise `MAX_FILE_SIZE_MB`.
 
 ## Security checklist
 
@@ -263,7 +310,8 @@ update and restore that backup when rolling back across a schema change.
 - [ ] If a secret leaks: `aspiro setup --force --rotate-secrets`; rotate the tunnel token in
       Cloudflare, or remove the machine in the Tailscale admin console and set a new auth key;
       changing `POSTGRES_PASSWORD` also needs an `ALTER USER` in Postgres.
-- [ ] Postgres listens on loopback only, and no router port is forwarded.
+- [ ] Postgres listens on loopback only, Caddy too on a tunnel or Tailscale host
+      (`CADDY_BIND=127.0.0.1`), and no router port is forwarded.
 - [ ] `aspiro admin list` shows only the admins you expect, and a public instance leaves
       `ADMIN_EMAILS` unset.
 - [ ] Public instances (Cloudflare, or Tailscale with Funnel): put **Cloudflare Access** in

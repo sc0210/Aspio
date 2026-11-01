@@ -10,7 +10,9 @@
 #                 pulls the checkout (or checks out REF: a tag, branch or commit),
 #                 builds the images here, migrates, restarts, and rolls back on failure;
 #                 --init lets migrations build an empty database: a first install
-#                 only, never inferred (a lost volume must fail, not start empty)
+#                 only, never inferred (a lost volume must fail, not start empty).
+#                 Dumps the database to backups/pre-update/ before migrating
+#                 (not with --init; keeps the newest 3, never uploaded)
 #   aspiro backup [--dir DIR] [--keep N]
 #   aspiro admin grant EMAIL [ROLE]   make a registered account an admin (default
 #                 super_admin; approves it if pending)   |   aspiro admin list
@@ -42,7 +44,7 @@ warn() { printf 'WARNING: %s\n' "$*" >&2; }
 die()  { printf 'ERROR: %s\n' "$*" >&2; exit 1; }
 
 usage() {
-  sed -n '2,17p' "${BASH_SOURCE[0]}" | sed 's/^# \{0,1\}//'
+  sed -n '2,19p' "${BASH_SOURCE[0]}" | sed 's/^# \{0,1\}//'
 }
 
 # --- pure helpers (unit-tested) ------------------------------------------------------
@@ -324,6 +326,95 @@ aspiro_restore_checkout() {  # aspiro_restore_checkout <branch or ''> <sha>
   fi
 }
 
+# Every dump goes here unless --dir or ASPIRO_BACKUP_DIR says otherwise.
+aspiro_backup_dir() { printf '%s' "${ASPIRO_BACKUP_DIR:-$ASPIRO_DIR/backups/db}"; }
+
+# How to put the pre-update dump back over a database the update already migrated.
+# The dump has no DROP statements, so the schema is emptied first, in the same
+# transaction: a dump that fails part-way leaves the migrated database as it was.
+aspiro_print_restore() {  # aspiro_print_restore <dump file>
+  local file=$1 read_dump dc
+  case "$file" in
+    *.age) read_dump="age -d -i <your age identity file> '$file' | gunzip -c" ;;
+    *.gpg) read_dump="gpg -d '$file' | gunzip -c" ;;
+    *)     read_dump="gunzip -c '$file'" ;;
+  esac
+  dc="docker compose --project-directory '$ASPIRO_DIR' --env-file '$ASPIRO_DIR/.env' -f '$ASPIRO_DIR/$ASPIRO_COMPOSE_FILE'"
+  warn "migrations already applied stay applied. To put back the database as it was before this update, run:"
+  {
+    printf '    %s stop backend frontend\n' "$dc"
+    # The pipe's status is psql's alone: a dump that is cut off, or fails to
+    # decompress or decrypt, would still drop the schema and commit. Read it once
+    # for pg_dump's closing marker first, and restore only a complete dump.
+    # shellcheck disable=SC2016  # the $POSTGRES_* are for the container's shell
+    printf '    %s | grep -q %s \\\n      && { echo %s; %s; } | %s exec -T postgres sh -c %s\n' \
+      "$read_dump" "'PostgreSQL database dump complete'" \
+      "'DROP SCHEMA public CASCADE; CREATE SCHEMA public;'" "$read_dump" "$dc" \
+      \''psql -U "$POSTGRES_USER" -d "$POSTGRES_DB" --single-transaction -v ON_ERROR_STOP=1'\'
+    printf '    %s start backend frontend\n' "$dc"
+  } >&2
+}
+
+# The dump `update` takes before migrating: the database only, local only, in its own
+# directory with its own rotation, so updates never push a scheduled `aspiro backup`
+# out of its keep-N window and never send anything offsite. It starts postgres when it
+# is not running (never recreating it), so an update can still deploy a fix to a
+# stack that is down. Run in a subshell: its umask and its `die` stay its own. That
+# subshell is an `if` condition, where set -e does not apply, so every step checks.
+aspiro_preupdate_backup() {  # aspiro_preupdate_backup <state dir>  → path in <state>/backup
+  local dir="$ASPIRO_DIR/backups/pre-update" keep=3 file old
+  umask 077
+  mkdir -p "$dir" && chmod 700 "$dir" || die "cannot create $dir"
+  compose up -d --no-recreate --wait --wait-timeout "$ASPIRO_HEALTH_TIMEOUT" postgres \
+    || die "postgres did not start and become healthy"
+  file="$dir/aspiro_$(date +%Y%m%d_%H%M%S).sql.gz"
+  log "dumping the database to $file"
+  # shellcheck disable=SC2016  # expanded inside the container, where they are set
+  compose exec -T postgres sh -c \
+    'pg_dump -U "$POSTGRES_USER" -d "$POSTGRES_DB" --no-owner --no-privileges' \
+    | gzip > "$file.partial" || { rm -f "$file.partial"; die "pg_dump failed"; }
+  gzip -t "$file.partial" || { rm -f "$file.partial"; die "dump is not a valid gzip"; }
+  [ "$(wc -c < "$file.partial")" -gt 100 ] || { rm -f "$file.partial"; die "dump is suspiciously small"; }
+  mv "$file.partial" "$file" && chmod 600 "$file" || die "cannot move the dump into place"
+  printf '%s\n' "$file" > "$1/backup" || die "cannot record the dump in $1/backup"
+  # shellcheck disable=SC2012  # our own fixed-format names
+  ls -1t "$dir"/aspiro_*.sql.gz 2>/dev/null | tail -n +"$((keep + 1))" | while IFS= read -r old; do
+    rm -f -- "$old"
+  done
+  log "pre-update dump ok: $file"
+}
+
+# A tunnel or Tailscale host serves only through that container; with CADDY_BIND unset,
+# Caddy's plain-HTTP origin is published on every interface, so the LAN reaches it too.
+aspiro_warn_caddy_bind() {
+  [ -z "${CADDY_BIND:-}" ] && [ -z "$(aspiro_env_get "$ASPIRO_DIR/.env" CADDY_BIND)" ] || return 0
+  local tunnel=0
+  case ",${COMPOSE_PROFILES:-}," in *,tunnel,*|*,tailscale,*) tunnel=1 ;; esac
+  # A stack started with --profile instead of COMPOSE_PROFILES still has its credentials.
+  [ -z "$(aspiro_env_get "$ASPIRO_DIR/.env" CF_TUNNEL_TOKEN)$(aspiro_env_get "$ASPIRO_DIR/.env" TS_AUTHKEY)" ] || tunnel=1
+  [ "$tunnel" -eq 0 ] || \
+    warn "CADDY_BIND is not set, so Caddy is published on every interface (the LAN too). Behind a tunnel or Tailscale only, add CADDY_BIND=127.0.0.1 to .env"
+}
+
+# Old images left dangling by this project's builds, and build cache over 3 GB. Only
+# images compose labelled as this project: other stacks on the host are not ours to
+# prune. Never fails the update that just worked.
+aspiro_prune() {
+  local project
+  project=$(docker image inspect --format '{{index .Config.Labels "com.docker.compose.project"}}' \
+    "aspiro-${ASPIRO_APPS[0]}:latest" 2>/dev/null || true)
+  if [ -n "$project" ]; then
+    docker image prune -f --filter "label=com.docker.compose.project=$project" >/dev/null \
+      || warn "docker image prune failed"
+  else
+    warn "aspiro-${ASPIRO_APPS[0]}:latest has no compose project label; skipped pruning old images"
+  fi
+  # --keep-storage is deprecated in newer buildx in favour of --max-used-space.
+  local cap=--keep-storage
+  docker builder prune --help 2>/dev/null | grep -q -- --max-used-space && cap=--max-used-space
+  docker builder prune -f "$cap" 3GB >/dev/null || warn "docker builder prune failed"
+}
+
 cmd_update() {
   local ref="" init=0
   while [ $# -gt 0 ]; do
@@ -335,6 +426,7 @@ cmd_update() {
     esac
   done
   aspiro_require_env
+  aspiro_warn_caddy_bind
 
   # Checks that change nothing, so a refusal leaves the install as it was.
   command -v git >/dev/null 2>&1 || die "git is not installed"
@@ -392,7 +484,23 @@ cmd_update() {
     die "build failed — checkout and images put back, containers were not recreated"
   fi
 
-  # 4. Migrate with the NEW backend image, before it serves.
+  # 4. Dump the database the migration is about to change. --init has nothing to
+  # back up yet.
+  local backup=""
+  # A rollback is itself an update, and its dump is of the already-migrated
+  # database: keep the pointer to the dump taken before the bad update.
+  [ ! -f "$state/backup" ] || mv -f "$state/backup" "$state/backup.prev"
+  if [ "$init" -eq 0 ]; then
+    log "backing up the database before migrating"
+    if ! (aspiro_preupdate_backup "$state"); then
+      aspiro_restore_previous "$state" || true
+      aspiro_restore_checkout "$branch" "$prev"
+      die "backup failed — checkout and images put back, nothing migrated or recreated"
+    fi
+    backup=$(cat "$state/backup")
+  fi
+
+  # 5. Migrate with the NEW backend image, before it serves.
   local migrate_cmd=()
   if [ "$init" -eq 1 ]; then
     log "running database migrations (--init: an empty database is initialised)"
@@ -403,14 +511,21 @@ cmd_update() {
   if ! compose --profile migrate run --rm migrate ${migrate_cmd[@]+"${migrate_cmd[@]}"}; then
     aspiro_restore_previous "$state" || true
     aspiro_restore_checkout "$branch" "$prev"
-    die "migration failed — checkout and images put back, containers were not recreated"
+    warn "migration failed — checkout and images put back, containers were not recreated"
+    # Alembic runs all pending migrations in one transaction, so usually nothing
+    # stuck; a migration outside it (autocommit) may have.
+    [ -z "$backup" ] || aspiro_print_restore "$backup"
+    exit 1
   fi
 
-  # 5. Recreate, then prove both apps answer. A failed `up` (port taken, a required
+  # 6. Recreate, then prove both apps answer. A failed `up` (port taken, a required
   # variable missing) must reach the rollback below too.
   if compose up -d --remove-orphans && aspiro_wait_healthy; then
     printf 'commit=%s\nupdated=%s\n' "$target" "$(date -u +%Y-%m-%dT%H:%M:%SZ)" > "$state/current"
     log "updated to $(aspiro_git rev-parse --short "$target")"
+    # Each update leaves the old images dangling and grows the build cache; on a
+    # small disk that ends the next build.
+    aspiro_prune
     return 0
   fi
 
@@ -420,13 +535,14 @@ cmd_update() {
   if aspiro_restore_previous "$state"; then
     # Health only, no schema check: an older backend need not recognise a newer revision.
     if compose up -d --remove-orphans && aspiro_wait_healthy --no-schema; then
-      warn "rolled back to the previous images (migrations already applied stay applied)"
+      warn "rolled back to the previous images"
     else
       warn "the previous images are not healthy either — needs attention"
     fi
   else
     warn "no previous images to roll back to"
   fi
+  [ -z "$backup" ] || aspiro_print_restore "$backup"
   exit 1
 }
 
@@ -472,7 +588,8 @@ aspiro_backup_seal() {  # aspiro_backup_seal <file>
 }
 
 cmd_backup() {
-  local dir="${ASPIRO_BACKUP_DIR:-$ASPIRO_DIR/backups/db}" keep="${ASPIRO_BACKUP_KEEP:-14}"
+  local dir keep="${ASPIRO_BACKUP_KEEP:-14}"
+  dir=$(aspiro_backup_dir)
   while [ $# -gt 0 ]; do
     case "$1" in
       --dir) dir=${2:?}; shift 2 ;;
@@ -483,6 +600,12 @@ cmd_backup() {
   done
   if ! [[ "$keep" =~ ^[0-9]+$ ]] || [ "$keep" -lt 1 ]; then
     die "--keep must be a positive integer"
+  fi
+  # A database dump is every user's finances: never readable by anyone else, not
+  # even for the moment between writing a file and the chmod below.
+  umask 077
+  if [ -n "${ASPIRO_BACKUP_S3_URI:-}" ] && [ -z "${ASPIRO_BACKUP_AGE_RECIPIENT:-}${ASPIRO_BACKUP_GPG_RECIPIENT:-}" ]; then
+    die "ASPIRO_BACKUP_S3_URI is set but no ASPIRO_BACKUP_AGE_RECIPIENT or ASPIRO_BACKUP_GPG_RECIPIENT: refusing to upload unencrypted backups (nothing was dumped)"
   fi
   aspiro_require_env
   mkdir -p "$dir"

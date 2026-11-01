@@ -146,3 +146,21 @@ updates:
       actions:
         applies-to: version-updates
         patterns: ["*"]
+
+  # Base images in the Dockerfiles (python, node, caddy, golang)
+  - package-ecosystem: "docker"
+    directories: ["/backend", "/frontend", "/caddy"]
+    schedule:
+      interval: "monthly"
+    open-pull-requests-limit: 3
+
+  # Images pinned in docker-compose.pi.yml (postgres, cloudflared, tailscale)
+  - package-ecosystem: "docker-compose"
+    directory: "/"
+    schedule:
+      interval: "monthly"
+    open-pull-requests-limit: 3
+    ignore:
+      # A Postgres major needs a dump/restore or pg_upgrade of the data volume, never a tag bump
+      - dependency-name: "postgres"
+        update-types: ["version-update:semver-major"]
