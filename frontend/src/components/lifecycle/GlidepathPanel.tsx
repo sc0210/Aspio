@@ -2,6 +2,7 @@
 
 import { useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
+import dynamic from 'next/dynamic';
 import {
     ChartBarSquareIcon,
     AdjustmentsHorizontalIcon,
@@ -13,7 +14,11 @@ import { formatTWDCompact } from '@/utils/formatters';
 import { cn } from '@/utils/cn';
 import { projectGlidepath, type GlidepathInputs } from '@/lib/lifecycle';
 import type { LifecyclePreferences } from '@/hooks/useLifecyclePreferences';
-import { GlidepathChart } from './GlidepathChart';
+// Recharts loads with the chart, not with the page.
+const GlidepathChart = dynamic(
+    () => import('./GlidepathChart').then(m => ({ default: m.GlidepathChart })),
+    { ssr: false, loading: () => <div aria-hidden="true" className="h-56 sm:h-64 animate-pulse rounded-lg bg-gray-100 dark:bg-gray-700/40" /> },
+);
 
 import { LIFECYCLE_CHART_COLORS as COLORS } from './chartColors';
 import { Card } from '@/components/ui/Card';

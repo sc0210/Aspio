@@ -111,6 +111,10 @@ export const UNGROUPED_KEYS: readonly QueryKeyValue[] = [
  * registry test now fails if a key exists without a group.
  */
 const LEDGER_DERIVED: readonly QueryKeyValue[] = [
+  // Every list filter the user has opened is cached under its own key, and the
+  // fetch-all ones re-page up to 50x200 rows. Refetching them all on each save
+  // fired one request per cached filter; only the mounted ones need it now.
+  QUERY_KEYS.TRANSACTIONS,
   QUERY_KEYS.TRANSACTION_STATS,
   QUERY_KEYS.TRANSACTION_PAGE_STATS,
   QUERY_KEYS.TRANSACTION_CATEGORIES,
@@ -168,7 +172,6 @@ const QUERY_GROUPS = {
     // The reverse direction was already wired: every loan mutation calls
     // invalidateDashboardData.
     QUERY_KEYS.LOANS,
-    QUERY_KEYS.TRANSACTIONS,
   ],
 
   // Everything else the write invalidates. Marked stale rather than refetched
@@ -180,7 +183,6 @@ const QUERY_GROUPS = {
     QUERY_KEYS.DASHBOARD,
     QUERY_KEYS.OPTIMIZED_DASHBOARD,
     QUERY_KEYS.WALLET_TRENDS,
-    QUERY_KEYS.TRANSACTIONS,
     QUERY_KEYS.PORTFOLIO,
     // Unlike GOALS, the loans key carries no user id, and credentials sign-in
     // does not reload the page. Two accounts in one tab would otherwise leave

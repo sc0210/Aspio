@@ -834,5 +834,98 @@ class TestSymbolBatchConcurrency:
         assert prev["max"] > 1, "previous_close lookups were still serial"
 
 
+class TestScheduledMarketJob:
+    """Each scheduled job prices the symbols whose resolved market it owns."""
+
+    async def _job_prices(self, async_session, market, holdings_by_user):
+        """Seed real holdings, run the job, return (symbols fetched, stats)."""
+        import uuid
+        from contextlib import asynccontextmanager
+        from datetime import date
+        from app.core import scheduler
+        from app.modules.portfolio.models import Portfolio
+        from app.modules.users.models import User
+
+        for index, holdings in enumerate(holdings_by_user):
+            user = User(
+                id=uuid.uuid4(), email=f"{uuid.uuid4()}@example.com", name="U",
+                hashed_password="x", is_active=True,
+            )
+            async_session.add(user)
+            await async_session.flush()
+            portfolio = Portfolio(
+                id=uuid.uuid4(), user_id=user.id, name="P", is_default=True, currency="TWD"
+            )
+            async_session.add(portfolio)
+            await async_session.flush()
+            for symbol, label in holdings:
+                async_session.add(PortfolioHolding(
+                    id=uuid.uuid4(), portfolio_id=portfolio.id, user_id=user.id,
+                    symbol=symbol, name=symbol, quantity=Decimal("1"),
+                    average_cost=Decimal("1"), current_price=Decimal("1"),
+                    currency="TWD", market=label, type="stock", exchange="X",
+                    total_cost=Decimal("1"), total_value=Decimal("1"),
+                    purchase_date=date(2026, 9, 1), is_active=True,
+                ))
+        await async_session.commit()
+
+        @asynccontextmanager
+        async def same_session():
+            yield async_session
+
+        fetched = []
+
+        async def fake_price(self, symbol, market, allow_historical_fallback=True):
+            fetched.append(symbol)
+            return Decimal("100")
+
+        with patch.object(scheduler, "async_session", same_session), \
+             patch.object(PriceUpdateService, "_get_price_with_fallback", fake_price), \
+             patch.object(MarketHoursManager, "should_update_price", return_value=True), \
+             patch("app.modules.portfolio.price_update_service.get_market_data_service") as mds:
+            mds.return_value.get_previous_close = AsyncMock(return_value=None)
+            stats = await scheduler.update_all_users_prices(market)
+        return sorted(fetched), stats
+
+    MIXED = [[("0050", "TW"), ("2330", "US"), ("AAPL", "US"), ("BTC-USD", "CRYPTO"), ("D05", "SG")]]
+
+    @pytest.mark.asyncio
+    async def test_tw_job_only_touches_tw_symbols(self, async_session):
+        fetched, _ = await self._job_prices(async_session, "TW", self.MIXED)
+        assert fetched == ["0050", "2330"]
+
+    @pytest.mark.asyncio
+    async def test_us_job_also_covers_markets_without_a_job(self, async_session):
+        fetched, _ = await self._job_prices(async_session, "US", self.MIXED)
+        assert fetched == ["AAPL", "D05"]
+
+    @pytest.mark.asyncio
+    async def test_all_job_touches_every_market(self, async_session):
+        fetched, _ = await self._job_prices(async_session, "ALL", self.MIXED)
+        assert fetched == ["0050", "2330", "AAPL", "BTC-USD", "D05"]
+
+    @pytest.mark.asyncio
+    async def test_tw_code_labelled_us_is_priced_without_any_tw_label(self, async_session):
+        fetched, stats = await self._job_prices(
+            async_session, "TW", [[("2330", "US"), ("AAPL", "US")]]
+        )
+        assert fetched == ["2330"]
+        assert (stats["users"], stats["updated"]) == (1, 1)
+
+    @pytest.mark.asyncio
+    async def test_sg_only_user_is_priced_by_the_us_job(self, async_session):
+        fetched, stats = await self._job_prices(
+            async_session, "US", [[("D05", "SG")], [("0050", "TW")]]
+        )
+        assert fetched == ["D05"]
+        assert stats["users"] == 1
+
+    @pytest.mark.asyncio
+    async def test_lowercase_crypto_label_routes_to_the_crypto_job(self, async_session):
+        holdings = [[("BTC-USD", "crypto")]]
+        assert (await self._job_prices(async_session, "CRYPTO", holdings))[0] == ["BTC-USD"]
+        assert (await self._job_prices(async_session, "US", holdings))[0] == []
+
+
 # Run with: pytest tests/test_price_update_service.py -v
 # Run with coverage: pytest tests/test_price_update_service.py --cov=app.modules.portfolio.price_update_service

@@ -2,6 +2,7 @@
 
 import { useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
+import dynamic from 'next/dynamic';
 import { ChartBarIcon } from '@heroicons/react/24/outline';
 import { usePrivacy } from '@/contexts/PrivacyContext';
 import { formatTWDCompact } from '@/utils/formatters';
@@ -12,7 +13,11 @@ import {
     type LifecycleLoan,
     type WalletDayBalances,
 } from '@/lib/lifecycle';
-import { LeverageHistoryChart } from './LeverageHistoryChart';
+// Recharts loads with the chart, not with the page.
+const LeverageHistoryChart = dynamic(
+    () => import('./LeverageHistoryChart').then(m => ({ default: m.LeverageHistoryChart })),
+    { ssr: false, loading: () => <div aria-hidden="true" className="h-56 sm:h-64 animate-pulse rounded-lg bg-gray-100 dark:bg-gray-700/40" /> },
+);
 
 import { LIFECYCLE_CHART_COLORS as COLORS } from './chartColors';
 import { Card } from '@/components/ui/Card';

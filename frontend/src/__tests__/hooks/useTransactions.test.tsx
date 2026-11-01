@@ -3,6 +3,7 @@
  * dedup for export/import), the demo-mode filter that mirrors the server's, and
  * the optimistic create/delete that must roll back when the server refuses.
  */
+import { useMemo } from 'react';
 import { act, renderHook, waitFor } from '@testing-library/react';
 import toast from 'react-hot-toast';
 import { useAuthContext } from '@/contexts/AuthContext';
@@ -277,5 +278,86 @@ describe('updateTransaction / deleteTransaction', () => {
 
     await waitFor(() => expect(result.current.transactions.map((t) => t.id)).toEqual(['a', 'b']));
     expect(toastMock.error).toHaveBeenCalledWith('Forbidden');
+  });
+});
+
+describe('request cost of a create', () => {
+  const input = { type: 'expense', amount: 50, currency: 'TWD', category: 'Food', description: 'Tea', date: new Date(), walletType: 'life', tags: [] } as never;
+  const settle = () => act(async () => { await new Promise((r) => setTimeout(r, 100)); });
+
+  it('refetches only the mounted list, once', async () => {
+    setMode(false);
+    svc.getTransactions.mockResolvedValue({ success: true, data: [tx('existing')] } as never);
+    svc.createTransaction.mockResolvedValue({ success: true, data: tx('saved') } as never);
+    const client = createQueryClient();
+    const wrapper = createQueryWrapper(client);
+
+    // Lists the user visited earlier: cached, no longer on screen.
+    for (const options of [{ type: 'income' as const }, { walletType: 'emergency' }, { page: 2 }]) {
+      const { unmount } = renderHook(() => useTransactions(options), { wrapper });
+      await settle();
+      unmount();
+    }
+    const { result } = renderHook(() => useTransactions(), { wrapper });
+    await waitFor(() => expect(result.current.transactions).toHaveLength(1));
+
+    svc.getTransactions.mockClear();
+    await act(async () => {
+      await result.current.createTransaction(input);
+    });
+    await settle();
+
+    expect(svc.getTransactions).toHaveBeenCalledTimes(1);
+  });
+
+  it('an off-screen filtered list never shows the new row it does not match', async () => {
+    setMode(false);
+    svc.getTransactions.mockImplementation(async (options) => ({
+      success: true,
+      data: options?.type === 'income' ? [tx('salary', { type: 'income' })] : [tx('existing')],
+    }) as never);
+    svc.createTransaction.mockResolvedValue({ success: true, data: tx('saved') } as never);
+    const client = createQueryClient();
+    const wrapper = createQueryWrapper(client);
+
+    const incomeList = renderHook(() => useTransactions({ type: 'income' }), { wrapper });
+    await waitFor(() => expect(incomeList.result.current.transactions).toHaveLength(1));
+    incomeList.unmount();
+    const { result } = renderHook(() => useTransactions(), { wrapper });
+    await waitFor(() => expect(result.current.transactions).toHaveLength(1));
+
+    await act(async () => {
+      await result.current.createTransaction(input);
+    });
+    await settle();
+
+    const seen: string[][] = [];
+    const reopened = renderHook(() => {
+      const hook = useTransactions({ type: 'income' });
+      seen.push(hook.transactions.map((t) => t.id));
+      return hook;
+    }, { wrapper });
+    await waitFor(() => expect(reopened.result.current.transactions).toHaveLength(1));
+    expect(seen.flat()).not.toContain('saved');
+  });
+
+  it('a date range ending "now" hits the cache on the next mount the same day', async () => {
+    setMode(false);
+    svc.getTransactions.mockResolvedValue({ success: true, data: [] } as never);
+    const wrapper = createQueryWrapper(createQueryClient());
+    // As useExpenseBreakdown builds it: memoised per mount, so each mount gets a new "now".
+    const useRangeToNow = () => {
+      const dateRange = useMemo(() => ({ start: new Date(2026, 9, 1), end: new Date() }), []);
+      return useTransactions({ dateRange });
+    };
+
+    const first = renderHook(useRangeToNow, { wrapper });
+    await settle();
+    first.unmount();
+    await new Promise((r) => setTimeout(r, 5));
+    renderHook(useRangeToNow, { wrapper });
+    await settle();
+
+    expect(svc.getTransactions).toHaveBeenCalledTimes(1);
   });
 });
