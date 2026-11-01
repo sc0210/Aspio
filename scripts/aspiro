@@ -343,8 +343,12 @@ aspiro_print_restore() {  # aspiro_print_restore <dump file>
   warn "migrations already applied stay applied. To put back the database as it was before this update, run:"
   {
     printf '    %s stop backend frontend\n' "$dc"
+    # The pipe's status is psql's alone: a dump that is cut off, or fails to
+    # decompress or decrypt, would still drop the schema and commit. Read it once
+    # for pg_dump's closing marker first, and restore only a complete dump.
     # shellcheck disable=SC2016  # the $POSTGRES_* are for the container's shell
-    printf '    { echo %s; %s; } | %s exec -T postgres sh -c %s\n' \
+    printf '    %s | grep -q %s \\\n      && { echo %s; %s; } | %s exec -T postgres sh -c %s\n' \
+      "$read_dump" "'PostgreSQL database dump complete'" \
       "'DROP SCHEMA public CASCADE; CREATE SCHEMA public;'" "$read_dump" "$dc" \
       \''psql -U "$POSTGRES_USER" -d "$POSTGRES_DB" --single-transaction -v ON_ERROR_STOP=1'\'
     printf '    %s start backend frontend\n' "$dc"

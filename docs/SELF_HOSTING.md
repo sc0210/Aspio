@@ -232,32 +232,29 @@ directory.
 `BACKUP_AGE_RECIPIENT` is set, as `<dump>.age`. Plaintext dumps uploaded before encryption
 was required stay in the bucket or on the remote host until you delete them.
 
-Restore into an empty database (decrypt first if needed). `--single-transaction` with
-`ON_ERROR_STOP` means a dump that fails part-way leaves the database empty, not half-restored:
+Restore by reading the dump twice: once to check it ends with pg_dump's closing marker,
+then into `psql` in one transaction with `ON_ERROR_STOP`. The check matters because a pipe
+reports only `psql`'s status: a dump cut off part-way, or one that fails to decompress or
+decrypt, would otherwise still run and commit. Stop `backend` and `frontend` first. The
+`DROP SCHEMA` line empties the existing database in the same transaction, so a failure
+changes nothing; it is harmless on an empty one.
 
 ```bash
-gunzip -c backups/db/aspiro_<stamp>.sql.gz \
-  | docker exec -i aspiro-postgres psql -U aspiro_user -d aspiro_db --single-transaction -v ON_ERROR_STOP=1
+dump=backups/db/aspiro_<stamp>.sql.gz
+read_dump() { gunzip -c "$dump"; }
+read_dump | grep -q 'PostgreSQL database dump complete' \
+  && { echo 'DROP SCHEMA public CASCADE; CREATE SCHEMA public;'; read_dump; } \
+  | docker exec -i aspiro-postgres sh -c 'psql -U "$POSTGRES_USER" -d "$POSTGRES_DB" --single-transaction -v ON_ERROR_STOP=1'
 docker exec -i aspiro-backend tar -C /app/uploads -xzf - < backups/db/aspiro_<stamp>.uploads.tar.gz
 ```
 
-To restore over an existing database, stop `backend` and `frontend`, then empty the schema
-in the same transaction as the restore, so a failure changes nothing:
+If the first line of the pipe fails, nothing ran: the dump is incomplete. An encrypted copy
+(from `aspiro backup` with a recipient, or `backup_db.sh`'s offsite `.age`) restores the same
+way with `read_dump` decrypting in the pipe:
 
 ```bash
-{ echo 'DROP SCHEMA public CASCADE; CREATE SCHEMA public;'; gunzip -c backups/db/aspiro_<stamp>.sql.gz; } \
-  | docker exec -i aspiro-postgres psql -U aspiro_user -d aspiro_db --single-transaction -v ON_ERROR_STOP=1
-```
-
-An encrypted copy (from `aspiro backup` with a recipient, or `backup_db.sh`'s offsite
-`.age`) restores the same way once decrypted in the pipe: replace `gunzip -c <file>` with
-`age -d -i <your age identity file> <file>.age | gunzip -c` (or `gpg -d <file>.gpg | gunzip -c`).
-For example, a `backup_db.sh` dump fetched back from offsite, over an existing database:
-
-```bash
-{ echo 'DROP SCHEMA public CASCADE; CREATE SCHEMA public;'
-  age -d -i <your age identity file> aspiro_<stamp>.sql.gz.age | gunzip -c; } \
-  | docker exec -i aspiro-postgres psql -U aspiro_user -d aspiro_db --single-transaction -v ON_ERROR_STOP=1
+read_dump() { age -d -i <your age identity file> "$dump" | gunzip -c; }   # .age
+read_dump() { gpg -d "$dump" | gunzip -c; }                               # .gpg
 ```
 
 Test a restore once, before you need it.

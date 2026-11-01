@@ -505,6 +505,8 @@ expect "...recreating twice (new, then old)" [ "$(grep -c ' up -d --remove-orpha
 expect "...and reports the rollback" has "$work/out" 'rolled back to the previous images'
 expect "...and prints how to restore the pre-update dump" \
   eval 'has "$work/out" "DROP SCHEMA public CASCADE" && has "$work/out" "$(cat "$d/.aspiro-state/backup")" && has "$work/out" "--single-transaction -v ON_ERROR_STOP=1"'
+expect "...and restores only a dump that ends with pg_dump's closing marker" \
+  has "$work/out" "grep -q 'PostgreSQL database dump complete'"
 expect "...without pruning anything" has_not "$STUB_LOG" 'prune'
 
 d=$(new_install up-fails)
