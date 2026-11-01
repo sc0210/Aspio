@@ -245,11 +245,13 @@ start them again (`docker start aspiro-backend aspiro-frontend`) once the restor
 If the check refuses the dump, the database is as it was, so starting them again is safe.
 
 ```bash
+# On a running stack: docker stop aspiro-backend aspiro-frontend first (see above).
 dump=backups/db/aspiro_<stamp>.sql.gz
 read_dump() { gzip -t "$dump" && gunzip -c "$dump"; }
 read_dump | tail -n 5 | grep -qx -- '-- PostgreSQL database dump complete' \
   && { echo 'DROP SCHEMA public CASCADE; CREATE SCHEMA public;'; read_dump; } \
-  | docker exec -i aspiro-postgres sh -c 'psql -U "$POSTGRES_USER" -d "$POSTGRES_DB" --single-transaction -v ON_ERROR_STOP=1'
+  | docker exec -i aspiro-postgres sh -c 'psql -U "$POSTGRES_USER" -d "$POSTGRES_DB" --single-transaction -v ON_ERROR_STOP=1' \
+  || echo 'Restore NOT applied: the dump is incomplete or psql failed. The database is unchanged.' >&2
 ```
 
 Only after that restore succeeded and the backend is running again, restore the uploads
