@@ -6,7 +6,7 @@
 # JavaScript and does not depend on the CPU it was compiled on, with one exception
 # handled in the `sharp` stage below. When build and target match (a build on the Pi
 # itself, or a laptop), this is an ordinary single-arch build.
-FROM --platform=$BUILDPLATFORM node:22-alpine AS builder
+FROM --platform=$BUILDPLATFORM node:26-alpine AS builder
 WORKDIR /app
 
 COPY package*.json ./
@@ -39,14 +39,14 @@ RUN npm run build
 # so fetch the TARGET platform's here — this stage runs as the target (under QEMU in
 # CI), but it is only an npm download, not a compile. Pinned to the lockfile's version
 # so it matches the sharp JavaScript the standalone output traced.
-FROM node:22-alpine AS sharp
+FROM node:26-alpine AS sharp
 WORKDIR /sharp
 COPY package-lock.json ./
 RUN npm install --no-save --no-package-lock --no-audit --no-fund \
       "sharp@$(node -p "require('./package-lock.json').packages['node_modules/sharp'].version")"
 
 # Production stage
-FROM node:22-alpine AS runner
+FROM node:26-alpine AS runner
 WORKDIR /app
 
 ENV NODE_ENV production
