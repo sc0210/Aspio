@@ -102,13 +102,19 @@ class LoanTransactionRepository:
         loan_id: uuid.UUID,
         user_id: uuid.UUID,
     ) -> Optional[Transaction]:
-        """Return a payment Transaction that matches loan + user ownership."""
+        """Return a live EXPENSE payment that matches loan + user ownership.
+
+        A deleted payment or the INCOME receipt row would move the balance on edit
+        without ever having been subtracted from it.
+        """
         result = await self.session.execute(
             select(Transaction).where(
                 and_(
                     Transaction.id == transaction_id,
                     Transaction.loan_id == loan_id,
                     Transaction.user_id == user_id,
+                    Transaction.type == TransactionType.EXPENSE,
+                    Transaction.is_deleted == False,
                 )
             )
         )
