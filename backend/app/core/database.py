@@ -22,7 +22,13 @@ settings = get_settings()
 
 
 # Build connect_args — add SSL when DATABASE_URL signals it (Supabase / remote Postgres)
-#
+_connect_args: dict = {
+    "command_timeout": 60,
+    "server_settings": {
+        "application_name": "aspiro-backend",
+        "timezone": "UTC",
+    },
+}
 # PgBouncer in transaction mode (Supabase's :6543 pooler) multiplexes many client
 # connections onto a smaller set of Postgres backends and does NOT pin a prepared
 # statement to one backend. Deterministically-named prepared statements therefore
@@ -36,16 +42,15 @@ settings = get_settings()
 #       (deterministic per process) — exactly what collides through PgBouncer.
 # NOTE: statement_cache_size=0 ALONE is NOT sufficient — the SQLAlchemy adapter
 # still prepares named statements. Verified empirically against the pooler.
-_connect_args: dict = {
-    "command_timeout": 60,
-    "statement_cache_size": 0,
-    "prepared_statement_cache_size": 0,
-    "prepared_statement_name_func": lambda: f"__asyncpg_{uuid4()}__",
-    "server_settings": {
-        "application_name": "aspiro-backend",
-        "timezone": "UTC",
-    },
-}
+# A direct Postgres connection pins statements to its own backend, so it keeps
+# asyncpg's cache: each cached query is one round trip instead of three
+# (parse, close, bind).
+if settings.database_via_pooler:
+    _connect_args.update(
+        statement_cache_size=0,
+        prepared_statement_cache_size=0,
+        prepared_statement_name_func=lambda: f"__asyncpg_{uuid4()}__",
+    )
 if settings.database_use_ssl:
     import ssl as _ssl
     _ssl_ctx = _ssl.create_default_context()
@@ -113,6 +118,8 @@ else:
         max_overflow=settings.DATABASE_MAX_OVERFLOW,
         pool_timeout=settings.DATABASE_POOL_TIMEOUT,
         pool_recycle=_pool_recycle,
+        # A Postgres restart kills pooled connections too; the ping replaces a
+        # dead one at checkout instead of failing the request.
         pool_pre_ping=True,
         connect_args=_connect_args,
     )

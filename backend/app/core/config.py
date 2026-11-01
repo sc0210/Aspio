@@ -108,6 +108,9 @@ class Settings(BaseSettings):
     # database_use_nullpool property below. Leave false to let SQLAlchemy reuse
     # connections through the Supabase transaction pooler.
     DATABASE_USE_NULLPOOL: bool = False
+    # Declare a transaction-mode pooler the URL can't reveal (a self-hosted
+    # PgBouncer on its own port). Supabase pooler hosts and :6543 are detected.
+    DATABASE_VIA_POOLER: bool = False
     SKIP_DB_SCHEMA_INIT: bool = False  # Set true in production; use alembic for migrations
 
     # Security
@@ -468,12 +471,17 @@ class Settings(BaseSettings):
 
     @property
     def database_via_pooler(self) -> bool:
-        """True when connecting through any Supabase pooler (Supavisor) endpoint.
+        """True when connecting through a pooler: any Supabase pooler (Supavisor)
+        endpoint, port 6543, or DATABASE_VIA_POOLER=true.
 
         Covers both the transaction pooler (:6543) and the session pooler
-        (pooler host on :5432). Used to enable pre-ping + a short recycle window,
-        since the pooler reaps idle connections."""
-        return self._database_host_is_supabase_pooler or self.database_port == 6543
+        (pooler host on :5432). Used to turn off asyncpg's statement cache and to
+        shorten the recycle window, since the pooler reaps idle connections."""
+        return (
+            self.DATABASE_VIA_POOLER
+            or self._database_host_is_supabase_pooler
+            or self.database_port == 6543
+        )
 
     @property
     def database_session_mode_pooler(self) -> bool:

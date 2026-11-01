@@ -152,6 +152,17 @@ class MarketHoursManager:
             return False
 
 
+# Markets with their own scheduled price job. Any other market (SG, HK, ...)
+# rides the US job, which runs last in the UTC day, after every other
+# exchange has closed.
+SCHEDULED_MARKETS = frozenset({"TW", "US", "CRYPTO"})
+
+
+def scheduled_job_market(market: str) -> str:
+    market = (market or "").upper()
+    return market if market in SCHEDULED_MARKETS else "US"
+
+
 class PriceUpdateService:
     """Service for smart price updates with caching and fallback strategies"""
 
@@ -505,9 +516,11 @@ class PriceUpdateService:
 
         return stats
 
-    async def update_all_symbols_prices(self, force: bool = False) -> Dict[str, Any]:
+    async def update_all_symbols_prices(
+        self, force: bool = False, market: Optional[str] = None
+    ) -> Dict[str, Any]:
         """
-        Symbol-first batch price update for ALL users.
+        Symbol-first batch price update for ALL users, optionally one market only.
 
         Instead of looping per-user (O(users × holdings) DB writes),
         this fetches each unique symbol once and bulk-updates every
@@ -519,7 +532,7 @@ class PriceUpdateService:
 
         # 1. Collect all unique (symbol, market) pairs from active tradable holdings
         result = await self.session.execute(
-            select(PortfolioHolding.symbol, PortfolioHolding.market)
+            select(PortfolioHolding.symbol, PortfolioHolding.market, PortfolioHolding.user_id)
             .join(User, User.id == PortfolioHolding.user_id)
             .where(PortfolioHolding.is_active == True)
             .where(PortfolioHolding.type.notin_(sorted(MANUALLY_PRICED_TYPES)))
@@ -534,21 +547,30 @@ class PriceUpdateService:
         # 0050 quote of 106.40 got replaced by a stale 105.20: the US-labelled
         # pass 404'd on the bare ticker and fell through to old history.
         markets_by_symbol: Dict[str, set] = {}
+        users_by_symbol: Dict[str, set] = {}
         for row in result.fetchall():
             # Holdings no feed prices keep the price the user set (manual_pricing).
             if is_manually_priced(row.symbol, None):
                 continue
             markets_by_symbol.setdefault(row.symbol, set()).add(row.market)
+            users_by_symbol.setdefault(row.symbol, set()).add(row.user_id)
 
         symbol_market_pairs = [
             (symbol, resolve_symbol_market(symbol, candidates))
             for symbol, candidates in markets_by_symbol.items()
         ]
+        # Filter on the resolved market, not the row label: a bare TW code
+        # labelled US still belongs to the TW job.
+        if market:
+            symbol_market_pairs = [
+                (s, m) for s, m in symbol_market_pairs if scheduled_job_market(m) == market
+            ]
 
         if not symbol_market_pairs:
-            return {"total_symbols": 0, "updated": 0, "cached": 0, "failed": 0}
+            return {"total_symbols": 0, "updated": 0, "cached": 0, "failed": 0, "users": 0}
 
         stats = {"total_symbols": len(symbol_market_pairs), "updated": 0, "cached": 0, "failed": 0}
+        priced_users: set = set()
         now = datetime.now(ZoneInfo("UTC"))
 
         logger.info(f"Symbol-batch price update: {len(symbol_market_pairs)} unique symbols across all users")
@@ -670,11 +692,14 @@ class PriceUpdateService:
                     {"price": float(new_price)},
                 )
                 stats["updated"] += 1
+                priced_users |= users_by_symbol.get(symbol, set())
                 logger.debug(f"Bulk updated {symbol} → {new_price}")
 
             except Exception as e:
                 logger.error(f"Failed symbol batch update for {symbol}: {e}")
                 stats["failed"] += 1
+
+        stats["users"] = len(priced_users)
 
         try:
             await self.session.commit()

@@ -122,35 +122,18 @@ async def update_all_users_prices(market: str = "ALL"):
         market: "TW", "US", "CRYPTO", or "ALL"
     """
     logger.info(f"Starting scheduled price update for market: {market}")
+    market = market.upper()
 
     async with async_session() as session:
-        # Get all active users with holdings
-        if market == "ALL":
-            query = select(User.id).distinct()
-        else:
-            # Get users with holdings in specific market
-            query = (
-                select(PortfolioHolding.user_id)
-                .where(PortfolioHolding.market == market)
-                .where(PortfolioHolding.is_active == True)
-                .distinct()
-            )
-
-        result = await session.execute(query)
-        user_ids = [row[0] for row in result.fetchall()]
-
-        if not user_ids:
-            logger.info(f"No users with {market} holdings to update")
-            return
-
-        logger.info(f"Found {len(user_ids)} users with {market} holdings — running symbol-batch update")
-
         # Symbol-first batch update: fetch each unique symbol once,
         # bulk-update all holdings for that symbol. O(unique_symbols) instead
-        # of O(users × holdings) — scales to any number of users.
+        # of O(users × holdings) — scales to any number of users. The service
+        # picks this job's symbols by resolved market, so no label-based
+        # pre-check here: a stored label can disagree with the resolved one.
         price_service = PriceUpdateService(session)
-        total_stats = await price_service.update_all_symbols_prices(force=False)
-        total_stats["users"] = len(user_ids)
+        total_stats = await price_service.update_all_symbols_prices(
+            force=False, market=None if market == "ALL" else market
+        )
 
         logger.info(
             "Scheduled price update complete: "

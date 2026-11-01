@@ -16,8 +16,13 @@ import {
 import { DashboardLayout } from '@/components/layout/DashboardLayout';
 import { ErrorBoundary } from '@/components/ui/ErrorBoundary';
 import dynamic from 'next/dynamic';
-import { AssetPriceChart } from '@/components/portfolio/AssetPriceChart';
 import type { ChartPoint } from '@/components/portfolio/AssetPriceChart';
+
+// Recharts ships with the chart chunk, not the page chunk.
+const AssetPriceChart = dynamic(
+    () => import('@/components/portfolio/AssetPriceChart').then(m => ({ default: m.AssetPriceChart })),
+    { ssr: false, loading: () => <div className="h-80 bg-gray-50 dark:bg-gray-700/30 rounded-lg animate-pulse" /> },
+);
 
 // Candlestick view is opt-in (Price is the default), so lazy-load it — its
 // Recharts ComposedChart/Bar/Line code only ships once the user picks "Candles".

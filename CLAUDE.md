@@ -137,7 +137,7 @@ Shared app-level infrastructure lives outside `modules/`: `app/common/` (base re
 - All routers return `ApiResponse[T]` using `ApiResponse.success_response(data=...)`.
 - `CurrentUser` dependency (`users/dependencies.py`) validates JWT and returns the user model.
 - `SKIP_DB_SCHEMA_INIT=True` in production — the app never creates tables. Alembic migrations are NOT auto-applied on deploy: schema changes ship as an Alembic migration (local/dev) plus an idempotent SQL script in `backend/scripts/prod_sql/`, applied manually against the target DB followed by `alembic stamp head`. `aspiro update` runs the migration itself and rolls back if the schema doesn't reach head.
-- PgBouncer transaction mode in production: `statement_cache_size=0` is required in asyncpg connect args.
+- Behind a transaction-mode pooler (`settings.database_via_pooler`: a Supabase pooler host, port 6543, or `DATABASE_VIA_POOLER=true` for a self-hosted PgBouncer on another port), `core/database.py` turns off asyncpg's statement cache; a direct Postgres connection keeps it. `pool_pre_ping` is always on.
 
 ### Frontend
 - `focus-visible:` not `focus:` for keyboard-only UI elements (avoids flash on page load).

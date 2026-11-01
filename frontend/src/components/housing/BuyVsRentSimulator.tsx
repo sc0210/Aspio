@@ -2,6 +2,7 @@
 
 import { useEffect, useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
+import dynamic from 'next/dynamic';
 import {
     HomeModernIcon,
     BuildingOffice2Icon,
@@ -14,9 +15,14 @@ import { usePrivacy } from '@/contexts/PrivacyContext';
 import { formatTWD, formatTWDCompact } from '@/utils/formatters';
 import { cn } from '@/utils/cn';
 import { projectBuyVsRent, loanTermsOf, DEFAULT_BUY_VS_RENT, WAN, type BuyVsRentInputs, type LoanTerms } from '@/lib/housing';
-import { BuyVsRentChart } from './BuyVsRentChart';
 import { Card } from '@/components/ui/Card';
 import { ScenarioCompare } from './ScenarioCompare';
+
+// Recharts loads with the chart, not with the page.
+const BuyVsRentChart = dynamic(
+    () => import('./BuyVsRentChart').then(m => ({ default: m.BuyVsRentChart })),
+    { ssr: false, loading: () => <div aria-hidden="true" className="h-56 sm:h-64 animate-pulse rounded-lg bg-gray-100 dark:bg-gray-700/40" /> },
+);
 
 const COLORS = { buy: '#6366f1', rent: '#f59e0b' }; // indigo-500 / amber-500 — CVD-safe pair
 

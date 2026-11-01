@@ -12,7 +12,7 @@ import { QUERY_KEYS, invalidateDashboardData } from './useDataSynchronization';
 import toast from 'react-hot-toast';
 import { log } from '@/utils/logger';
 import { isWalletTransfer } from '@/utils/expenseGroups';
-import { isDayInRange } from '@/utils/formatters';
+import { isDayInRange, localDateString } from '@/utils/formatters';
 
 interface UseTransactionsOptions extends PaginationParams {
   category?: string;
@@ -38,6 +38,14 @@ interface UseTransactionsOptions extends PaginationParams {
 // invalidated on every render while the query has no data.
 const NO_TRANSACTIONS: Transaction[] = [];
 
+// The service sends a date range as calendar days, so key it the same way: a
+// range ending "now" otherwise gets a new key on every mount and never hits.
+function cacheKeyOptions(options: UseTransactionsOptions) {
+  if (!options.dateRange) return options;
+  const { start, end } = options.dateRange;
+  return { ...options, dateRange: { start: localDateString(start), end: localDateString(end) } };
+}
+
 export function useTransactions(options: UseTransactionsOptions = {}) {
   const { data: session } = useSession();
   const { isDemo } = useAppMode();
@@ -55,7 +63,9 @@ export function useTransactions(options: UseTransactionsOptions = {}) {
   } = useDualModeQuery(
     // Demo keys carry the fixture revision: a demo add/delete must refetch
     // through a queryFn that sees the new rows, not one closed over the old.
-    isDemo ? ['transactions', options, 'demo', demoRevision ?? 0] : ['transactions', options],
+    isDemo
+      ? ['transactions', cacheKeyOptions(options), 'demo', demoRevision ?? 0]
+      : ['transactions', cacheKeyOptions(options)],
     async () => {
       if (!options.fetchAll) {
         return transactionService.getTransactions(options);
@@ -269,19 +279,11 @@ export function useTransactions(options: UseTransactionsOptions = {}) {
         });
       }
 
-      // Invalidate all related queries to ensure fresh data everywhere
-      log.debug('Invalidating related queries after transaction creation', undefined, 'useTransactions');
-
-      // Use centralized invalidation for dashboard data (includes wallet-trends)
+      // Refetches the mounted lists once. The off-screen ones got the optimistic
+      // row whether or not it matches their filter, so drop them: each fetches
+      // fresh when its page next mounts.
       invalidateDashboardData(queryClient);
-
-      // For comprehensive cache refresh, invalidate all transaction queries
-      // This will match ['transactions'], ['transactions', options], etc.
-      queryClient.invalidateQueries({
-        queryKey: [QUERY_KEYS.TRANSACTIONS],
-        exact: false,
-        refetchType: 'all'
-      });
+      queryClient.removeQueries({ queryKey: [QUERY_KEYS.TRANSACTIONS], type: 'inactive' });
 
       // Dispatch custom event for cross-component sync
       if (typeof window !== 'undefined') {
@@ -293,11 +295,6 @@ export function useTransactions(options: UseTransactionsOptions = {}) {
         log.debug('Demo mode: Forcing comprehensive cache refresh', undefined, 'useTransactions');
         setTimeout(() => {
           queryClient.removeQueries({ queryKey: [QUERY_KEYS.OPTIMIZED_DASHBOARD], exact: false });
-          queryClient.invalidateQueries({
-            queryKey: [QUERY_KEYS.TRANSACTIONS],
-            exact: false,
-            refetchType: 'all'
-          });
         }, 50);
       }
 
@@ -315,15 +312,8 @@ export function useTransactions(options: UseTransactionsOptions = {}) {
 
       const message = error instanceof Error ? error.message : t('transactions:toast.createFailed');
       toast.error(message);
-    },
-    onSettled: () => {
-      log.debug('Transaction mutation settled, ensuring cache consistency', undefined, 'useTransactions');
-      // Force refetch of all transaction queries to ensure consistency
-      queryClient.invalidateQueries({
-        queryKey: [QUERY_KEYS.TRANSACTIONS],
-        exact: false,
-        refetchType: 'all'
-      });
+      // A failed request may still have written (a timeout after commit).
+      queryClient.invalidateQueries({ queryKey: [QUERY_KEYS.TRANSACTIONS] });
     },
   });
 
@@ -331,7 +321,6 @@ export function useTransactions(options: UseTransactionsOptions = {}) {
     mutationFn: ({ id, data }: { id: string; data: Partial<Transaction> }) =>
       transactionService.updateTransaction(id, data),
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: [QUERY_KEYS.TRANSACTIONS], exact: false });
       // Use centralized invalidation for dashboard data (includes wallet-trends)
       invalidateDashboardData(queryClient);
 
@@ -386,9 +375,7 @@ export function useTransactions(options: UseTransactionsOptions = {}) {
       context?.snapshots.forEach(([queryKey, data]) => queryClient.setQueryData(queryKey, data));
       const message = error instanceof Error ? error.message : t('transactions:toast.deleteFailed');
       toast.error(message);
-    },
-    onSettled: () => {
-      queryClient.invalidateQueries({ queryKey: [QUERY_KEYS.TRANSACTIONS], exact: false });
+      queryClient.invalidateQueries({ queryKey: [QUERY_KEYS.TRANSACTIONS] });
     },
   });
 

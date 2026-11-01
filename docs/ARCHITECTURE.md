@@ -101,7 +101,10 @@ error dicts in routers.
 - `CurrentUser` (`users/dependencies.py`) validates the JWT and returns the user model.
 - Eager-load with `selectinload` to avoid N+1; paginate with `PaginationParams`.
 - `SKIP_DB_SCHEMA_INIT=True` in production — the app never creates tables.
-- Under PgBouncer transaction mode, asyncpg needs `statement_cache_size=0` in connect args.
+- asyncpg's statement cache is on for a direct Postgres connection and off behind a
+  transaction-mode pooler (`settings.database_via_pooler`), where a named statement can land on
+  another backend. Supabase pooler hosts and port 6543 are detected; a self-hosted PgBouncer on
+  another port must set `DATABASE_VIA_POOLER=true`. `pool_pre_ping` stays on everywhere.
 
 Health: `GET /health`, `/health/detailed`, `/health/scheduler`. Interactive API docs at
 `/docs` — that is the API reference, which is why none is duplicated here.

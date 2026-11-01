@@ -2,6 +2,7 @@
 
 import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
+import dynamic from 'next/dynamic';
 import {
   PlusIcon,
   BanknotesIcon,
@@ -23,8 +24,13 @@ import { DebtAccount } from '@/services/loanService';
 import { formatCurrency } from '@/utils/formatters';
 import { useIsMobile } from '@/hooks/useMediaQuery';
 import { MobileLoans } from '@/components/loans/MobileLoans';
-import { PayoffPlanner } from '@/components/loans/PayoffPlanner';
 import { UpcomingPayments } from '@/components/loans/UpcomingPayments';
+
+// The planner is the page's only Recharts user; keep the chart library out of the page chunk.
+const PayoffPlanner = dynamic(
+  () => import('@/components/loans/PayoffPlanner').then(m => ({ default: m.PayoffPlanner })),
+  { ssr: false, loading: () => <div aria-hidden="true" className="h-96 animate-pulse rounded-xl bg-gray-100 dark:bg-gray-700/40" /> },
+);
 
 function fmt(value: number, currency = 'TWD') {
   return formatCurrency(value, currency, { precision: 0 });
