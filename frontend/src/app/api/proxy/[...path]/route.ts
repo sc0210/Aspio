@@ -45,6 +45,11 @@ async function proxyRequest(
   pathSegments: string[],
   method: string
 ): Promise<NextResponse> {
+  // Segments arrive decoded (%2e%2e is '..', %2f a '/'), and joined onto the
+  // backend base any of these would walk out of /api/v1.
+  if (pathSegments.some((s) => s === '.' || s === '..' || s.includes('/') || s.includes('\\'))) {
+    return NextResponse.json({ error: 'Invalid path' }, { status: 400 });
+  }
   try {
     const path = pathSegments.join('/');
     const url = new URL(request.url);

@@ -150,21 +150,35 @@ class UserService:
             HTTPException: If authentication fails
         """
         try:
-            # Get user by email
+            # Until the password is proven, every refusal is this one 401 after a
+            # bcrypt check, so the response does not say whether the account
+            # exists, is locked, pending or suspended. Timing still leaks a little:
+            # a wrong password on an account that can sign in also reads and
+            # writes the failed-attempt count, which an unknown email skips.
+            invalid_credentials = HTTPException(
+                status_code=status.HTTP_401_UNAUTHORIZED,
+                detail="Invalid email or password"
+            )
             user = await self.user_repo.get_user_by_email(login_data.email)
-            if not user:
-                raise HTTPException(
-                    status_code=status.HTTP_401_UNAUTHORIZED,
-                    detail="Invalid email or password"
-                )
-            
-            # Check if account is locked
+            if not user or not user.hashed_password:
+                security_utils.dummy_verify_password()
+                raise invalid_credentials
+
+            password_ok = security_utils.verify_password(login_data.password, user.hashed_password)
+            # A locked account refuses the right password too: answering it
+            # differently would let guessing carry on through the lock.
             if user.is_account_locked:
-                raise HTTPException(
-                    status_code=status.HTTP_423_LOCKED,
-                    detail=f"Account is locked until {user.account_locked_until.isoformat()}"
+                raise invalid_credentials
+            if not password_ok:
+                # Only an account that can sign in is worth locking. Counting
+                # guesses on a pending one would greet its owner with a lock.
+                can_sign_in = user.is_active and user.status not in (
+                    UserStatus.PENDING_APPROVAL, UserStatus.SUSPENDED
                 )
-            
+                if can_sign_in:
+                    await self.user_repo.update_login_info(user.id, ip_address or "", success=False)
+                raise invalid_credentials
+
             # Check if account is pending approval
             if user.status == UserStatus.PENDING_APPROVAL:
                 raise HTTPException(
@@ -178,18 +192,7 @@ class UserService:
                     status_code=status.HTTP_403_FORBIDDEN,
                     detail="Account is suspended or deactivated"
                 )
-            
-            # Verify password
-            if not user.hashed_password or not security_utils.verify_password(
-                login_data.password, user.hashed_password
-            ):
-                # Update failed login attempts
-                await self.user_repo.update_login_info(user.id, ip_address or "", success=False)
-                raise HTTPException(
-                    status_code=status.HTTP_401_UNAUTHORIZED,
-                    detail="Invalid email or password"
-                )
-            
+
             # Update successful login info
             await self.user_repo.update_login_info(user.id, ip_address or "", success=True)
             
@@ -659,12 +662,8 @@ class UserService:
                     status_code=status.HTTP_403_FORBIDDEN,
                     detail="Account is suspended or deactivated."
                 )
-            if user.is_account_locked:
-                raise HTTPException(
-                    status_code=status.HTTP_423_LOCKED,
-                    detail="Account is temporarily locked"
-                )
-
+            # No failed-password lock here: anyone who knows the email can trip it,
+            # and Google proves the owner without a password. Signing in clears it.
             await self.user_repo.update_login_info(user.id, ip_address or "", success=True)
             await self._update_user_activity(user.id)
 

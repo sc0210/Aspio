@@ -225,15 +225,61 @@ describe('session callback', () => {
   const session = (token: JWT) =>
     cb.session!({ session: { user: { name: 'A' }, expires: '' } as Session, token } as never) as Promise<Session>;
 
-  it('copies identity and tokens onto the session', async () => {
+  it('copies identity and the access token onto the session', async () => {
     await expect(session({ userId: 'u1', role: 'ADMIN', accessToken: 'a', refreshToken: 'r' })).resolves.toMatchObject({
-      user: { name: 'A', id: 'u1', role: 'ADMIN' }, accessToken: 'a', refreshToken: 'r',
+      user: { name: 'A', id: 'u1', role: 'ADMIN' }, accessToken: 'a',
     });
   });
 
-  it('strips the tokens once refresh has failed', async () => {
+  // The session is what page JavaScript reads; the 7-day refresh token stays
+  // in the HttpOnly JWT cookie, where only the server can use it.
+  it.each([
+    ['a live session', { userId: 'u1', accessToken: 'a', refreshToken: 'r' }],
+    ['a failed refresh', { error: 'RefreshAccessTokenError', accessToken: 'stale', refreshToken: 'r' }],
+  ])('never hands the refresh token to the page (%s)', async (_label, token) => {
+    expect(await session(token)).not.toHaveProperty('refreshToken');
+  });
+
+  it('strips the access token once refresh has failed', async () => {
     const s = await session({ error: 'RefreshAccessTokenError', accessToken: 'stale' });
-    expect(s).toMatchObject({ error: 'RefreshAccessTokenError', accessToken: undefined, refreshToken: undefined });
+    expect(s).toMatchObject({ error: 'RefreshAccessTokenError', accessToken: undefined });
+  });
+});
+
+describe('signOut event', () => {
+  const signOut = (token: JWT) => authOptions.events!.signOut!({ token } as never);
+  const now = 1_000_000;
+
+  beforeEach(() => jest.spyOn(Date, 'now').mockReturnValue(now));
+
+  it('revokes the refresh token on the backend, server-side', async () => {
+    fetchMock.mockResolvedValueOnce(reply(200));
+    await signOut({ accessToken: 'a', refreshToken: 'r', accessTokenExpires: now + 1 });
+
+    const [url, init] = fetchMock.mock.calls[0];
+    expect(url).toBe('http://api/auth/logout');
+    expect(init.headers.Authorization).toBe('Bearer a');
+    expect(JSON.parse(init.body)).toEqual({ refresh_token: 'r', logout_all_devices: false });
+  });
+
+  it('refreshes an expired access token first, then revokes the rotated refresh token', async () => {
+    fetchMock.mockResolvedValueOnce(reply(200, { access_token: 'a2', refresh_token: 'r2' })).mockResolvedValueOnce(reply(200));
+    await signOut({ accessToken: 'a', refreshToken: 'r', accessTokenExpires: now - 1 });
+
+    expect(fetchMock.mock.calls.map((c) => c[0])).toEqual(['http://api/auth/refresh', 'http://api/auth/logout']);
+    const [, init] = fetchMock.mock.calls[1];
+    expect(init.headers.Authorization).toBe('Bearer a2');
+    expect(JSON.parse(init.body).refresh_token).toBe('r2');
+  });
+
+  it('does nothing for a session that holds no refresh token (LIFF)', async () => {
+    await signOut({ accessToken: 'a', accessTokenExpires: now + 1 });
+    expect(fetchMock).not.toHaveBeenCalled();
+  });
+
+  it('never throws when the backend is down: sign-out must still finish', async () => {
+    fetchMock.mockRejectedValueOnce(new Error('down'));
+    await expect(signOut({ accessToken: 'a', refreshToken: 'r', accessTokenExpires: now + 1 })).resolves.toBeUndefined();
   });
 });
 

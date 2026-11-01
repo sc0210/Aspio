@@ -108,3 +108,20 @@ async def test_active_account_signs_in_and_redirect_uri_is_not_the_callers():
     assert result.access_token
     assert exchange.call_args.args == ("c",)
     assert "redirect_uri" not in exchange.call_args.kwargs
+
+
+@pytest.mark.asyncio
+async def test_a_password_lockout_does_not_block_google_sign_in():
+    """Anyone who knows the email can trip the lock with wrong passwords; Google
+    proves the owner without one, and signing in clears the lock."""
+    user = make_mock_user(email="newcomer@example.com")
+    user.deleted_at = None
+    user.is_account_locked = True
+    svc = _service(existing=user)
+    enabled, exch, info, _ = _google(VERIFIED)
+    with enabled, exch, info:
+        result = await svc.google_oauth_login(GoogleOAuthRequest(authorization_code="c"))
+
+    assert result.access_token
+    svc.user_repo.update_login_info.assert_awaited_once()
+    assert svc.user_repo.update_login_info.await_args.kwargs.get("success") is True

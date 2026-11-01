@@ -278,15 +278,6 @@ async def auth_health_check():
 
     settings = get_settings()
 
-    # Check if essential auth configuration is present
-    config_status = {
-        "jwt_secret_configured": bool(settings.SECRET_KEY),
-        "jwt_algorithm": settings.ALGORITHM,
-        "access_token_expiry": settings.ACCESS_TOKEN_EXPIRE_MINUTES,
-        "refresh_token_expiry": settings.REFRESH_TOKEN_EXPIRE_DAYS,
-        "google_oauth_enabled": settings.google_oauth_enabled,
-    }
-
     # Test JWT functionality
     try:
         test_payload = {"test": "auth_health_check", "sub": "test-user"}
@@ -301,17 +292,14 @@ async def auth_health_check():
 
     overall_status = (
         "healthy"
-        if (config_status["jwt_secret_configured"] and jwt_functional)
+        if (bool(settings.SECRET_KEY) and jwt_functional)
         else "unhealthy"
     )
 
+    # Public route: status only. The JWT algorithm and expiries are not the
+    # caller's business.
     return ApiResponse.success_response(
-        data={
-            "service": "auth",
-            "status": overall_status,
-            "jwt_functional": jwt_functional,
-            "configuration": config_status,
-        },
+        data={"service": "auth", "status": overall_status},
         message="Authentication service health check completed",
     )
 

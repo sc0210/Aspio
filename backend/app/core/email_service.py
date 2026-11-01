@@ -1,8 +1,9 @@
 """
 Email service for sending transactional emails via SMTP.
 
-Falls back to console logging when SMTP is not configured, so local dev
-and environments without email credentials work without errors.
+Without SMTP configured, a mail is not sent and only its subject and the
+recipient's domain are logged, so local dev and environments without email
+credentials work without errors.
 """
 
 import asyncio
@@ -50,21 +51,18 @@ class EmailService:
 
     async def _send(self, to_email: str, subject: str, html_body: str, text_body: str) -> bool:
         msg = self._build_message(to_email, subject, html_body, text_body)
+        # Bodies carry live reset and verification links, so the log gets the
+        # recipient's domain and the subject, never the body or the mailbox.
+        domain = to_email.rpartition("@")[2]
         if not settings.email_enabled:
-            logger.info(
-                "SMTP not configured — email logged instead. "
-                "To=%s Subject=%s Body=%s",
-                to_email,
-                subject,
-                text_body,
-            )
+            logger.info("SMTP not configured, email not sent: domain=%s subject=%s", domain, subject)
             return True
         try:
             await asyncio.to_thread(self._send_smtp, to_email, msg)
-            logger.info("Email sent to=%s subject=%s", to_email, subject)
+            logger.info("Email sent: domain=%s subject=%s", domain, subject)
             return True
         except Exception as exc:
-            logger.error("Failed to send email to=%s: %s", to_email, exc)
+            logger.error("Failed to send email: domain=%s error=%s", domain, type(exc).__name__)
             return False
 
     async def send_verification_email(self, to_email: str, token: str) -> bool:

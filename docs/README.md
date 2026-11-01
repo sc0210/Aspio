@@ -10,6 +10,7 @@
 | [SECURITY.md](SECURITY.md) | You're touching auth, middleware, a raw query, or adding a table |
 | [SELF_HOSTING.md](SELF_HOSTING.md) | You're running your own Aspiro, built from a clone of this repo: setup, updates, backups, rollback |
 | [DEVELOPMENT.md](DEVELOPMENT.md) | You're working on the code day to day: running the stack, the environment traps, schema changes |
+| [reviews/2026-11-01-architecture-review.md](reviews/2026-11-01-architecture-review.md) | You want the Nov 2026 security and performance findings, each with its before/after measurement, and what was deferred |
 
 At the repo root: [README.md](../README.md) for the overview, self-host quick start and local setup,
 [CONTRIBUTING.md](../CONTRIBUTING.md) for sending a change, and

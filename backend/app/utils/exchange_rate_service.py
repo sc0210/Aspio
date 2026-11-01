@@ -259,11 +259,16 @@ class ExchangeRateService:
                     )
                     return None
 
-        except httpx.HTTPError as e:
-            logger.warning(f"HTTP error fetching exchange rates: {e}")
+        # The API key is part of the URL, and httpx puts the URL in its error
+        # text: log the error's type and status, never the error itself.
+        except httpx.HTTPStatusError as e:
+            logger.warning(f"ExchangeRate-API answered HTTP {e.response.status_code} for {base_currency}")
+            return None
+        except httpx.RequestError as e:
+            logger.warning(f"Could not reach ExchangeRate-API for {base_currency}: {type(e).__name__}")
             return None
         except Exception as e:
-            logger.error(f"Error fetching exchange rates: {e}", exc_info=True)
+            logger.error(f"Error fetching exchange rates for {base_currency}: {type(e).__name__}")
             return None
 
     @staticmethod

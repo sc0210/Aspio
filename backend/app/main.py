@@ -186,16 +186,12 @@ def create_app() -> FastAPI:
         lifespan=lifespan,
     )
 
-    # Setup middleware (order matters!)
-    # CORS must be first to handle OPTIONS preflight
-    setup_cors(app)
-
-    # Pure ASGI middleware (security, logging, validation)
-    # This replaces the old BaseHTTPMiddleware implementations
-    setup_pure_asgi_middleware(app)
-
-    # Rate limiting (can stay as BaseHTTPMiddleware since it doesn't read body)
+    # The last middleware added is the outermost. Request ID, security headers
+    # and logging wrap everything, preflights included. CORS sits just outside
+    # the limiter, so its 429 gets CORS headers for allowlisted origins only.
     setup_rate_limiting(app)
+    setup_cors(app)
+    setup_pure_asgi_middleware(app)
 
     # Setup exception handlers
     setup_exception_handlers(app)

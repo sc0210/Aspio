@@ -1479,6 +1479,22 @@ class TestLiffSessionAccountState:
         assert result.access_token is None
 
     @pytest.mark.asyncio
+    async def test_a_password_lockout_does_not_block_liff(self, async_session, monkeypatch):
+        user = _make_user()
+        user.failed_login_attempts = 5
+        user.account_locked_until = datetime.now(timezone.utc) + timedelta(hours=1)
+        async_session.add(user)
+        async_session.add(_make_link(user.id))
+        await async_session.flush()
+        monkeypatch.setattr(svc.settings, "LINE_LOGIN_CHANNEL_ID", "dummy-channel")
+
+        with _liff_verify_ok(MOCK_LINE_USER_ID):
+            result = await svc.liff_session(async_session, "id-token")
+
+        assert result.linked is True
+        assert result.access_token
+
+    @pytest.mark.asyncio
     async def test_issues_a_token_for_an_active_account(self, async_session, monkeypatch):
         user = _make_user()
         async_session.add(user)

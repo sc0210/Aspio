@@ -15,8 +15,22 @@ from ._shared import (  # noqa: F401  explicit re-import for underscore-prefixed
     fetch_historical_data_background,
 )
 from app.utils.datetime_helpers import utc_now
+from app.core.config import get_settings
+from app.modules.admin.dependencies import RequirePermission
+from app.modules.admin.models import AdminPermission, AdminUser
 
 router = APIRouter()
+
+
+def _supported_currency(code: str) -> str:
+    """The code upper-cased, or 422: an unknown base is a paid API call and a cache key."""
+    code = code.upper()
+    if code not in get_settings().SUPPORTED_CURRENCIES:
+        raise HTTPException(
+            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+            detail=f"Unsupported currency: {code}",
+        )
+    return code
 
 
 @router.get("/prices/bulk")
@@ -325,6 +339,7 @@ async def get_exchange_rates(
     Returns:
         Dictionary of currency pairs with exchange rates
     """
+    base_currency = _supported_currency(base_currency)
     try:
         from app.utils.exchange_rate_service import get_exchange_rate_service
 
@@ -391,7 +406,8 @@ async def get_exchange_rates(
     description="Fetch latest exchange rates from ExchangeRate-API and update database",
 )
 async def refresh_exchange_rates(
-    current_user: CurrentUser,
+    # The stored rates are shared by every user: an operator action.
+    current_admin: AdminUser = Depends(RequirePermission(AdminPermission.MANAGE_SETTINGS)),
     base_currency: str = Query("USD", description="Base currency for exchange rates"),
     session: AsyncSession = Depends(get_db),
 ):
@@ -401,8 +417,9 @@ async def refresh_exchange_rates(
     This endpoint fetches the latest exchange rates and stores them in the database.
     It's useful for ensuring currency conversions use up-to-date rates.
 
-    Requires authentication.
+    Requires the MANAGE_SETTINGS admin permission.
     """
+    base_currency = _supported_currency(base_currency)
     try:
         from app.utils.exchange_rate_service import get_exchange_rate_service
         from ..repositories import CurrencyRepository
@@ -456,7 +473,7 @@ async def refresh_exchange_rates(
         await session.commit()
 
         logger.info(
-            f"Refreshed {len(stored_rates)} exchange rates for user {current_user.id}"
+            f"Refreshed {len(stored_rates)} exchange rates for admin {current_admin.user_id}"
         )
 
         return ApiResponse.success_response(
@@ -485,10 +502,8 @@ async def refresh_exchange_rates(
     description="Get current exchange rate from cache or API",
 )
 async def get_exchange_rate_endpoint(
-    # ISO 4217 codes only: anything else is refused before it reaches a cache,
-    # a lock or the paid exchange-rate API.
-    from_currency: str = Path(..., pattern="^[A-Za-z]{3}$", description="Source currency code (e.g., USD)"),
-    to_currency: str = Path(..., pattern="^[A-Za-z]{3}$", description="Target currency code (e.g., TWD)"),
+    from_currency: str = Path(..., description="Source currency code (e.g., USD)"),
+    to_currency: str = Path(..., description="Target currency code (e.g., TWD)"),
     current_user=Depends(get_optional_current_user),
 ):
     """
@@ -496,6 +511,8 @@ async def get_exchange_rate_endpoint(
 
     Returns real-time rate from ExchangeRate-API with caching.
     """
+    from_currency = _supported_currency(from_currency)
+    to_currency = _supported_currency(to_currency)
     try:
         from app.utils.exchange_rate_service import get_exchange_rate_service
 

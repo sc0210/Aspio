@@ -27,6 +27,13 @@ from app.core.config import get_settings
 # Receipt OCR: US Letter at 300 DPI is about 8.4M pixels.
 MAX_PDF_PIXELS = 12_000_000
 MIN_PDF_DPI = 72
+# A 48MP phone photo is ~48M pixels; past that a few KB of PNG can decode to
+# hundreds of MB. Checked from the header, before any pixel is decoded.
+MAX_RECEIPT_IMAGE_PIXELS = 40_000_000
+
+
+class ReceiptImageTooLargeError(Exception):
+    """The image declares more pixels than a receipt scan will decode."""
 
 # CSV import bounds. Bytes reuse the attachment limit; failed rows are counted
 # but only the first few are kept, without their contents.
@@ -214,11 +221,12 @@ class AttachmentService:
             else:
                 raise ValueError(f"Unsupported file type: {mime_type}")
 
-        except (NotImplementedError, TimeoutError):
-            # Both must reach the router. NotImplementedError becomes a 501: folding
+        except (NotImplementedError, TimeoutError, ReceiptImageTooLargeError):
+            # All must reach the router. NotImplementedError becomes a 501: folding
             # it into the generic handler below would report "scan failed", implying
             # a transient problem worth retrying when no provider exists at all.
-            # TimeoutError becomes a 504, which is retryable and actionable.
+            # TimeoutError becomes a 504, which is retryable and actionable, and an
+            # oversized image a 413 the user can fix with a smaller photo.
             raise
         except Exception as e:
             logger.error(f"Receipt data extraction failed: {str(e)}")
@@ -255,6 +263,10 @@ class AttachmentService:
 
         try:
             with Image.open(file_path) as img:
+                # Image.open reads only the header. Pillow's own bomb check warns
+                # from 89M pixels and refuses only past 179M.
+                if img.width * img.height > MAX_RECEIPT_IMAGE_PIXELS:
+                    raise ReceiptImageTooLargeError(f"{img.width}x{img.height}")
                 # Receipts are thermal prints: greyscale reads more reliably
                 # than colour, and costs nothing to convert.
                 # Downscale first: a full-resolution phone photo is what pushes

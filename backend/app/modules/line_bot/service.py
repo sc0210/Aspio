@@ -1737,7 +1737,6 @@ async def _get_link(db: AsyncSession, line_user_id: str) -> Optional[LineUserLin
         or not user.is_active
         or user.deleted_at is not None
         or user.status != UserStatus.ACTIVE
-        or user.is_account_locked
     ):
         return None
     return link
@@ -4335,15 +4334,14 @@ async def liff_session(db: AsyncSession, id_token: str) -> LiffSessionResponse:
         return LiffSessionResponse(linked=False)
 
     user = await LineAccountRepository(db).get_user(link.user_id)
-    # A missing, deactivated, suspended, pending or locked account gets no token:
-    # this mints a session without a password, so it must refuse exactly what
+    # A missing, deactivated, suspended or pending account gets no token: this
+    # mints a session without a password, so it must refuse exactly what
     # CurrentUser refuses, or deactivation would not reach LINE-linked users.
     if (
         user is None
         or not user.is_active
         or user.deleted_at is not None
         or user.status != UserStatus.ACTIVE
-        or user.is_account_locked
     ):
         return LiffSessionResponse(linked=False)
 

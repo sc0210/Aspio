@@ -150,8 +150,20 @@ class _FakeFx:
         return self.rates.get(from_currency.upper())
 
 
+@pytest_asyncio.fixture
+async def admin_client(authenticated_client, test_user, async_session):
+    """Refreshing writes the rates every user reads, so it takes an admin."""
+    import uuid
+
+    from app.modules.admin.models import AdminUser
+
+    async_session.add(AdminUser(id=uuid.uuid4(), user_id=test_user.id, role="admin", is_active=True, is_suspended=False))
+    await async_session.commit()
+    return authenticated_client
+
+
 class TestExchangeRates:
-    async def test_refresh_stores_known_currencies(self, authenticated_client, monkeypatch):
+    async def test_refresh_stores_known_currencies(self, admin_client, monkeypatch):
         stored = []
 
         async def fake_upsert(self, rate_data):
@@ -164,15 +176,15 @@ class TestExchangeRates:
         )
         monkeypatch.setattr(CurrencyRepository, "create_or_update_rate", fake_upsert)
 
-        data = authenticated_client.post(f"{BASE}/exchange-rates/refresh").json()["data"]
+        data = admin_client.post(f"{BASE}/exchange-rates/refresh").json()["data"]
 
         assert data["rates_updated"] == 2
         assert {(r["to"], r["rate"]) for r in data["rates"]} == {("TWD", 31.5), ("JPY", 150.0)}
         assert {s["source"] for s in stored} == {exchange_rate_service.LIVE_SOURCE}
 
-    async def test_refresh_without_rates_is_503(self, authenticated_client, monkeypatch):
+    async def test_refresh_without_rates_is_503(self, admin_client, monkeypatch):
         monkeypatch.setattr(exchange_rate_service, "get_exchange_rate_service", lambda *a, **kw: _FakeFx({}))
-        assert authenticated_client.post(f"{BASE}/exchange-rates/refresh").status_code == 503
+        assert admin_client.post(f"{BASE}/exchange-rates/refresh").status_code == 503
 
     async def test_pair_lookup(self, client, monkeypatch):
         monkeypatch.setattr(exchange_rate_service, "get_exchange_rate_service", lambda *a, **kw: _FakeFx({"USD": 31.5}))

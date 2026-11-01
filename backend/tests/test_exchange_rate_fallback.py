@@ -243,7 +243,7 @@ async def test_the_refresh_endpoint_saves_rates_under_the_trusted_label():
     with patch("app.utils.exchange_rate_service.get_exchange_rate_service", return_value=live), \
          patch.object(CurrencyRepository, "create_or_update_rate", upsert):
         await refresh_exchange_rates(
-            current_user=SimpleNamespace(id="user-1"), base_currency="USD", session=AsyncMock()
+            current_admin=SimpleNamespace(user_id="admin-1"), base_currency="USD", session=AsyncMock()
         )
 
     assert {row["to_currency"] for row in saved} == {"TWD", "HKD"}

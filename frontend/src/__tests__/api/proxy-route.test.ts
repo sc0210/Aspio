@@ -18,7 +18,7 @@ jest.mock('@/lib/safe-get-token', () => ({
   safeGetToken: jest.fn().mockResolvedValue({ accessToken: 'backend-token' }),
 }));
 
-import { POST } from '@/app/api/proxy/[...path]/route';
+import { GET, POST } from '@/app/api/proxy/[...path]/route';
 
 const mockFetch = jest.fn();
 global.fetch = mockFetch as unknown as typeof fetch;
@@ -86,5 +86,27 @@ describe('POST /api/proxy/[...path]', () => {
 
     const [, init] = mockFetch.mock.calls[0] as [string, RequestInit];
     expect((init.headers as Record<string, string>)['Content-Type']).toBe('application/json');
+  });
+});
+
+describe('/api/proxy path segments', () => {
+  // Next hands the route decoded segments, so %2e%2e arrives as '..' and %2f as
+  // a '/' inside one segment. Joined onto the backend's /api/v1 base, either
+  // walks out of it.
+  it.each([[['..', 'health']], [['.', 'users']], [['users/..', 'docs']], [['a\\b']], [['portfolio', '..']]])(
+    'refuses %j with 400 and never calls the backend',
+    async (path) => {
+      const res = (await GET(makeRequest(ascii(''), null) as never, params(path))) as unknown as {
+        init?: { status?: number };
+      };
+
+      expect(res.init?.status).toBe(400);
+      expect(mockFetch).not.toHaveBeenCalled();
+    },
+  );
+
+  it('still forwards an ordinary path', async () => {
+    await GET(makeRequest(ascii(''), null) as never, params(['portfolio', 'holdings']));
+    expect(mockFetch.mock.calls[0][0]).toMatch(/\/portfolio\/holdings$/);
   });
 });
