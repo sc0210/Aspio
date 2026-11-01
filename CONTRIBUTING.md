@@ -13,7 +13,7 @@ issue first so we can agree on the approach before you write it.
 ## Set up
 
 Fork the repo, clone your fork, then follow [Run it locally](README.md#run-it-locally). Docker
-runs the whole stack. You need Node 22 and Python 3.11 for running checks outside it.
+runs the whole stack. You need Node 22 and Python 3.14 for running checks outside it.
 
 You don't need an account to see the UI. Demo mode runs on fixture data: set a `demo-mode=true`
 cookie on `localhost:3000`. Use `localhost`, not `127.0.0.1`, or sessions won't stick.
