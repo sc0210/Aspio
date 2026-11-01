@@ -355,6 +355,11 @@ expect "...in its own directory" [ "$(dirname "$recorded")" = "$d/backups/pre-up
 expect "...at mode 600" [ "$(file_mode "$recorded")" = 600 ]
 expect "...in a mode 700 directory" [ "$(file_mode "$d/backups/pre-update")" = 700 ]
 expect "...database only (no uploads archive)" has_not "$STUB_LOG" 'tar -C /app/uploads'
+first=$recorded
+sleep 1
+run_cli "$d" "$work/bin" update
+expect "a second update keeps the first dump as backup.prev" \
+  eval '[ "$(cat "$d/.aspiro-state/backup.prev")" = "$first" ] && [ "$(cat "$d/.aspiro-state/backup")" != "$first" ]'
 
 d=$(new_install bind)
 printf 'COMPOSE_PROFILES=tunnel\n' >> "$d/.env"
@@ -367,6 +372,10 @@ expect "...and not once it is set" has_not "$work/out" 'CADDY_BIND is not set'
 d=$(new_install bind-lan)
 run_cli "$d" "$work/bin" update
 expect "a LAN-HTTPS host (no tunnel or tailscale profile) is not warned" has_not "$work/out" 'CADDY_BIND is not set'
+d=$(new_install bind-token)
+printf 'CF_TUNNEL_TOKEN=tok\n' >> "$d/.env"
+run_cli "$d" "$work/bin" update
+expect "a tunnel host started with --profile (token set, no COMPOSE_PROFILES) is warned" has "$work/out" 'CADDY_BIND is not set'
 
 d=$(new_install oldbuildx)
 (export FAKE_OLD_BUILDX=1; run_cli "$d" "$work/bin" update; exit "$rc")

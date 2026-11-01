@@ -295,7 +295,12 @@ starts them again. Copy the four files over, then on the new host, in this order
 `scripts/aspiro update --ref <earlier tag or commit>`. Migrations are **not** reversed: an
 older backend usually tolerates a newer schema, but not always. Every update backs up first
 (`.aspiro-state/backup` names the dump), so restore that dump, over the existing database
-as shown under Backups, when rolling back across a schema change.
+as shown under Backups, when rolling back across a schema change. The rollback update takes
+its own dump of the migrated database, so after it `.aspiro-state/backup.prev` names the one
+taken before the bad update: restore that one.
+
+Caddy caps request bodies at 11 MiB, the backend's `MAX_FILE_SIZE_MB` (10) plus 1 MiB. Raise
+`max_size` in `caddy/Caddyfile` too if you raise `MAX_FILE_SIZE_MB`.
 
 ## Security checklist
 
