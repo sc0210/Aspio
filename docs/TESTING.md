@@ -53,6 +53,19 @@ CI reproduces; `LOAN_INVARIANT_EXPLORE=1 python -m pytest tests/test_loan_balanc
 API requests to replay. A second property makes the balance write fail mid-request and checks
 that nothing drifts after rollback, which holds because each request commits once.
 
+Neither property covers two requests at once, and SQLite ignores `SELECT ... FOR UPDATE`, so
+the suite cannot see it. Every writer that moves a loan's balance locks the loans first, in id
+order, then the transaction row (`TransactionService._lock_for_loan_edit`,
+`DebtAccountRepository.get_by_id(for_update=True)`). Break that order and two requests deadlock;
+skip the lock and a payment is lost (five concurrent payments of 100 on a 2500 loan ended at
+2300). `tests/test_loan_row_lock_postgres.py` checks it on real Postgres. It is marked
+`integration` and creates and drops its own database on the server you name:
+
+```bash
+ASPIRO_PG_LOCK_TEST_URL=postgresql+asyncpg://user:pass@host:5432/postgres \
+  python -m pytest tests/test_loan_row_lock_postgres.py -m integration -o "addopts="
+```
+
 ### Mocks that hide bugs
 
 Two patterns have each shipped a real production break past a green suite:

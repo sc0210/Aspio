@@ -134,15 +134,6 @@ class TransactionService:
         data["status"] = TransactionStatus.COMPLETED
         data["processed_at"] = datetime.now(timezone.utc)
 
-        if data.get("loan_id") and data.get("type") == TransactionType.EXPENSE:
-            cap = await self._loan_payment_cap(
-                str(data["loan_id"]),
-                Decimal(str(data.get("principal_portion") or data["amount"])),
-                user_id,
-            )
-            if cap is not None:
-                data["principal_portion"] = cap
-
         # Ensure category_id is set
         category_id = await self._ensure_category_id(data)
 
@@ -187,6 +178,16 @@ class TransactionService:
         # commit: a payment that is saved must also have moved its loan, or neither.
         db = self.transaction_repo.db
         try:
+            # The cap locks the loan, so it runs here: after the category work and
+            # inside the rollback, never holding the lock over a failure.
+            if data.get("loan_id") and data.get("type") == TransactionType.EXPENSE:
+                cap = await self._loan_payment_cap(
+                    str(data["loan_id"]),
+                    Decimal(str(data.get("principal_portion") or data["amount"])),
+                    user_id,
+                )
+                if cap is not None:
+                    data["principal_portion"] = cap
             transaction = await self.transaction_repo.create(data, user_id, commit=False)
             await self.category_repo.increment_usage(transaction.category_id, commit=False)
             if data.get("loan_id") and transaction.type == TransactionType.EXPENSE:
@@ -587,7 +588,7 @@ class TransactionService:
         # category, tags…) skip the extra fetch and the sync entirely.
         loan_relevant = bool({"loan_id", "amount", "type"} & data.keys())
         existing = (
-            await self.transaction_repo.get_by_id(transaction_id, user_id)
+            await self._lock_for_loan_edit(transaction_id, user_id, data.get("loan_id"))
             if loan_relevant
             else None
         )
@@ -663,7 +664,7 @@ class TransactionService:
     async def delete_transaction(self, transaction_id: str, user_id: str) -> bool:
         """Soft delete a transaction"""
         # Fetch before deleting so we can reverse any loan balance change
-        existing = await self.transaction_repo.get_by_id(transaction_id, user_id)
+        existing = await self._lock_for_loan_edit(transaction_id, user_id)
 
         # The delete, the loan balance it restores and a transfer's other leg are one
         # commit: no half-deleted transfer, no deleted payment still off its loan.
@@ -705,20 +706,35 @@ class TransactionService:
         return success
 
     async def _get_loan(self, loan_id: str, user_id: str):
+        """The loan, locked until this request commits (every caller moves its balance)."""
         import uuid as _uuid
-        from sqlalchemy import select, and_
-        from app.modules.loans.models import DebtAccount
+        from app.modules.loans.repositories import DebtAccountRepository
 
-        result = await self.transaction_repo.db.execute(
-            select(DebtAccount).where(
-                and_(
-                    DebtAccount.id == _uuid.UUID(str(loan_id)),
-                    DebtAccount.user_id == _uuid.UUID(str(user_id)),
-                    DebtAccount.is_deleted == False,
-                )
-            )
+        return await DebtAccountRepository(self.transaction_repo.db).get_by_id(
+            _uuid.UUID(str(user_id)), _uuid.UUID(str(loan_id)), for_update=True
         )
-        return result.scalar_one_or_none()
+
+    async def _lock_for_loan_edit(
+        self, transaction_id: str, user_id: str, next_loan_id: Optional[str] = None
+    ):
+        """Read a row for an edit that can move loan balances, under the right locks.
+
+        Every writer locks in one order, loans by id and then the transaction row
+        (LoanService locks the loan before its payment row too), so two requests
+        never wait on each other in a cycle. The row is re-read under its lock, so
+        the amount reversed is the one actually stored, not a copy read earlier.
+        """
+        first = await self.transaction_repo.get_by_id(transaction_id, user_id)
+        if first is None:
+            return None
+        loan_ids = sorted({str(x) for x in (first.loan_id, next_loan_id) if x})
+        for loan_id in loan_ids:
+            await self._get_loan(loan_id, user_id)
+        row = await self.transaction_repo.get_by_id(transaction_id, user_id, for_update=True)
+        if row is not None and row.loan_id and str(row.loan_id) not in loan_ids:
+            # Relinked by another request between the two reads; its loan is unlocked.
+            raise ValueError("This transaction was changed by another request. Try again.")
+        return row
 
     async def _loan_payment_cap(
         self,

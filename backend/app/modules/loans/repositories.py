@@ -39,18 +39,23 @@ class DebtAccountRepository:
         self.session = session
 
     async def get_by_id(
-        self, user_id: uuid.UUID, loan_id: uuid.UUID
+        self, user_id: uuid.UUID, loan_id: uuid.UUID, for_update: bool = False
     ) -> Optional[DebtAccount]:
-        """Return the loan if it belongs to user and is not soft-deleted."""
-        result = await self.session.execute(
-            select(DebtAccount).where(
-                and_(
-                    DebtAccount.id == loan_id,
-                    DebtAccount.user_id == user_id,
-                    DebtAccount.is_deleted == False,
-                )
+        """Return the loan if it belongs to user and is not soft-deleted.
+
+        for_update locks the row until the caller commits, so two requests that both
+        move current_balance apply in turn instead of one overwriting the other.
+        """
+        stmt = select(DebtAccount).where(
+            and_(
+                DebtAccount.id == loan_id,
+                DebtAccount.user_id == user_id,
+                DebtAccount.is_deleted == False,
             )
         )
+        if for_update:
+            stmt = stmt.with_for_update().execution_options(populate_existing=True)
+        result = await self.session.execute(stmt)
         return result.scalar_one_or_none()
 
     async def list_by_user(self, user_id: uuid.UUID) -> List[DebtAccount]:
@@ -97,13 +102,19 @@ class LoanTransactionRepository:
         loan_id: uuid.UUID,
         user_id: uuid.UUID,
     ) -> Optional[Transaction]:
-        """Return a payment Transaction that matches loan + user ownership."""
+        """Return a live EXPENSE payment that matches loan + user ownership.
+
+        A deleted payment or the INCOME receipt row would move the balance on edit
+        without ever having been subtracted from it.
+        """
         result = await self.session.execute(
             select(Transaction).where(
                 and_(
                     Transaction.id == transaction_id,
                     Transaction.loan_id == loan_id,
                     Transaction.user_id == user_id,
+                    Transaction.type == TransactionType.EXPENSE,
+                    Transaction.is_deleted == False,
                 )
             )
         )

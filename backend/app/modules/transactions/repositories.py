@@ -144,9 +144,13 @@ class TransactionRepository:
             raise
 
     async def get_by_id(
-        self, transaction_id: str, user_id: str
+        self, transaction_id: str, user_id: str, for_update: bool = False
     ) -> Optional[Transaction]:
-        """Get transaction by ID for a specific user"""
+        """Get transaction by ID for a specific user.
+
+        for_update locks this row (not the joined ones) until the caller commits and
+        re-reads it over any copy the session already holds.
+        """
         # Convert string UUIDs to UUID objects
         transaction_id_uuid = (
             uuid_module.UUID(transaction_id)
@@ -174,6 +178,10 @@ class TransactionRepository:
                 )
             )
         )
+        if for_update:
+            stmt = stmt.with_for_update(of=Transaction).execution_options(
+                populate_existing=True
+            )
         result = await self.db.execute(stmt)
         return result.scalar_one_or_none()
 

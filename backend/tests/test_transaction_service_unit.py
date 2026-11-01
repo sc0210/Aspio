@@ -27,7 +27,14 @@ from app.modules.transactions.schemas import (
     BulkTransactionCreate,
     RecurringTransactionUpdate,
 )
+from sqlalchemy.ext.asyncio import AsyncSession
+
 from app.core.exceptions import ValidationException
+from app.modules.transactions.repositories import (
+    RecurringTransactionRepository,
+    TransactionCategoryRepository,
+    TransactionRepository,
+)
 from app.utils.datetime_helpers import business_today
 
 
@@ -109,11 +116,16 @@ def make_service(
     recurring_repo=None,
 ):
     """Build a TransactionService with all deps mocked."""
-    t_repo = transaction_repo or MagicMock()
-    c_repo = category_repo or MagicMock()
-    r_repo = recurring_repo or MagicMock()
-    # create/update/delete_transaction commit once on the transaction repo's session
-    # (and roll back on error), so that session must be awaitable like AsyncSession.
+    # Specced, so a call to a repository method that does not exist fails here
+    # instead of passing (see "Mocks that hide bugs" in docs/TESTING.md).
+    t_repo = transaction_repo or MagicMock(spec=TransactionRepository)
+    c_repo = category_repo or MagicMock(spec=TransactionCategoryRepository)
+    r_repo = recurring_repo or MagicMock(spec=RecurringTransactionRepository)
+    # `db` is set in __init__, so the class spec lacks it. create/update/delete commit
+    # once on this session and roll back on error, so it must be awaitable.
+    for repo in (t_repo, c_repo, r_repo):
+        if "db" not in vars(repo):
+            repo.db = MagicMock(spec=AsyncSession)
     for method in ("commit", "rollback", "flush"):
         if not isinstance(getattr(t_repo.db, method), AsyncMock):
             setattr(t_repo.db, method, AsyncMock())
@@ -133,7 +145,7 @@ class TestEnsureCategoryId:
     async def test_valid_category_id_returns_it(self):
         cat_id = str(uuid4())
         mock_cat = make_mock_category()
-        c_repo = MagicMock()
+        c_repo = MagicMock(spec=TransactionCategoryRepository)
         c_repo.get_by_id = AsyncMock(return_value=mock_cat)
 
         svc = make_service(category_repo=c_repo)
@@ -144,7 +156,7 @@ class TestEnsureCategoryId:
     async def test_invalid_category_id_falls_back_to_name(self):
         cat_id = str(uuid4())
         mock_cat = make_mock_category("Groceries")
-        c_repo = MagicMock()
+        c_repo = MagicMock(spec=TransactionCategoryRepository)
         c_repo.get_by_id = AsyncMock(return_value=None)  # invalid id
         c_repo.get_by_name = AsyncMock(return_value=mock_cat)
 
@@ -159,7 +171,7 @@ class TestEnsureCategoryId:
     @pytest.mark.asyncio
     async def test_category_name_found_returns_id(self):
         mock_cat = make_mock_category("Transportation")
-        c_repo = MagicMock()
+        c_repo = MagicMock(spec=TransactionCategoryRepository)
         c_repo.get_by_name = AsyncMock(return_value=mock_cat)
 
         svc = make_service(category_repo=c_repo)
@@ -173,7 +185,7 @@ class TestEnsureCategoryId:
     async def test_unknown_category_name_falls_back_without_creating(self):
         # Categories are global; an ordinary request must not add one.
         others = make_mock_category("Others")
-        c_repo = MagicMock()
+        c_repo = MagicMock(spec=TransactionCategoryRepository)
         c_repo.get_by_name = AsyncMock(side_effect=lambda name, t: others if name == "Others" else None)
         c_repo.create = AsyncMock()
 
@@ -189,9 +201,10 @@ class TestEnsureCategoryId:
     async def test_fresh_install_creates_only_the_fixed_fallback(self):
         # No "Others" yet: create that one fixed name, never the requested one.
         others = make_mock_category("Others")
-        c_repo = MagicMock()
+        c_repo = MagicMock(spec=TransactionCategoryRepository)
         c_repo.get_by_name = AsyncMock(return_value=None)
         c_repo.create_flush = AsyncMock(return_value=others)
+        c_repo.db = MagicMock(spec=AsyncSession)
         c_repo.db.begin_nested = MagicMock(return_value=_Savepoint())
 
         svc = make_service(category_repo=c_repo)
@@ -203,7 +216,7 @@ class TestEnsureCategoryId:
     @pytest.mark.asyncio
     async def test_unknown_income_name_uses_the_income_catch_all(self):
         other_income = make_mock_category("Other Income")
-        c_repo = MagicMock()
+        c_repo = MagicMock(spec=TransactionCategoryRepository)
         c_repo.get_by_name = AsyncMock(
             side_effect=lambda name, t: other_income if name == "Other Income" else None
         )
@@ -221,9 +234,10 @@ class TestEnsureCategoryId:
         from sqlalchemy.exc import IntegrityError
 
         others = make_mock_category("Others")
-        c_repo = MagicMock()
+        c_repo = MagicMock(spec=TransactionCategoryRepository)
         c_repo.get_by_name = AsyncMock(side_effect=[None, None, others])
         c_repo.create_flush = AsyncMock(side_effect=IntegrityError("insert", {}, Exception("dup")))
+        c_repo.db = MagicMock(spec=AsyncSession)
         c_repo.db.begin_nested = MagicMock(return_value=_Savepoint())
         c_repo.db.rollback = AsyncMock()
 
@@ -261,11 +275,11 @@ class TestCreateTransaction:
         mock_cat = make_mock_category("Food & Dining")
         mock_tx = make_mock_transaction(description="Coffee shop")
 
-        c_repo = MagicMock()
+        c_repo = MagicMock(spec=TransactionCategoryRepository)
         c_repo.get_by_name = AsyncMock(return_value=mock_cat)
         c_repo.increment_usage = AsyncMock()
 
-        t_repo = MagicMock()
+        t_repo = MagicMock(spec=TransactionRepository)
         t_repo.create = AsyncMock(return_value=mock_tx)
 
         svc = make_service(transaction_repo=t_repo, category_repo=c_repo)
@@ -281,12 +295,12 @@ class TestCreateTransaction:
 
     @pytest.mark.asyncio
     async def test_create_without_category_raises_validation_error(self):
-        c_repo = MagicMock()
+        c_repo = MagicMock(spec=TransactionCategoryRepository)
         c_repo.get_by_name = AsyncMock(return_value=None)
         c_repo.create = AsyncMock(return_value=None)
         c_repo.get_all = AsyncMock(return_value=[])
 
-        t_repo = MagicMock()
+        t_repo = MagicMock(spec=TransactionRepository)
         svc = make_service(transaction_repo=t_repo, category_repo=c_repo)
 
         with pytest.raises(ValidationException):
@@ -301,14 +315,14 @@ class TestCreateTransaction:
         mock_tx = make_mock_transaction()
 
         # Setup category_repo to return None for category_id/name lookups
-        c_repo = MagicMock()
+        c_repo = MagicMock(spec=TransactionCategoryRepository)
         c_repo.get_by_id = AsyncMock(return_value=None)
         c_repo.get_by_name = AsyncMock(return_value=None)
         c_repo.create = AsyncMock(return_value=None)  # can't create either
         c_repo.get_all = AsyncMock(return_value=[mock_cat])
         c_repo.increment_usage = AsyncMock()
 
-        t_repo = MagicMock()
+        t_repo = MagicMock(spec=TransactionRepository)
         t_repo.create = AsyncMock(return_value=mock_tx)
         t_repo.search_similar_transactions = AsyncMock(return_value=[])
 
@@ -344,7 +358,7 @@ class TestGetTransactions:
     @pytest.mark.asyncio
     async def test_get_transaction_by_id(self):
         mock_tx = make_mock_transaction()
-        t_repo = MagicMock()
+        t_repo = MagicMock(spec=TransactionRepository)
         t_repo.get_by_id = AsyncMock(return_value=mock_tx)
 
         svc = make_service(transaction_repo=t_repo)
@@ -355,7 +369,7 @@ class TestGetTransactions:
 
     @pytest.mark.asyncio
     async def test_get_transaction_not_found(self):
-        t_repo = MagicMock()
+        t_repo = MagicMock(spec=TransactionRepository)
         t_repo.get_by_id = AsyncMock(return_value=None)
 
         svc = make_service(transaction_repo=t_repo)
@@ -366,7 +380,7 @@ class TestGetTransactions:
     @pytest.mark.asyncio
     async def test_get_transactions_returns_paginated(self):
         txs = [make_mock_transaction() for _ in range(5)]
-        t_repo = MagicMock()
+        t_repo = MagicMock(spec=TransactionRepository)
         t_repo.get_all = AsyncMock(return_value=(txs, 5))
 
         svc = make_service(transaction_repo=t_repo)
@@ -383,7 +397,7 @@ class TestGetTransactions:
     @pytest.mark.asyncio
     async def test_get_transactions_pagination_metadata(self):
         txs = [make_mock_transaction() for _ in range(10)]
-        t_repo = MagicMock()
+        t_repo = MagicMock(spec=TransactionRepository)
         t_repo.get_all = AsyncMock(return_value=(txs, 25))
 
         svc = make_service(transaction_repo=t_repo)
@@ -396,7 +410,7 @@ class TestGetTransactions:
     @pytest.mark.asyncio
     async def test_get_transactions_last_page(self):
         txs = [make_mock_transaction() for _ in range(5)]
-        t_repo = MagicMock()
+        t_repo = MagicMock(spec=TransactionRepository)
         t_repo.get_all = AsyncMock(return_value=(txs, 25))
 
         svc = make_service(transaction_repo=t_repo)
@@ -413,10 +427,10 @@ class TestUpdateTransaction:
     @pytest.mark.asyncio
     async def test_update_transaction_success(self):
         mock_tx = make_mock_transaction()
-        t_repo = MagicMock()
+        t_repo = MagicMock(spec=TransactionRepository)
         t_repo.update = AsyncMock(return_value=mock_tx)
 
-        c_repo = MagicMock()
+        c_repo = MagicMock(spec=TransactionCategoryRepository)
         c_repo.increment_usage = AsyncMock()
 
         svc = make_service(transaction_repo=t_repo, category_repo=c_repo)
@@ -432,11 +446,11 @@ class TestUpdateTransaction:
         mock_cat = make_mock_category("Shopping")
         mock_tx = make_mock_transaction(category_id=mock_cat.id)
 
-        c_repo = MagicMock()
+        c_repo = MagicMock(spec=TransactionCategoryRepository)
         c_repo.get_by_name = AsyncMock(return_value=mock_cat)
         c_repo.increment_usage = AsyncMock()
 
-        t_repo = MagicMock()
+        t_repo = MagicMock(spec=TransactionRepository)
         t_repo.update = AsyncMock(return_value=mock_tx)
         stored = make_mock_transaction()
         stored.type = TransactionType.INCOME
@@ -456,7 +470,7 @@ class TestUpdateTransaction:
 
     @pytest.mark.asyncio
     async def test_update_transaction_not_found_returns_none(self):
-        t_repo = MagicMock()
+        t_repo = MagicMock(spec=TransactionRepository)
         t_repo.update = AsyncMock(return_value=None)
 
         svc = make_service(transaction_repo=t_repo)
@@ -471,7 +485,7 @@ class TestDeleteTransaction:
 
     @pytest.mark.asyncio
     async def test_delete_transaction_success(self):
-        t_repo = MagicMock()
+        t_repo = MagicMock(spec=TransactionRepository)
         t_repo.get_by_id = AsyncMock(return_value=None)
         t_repo.soft_delete = AsyncMock(return_value=True)
 
@@ -483,7 +497,7 @@ class TestDeleteTransaction:
 
     @pytest.mark.asyncio
     async def test_delete_transaction_not_found_returns_false(self):
-        t_repo = MagicMock()
+        t_repo = MagicMock(spec=TransactionRepository)
         t_repo.get_by_id = AsyncMock(return_value=None)
         t_repo.soft_delete = AsyncMock(return_value=False)
 
@@ -506,7 +520,7 @@ class TestGetAnalytics:
             "currency": "USD",
         }
 
-        t_repo = MagicMock()
+        t_repo = MagicMock(spec=TransactionRepository)
         t_repo.get_summary = AsyncMock(return_value=summary.copy())
         t_repo.get_category_breakdown = AsyncMock(return_value=[])
         t_repo.get_monthly_trends = AsyncMock(return_value=[])
@@ -529,7 +543,7 @@ class TestGetAnalytics:
             "transaction_count": 0,
             "currency": "USD",
         }
-        t_repo = MagicMock()
+        t_repo = MagicMock(spec=TransactionRepository)
         t_repo.get_summary = AsyncMock(return_value=summary.copy())
         t_repo.get_category_breakdown = AsyncMock(return_value=[])
         t_repo.get_monthly_trends = AsyncMock(return_value=[])
@@ -553,7 +567,7 @@ class TestCheckDuplicateTransaction:
 
     @pytest.mark.asyncio
     async def test_no_duplicate(self):
-        t_repo = MagicMock()
+        t_repo = MagicMock(spec=TransactionRepository)
         t_repo.get_all = AsyncMock(return_value=([], 0))
 
         svc = make_service(transaction_repo=t_repo)
@@ -575,7 +589,7 @@ class TestCheckDuplicateTransaction:
             description="Coffee", amount=Decimal("100"), tx_date=tx_date
         )
 
-        t_repo = MagicMock()
+        t_repo = MagicMock(spec=TransactionRepository)
         t_repo.get_all = AsyncMock(return_value=([mock_tx], 1))
 
         svc = make_service(transaction_repo=t_repo)
@@ -593,7 +607,7 @@ class TestCheckDuplicateTransaction:
     @pytest.mark.asyncio
     async def test_different_amount_not_duplicate(self):
         mock_tx = make_mock_transaction(description="Coffee", amount=Decimal("200"))
-        t_repo = MagicMock()
+        t_repo = MagicMock(spec=TransactionRepository)
         t_repo.get_all = AsyncMock(return_value=([mock_tx], 1))
 
         svc = make_service(transaction_repo=t_repo)
@@ -618,11 +632,11 @@ class TestBulkCreateTransactions:
         mock_cat = make_mock_category("Food & Dining")
         mock_txs = [make_mock_transaction() for _ in range(3)]
 
-        c_repo = MagicMock()
+        c_repo = MagicMock(spec=TransactionCategoryRepository)
         c_repo.get_by_name = AsyncMock(return_value=mock_cat)
         c_repo.increment_usage = AsyncMock()
 
-        t_repo = MagicMock()
+        t_repo = MagicMock(spec=TransactionRepository)
         t_repo.create = AsyncMock(side_effect=mock_txs)
         t_repo.get_all = AsyncMock(return_value=([], 0))
 
@@ -652,7 +666,7 @@ class TestBulkCreateTransactions:
     @pytest.mark.asyncio
     async def test_bulk_create_skips_duplicates(self):
         mock_tx = make_mock_transaction(description="Coffee", amount=Decimal("10"))
-        t_repo = MagicMock()
+        t_repo = MagicMock(spec=TransactionRepository)
         t_repo.get_all = AsyncMock(return_value=([mock_tx], 1))
 
         svc = make_service(transaction_repo=t_repo)
@@ -673,12 +687,12 @@ class TestBulkCreateTransactions:
 
     @pytest.mark.asyncio
     async def test_bulk_create_handles_errors(self):
-        c_repo = MagicMock()
+        c_repo = MagicMock(spec=TransactionCategoryRepository)
         c_repo.get_by_name = AsyncMock(return_value=None)
         c_repo.create = AsyncMock(return_value=None)
         c_repo.get_all = AsyncMock(return_value=[])
 
-        t_repo = MagicMock()
+        t_repo = MagicMock(spec=TransactionRepository)
 
         svc = make_service(transaction_repo=t_repo, category_repo=c_repo)
 
@@ -702,8 +716,8 @@ class TestCategorizationService:
     """Tests for CategorizationService._categorize_by_rules and auto_categorize"""
 
     def make_service(self):
-        t_repo = MagicMock()
-        c_repo = MagicMock()
+        t_repo = MagicMock(spec=TransactionRepository)
+        c_repo = MagicMock(spec=TransactionCategoryRepository)
         return CategorizationService(t_repo, c_repo)
 
     def test_categorize_by_rules_matches_food(self):
@@ -778,10 +792,10 @@ class TestCategorizationService:
         food_cat.type = TransactionType.EXPENSE
         food_cat.keywords = ["food", "dining"]
 
-        c_repo = MagicMock()
+        c_repo = MagicMock(spec=TransactionCategoryRepository)
         c_repo.get_all = AsyncMock(return_value=[food_cat])
 
-        t_repo = MagicMock()
+        t_repo = MagicMock(spec=TransactionRepository)
         t_repo.search_similar_transactions = AsyncMock(return_value=[])
 
         svc = CategorizationService(t_repo, c_repo)
@@ -800,7 +814,7 @@ class TestCalculateNextOccurrence:
 
     def make_service(self):
         return RecurringTransactionService(
-            recurring_repo=MagicMock(),
+            recurring_repo=MagicMock(spec=RecurringTransactionRepository),
             transaction_service=MagicMock(),
         )
 
@@ -871,7 +885,7 @@ class TestGetDaysInMonth:
 
     def make_service(self):
         return RecurringTransactionService(
-            recurring_repo=MagicMock(),
+            recurring_repo=MagicMock(spec=RecurringTransactionRepository),
             transaction_service=MagicMock(),
         )
 
@@ -909,7 +923,7 @@ class TestGetDaysInMonth:
 class TestRecurringTransactionService:
 
     def make_service(self):
-        r_repo = MagicMock()
+        r_repo = MagicMock(spec=RecurringTransactionRepository)
         t_svc = MagicMock()
         return RecurringTransactionService(r_repo, t_svc)
 
@@ -1033,10 +1047,10 @@ class TestLoanPaymentBiggerThanBalance:
 
     @staticmethod
     def _service(balance):
-        c_repo = MagicMock()
+        c_repo = MagicMock(spec=TransactionCategoryRepository)
         c_repo.get_by_name = AsyncMock(return_value=make_mock_category("Debt"))
         c_repo.increment_usage = AsyncMock()
-        t_repo = MagicMock()
+        t_repo = MagicMock(spec=TransactionRepository)
         t_repo.create = AsyncMock(return_value=make_mock_transaction())
         svc = make_service(transaction_repo=t_repo, category_repo=c_repo)
         svc._get_loan = AsyncMock(return_value=_loan(balance))
@@ -1074,7 +1088,7 @@ class TestLoanPaymentBiggerThanBalance:
     async def test_edit_counts_this_rows_own_payment_as_room(self):
         """100 already paid by this row + 20 left = 120: raising it to 150 records 120."""
         existing = _make_loan_expense(loan_id="loan-123", amount="100.00")
-        t_repo = MagicMock()
+        t_repo = MagicMock(spec=TransactionRepository)
         t_repo.get_by_id = AsyncMock(return_value=existing)
         t_repo.update = AsyncMock(return_value=_make_loan_expense("loan-123", "150.00", "120.00"))
         svc = make_service(transaction_repo=t_repo)
@@ -1090,7 +1104,7 @@ class TestLoanPaymentBiggerThanBalance:
     async def test_lowering_a_capped_payment_lowers_its_principal(self):
         """3,200 recorded 3,000 of principal; cut to 2,000, only 2,000 came off."""
         existing = _make_loan_expense("loan-123", "3200.00", "3000.00")
-        t_repo = MagicMock()
+        t_repo = MagicMock(spec=TransactionRepository)
         t_repo.get_by_id = AsyncMock(return_value=existing)
         t_repo.update = AsyncMock(return_value=_make_loan_expense("loan-123", "2000.00", "2000.00"))
         svc = make_service(transaction_repo=t_repo)
@@ -1111,7 +1125,7 @@ class TestUpdateTransactionLoanSync:
     async def test_linking_a_loan_reduces_balance(self):
         existing = _make_loan_expense(loan_id=None, amount="100.00")
         updated = _make_loan_expense(loan_id="loan-123", amount="100.00")
-        t_repo = MagicMock()
+        t_repo = MagicMock(spec=TransactionRepository)
         t_repo.get_by_id = AsyncMock(return_value=existing)
         t_repo.update = AsyncMock(return_value=updated)
         svc = make_service(transaction_repo=t_repo)
@@ -1127,7 +1141,7 @@ class TestUpdateTransactionLoanSync:
     async def test_unlinking_a_loan_restores_balance(self):
         existing = _make_loan_expense(loan_id="loan-123", amount="100.00")
         updated = _make_loan_expense(loan_id=None, amount="100.00")
-        t_repo = MagicMock()
+        t_repo = MagicMock(spec=TransactionRepository)
         t_repo.get_by_id = AsyncMock(return_value=existing)
         t_repo.update = AsyncMock(return_value=updated)
         svc = make_service(transaction_repo=t_repo)
@@ -1144,7 +1158,7 @@ class TestUpdateTransactionLoanSync:
     async def test_amount_change_on_linked_loan_resyncs(self):
         existing = _make_loan_expense(loan_id="loan-123", amount="100.00")
         updated = _make_loan_expense(loan_id="loan-123", amount="150.00")
-        t_repo = MagicMock()
+        t_repo = MagicMock(spec=TransactionRepository)
         t_repo.get_by_id = AsyncMock(return_value=existing)
         t_repo.update = AsyncMock(return_value=updated)
         svc = make_service(transaction_repo=t_repo)
@@ -1162,7 +1176,7 @@ class TestUpdateTransactionLoanSync:
     async def test_unrelated_edit_does_not_touch_loans(self):
         existing = _make_loan_expense(loan_id=None, amount="100.00")
         updated = _make_loan_expense(loan_id=None, amount="100.00")
-        t_repo = MagicMock()
+        t_repo = MagicMock(spec=TransactionRepository)
         t_repo.get_by_id = AsyncMock(return_value=existing)
         t_repo.update = AsyncMock(return_value=updated)
         svc = make_service(transaction_repo=t_repo)
@@ -1203,7 +1217,7 @@ class TestOneCommitPerRequest:
 
     @staticmethod
     def _linked(amount_after="150.00"):
-        t_repo = MagicMock()
+        t_repo = MagicMock(spec=TransactionRepository)
         t_repo.get_by_id = AsyncMock(return_value=_make_loan_expense(loan_id="loan-123", amount="100.00"))
         t_repo.update = AsyncMock(return_value=_make_loan_expense(loan_id="loan-123", amount=amount_after))
         t_repo.soft_delete = AsyncMock(return_value=True)
