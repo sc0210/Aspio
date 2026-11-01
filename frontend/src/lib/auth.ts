@@ -1,5 +1,6 @@
 import { getServerApiUrl } from '@/lib/api-url';
 import { NextAuthOptions } from 'next-auth';
+import type { JWT } from 'next-auth/jwt';
 import GoogleProvider from 'next-auth/providers/google';
 import CredentialsProvider from 'next-auth/providers/credentials';
 
@@ -34,7 +35,6 @@ declare module 'next-auth' {
 
   interface Session {
     accessToken?: string;
-    refreshToken?: string;
     error?: string;
     user: {
       id?: string;
@@ -89,6 +89,46 @@ function decodeJwtPayload(token: string): Record<string, unknown> | null {
   } catch {
     return null;
   }
+}
+
+/** The token with a usable backend access token, refreshing it if it has expired. */
+async function withLiveAccessToken(token: JWT, signal?: AbortSignal): Promise<JWT> {
+  if (token.error === 'RefreshAccessTokenError') {
+    return token;
+  }
+
+  if (token.accessTokenExpires && Date.now() < token.accessTokenExpires) {
+    return token;
+  }
+
+  if (token.refreshToken) {
+    try {
+      const apiUrl = getServerApiUrl();
+
+      const response = await fetch(`${apiUrl}/auth/refresh`, {
+        signal,
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ refresh_token: token.refreshToken }),
+      });
+
+      if (response.ok) {
+        const data = await response.json();
+        return {
+          ...token,
+          accessToken: data.access_token,
+          refreshToken: data.refresh_token || token.refreshToken,
+          accessTokenExpires: Date.now() + 15 * 60 * 1000,
+        };
+      } else {
+        return { ...token, error: 'RefreshAccessTokenError' };
+      }
+    } catch {
+      return { ...token, error: 'RefreshAccessTokenError' };
+    }
+  }
+
+  return { ...token, error: 'RefreshAccessTokenError' };
 }
 
 export const authOptions: NextAuthOptions = {
@@ -300,41 +340,7 @@ export const authOptions: NextAuthOptions = {
         return token;
       }
 
-      if (token.error === 'RefreshAccessTokenError') {
-        return token;
-      }
-
-      if (token.accessTokenExpires && Date.now() < token.accessTokenExpires) {
-        return token;
-      }
-
-      if (token.refreshToken) {
-        try {
-          const apiUrl = getServerApiUrl();
-
-          const response = await fetch(`${apiUrl}/auth/refresh`, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ refresh_token: token.refreshToken }),
-          });
-
-          if (response.ok) {
-            const data = await response.json();
-            return {
-              ...token,
-              accessToken: data.access_token,
-              refreshToken: data.refresh_token || token.refreshToken,
-              accessTokenExpires: Date.now() + 15 * 60 * 1000,
-            };
-          } else {
-            return { ...token, error: 'RefreshAccessTokenError' };
-          }
-        } catch {
-          return { ...token, error: 'RefreshAccessTokenError' };
-        }
-      }
-
-      return { ...token, error: 'RefreshAccessTokenError' };
+      return withLiveAccessToken(token);
     },
     async session({ session, token }) {
       if (token.error) {
@@ -342,7 +348,6 @@ export const authOptions: NextAuthOptions = {
           ...session,
           error: 'RefreshAccessTokenError',
           accessToken: undefined,
-          refreshToken: undefined,
         };
       }
 
@@ -350,7 +355,6 @@ export const authOptions: NextAuthOptions = {
         session.user.id = token.userId as string;
         session.user.role = token.role as string;
         session.accessToken = token.accessToken;
-        session.refreshToken = token.refreshToken;
       }
       return session;
     },
@@ -429,6 +433,28 @@ export const authOptions: NextAuthOptions = {
         }
       }
       return true;
+    },
+  },
+  events: {
+    // The refresh token never reaches page JavaScript, so it is revoked here,
+    // server-side. Best-effort: a backend that is down must not strand the user
+    // in a session they asked to end. If the refresh itself fails nothing is
+    // revoked: a 401 means the token is already dead, an outage leaves it live.
+    async signOut({ token }) {
+      if (!token?.refreshToken) return;
+      // Bounded, so a hung backend cannot hold up clearing the cookie.
+      const live = await withLiveAccessToken(token, AbortSignal.timeout(3000));
+      if (live.error) return;
+      try {
+        await fetch(`${getServerApiUrl()}/auth/logout`, {
+          signal: AbortSignal.timeout(3000),
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${live.accessToken}` },
+          body: JSON.stringify({ refresh_token: live.refreshToken, logout_all_devices: false }),
+        });
+      } catch {
+        /* best-effort */
+      }
     },
   },
   pages: {

@@ -79,9 +79,12 @@ export async function middleware(request: NextRequest) {
     return NextResponse.next();
   }
 
-  // Allow demo-mode users through — the page layer enforces demo-only content
+  // Allow demo-mode users through — the page layer enforces demo-only content.
+  // Anyone can set this cookie, and the admin console has no demo, so it never
+  // opens /admin.
   const demoModeCookie = request.cookies.get('demo-mode');
-  if (demoModeCookie?.value === 'true') {
+  const isAdminPage = pathname === '/admin' || pathname.startsWith('/admin/');
+  if (demoModeCookie?.value === 'true' && !isAdminPage) {
     return NextResponse.next();
   }
 

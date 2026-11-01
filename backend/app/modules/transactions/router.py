@@ -50,6 +50,7 @@ from .dependencies import (
     AttachmentServiceDepends,
     ImportExportServiceDepends,
 )
+from .attachment_service import ReceiptImageTooLargeError
 from .demo_service import demo_transaction_service
 from app.utils.fx_sql import twd_rates_for
 from .schemas import (
@@ -1586,6 +1587,11 @@ async def scan_receipt(
         raise HTTPException(
             status_code=status.HTTP_504_GATEWAY_TIMEOUT,
             detail="Receipt scan timed out. Try again, or use a smaller photo.",
+        )
+    except ReceiptImageTooLargeError:
+        raise HTTPException(
+            status_code=status.HTTP_413_REQUEST_ENTITY_TOO_LARGE,
+            detail="Image too large to scan. Use a photo under 40 megapixels.",
         )
     except NotImplementedError:
         raise HTTPException(

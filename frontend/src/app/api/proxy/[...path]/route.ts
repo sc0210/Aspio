@@ -45,11 +45,24 @@ async function proxyRequest(
   pathSegments: string[],
   method: string
 ): Promise<NextResponse> {
+  // Segments arrive decoded (%2e%2e is '..', %2f a '/'), and joined onto the
+  // backend base any of these would walk out of /api/v1.
+  if (pathSegments.some((s) => s === '.' || s === '..' || s.includes('/') || s.includes('\\'))) {
+    return NextResponse.json({ error: 'Invalid path' }, { status: 400 });
+  }
   try {
     const path = pathSegments.join('/');
     const url = new URL(request.url);
     const queryString = url.search;
     const targetUrl = `${BACKEND_URL}/${path}${queryString}`;
+
+    // Judge the URL fetch will actually request, not the segments' spelling: a
+    // double-encoded '%252E%252E' arrives here as '%2E%2E', passes the check
+    // above, and the URL parser then resolves it to '..'.
+    const basePath = new URL(BACKEND_URL).pathname.replace(/\/$/, '');
+    if (!new URL(targetUrl).pathname.startsWith(`${basePath}/`)) {
+      return NextResponse.json({ error: 'Invalid path' }, { status: 400 });
+    }
 
     if (process.env.NODE_ENV === 'development') console.log(`[API Proxy] ${method} ${path} -> ${targetUrl}`);
 

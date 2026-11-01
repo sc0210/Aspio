@@ -7,24 +7,15 @@
  * up as "logged in but seeing demo data".
  */
 
-import { signOut, getSession } from 'next-auth/react';
-import { apiClient } from './api-client';
+import { signOut } from 'next-auth/react';
 
 /**
- * Revoke the refresh token, clear the demo cookie, then hand off to NextAuth.
- * The revoke is best-effort: a backend that is down must not strand the user
- * in a session they asked to end.
+ * Clear the demo cookie, then hand off to NextAuth. NextAuth's signOut event
+ * (lib/auth.ts) revokes the refresh token server-side.
  */
 export async function signOutCompletely(callbackUrl = '/'): Promise<void> {
   if (typeof document !== 'undefined') {
     document.cookie = 'demo-mode=false; path=/; expires=Thu, 01 Jan 1970 00:00:00 GMT';
-  }
-  try {
-    const session = await getSession();
-    const refreshToken = (session as { refreshToken?: string } | null)?.refreshToken;
-    await apiClient.logout(refreshToken);
-  } catch {
-    /* best-effort */
   }
   signOut({ callbackUrl });
 }

@@ -225,7 +225,7 @@ class TestAuthenticateUser:
         assert "Invalid email or password" in exc.value.detail
 
     @pytest.mark.asyncio
-    async def test_login_locked_account_raises_423(self):
+    async def test_login_locked_account_refuses_even_the_right_password_generically(self):
         locked_user = make_mock_user(
             is_account_locked=True,
             account_locked_until=datetime.now(timezone.utc) + timedelta(hours=1),
@@ -233,12 +233,15 @@ class TestAuthenticateUser:
         svc = make_service()
         svc.user_repo.get_user_by_email = AsyncMock(return_value=locked_user)
 
-        with pytest.raises(HTTPException) as exc:
-            await svc.authenticate_user(
-                LoginRequest(email="test@aspiro.com", password="SecurePass123!")
-            )
+        with patch("app.modules.users.services.security_utils") as mock_su:
+            mock_su.verify_password.return_value = True
+            with pytest.raises(HTTPException) as exc:
+                await svc.authenticate_user(
+                    LoginRequest(email="test@aspiro.com", password="SecurePass123!")
+                )
 
-        assert exc.value.status_code == 423
+        assert exc.value.status_code == 401
+        assert "Invalid email or password" in exc.value.detail
 
     @pytest.mark.asyncio
     async def test_login_pending_approval_raises_403(self):
@@ -248,10 +251,13 @@ class TestAuthenticateUser:
         svc = make_service()
         svc.user_repo.get_user_by_email = AsyncMock(return_value=pending_user)
 
-        with pytest.raises(HTTPException) as exc:
-            await svc.authenticate_user(
-                LoginRequest(email="test@aspiro.com", password="SecurePass123!")
-            )
+        # The precise state is only for a caller who has proven the password.
+        with patch("app.modules.users.services.security_utils") as mock_su:
+            mock_su.verify_password.return_value = True
+            with pytest.raises(HTTPException) as exc:
+                await svc.authenticate_user(
+                    LoginRequest(email="test@aspiro.com", password="SecurePass123!")
+                )
 
         assert exc.value.status_code == 403
         assert "pending" in exc.value.detail.lower()
@@ -264,10 +270,13 @@ class TestAuthenticateUser:
         svc = make_service()
         svc.user_repo.get_user_by_email = AsyncMock(return_value=inactive_user)
 
-        with pytest.raises(HTTPException) as exc:
-            await svc.authenticate_user(
-                LoginRequest(email="test@aspiro.com", password="SecurePass123!")
-            )
+        # The precise state is only for a caller who has proven the password.
+        with patch("app.modules.users.services.security_utils") as mock_su:
+            mock_su.verify_password.return_value = True
+            with pytest.raises(HTTPException) as exc:
+                await svc.authenticate_user(
+                    LoginRequest(email="test@aspiro.com", password="SecurePass123!")
+                )
 
         assert exc.value.status_code == 403
 

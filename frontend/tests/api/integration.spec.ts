@@ -74,7 +74,7 @@ test.describe('API Integration Tests', () => {
 
     test('should handle logout and token cleanup', async ({ page }) => {
       try {
-        await apiClient.logout();
+        apiClient.clearAccessToken();
         
         // Verify token is cleared
         expect(apiClient['accessToken']).toBeNull();

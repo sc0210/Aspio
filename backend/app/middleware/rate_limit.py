@@ -159,10 +159,6 @@ class RateLimitMiddleware(BaseHTTPMiddleware):
                     "X-RateLimit-Reset": str(int(reset_time)),
                     "X-RateLimit-Limit": str(rate_config["requests"]),
                     "Retry-After": str(rate_config["window"]),
-                    "Access-Control-Allow-Origin": request.headers.get("origin", "*"),
-                    "Access-Control-Allow-Credentials": "true",
-                    "Access-Control-Allow-Methods": "*",
-                    "Access-Control-Allow-Headers": "*",
                 },
             )
 

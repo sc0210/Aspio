@@ -456,17 +456,6 @@ class ApiClient {
     }
   }
 
-  // Authentication APIs
-  async logout(refreshToken?: string): Promise<void> {
-    await this.request('/auth/logout', {
-      method: 'POST',
-      body: refreshToken
-        ? JSON.stringify({ refresh_token: refreshToken, logout_all_devices: false })
-        : undefined,
-    });
-    this.clearAccessToken();
-  }
-
   // User APIs
   async getCurrentUser(): Promise<User> {
     const response = await this.request<User>('/users/me');

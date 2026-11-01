@@ -68,7 +68,12 @@ class SecurityUtils:
         except Exception:
             # Handle any potential bcrypt verification errors
             return False
-    
+
+    @staticmethod
+    def dummy_verify_password() -> None:
+        """Spend one bcrypt verification's time, for a login with no hash to check."""
+        pwd_context.dummy_verify()
+
     @staticmethod
     def generate_secure_token(length: int = 32) -> str:
         """

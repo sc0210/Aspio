@@ -5,7 +5,6 @@ This module provides authentication and authorization dependencies
 for FastAPI endpoints with comprehensive security validation.
 """
 
-from datetime import datetime, timezone
 from typing import Optional, Annotated
 from uuid import UUID
 import logging
@@ -131,13 +130,8 @@ async def get_current_user_from_token(
                 detail="User account is suspended",
             )
 
-        # Check if account is locked
-        if user.is_account_locked:
-            raise HTTPException(
-                status_code=status.HTTP_423_LOCKED,
-                detail="User account is temporarily locked",
-            )
-
+        # No failed-login lock check: anyone who knows the email can trip it, so
+        # it guards /login only and must not end sessions already issued.
         return user
 
     except HTTPException:
@@ -331,26 +325,19 @@ async def get_optional_current_user(
                 User.status,
                 User.role,
                 User.deleted_at,
-                User.account_locked_until,
             ).where(User.id == user_id)
         )
         row = result.fetchone()
 
         if row:
             # The same account-state policy as CurrentUser. Most transaction and
-            # holding writes use this dependency, so without it a deactivated,
-            # suspended or locked account kept full access for the token's life.
+            # holding writes use this dependency, so without it a deactivated or
+            # suspended account kept full access for the token's life.
             # Checked before caching, so only usable accounts are ever cached.
             if not row.is_active or row.deleted_at is not None:
                 raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="User account is deactivated")
             if row.status == UserStatus.SUSPENDED:
                 raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="User account is suspended")
-            locked_until = row.account_locked_until
-            if locked_until is not None:
-                if locked_until.tzinfo is None:
-                    locked_until = locked_until.replace(tzinfo=timezone.utc)
-                if locked_until > datetime.now(timezone.utc):
-                    raise HTTPException(status_code=status.HTTP_423_LOCKED, detail="User account is temporarily locked")
 
             fields = {
                 "id": user_id,

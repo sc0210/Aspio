@@ -33,11 +33,17 @@ Dangerous surfaces use an explicit opt-in secret instead:
   failure the client redirects to `/api/auth/destroy`, which clears cookies server-side;
   `signOut()` races the HttpOnly cookies and leaves a half-logged-out state.
 - `CurrentUser` (`users/dependencies.py`) is the only sanctioned way to resolve the caller.
-- Account state (active, not deleted, not suspended, not locked) is enforced on every way of
+- Account state (active, not deleted, not suspended) is enforced on every way of
   acting as a user: `CurrentUser`, `get_optional_current_user`, LIFF session minting and the LINE
   bot's `_get_link`. A new path that acts for a user must apply the same check; deactivation
   is only as strong as the weakest one.
-- Shared data and all-users actions (global categories, recurring processing, the market cache)
+- The failed-login lock (5 failures, escalating to 24h) guards password sign-in only, never
+  Google or LIFF sign-in (they prove the owner without a password, and a successful sign-in
+  clears the lock) and never a session already issued. Anyone who knows an email can trip it, so on a token check it would let a
+  stranger log the owner out. Login answers every refusal with the same generic 401 until the
+  password is right, a locked account included, so neither the lock nor the account's
+  existence can be probed.
+- Shared data and all-users actions (global categories, recurring processing, the market cache, the stored exchange rates)
   need an admin *permission* (`RequirePermission`), not just an `AdminUser` row: analyst,
   support and moderator are limited roles.
 
@@ -75,7 +81,8 @@ involved despite what older notes may claim.
 - `RATE_LIMIT_DEV_MULTIPLIER` loosens auth limits for React strict mode's double-invoked
   effects. It is a separate knob precisely so production cannot inherit a 10× looser login
   limit from an env shape.
-- Exceeding a limit returns `RATE_LIMIT_EXCEEDED`.
+- Exceeding a limit returns `RATE_LIMIT_EXCEEDED`. The limiter sits inside `CORSMiddleware`,
+  so the 429 carries CORS headers only for an allowlisted origin.
 - Rules match the real route path (registration is `/api/v1/users/register`). Idle buckets are
   swept and the total is capped, since keys include the raw path.
 - The in-route auth guard (`rate_limit_check`) keeps its limits as constants: a FastAPI
