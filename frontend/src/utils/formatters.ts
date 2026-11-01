@@ -139,6 +139,10 @@ export function formatCurrency(amount: number, currency: string = DEFAULT_CURREN
         style: 'currency',
         currency: currency,
         notation: 'compact',
+        // Both bounds, or the result depends on the JS engine: with only a maximum,
+        // V8 in Node 22 printed "NT$15.0萬" and Node 26 prints "NT$15萬", so a
+        // server-rendered page could disagree with the browser that hydrates it.
+        minimumFractionDigits: 1,
         maximumFractionDigits: 1,
       });
       return formatWithSymbolFix(formatter, amount, currency);

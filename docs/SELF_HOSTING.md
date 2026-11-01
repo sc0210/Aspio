@@ -12,7 +12,7 @@ Both dial out, so no inbound port has to be opened.
 - 64-bit Linux or macOS (amd64 or arm64). A Raspberry Pi 4/5 works but builds slowly.
 - `git` and `openssl`.
 - **Docker path:** Docker Engine with the compose plugin, run by a user in the `docker` group.
-- **Without Docker:** PostgreSQL 15, Python 3.14, Node 22, and a reverse proxy (Caddy, nginx).
+- **Without Docker:** PostgreSQL 15, Python 3.14, Node 26, and a reverse proxy (Caddy, nginx).
 - For access from outside your network, one of:
   - a domain on Cloudflare (free plan), for a Cloudflare Tunnel, or
   - a Tailscale account (free for personal use), for a private `*.ts.net` address.
