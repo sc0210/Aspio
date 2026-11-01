@@ -196,7 +196,8 @@ async def test_a_password_reset_request_logs_no_token_or_mailbox(client, test_us
     mail_lines = [m for m in app_log.messages if "Subject" in m or "subject" in m]
     assert mail_lines, "the email service should still record that a mail went out"
     assert not [m for m in app_log.messages if token in m or "token=" in m]
-    assert all(test_user.email not in m and "example.com" in m for m in mail_lines)
+    domain = test_user.email.rsplit("@", 1)[1]
+    assert all(test_user.email not in m and f"domain={domain} " in m for m in mail_lines)
 
 
 # ── S6: exchange-rate routes ─────────────────────────────────────────────────
