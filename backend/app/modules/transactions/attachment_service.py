@@ -262,9 +262,13 @@ class AttachmentService:
         from PIL import Image
 
         try:
-            with Image.open(file_path) as img:
+            try:
+                opened = Image.open(file_path)
+            except Image.DecompressionBombError as exc:
+                raise ReceiptImageTooLargeError(str(exc)) from exc
+            with opened as img:
                 # Image.open reads only the header. Pillow's own bomb check warns
-                # from 89M pixels and refuses only past 179M.
+                # from 89M pixels and raises (above) only past 179M.
                 if img.width * img.height > MAX_RECEIPT_IMAGE_PIXELS:
                     raise ReceiptImageTooLargeError(f"{img.width}x{img.height}")
                 # Receipts are thermal prints: greyscale reads more reliably

@@ -364,6 +364,38 @@ async def test_a_receipt_too_large_to_decode_is_refused_before_ocr(authenticated
     ocr.assert_not_called()
 
 
+def _png_header_only(width: int, height: int) -> bytes:
+    """A PNG whose header claims width x height; never decodable, only openable."""
+    import struct
+    import zlib
+
+    def chunk(kind: bytes, data: bytes) -> bytes:
+        return struct.pack(">I", len(data)) + kind + data + struct.pack(">I", zlib.crc32(kind + data))
+
+    ihdr = struct.pack(">IIBBBBB", width, height, 1, 0, 0, 0, 0)
+    return b"\x89PNG\r\n\x1a\n" + chunk(b"IHDR", ihdr) + chunk(b"IDAT", zlib.compress(b"\x00")) + chunk(b"IEND", b"")
+
+
+async def test_a_receipt_past_pillows_own_bomb_limit_is_refused_as_too_large(authenticated_client, tmp_path, monkeypatch):
+    """Past ~179M pixels Pillow raises at Image.open, before our own size check runs."""
+    import pytesseract
+
+    from app.core.config import get_settings
+
+    ocr = MagicMock(return_value="")
+    monkeypatch.setattr(pytesseract, "image_to_string", ocr)
+    monkeypatch.setattr(get_settings(), "UPLOAD_PATH", str(tmp_path))
+
+    response = authenticated_client.post(
+        "/api/v1/transactions/scan-receipt",
+        files={"file": ("bomb.png", _png_header_only(20000, 10000), "image/png")},
+    )
+
+    assert response.status_code == 413
+    assert "too large" in _message(response).lower()
+    ocr.assert_not_called()
+
+
 # ── S9: /auth/health reveals no configuration ────────────────────────────────
 
 

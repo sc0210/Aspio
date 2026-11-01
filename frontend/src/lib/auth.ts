@@ -92,7 +92,7 @@ function decodeJwtPayload(token: string): Record<string, unknown> | null {
 }
 
 /** The token with a usable backend access token, refreshing it if it has expired. */
-async function withLiveAccessToken(token: JWT): Promise<JWT> {
+async function withLiveAccessToken(token: JWT, signal?: AbortSignal): Promise<JWT> {
   if (token.error === 'RefreshAccessTokenError') {
     return token;
   }
@@ -106,6 +106,7 @@ async function withLiveAccessToken(token: JWT): Promise<JWT> {
       const apiUrl = getServerApiUrl();
 
       const response = await fetch(`${apiUrl}/auth/refresh`, {
+        signal,
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ refresh_token: token.refreshToken }),
@@ -441,10 +442,12 @@ export const authOptions: NextAuthOptions = {
     // revoked: a 401 means the token is already dead, an outage leaves it live.
     async signOut({ token }) {
       if (!token?.refreshToken) return;
-      const live = await withLiveAccessToken(token);
+      // Bounded, so a hung backend cannot hold up clearing the cookie.
+      const live = await withLiveAccessToken(token, AbortSignal.timeout(3000));
       if (live.error) return;
       try {
         await fetch(`${getServerApiUrl()}/auth/logout`, {
+          signal: AbortSignal.timeout(3000),
           method: 'POST',
           headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${live.accessToken}` },
           body: JSON.stringify({ refresh_token: live.refreshToken, logout_all_devices: false }),
