@@ -59,7 +59,7 @@ def business_today() -> date:
 
     `date.today()` reads the *container's* clock, and nothing in the prod stack sets
     TZ — docker-compose.pi.yml, backend/Dockerfile and frontend/Dockerfile all leave
-    it unset, so python:3.11-slim's default applies and the container runs UTC. The
+    it unset, so python:3.14-slim's default applies and the container runs UTC. The
     app's day is Asia/Taipei (UTC+8), so from 16:00 UTC until midnight — 00:00 to
     08:00 the next day in Taipei — `date.today()` returns YESTERDAY. Every "today",
     "this month" and day-count computed from it is off by one for a third of each

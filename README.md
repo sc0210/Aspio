@@ -74,7 +74,7 @@ security checklist.
 
 ## Run it locally
 
-For development. You need Docker, Node 22 and Python 3.11.
+For development. You need Docker, Node 22 and Python 3.14.
 
 ```bash
 cp .env.sample .env

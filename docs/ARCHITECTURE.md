@@ -9,7 +9,7 @@ How Aspiro is put together. For the domain vocabulary (wallets, Total Asset, Net
 | Layer | What we run |
 |---|---|
 | Frontend | Next.js 16 (App Router) · React 19 · TypeScript 5 · TailwindCSS 3 · TanStack Query v5 · NextAuth v4 · Recharts 2 |
-| Backend | FastAPI 0.141 · Python 3.11 · SQLAlchemy 2.0 (async) · Pydantic v2 · Alembic |
+| Backend | FastAPI 0.141 · Python 3.14 · SQLAlchemy 2.0 (async) · Pydantic v2 · Alembic |
 | Database | PostgreSQL 15 — 48 tables |
 | Auth | NextAuth (frontend session) + JWT / Google OAuth (backend) |
 

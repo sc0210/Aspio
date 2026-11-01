@@ -2,7 +2,7 @@
 
 `date.today()` reads the container's clock. Nothing in the prod stack sets TZ —
 docker-compose.pi.yml, backend/Dockerfile and frontend/Dockerfile all leave it unset —
-so python:3.11-slim's default applies and production runs UTC, while the app's day is
+so python:3.14-slim's default applies and production runs UTC, while the app's day is
 Asia/Taipei (UTC+8). From 16:00 UTC until midnight, which is 00:00–08:00 the next day
 in Taipei, `date.today()` returns YESTERDAY.
 
