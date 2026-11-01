@@ -11,6 +11,8 @@
 #   RCLONE_REMOTE                  offsite target, e.g. "r2:aspiro-backups"
 #                                  (requires rclone; skipped if unset/absent)
 #   BACKUP_SCP_DEST                offsite scp target, e.g. "sam@192.168.0.10:~/aspiro-offsite"
+#   BACKUP_AGE_RECIPIENT           age public key; REQUIRED for any offsite copy, which
+#                                  is uploaded as <dump>.age (the local dump stays plain)
 #   PING_URL                       healthcheck URL curl'd on success (e.g. healthchecks.io)
 #   OFFSITE_RETRIES                attempts to reach the remote before giving up (6)
 #   OFFSITE_RETRY_DELAY            seconds before the first retry, doubling (5)
@@ -24,6 +26,8 @@
 # earlier dump the remote is missing, so one failed night heals on the next good
 # one instead of stranding that backup for good.
 set -euo pipefail
+# Dumps hold every user's finances: owner-only from the moment they are created.
+umask 077
 
 # --if-stale [HOURS]: do nothing if a recent enough dump already exists.
 #
@@ -44,6 +48,7 @@ BACKUP_DIR="${1:-${BACKUP_DIR:-$(dirname "$0")/../backups/db}}"
 KEEP_DAYS="${KEEP_DAYS:-7}"
 RCLONE_REMOTE="${RCLONE_REMOTE:-}"
 BACKUP_SCP_DEST="${BACKUP_SCP_DEST:-}"
+BACKUP_AGE_RECIPIENT="${BACKUP_AGE_RECIPIENT:-}"
 PING_URL="${PING_URL:-}"
 # How long to keep waiting for the network before giving up on the offsite copy.
 # Doubling from 5s over 6 attempts is ~2.5 minutes, which covers a scheduled run
@@ -104,12 +109,25 @@ log "Backup saved: $BACKUP_FILE ($SIZE)"
 
 # --- Offsite copies (best-effort; a failure here must not delete local copies) ---
 offsite_failed=0
+# Nothing leaves this machine unencrypted: each offsite copy is <dump>.age, made in
+# a private temp file and deleted after the upload.
+with_encrypted() {  # with_encrypted <dump> <command…>  → runs command with "$enc" set
+  local dump=$1 rc; shift
+  enc=$(mktemp "${TMPDIR:-/tmp}/aspiro_offsite.XXXXXX")
+  if age -r "$BACKUP_AGE_RECIPIENT" -o "$enc" "$dump" && [ -s "$enc" ]; then
+    "$@"; rc=$?
+  else
+    echo "WARN: age encryption of $(basename "$dump") failed." >&2; rc=1
+  fi
+  rm -f "$enc"
+  return "$rc"
+}
 # copyto with an explicit key (not copy into a prefix) avoids the S3 "is a file
 # not a directory" conflict when a bare directory-marker object exists at the
 # prefix path.
-upload_one() {
-  rclone copyto "$1" "$RCLONE_REMOTE/$(basename "$1")" 2>&1
-}
+rclone_put() { rclone copyto "$enc" "$RCLONE_REMOTE/$1" 2>&1; }
+upload_one() { with_encrypted "$1" rclone_put "$(basename "$1").age"; }
+scp_put() { scp -q -o ConnectTimeout=10 "$enc" "$BACKUP_SCP_DEST/$1" 2>&1; }
 
 # Scheduled runs start before the network is up.
 #
@@ -149,7 +167,7 @@ catch_up_missing() {
   for f in "$BACKUP_DIR"/*.sql.gz; do
     [ -e "$f" ] || continue
     case "$remote_list" in
-      *"$(basename "$f")"*) continue ;;
+      *"$(basename "$f").age"*) continue ;;
     esac
     if upload_one "$f" >/dev/null; then
       uploaded=$(( uploaded + 1 ))
@@ -165,6 +183,17 @@ catch_up_missing() {
   return 0
 }
 
+if [ -n "$RCLONE_REMOTE$BACKUP_SCP_DEST" ]; then
+  if [ -z "$BACKUP_AGE_RECIPIENT" ]; then
+    echo "WARN: an offsite target is set but BACKUP_AGE_RECIPIENT is not: refusing to send an unencrypted dump offsite." >&2
+    offsite_failed=1
+    RCLONE_REMOTE="" BACKUP_SCP_DEST=""
+  elif ! command -v age >/dev/null 2>&1; then
+    echo "WARN: BACKUP_AGE_RECIPIENT is set but age is not installed; skipping offsite." >&2
+    offsite_failed=1
+    RCLONE_REMOTE="" BACKUP_SCP_DEST=""
+  fi
+fi
 if [ -n "$RCLONE_REMOTE" ]; then
   if command -v rclone >/dev/null 2>&1; then
     log "Uploading to rclone remote: $RCLONE_REMOTE"
@@ -185,7 +214,7 @@ if [ -n "$RCLONE_REMOTE" ]; then
 fi
 if [ -n "$BACKUP_SCP_DEST" ]; then
   log "Copying offsite via scp: $BACKUP_SCP_DEST"
-  if scp -q -o ConnectTimeout=10 "$BACKUP_FILE" "$BACKUP_SCP_DEST/" 2>&1; then
+  if with_encrypted "$BACKUP_FILE" scp_put "$(basename "$BACKUP_FILE").age"; then
     log "Offsite (scp) OK."
   else
     echo "WARN: scp offsite copy failed." >&2

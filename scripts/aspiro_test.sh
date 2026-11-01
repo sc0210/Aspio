@@ -56,11 +56,22 @@ put() { printf '%s' "$2" > "$STUB_STATE/$(key "$1")"; }
 case "$1" in
   tag)
     id=$(get "$2") || exit 1; put "$3" "$id"; exit 0 ;;
+  builder)
+    # FAKE_OLD_BUILDX=1: a buildx from before --max-used-space replaced --keep-storage.
+    if [ "$3" = --help ]; then
+      [ "${FAKE_OLD_BUILDX:-0}" = 1 ] && echo '      --keep-storage bytes' || echo '      --max-used-space bytes'
+      exit 0
+    fi
+    exit "${FAKE_PRUNE_RC:-0}" ;;
   image)
+    [ "$2" = prune ] && exit "${FAKE_PRUNE_RC:-0}"
     # image inspect [--format FMT] REF
     if [ "$3" = --format ]; then fmt=$4; ref=$5; else fmt=''; ref=$3; fi
     id=$(get "$ref") || exit 1
-    echo "$id"
+    case "$fmt" in
+      *com.docker.compose.project*) echo "${FAKE_PROJECT_LABEL-aspiro}" ;;
+      *) echo "$id" ;;
+    esac
     exit 0 ;;
   compose)
     shift
@@ -76,6 +87,13 @@ case "$1" in
         shift; for svc in "$@"; do put "aspiro-$svc:latest" "built-$svc"; done
         exit 0 ;;
       up)
+        # Starting postgres alone (the pre-update dump) brings the database up,
+        # unless FAKE_PG_NEVER_UP=1 (it never becomes healthy).
+        case " $* " in
+          *" postgres "*)
+            [ "${FAKE_PG_NEVER_UP:-0}" = 1 ] && exit 1
+            : > "$STUB_STATE/pg-up"; exit 0 ;;
+        esac
         # FAKE_UP_FAIL=1: only the first `up` fails, so the rollback's own `up` works.
         if [ "${FAKE_UP_FAIL:-0}" = 1 ] && [ ! -e "$STUB_STATE/up-failed" ]; then
           : > "$STUB_STATE/up-failed"; exit 1
@@ -96,7 +114,7 @@ case "$1" in
             fi
             exit 7 ;;
           *backend*tar*)
-            [ "${FAKE_TAR_FAIL:-0}" = 1 ] && exit 1
+            [ "${FAKE_TAR_FAIL:-0}" = 1 ] || [ "${FAKE_STACK_DOWN:-0}" = 1 ] && exit 1
             printf 'receipt.jpg' | gzip
             exit 0 ;;
           *frontend*node*)
@@ -108,6 +126,8 @@ case "$1" in
             # FAKE_ADMIN_RC=1: the script found no account with that email.
             exit "${FAKE_ADMIN_RC:-0}" ;;
           *pg_dump*)
+            # FAKE_STACK_DOWN=1: postgres is stopped until something starts it.
+            [ "${FAKE_STACK_DOWN:-0}" = 1 ] && [ ! -e "$STUB_STATE/pg-up" ] && exit 1
             echo '-- PostgreSQL database dump'
             i=0; while [ $i -lt 50 ]; do echo "INSERT INTO t VALUES ($i);"; i=$((i+1)); done
             exit 0 ;;
@@ -129,6 +149,13 @@ while [ $# -gt 0 ]; do [ "$1" = -o ] && { printf 'partial' > "$2"; }; shift; don
 exit 1
 STUB
 chmod +x "$work/bin-agefail/age"
+# aws and age that only record being called.
+mkdir -p "$work/bin-offsite"
+cp "$work/bin/docker" "$work/bin-offsite/"
+for tool in aws age; do
+  printf '#!/usr/bin/env bash\necho "%s $*" >> "$STUB_LOG"\n' "$tool" > "$work/bin-offsite/$tool"
+done
+chmod +x "$work/bin-offsite/"*
 
 base_path="/usr/bin:/bin"
 export STUB_LOG="$work/log" STUB_STATE="$work/state"
@@ -305,17 +332,92 @@ expect "...and never pulls" has_not "$STUB_LOG" 'docker pull'
 expect "records the previous image" has "$STUB_LOG" 'docker tag aspiro-backend:latest aspiro-backend:previous'
 expect "tags previous before building" before "$STUB_LOG" 'docker tag aspiro-backend:latest aspiro-backend:previous' 'compose-build'
 expect "builds before migrating" before "$STUB_LOG" 'compose-build' 'run --rm migrate'
-expect "migrates before up" before "$STUB_LOG" 'run --rm migrate' ' up -d'
+expect "migrates before up" before "$STUB_LOG" 'run --rm migrate' ' up -d --remove-orphans'
 expect "backend now runs the new image" [ "$(cat "$STUB_STATE/aspiro-backend_latest")" = built-backend ]
 expect "previous is the old image" [ "$(cat "$STUB_STATE/aspiro-backend_previous")" = old-backend ]
 expect "state records the commit" has "$d/.aspiro-state/current" "commit=$(git -C "$d" rev-parse HEAD)"
 expect "state records the old image ids" has "$d/.aspiro-state/previous.ids" 'backend=old-backend'
 expect "update --init migrates with --init" has "$STUB_LOG" 'compose-run run --rm migrate bash scripts/migrate.sh --init'
 expect "checks the schema is at head" has "$STUB_LOG" 'exec -T backend alembic current'
+expect "update --init backs nothing up (the database is empty)" has_not "$STUB_LOG" 'pg_dump'
+expect "a healthy update prunes this project's dangling images only" \
+  has "$STUB_LOG" 'docker image prune -f --filter label=com.docker.compose.project=aspiro'
+expect "...and the build cache down to 3GB" has "$STUB_LOG" 'docker builder prune -f --max-used-space 3GB'
+expect "...only after the new build is up" before "$STUB_LOG" ' up -d --remove-orphans' 'docker image prune -f'
 : > "$STUB_LOG"
 run_cli "$d" "$work/bin" update
 expect "a second update (nothing new) succeeds" [ "$rc" -eq 0 ]
 expect "...and migrates WITHOUT --init" eval 'has "$STUB_LOG" "compose-run run --rm migrate" && has_not "$STUB_LOG" "--init"'
+expect "...backs the database up first" before "$STUB_LOG" 'exec -T postgres sh -c pg_dump' 'run --rm migrate'
+recorded=$(cat "$d/.aspiro-state/backup" 2>/dev/null)
+expect "...records that dump in the state dir" eval '[ -n "$recorded" ] && [ -f "$recorded" ] && gzip -dc "$recorded" | grep -q "INSERT INTO t"'
+expect "...in its own directory" [ "$(dirname "$recorded")" = "$d/backups/pre-update" ]
+expect "...at mode 600" [ "$(file_mode "$recorded")" = 600 ]
+expect "...in a mode 700 directory" [ "$(file_mode "$d/backups/pre-update")" = 700 ]
+expect "...database only (no uploads archive)" has_not "$STUB_LOG" 'tar -C /app/uploads'
+
+d=$(new_install bind)
+printf 'COMPOSE_PROFILES=tunnel\n' >> "$d/.env"
+run_cli "$d" "$work/bin" update
+expect "a tunnel host without CADDY_BIND is warned once" \
+  eval '[ "$rc" -eq 0 ] && [ "$(grep -c "CADDY_BIND is not set" "$work/out")" -eq 1 ]'
+printf 'CADDY_BIND=127.0.0.1\n' >> "$d/.env"
+run_cli "$d" "$work/bin" update
+expect "...and not once it is set" has_not "$work/out" 'CADDY_BIND is not set'
+d=$(new_install bind-lan)
+run_cli "$d" "$work/bin" update
+expect "a LAN-HTTPS host (no tunnel or tailscale profile) is not warned" has_not "$work/out" 'CADDY_BIND is not set'
+
+d=$(new_install oldbuildx)
+(export FAKE_OLD_BUILDX=1; run_cli "$d" "$work/bin" update; exit "$rc")
+expect "an older buildx trims the cache with --keep-storage" \
+  eval '[ $? -eq 0 ] && has "$STUB_LOG" "docker builder prune -f --keep-storage 3GB"'
+
+d=$(new_install nolabel)
+(export FAKE_PROJECT_LABEL=''; run_cli "$d" "$work/bin" update; exit "$rc")
+expect "images without a compose project label are never pruned" \
+  eval '[ $? -eq 0 ] && has_not "$STUB_LOG" "docker image prune" && has "$work/out" "skipped pruning old images"'
+
+d=$(new_install stackdown)
+(export FAKE_STACK_DOWN=1; run_cli "$d" "$work/bin" update; exit "$rc")
+expect "an update with the stack down still succeeds" [ $? -eq 0 ]
+expect "...starting postgres alone, without recreating it, before the dump" \
+  before "$STUB_LOG" 'up -d --no-recreate --wait --wait-timeout 1 postgres' 'exec -T postgres sh -c pg_dump'
+recorded=$(cat "$d/.aspiro-state/backup" 2>/dev/null)
+expect "...and backs the database up" eval '[ -n "$recorded" ] && gzip -dc "$recorded" | grep -q "INSERT INTO t"'
+
+d=$(new_install offsite)
+mkdir -p "$d/backups/db" "$d/backups/pre-update"
+for i in 1 2 3; do
+  printf 'scheduled' | gzip > "$d/backups/db/aspiro_2020010${i}_000000.sql.gz"
+  touch -t "20200${i}010000" "$d/backups/db/aspiro_2020010${i}_000000.sql.gz"
+done
+for i in 1 2 3 4; do
+  printf 'pre' | gzip > "$d/backups/pre-update/aspiro_2020020${i}_000000.sql.gz"
+  touch -t "20200${i}020000" "$d/backups/pre-update/aspiro_2020020${i}_000000.sql.gz"
+done
+ls -l "$d/backups/db" > "$work/scheduled-before"
+(export ASPIRO_BACKUP_AGE_RECIPIENT=age1test ASPIRO_BACKUP_S3_URI=s3://bucket/x ASPIRO_BACKUP_KEEP=1
+ run_cli "$d" "$work/bin-offsite" update; exit "$rc")
+expect "an update with offsite backups configured succeeds" [ $? -eq 0 ]
+expect "...and neither encrypts nor uploads anything" eval '! grep -qE "^(aws|age) " "$STUB_LOG"'
+ls -l "$d/backups/db" > "$work/scheduled-after"
+expect "...leaves every scheduled dump as it was" cmp -s "$work/scheduled-before" "$work/scheduled-after"
+expect "...keeps the newest 3 pre-update dumps" [ "$(count_glob "$d"/backups/pre-update/*.sql.gz)" -eq 3 ]
+expect "...dropping the oldest" [ ! -e "$d/backups/pre-update/aspiro_20200201_000000.sql.gz" ]
+expect "...and keeping the new one" [ -e "$(cat "$d/.aspiro-state/backup")" ]
+
+d=$(new_install prunefail)
+(export FAKE_PRUNE_RC=1; run_cli "$d" "$work/bin" update; exit "$rc")
+expect "a failed prune does not fail the update" [ $? -eq 0 ]
+expect "...but says so" has "$work/out" 'prune failed'
+
+d=$(new_install backupfail)
+(export FAKE_STACK_DOWN=1 FAKE_PG_NEVER_UP=1; run_cli "$d" "$work/bin" update; exit "$rc")
+expect "a failed pre-migration backup aborts the update" [ $? -ne 0 ]
+expect "...without migrating or recreating" eval 'has_not "$STUB_LOG" "run --rm migrate" && has_not "$STUB_LOG" " up -d --remove-orphans"'
+expect "...restores the old image" [ "$(cat "$STUB_STATE/aspiro-backend_latest")" = old-backend ]
+expect "...and the old checkout" head_is "$d" A
 
 d=$(new_install ref)
 run_cli "$d" "$work/bin" update --ref v1.0.0
@@ -347,16 +449,17 @@ expect "...pointing at the docs" has "$work/out" 'not a git checkout'
 d=$(new_install buildfail)
 (export FAKE_BUILD_FAIL=1; run_cli "$d" "$work/bin" update; exit "$rc")
 expect "a failed build aborts" [ $? -ne 0 ]
-expect "...without migrating or recreating" eval 'has_not "$STUB_LOG" "run --rm migrate" && has_not "$STUB_LOG" " up -d"'
+expect "...without migrating or recreating" eval 'has_not "$STUB_LOG" "run --rm migrate" && has_not "$STUB_LOG" " up -d --remove-orphans"'
 expect "...restores the old image" [ "$(cat "$STUB_STATE/aspiro-backend_latest")" = old-backend ]
 expect "...and the old checkout" head_is "$d" A
 
 d=$(new_install migfail)
 (export FAKE_MIGRATE_RC=1; run_cli "$d" "$work/bin" update; exit "$rc")
 expect "failed migration aborts" [ $? -ne 0 ]
-expect "...without recreating containers" has_not "$STUB_LOG" ' up -d'
+expect "...without recreating containers" has_not "$STUB_LOG" ' up -d --remove-orphans'
 expect "...restores the old tag" [ "$(cat "$STUB_STATE/aspiro-backend_latest")" = old-backend ]
 expect "...and the old checkout" head_is "$d" A
+expect "...and prints how to restore the pre-update dump" has "$work/out" 'DROP SCHEMA public CASCADE'
 
 d=$(new_install nomig)
 (export FAKE_MIGRATE=0; run_cli "$d" "$work/bin" update; exit "$rc")
@@ -389,8 +492,11 @@ d=$(new_install unhealthy)
 expect "unhealthy update exits non-zero" [ $? -ne 0 ]
 expect "...rolls back to the old image" [ "$(cat "$STUB_STATE/aspiro-backend_latest")" = old-backend ]
 expect "...and the old frontend" [ "$(cat "$STUB_STATE/aspiro-frontend_latest")" = old-frontend ]
-expect "...recreating twice (new, then old)" [ "$(grep -c ' up -d' "$STUB_LOG")" -eq 2 ]
+expect "...recreating twice (new, then old)" [ "$(grep -c ' up -d --remove-orphans' "$STUB_LOG")" -eq 2 ]
 expect "...and reports the rollback" has "$work/out" 'rolled back to the previous images'
+expect "...and prints how to restore the pre-update dump" \
+  eval 'has "$work/out" "DROP SCHEMA public CASCADE" && has "$work/out" "$(cat "$d/.aspiro-state/backup")" && has "$work/out" "--single-transaction -v ON_ERROR_STOP=1"'
+expect "...without pruning anything" has_not "$STUB_LOG" 'prune'
 
 d=$(new_install up-fails)
 (export FAKE_UP_FAIL=1; run_cli "$d" "$work/bin" update; exit "$rc")
@@ -435,8 +541,15 @@ expect "archives /app/uploads from the backend" has "$STUB_LOG" 'exec -T backend
 uploads=$(ls -1t "$d/backups/db"/aspiro_*.uploads.tar.gz | head -1)
 expect "...as a valid gzip beside the dump" eval 'gzip -dc "$uploads" | grep -q receipt.jpg'
 expect "...at mode 600" [ "$(file_mode "$uploads")" = 600 ]
+expect "the dump is mode 600 too" [ "$(file_mode "$newest")" = 600 ]
 run_cli "$d" "$work/bin" backup --keep 0
 expect "backup --keep 0 refuses" [ "$rc" -ne 0 ]
+
+d=$(new_install plain-offsite)
+(export ASPIRO_BACKUP_S3_URI=s3://bucket/x; run_cli "$d" "$work/bin" backup; exit "$rc")
+expect "an offsite bucket without an encryption recipient refuses" [ $? -ne 0 ]
+expect "...saying why" has "$work/out" 'refusing to upload unencrypted'
+expect "...before dumping anything" eval 'has_not "$STUB_LOG" pg_dump && [ -z "$(ls "$d/backups/db" 2>/dev/null)" ]'
 
 d=$(new_install tarfail)
 (export FAKE_TAR_FAIL=1 ASPIRO_BACKUP_AGE_RECIPIENT=age1test ASPIRO_BACKUP_S3_URI=s3://bucket/x

@@ -50,6 +50,22 @@
 #                        HTTPS, no Cloudflare API token, no 10-minute xcaddy build)
 # ---------------------------------------------------------------------------
 
+# Every service logs through Docker's json-file driver, which keeps everything forever
+# by default; on a small SD card or SSD that ends in a full disk. 3 x 10 MB per
+# container is days of normal traffic and a bounded 30 MB worst case.
+x-logging: &default-logging
+  driver: json-file
+  options:
+    max-size: "10m"
+    max-file: "3"
+
+# mem_limit on every service, sized for an 8 GB host so that one runaway process is
+# killed alone instead of taking the box down: postgres 1g, backend 2g (3 workers idle
+# near 100 MB together, but a FinLab refresh loads ~100 MB tables and once OOM'd a
+# 512 MB host), migrate 1g, frontend 768m, caddy, cloudflared and tailscale 256m each
+# (all idle under 30 MB). That is about 4.5 GB, leaving the rest for the OS, Postgres's
+# page cache and `aspiro update` image builds, which run outside these limits.
+
 # Shared by the backend and the one-shot services that run its image, so the
 # migrate job sees exactly the settings the app does (alembic's env.py loads them).
 x-backend-environment: &backend-environment
@@ -58,8 +74,11 @@ x-backend-environment: &backend-environment
   - DEBUG=false
   - LOG_LEVEL=${LOG_LEVEL:-INFO}
   - DATABASE_URL=postgresql+asyncpg://${POSTGRES_USER:-aspiro_user}:${POSTGRES_PASSWORD:?POSTGRES_PASSWORD is required - see production.env.sample}@postgres:5432/${POSTGRES_DB:-aspiro_db}
-  - DATABASE_POOL_SIZE=10
-  - DATABASE_MAX_OVERFLOW=20
+  # Per worker process: 3 workers x (5 + 5) = 30 connections at most, plus the
+  # migrate job and psql, well under Postgres's max_connections=100. It was 10 + 20,
+  # 90 for three workers, which left no room for anything else at peak.
+  - DATABASE_POOL_SIZE=5
+  - DATABASE_MAX_OVERFLOW=5
   - SECRET_KEY=${SECRET_KEY:?SECRET_KEY is required - generate with openssl rand -hex 32 (see production.env.sample)}
   - ALGORITHM=HS256
   - ACCESS_TOKEN_EXPIRE_MINUTES=30
@@ -118,6 +137,8 @@ services:
       timeout: 10s
       retries: 5
     restart: unless-stopped
+    mem_limit: 1g
+    logging: *default-logging
     networks:
       - aspiro-network
 
@@ -149,6 +170,8 @@ services:
       retries: 5
       start_period: 40s
     restart: unless-stopped
+    mem_limit: 2g
+    logging: *default-logging
     networks:
       - aspiro-network
     # No --reload. 3 workers on the Pi 4's 4 cores: handlers are CPU-bound
@@ -162,7 +185,14 @@ services:
     # before that each one started its own APScheduler and fired all seven
     # cron jobs — at 2 workers the FinLab refresh was already burning double
     # its 500MB/day quota. Do not raise this without that election in place.
-    command: python -m uvicorn app.main:app --host 0.0.0.0 --port 8000 --workers 3
+    #
+    # --timeout-keep-alive 30: Caddy drops an idle upstream connection after 20s
+    # (`keepalive` in caddy/Caddyfile*), so it never reuses one uvicorn is closing.
+    # No --limit-concurrency: it counts idle keep-alive and healthcheck connections
+    # too, so it can 503 /health, and the database pool already bounds the work.
+    command: >-
+      python -m uvicorn app.main:app --host 0.0.0.0 --port 8000 --workers 3
+      --timeout-keep-alive 30
 
   # One-shot `alembic upgrade heads` (backend/scripts/migrate.sh), OPT-IN. The
   # `aspiro` CLI runs exactly `docker compose --profile migrate run --rm migrate`, so
@@ -193,6 +223,8 @@ services:
     healthcheck:
       disable: true
     restart: "no"
+    mem_limit: 1g
+    logging: *default-logging
     networks:
       - aspiro-network
 
@@ -219,6 +251,8 @@ services:
       backend:
         condition: service_healthy
     restart: unless-stopped
+    mem_limit: 768m
+    logging: *default-logging
     networks:
       - aspiro-network
 
@@ -254,10 +288,13 @@ services:
       dockerfile: Dockerfile
     container_name: aspiro-caddy
     restart: unless-stopped
+    mem_limit: 256m
+    logging: *default-logging
     ports:
-      # Tunnel-only and Tailscale hosts set CADDY_BIND=127.0.0.1 (production.env.sample
-      # does), so the plain-HTTP origin is reachable only by cloudflared or tailscale
-      # over the compose network, never the LAN.
+      # Every interface by default, for the LAN-HTTPS setup. Tunnel-only and Tailscale
+      # hosts set CADDY_BIND=127.0.0.1 (production.env.sample does, and `aspiro update`
+      # warns when it is missing), so the plain-HTTP origin is reachable only by
+      # cloudflared or tailscale, never the LAN.
       - "${CADDY_BIND:-0.0.0.0}:80:80"
       - "${CADDY_BIND:-0.0.0.0}:443:443"
     environment:
@@ -285,7 +322,7 @@ services:
   # http://caddy:80) lives in the Cloudflare dashboard, and the token below is all
   # this side needs.
   cloudflared:
-    image: cloudflare/cloudflared:latest
+    image: cloudflare/cloudflared:2026.10.7   # Dependabot (docker-compose) bumps it
     container_name: aspiro-cloudflared
     # Opt-in, because it cannot start without a token: `tunnel run` with an empty
     # TUNNEL_TOKEN exits immediately ("requires the ID or name of the tunnel"), and
@@ -294,6 +331,8 @@ services:
     # `--profile tunnel` or COMPOSE_PROFILES=tunnel in the Pi's .env.
     profiles: ["tunnel"]
     restart: unless-stopped
+    mem_limit: 256m
+    logging: *default-logging
     command: tunnel --no-autoupdate run
     environment:
       - TUNNEL_TOKEN=${CF_TUNNEL_TOKEN:-}
@@ -314,10 +353,12 @@ services:
   # without an auth key it would sit waiting to log in. The key is used once; the
   # node identity then lives in the tailscale_state volume.
   tailscale:
-    image: tailscale/tailscale:latest
+    image: tailscale/tailscale:v1.104.4   # Dependabot (docker-compose) bumps it
     container_name: aspiro-tailscale
     profiles: ["tailscale"]
     restart: unless-stopped
+    mem_limit: 256m
+    logging: *default-logging
     hostname: ${TS_HOSTNAME:-aspiro}
     environment:
       - TS_AUTHKEY=${TS_AUTHKEY:-}

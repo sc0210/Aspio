@@ -19,6 +19,13 @@
 # /api/v1 (which the frontend calls same-origin), everything else — including
 # NextAuth's /api/auth/* — to Next.js.
 :80 {
+	# The backend's own cap (BodySizeLimitMiddleware: MAX_FILE_SIZE_MB, 10, plus 1 MiB
+	# of multipart framing), enforced here too so an oversized body is refused with a
+	# 413 before it is streamed through to the backend. Raise both together.
+	request_body {
+		max_size 11MiB
+	}
+
 	# Only NextAuth may call this, and it reaches the backend directly over the
 	# Docker network (INTERNAL_API_URL), never through Caddy. Refusing it here keeps
 	# the account-login endpoint off the internet even if a backend check regresses.
@@ -28,7 +35,13 @@
 	}
 
 	handle /api/v1/* {
-		reverse_proxy backend:8000
+		reverse_proxy backend:8000 {
+			# Below uvicorn's --timeout-keep-alive 30 (docker-compose.pi.yml), so Caddy
+			# never sends a request down a connection the backend is closing.
+			transport http {
+				keepalive 20s
+			}
+		}
 	}
 	handle {
 		reverse_proxy frontend:3000

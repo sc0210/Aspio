@@ -20,8 +20,9 @@ At the repo root: [README.md](../README.md) for the overview, self-host quick st
 Scripts live in three places, by what they run against:
 
 - `scripts/` — the repo and the Docker stacks: `aspiro` (self-host CLI, tested by `aspiro_test.sh`),
-  `start-local.sh` and `rebuild-fresh.sh` (dev stack), `backup_db.sh` / `restore_db.sh` (cron-able
-  dumps of a dev or Pi database; a self-hosted instance uses `aspiro backup`),
+  `start-local.sh` and `rebuild-fresh.sh` (dev stack), `backup_db.sh` (cron-able dumps
+  of a dev or Pi database, restored as `docs/SELF_HOSTING.md` shows; a self-hosted instance
+  uses `aspiro backup`),
   `export_for_migration.sh` (moving a stack to a new host), `install-git-hooks.sh` with
   `commit_review.py` (the advisory commit review), and `ci/` (CI-only checks).
 - `backend/scripts/` — the database, run with the backend's env. Indexed in its own

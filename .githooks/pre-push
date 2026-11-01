@@ -1,8 +1,9 @@
 #!/usr/bin/env bash
 # Review everything about to leave this machine, before it leaves.
 #
-# This is the moment that matters: a push to `main` auto-deploys to the Pi, so
-# this is the last point where a look at the whole outgoing range is still cheap.
+# This is the moment that matters: once pushed, the range is public and anyone may
+# build it (nothing deploys automatically; each instance runs `aspiro update` by hand),
+# so this is the last point where a look at the whole outgoing range is still cheap.
 # Synchronous, but ADVISORY — it always exits 0 and never stops a push.
 #
 # git feeds `<local_ref> <local_sha> <remote_ref> <remote_sha>` on stdin; the
