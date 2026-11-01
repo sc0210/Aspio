@@ -234,8 +234,8 @@ was required stay in the bucket or on the remote host until you delete them.
 
 Restore by reading the dump twice: once to check it ends with pg_dump's closing marker,
 then into `psql` in one transaction with `ON_ERROR_STOP`. The check matters because a pipe
-reports only `psql`'s status: a dump cut off part-way, or one that fails to decompress or
-decrypt, would otherwise still run and commit. Stop `backend` and `frontend` first. The
+reports only `psql`'s status: a dump cut off part-way, or one whose decryption or
+decompression stops early, would otherwise still run and commit what it got. Stop `backend` and `frontend` first. The
 `DROP SCHEMA` line empties the existing database in the same transaction, so a failure
 changes nothing; it is harmless on an empty one.
 
@@ -256,6 +256,8 @@ way with `read_dump` decrypting in the pipe:
 read_dump() { age -d -i <your age identity file> "$dump" | gunzip -c; }   # .age
 read_dump() { gpg -d "$dump" | gunzip -c; }                               # .gpg
 ```
+
+`read_dump` runs twice, so a passphrase-protected key asks twice.
 
 Test a restore once, before you need it.
 
