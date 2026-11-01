@@ -717,6 +717,11 @@ class TransactionService:
                     DebtAccount.is_deleted == False,
                 )
             )
+            # Every caller is about to move current_balance. The lock holds until the
+            # request commits, so concurrent payments apply in turn; populate_existing
+            # stops an already-loaded copy from hiding the value read under the lock.
+            .with_for_update()
+            .execution_options(populate_existing=True)
         )
         return result.scalar_one_or_none()
 

@@ -218,8 +218,10 @@ class LoanService:
 
     # ── Internal helpers ──────────────────────────────────────────────────────
 
-    async def _get_or_error(self, user_id: uuid.UUID, loan_id: uuid.UUID) -> DebtAccount:
-        loan = await self._loans.get_by_id(user_id, loan_id)
+    async def _get_or_error(
+        self, user_id: uuid.UUID, loan_id: uuid.UUID, for_update: bool = False
+    ) -> DebtAccount:
+        loan = await self._loans.get_by_id(user_id, loan_id, for_update=for_update)
         if not loan:
             raise ValueError(f"Loan {loan_id} not found")
         return loan
@@ -283,7 +285,7 @@ class LoanService:
     async def update_loan(
         self, user_id: uuid.UUID, loan_id: uuid.UUID, data: DebtAccountUpdate
     ) -> DebtAccountResponse:
-        loan = await self._get_or_error(user_id, loan_id)
+        loan = await self._get_or_error(user_id, loan_id, for_update=True)
         for field, value in data.model_dump(exclude_none=True).items():
             setattr(loan, field, value)
         await self.session.commit()
@@ -291,7 +293,7 @@ class LoanService:
         return _enrich(loan)
 
     async def delete_loan(self, user_id: uuid.UUID, loan_id: uuid.UUID) -> None:
-        loan = await self._get_or_error(user_id, loan_id)
+        loan = await self._get_or_error(user_id, loan_id, for_update=True)
         await self._loans.soft_delete(loan)
 
         # Soft-delete ALL linked transactions (both the auto-created receipt
@@ -305,7 +307,7 @@ class LoanService:
     async def record_payment(
         self, user_id: uuid.UUID, loan_id: uuid.UUID, data: LoanPaymentCreate
     ) -> LoanPaymentResponse:
-        loan = await self._get_or_error(user_id, loan_id)
+        loan = await self._get_or_error(user_id, loan_id, for_update=True)
 
         if loan.status == LoanStatus.PAID_OFF:
             raise ValueError("This loan is already paid off")
@@ -402,7 +404,7 @@ class LoanService:
         data: LoanPaymentUpdate,
     ) -> LoanPaymentRecord:
         """Edit a recorded payment and recalculate the loan balance."""
-        loan = await self._get_or_error(user_id, loan_id)
+        loan = await self._get_or_error(user_id, loan_id, for_update=True)
 
         txn = await self._txns.get_payment(transaction_id, loan_id, user_id)
         if not txn:
@@ -478,7 +480,7 @@ class LoanService:
         transaction_id: uuid.UUID,
     ) -> None:
         """Soft-delete a recorded payment and reverse its effect on the loan balance."""
-        loan = await self._get_or_error(user_id, loan_id)
+        loan = await self._get_or_error(user_id, loan_id, for_update=True)
 
         txn = await self._txns.get_payment_for_delete(transaction_id, loan_id, user_id)
         if not txn:

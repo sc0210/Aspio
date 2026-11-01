@@ -39,18 +39,23 @@ class DebtAccountRepository:
         self.session = session
 
     async def get_by_id(
-        self, user_id: uuid.UUID, loan_id: uuid.UUID
+        self, user_id: uuid.UUID, loan_id: uuid.UUID, for_update: bool = False
     ) -> Optional[DebtAccount]:
-        """Return the loan if it belongs to user and is not soft-deleted."""
-        result = await self.session.execute(
-            select(DebtAccount).where(
-                and_(
-                    DebtAccount.id == loan_id,
-                    DebtAccount.user_id == user_id,
-                    DebtAccount.is_deleted == False,
-                )
+        """Return the loan if it belongs to user and is not soft-deleted.
+
+        for_update locks the row until the caller commits, so two requests that both
+        move current_balance apply in turn instead of one overwriting the other.
+        """
+        stmt = select(DebtAccount).where(
+            and_(
+                DebtAccount.id == loan_id,
+                DebtAccount.user_id == user_id,
+                DebtAccount.is_deleted == False,
             )
         )
+        if for_update:
+            stmt = stmt.with_for_update().execution_options(populate_existing=True)
+        result = await self.session.execute(stmt)
         return result.scalar_one_or_none()
 
     async def list_by_user(self, user_id: uuid.UUID) -> List[DebtAccount]:
