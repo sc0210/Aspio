@@ -239,14 +239,23 @@ off part-way, or one whose decryption or decompression stops early, would otherw
 run and commit what it got. The marker is matched as a whole line near the end, because a
 row of data can hold the same words. Stop `backend` and `frontend` first. The `DROP SCHEMA`
 line empties the existing database in the same transaction, so a failure changes nothing;
-it is harmless on an empty one. The uploads are restored only after the database was.
+it is harmless on an empty one. The apps start again only after the database restore succeeded.
 
 ```bash
+docker stop aspiro-backend aspiro-frontend
 dump=backups/db/aspiro_<stamp>.sql.gz
 read_dump() { gzip -t "$dump" && gunzip -c "$dump"; }
 read_dump | tail -n 5 | grep -qx -- '-- PostgreSQL database dump complete' \
   && { echo 'DROP SCHEMA public CASCADE; CREATE SCHEMA public;'; read_dump; } \
   | docker exec -i aspiro-postgres sh -c 'psql -U "$POSTGRES_USER" -d "$POSTGRES_DB" --single-transaction -v ON_ERROR_STOP=1' \
+  && docker start aspiro-backend aspiro-frontend
+```
+
+Then, if the backup has an uploads archive (`aspiro backup` writes one; the pre-update dump
+does not), restore it into the running backend:
+
+```bash
+gzip -t backups/db/aspiro_<stamp>.uploads.tar.gz \
   && docker exec -i aspiro-backend tar -C /app/uploads -xzf - < backups/db/aspiro_<stamp>.uploads.tar.gz
 ```
 
