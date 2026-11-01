@@ -105,6 +105,20 @@ describe('/api/proxy path segments', () => {
     },
   );
 
+  // A double-encoded request (%252E%252E) reaches the route as '%2E%2E', which
+  // the URL parser in fetch then resolves to '..'.
+  it.each([[['%2E%2E', 'health']], [['%2e%2e', 'health']], [['%2e', '%2E%2e', 'docs']], [['.%2E', 'health']]])(
+    'refuses the still-encoded %j with 400 and never calls the backend',
+    async (path) => {
+      const res = (await GET(makeRequest(ascii(''), null) as never, params(path))) as unknown as {
+        init?: { status?: number };
+      };
+
+      expect(res.init?.status).toBe(400);
+      expect(mockFetch).not.toHaveBeenCalled();
+    },
+  );
+
   it('still forwards an ordinary path', async () => {
     await GET(makeRequest(ascii(''), null) as never, params(['portfolio', 'holdings']));
     expect(mockFetch.mock.calls[0][0]).toMatch(/\/portfolio\/holdings$/);
