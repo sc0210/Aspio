@@ -512,6 +512,17 @@ class TestUnknownAssetTypeSkipsSync:
 # 6. sync_amount calculation in add_holding
 # ─────────────────────────────────────────────────────────────────────────────
 
+@pytest.fixture(autouse=True)
+def _no_shared_quote():
+    """These tests drive add_holding on a mocked session: no shared quote exists,
+    so the new lot is priced by the background fetch, as before quotes were shared."""
+    with patch(
+        "app.modules.portfolio.price_update_service.PriceUpdateService.stored_quotes",
+        new=AsyncMock(return_value={}),
+    ):
+        yield
+
+
 class TestSyncAmountCalculation:
     """
     The amount passed to _sync_wallet_transaction differs by asset type:

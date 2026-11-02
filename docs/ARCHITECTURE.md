@@ -163,7 +163,7 @@ authenticated page in a browser, set the `demo-mode=true` cookie.
 | `portfolio_holdings` · `portfolio_transactions` | Holdings live in the Portfolio or Emergency wallet, never as cash |
 | `transaction_categories` | Global rows (`user_id IS NULL`) plus per-user rows |
 | `historical_prices` | Shared daily closes, unique per (symbol, date); written only once a session is closed (`utils/market_sessions.session_closed`). Also holds the `TWD=X` FX series |
-| Live quotes | No table of their own: `current_price`, `previous_close` and `last_price_update_at` sit on every lot in `portfolio_holdings`. Every writer goes through `PriceUpdateService.apply_quote` (one set-based UPDATE that computes value and cost from the committed row, and never lets an older quote overwrite a newer one). The `market_data` table is unused |
+| `security_quotes` | The latest live quote per symbol, shared by every holder: the source of truth for a live price, and what freshness is judged by. `portfolio_holdings.current_price`, `previous_close` and `last_price_update_at` are its copies; `PriceUpdateService.apply_quote` writes the quote and the copies together (value and cost computed from the committed row; an older quote never replaces a newer one) and fans a stored quote out to lots that missed it. The `market_data` table is unused |
 | `line_*` | `line_group_members.line_user_id` is a plain string, not an FK — clean it up explicitly on unlink |
 
 New tables need RLS enabled in the same change: the backend connects as superuser and bypasses

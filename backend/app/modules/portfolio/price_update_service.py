@@ -20,7 +20,9 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select, and_, case, func, or_, update, text
 
 from .manual_pricing import MANUALLY_PRICED_TYPES, is_manually_priced
-from .models import PortfolioHolding
+from .models import PortfolioHolding, SecurityQuote
+from sqlalchemy.dialects.postgresql import insert as pg_insert
+from sqlalchemy.dialects.sqlite import insert as sqlite_insert
 from app.modules.users.models import User
 from .market_data_service import get_market_data_service, resolve_symbol_market
 from ...core.config import get_settings
@@ -242,8 +244,16 @@ class PriceUpdateService:
         previous_close: Optional[Decimal],
         quote_time: datetime,
         user_id: Optional[str] = None,
+        *,
+        market: Optional[str] = None,
+        currency: Optional[str] = None,
+        store: bool = True,
     ) -> int:
         """Write one quote onto every active, feed-priced lot of `symbol` (or one user's).
+
+        With `store` (the default) the quote is first saved as the symbol's shared
+        `security_quotes` row — the source of truth; the lot columns are its copies.
+        `store=False` fans an already-stored quote out to lots that missed it.
 
         The single price write every path shares — the scheduler, the per-user
         refresh. One set-based UPDATE, so the derived columns are computed by
@@ -261,6 +271,11 @@ class PriceUpdateService:
 
         Returns the number of lots written.
         """
+        if store:
+            await self.store_quote(
+                symbol, price, previous_close, quote_time,
+                market=market or "US", currency=currency or "TWD",
+            )
         cost = PortfolioHolding.quantity * PortfolioHolding.average_cost
         value = PortfolioHolding.quantity * price
         prev = (
@@ -297,6 +312,53 @@ class PriceUpdateService:
         result = await self.session.execute(stmt)
         return result.rowcount or 0
 
+    async def store_quote(
+        self,
+        symbol: str,
+        price: Decimal,
+        previous_close: Optional[Decimal],
+        quote_time: datetime,
+        *,
+        market: str,
+        currency: str,
+    ) -> None:
+        """Upsert the symbol's shared quote; an older quote never replaces a newer one."""
+        prev = (
+            previous_close
+            if previous_close is not None and previous_close.is_finite() and previous_close > 0
+            else None
+        )
+        values = dict(
+            symbol=symbol, market=market, currency=(currency or "TWD").upper(),
+            price=price, previous_close=prev, quote_time=quote_time,
+        )
+        dialect = self.session.bind.dialect.name if self.session.bind is not None else "postgresql"
+        insert_fn = sqlite_insert if dialect == "sqlite" else pg_insert
+        stmt = insert_fn(SecurityQuote).values(**values)
+        stmt = stmt.on_conflict_do_update(
+            index_elements=[SecurityQuote.symbol],
+            set_={
+                "market": stmt.excluded.market,
+                "currency": stmt.excluded.currency,
+                "price": stmt.excluded.price,
+                "previous_close": stmt.excluded.previous_close,
+                "quote_time": stmt.excluded.quote_time,
+                "updated_at": func.now(),
+            },
+            where=SecurityQuote.quote_time <= stmt.excluded.quote_time,
+        )
+        await self.session.execute(stmt)
+
+    async def stored_quotes(self, symbols) -> Dict[str, "SecurityQuote"]:
+        """The shared quotes for these symbols, by symbol (missing ones absent)."""
+        symbols = sorted(set(symbols))
+        if not symbols:
+            return {}
+        rows = (await self.session.execute(
+            select(SecurityQuote).where(SecurityQuote.symbol.in_(symbols))
+        )).scalars().all()
+        return {q.symbol: q for q in rows}
+
     async def _fetch_live_quote(self, symbol: str, market: str):
         """(price, previous_close) from the providers, or None. Never a stored price.
 
@@ -327,6 +389,7 @@ class PriceUpdateService:
             PortfolioHolding.symbol,
             PortfolioHolding.market,
             PortfolioHolding.type,
+            PortfolioHolding.currency,
             PortfolioHolding.last_price_update_at,
         ).where(
             and_(
@@ -361,10 +424,12 @@ class PriceUpdateService:
         # One market and one freshness per symbol: the stalest lot decides, so a
         # lot added (or refreshed) recently does not hide an older sibling.
         markets: Dict[str, set] = {}
+        currencies: Dict[str, str] = {}
         oldest: Dict[str, Optional[datetime]] = {}
         lots_per_symbol: Dict[str, int] = {}
         for r in tradable:
             markets.setdefault(r.symbol, set()).add(r.market)
+            currencies.setdefault(r.symbol, r.currency or "TWD")
             lots_per_symbol[r.symbol] = lots_per_symbol.get(r.symbol, 0) + 1
             stamp = r.last_price_update_at
             if r.symbol not in oldest:
@@ -384,14 +449,33 @@ class PriceUpdateService:
             bucket[key] += n
             stats[key] += n
 
+        # Freshness is the symbol's shared quote, not this user's lots: if another
+        # user's refresh (or the scheduler) already fetched it, it is reused —
+        # copied onto any of this user's lots that missed it, with no provider call.
+        shared = await self.stored_quotes(markets.keys())
         to_fetch = []
+        fanned_out = False
         for symbol, market in pairs:
-            if force or self.market_hours_manager.should_update_price(market, oldest[symbol]):
+            quote = shared.get(symbol)
+            stamp = quote.quote_time if quote is not None else oldest[symbol]
+            if force or self.market_hours_manager.should_update_price(market, stamp):
                 to_fetch.append((symbol, market))
-            else:
-                _bump(market, "cached", lots_per_symbol[symbol])
+                continue
+            written = 0
+            if quote is not None and (oldest[symbol] is None or oldest[symbol] < quote.quote_time):
+                written = await self.apply_quote(
+                    symbol, quote.price, quote.previous_close, quote.quote_time,
+                    user_id=user_id, store=False,
+                )
+                fanned_out = fanned_out or written > 0
+            if written:
+                _bump(market, "updated", written)
+            if lots_per_symbol[symbol] > written:
+                _bump(market, "cached", lots_per_symbol[symbol] - written)
 
         if not to_fetch:
+            if fanned_out:
+                await self.session.commit()
             return stats
 
         # End the read transaction before the network wait, so no pooled
@@ -419,7 +503,10 @@ class PriceUpdateService:
                     _bump(market, "failed", lots_per_symbol[symbol])
                     continue
                 price, prev = quote
-                written = await self.apply_quote(symbol, price, prev, quote_time, user_id=user_id)
+                written = await self.apply_quote(
+                    symbol, price, prev, quote_time, user_id=user_id,
+                    market=market, currency=currencies.get(symbol),
+                )
                 _bump(market, "updated", written)
                 # Lots a newer write already covered count as current, not failed.
                 if lots_per_symbol[symbol] > written:
@@ -452,7 +539,10 @@ class PriceUpdateService:
 
         # 1. Collect all unique (symbol, market) pairs from active tradable holdings
         result = await self.session.execute(
-            select(PortfolioHolding.symbol, PortfolioHolding.market, PortfolioHolding.user_id)
+            select(
+                PortfolioHolding.symbol, PortfolioHolding.market,
+                PortfolioHolding.user_id, PortfolioHolding.currency,
+            )
             .join(User, User.id == PortfolioHolding.user_id)
             .where(PortfolioHolding.is_active == True)
             .where(PortfolioHolding.type.notin_(sorted(MANUALLY_PRICED_TYPES)))
@@ -468,11 +558,13 @@ class PriceUpdateService:
         # pass 404'd on the bare ticker and fell through to old history.
         markets_by_symbol: Dict[str, set] = {}
         users_by_symbol: Dict[str, set] = {}
+        currency_by_symbol: Dict[str, str] = {}
         for row in result.fetchall():
             # Holdings no feed prices keep the price the user set (manual_pricing).
             if is_manually_priced(row.symbol, None):
                 continue
             markets_by_symbol.setdefault(row.symbol, set()).add(row.market)
+            currency_by_symbol.setdefault(row.symbol, getattr(row, "currency", None) or "TWD")
             users_by_symbol.setdefault(row.symbol, set()).add(row.user_id)
 
         symbol_market_pairs = [
@@ -527,14 +619,28 @@ class PriceUpdateService:
                 # A never-priced lot (NULL) makes the whole symbol due.
                 last_updates[row[0]] = None if row[2] else row[1]
 
+            # The shared quote decides where there is one; the lots decide only
+            # for a symbol nobody has quoted yet. A symbol that is not due still
+            # has its stored quote copied onto lots that missed it (a lot added
+            # since), so no lot sits at its purchase price until the next fetch.
+            shared = await self.stored_quotes(s for s, _ in symbol_market_pairs)
             to_fetch = []
             for symbol, market in symbol_market_pairs:
-                if self.market_hours_manager.should_update_price(
-                    market, last_updates.get(symbol)
-                ):
+                quote = shared.get(symbol)
+                stamp = quote.quote_time if quote is not None else last_updates.get(symbol)
+                if self.market_hours_manager.should_update_price(market, stamp):
                     to_fetch.append((symbol, market))
-                else:
-                    stats["cached"] += 1
+                    continue
+                stats["cached"] += 1
+                if quote is not None:
+                    try:
+                        await self.apply_quote(
+                            symbol, quote.price, quote.previous_close, quote.quote_time, store=False,
+                        )
+                        await self.session.commit()
+                    except Exception as e:
+                        await self.session.rollback()
+                        logger.error(f"Failed to fan out the stored quote for {symbol}: {e}")
 
         # 3. Fetch every quote concurrently, bounded.
         #
@@ -589,7 +695,10 @@ class PriceUpdateService:
                 continue
             new_price, previous_close = quotes[symbol]
             try:
-                await self.apply_quote(symbol, new_price, previous_close, now)
+                await self.apply_quote(
+                    symbol, new_price, previous_close, now,
+                    market=market, currency=currency_by_symbol.get(symbol),
+                )
                 await self.session.commit()
                 stats["updated"] += 1
                 priced_users |= users_by_symbol.get(symbol, set())

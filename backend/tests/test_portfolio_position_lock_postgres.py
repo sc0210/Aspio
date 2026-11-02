@@ -176,3 +176,27 @@ async def test_a_price_write_after_a_sale_uses_the_sold_quantity(world):
     async with maker() as s:
         lot = (await s.execute(select(PortfolioHolding).where(PortfolioHolding.id == lot_id))).scalar_one()
     assert (lot.quantity, lot.total_value, lot.total_cost) == (Decimal("4"), Decimal("480"), Decimal("400"))
+
+
+async def test_an_older_quote_arriving_last_does_not_replace_the_shared_one(world):
+    """Two refreshes race to store one symbol's quote; the newer quote wins
+    whatever order they commit in (ON CONFLICT ... WHERE quote_time <=)."""
+    from datetime import timedelta
+    from app.modules.portfolio.models import SecurityQuote
+    from app.modules.portfolio.price_update_service import PriceUpdateService
+
+    maker, _, _, _ = world
+    newer = datetime.now(timezone.utc)
+
+    async def store(price, at, delay):
+        await asyncio.sleep(delay)
+        async with maker() as s:
+            await PriceUpdateService(s).store_quote(
+                "0050", Decimal(price), None, at, market="TW", currency="TWD"
+            )
+            await s.commit()
+
+    await asyncio.gather(store("130", newer, 0), store("99", newer - timedelta(minutes=5), WINDOW / 5))
+    async with maker() as s:
+        quote = await s.get(SecurityQuote, "0050")
+    assert quote.price == Decimal("130")

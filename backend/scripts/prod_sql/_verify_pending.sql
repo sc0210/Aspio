@@ -111,7 +111,14 @@ WITH checks(sort, object, source_file, present) AS (
 
     -- 2026_10_28_drop_daily_wallet_snapshots.sql (present = the table is gone)
     (17, 'table daily_wallet_snapshots dropped', '2026_10_28_drop_daily_wallet_snapshots.sql',
-        to_regclass('public.daily_wallet_snapshots') IS NULL)
+        to_regclass('public.daily_wallet_snapshots') IS NULL),
+
+    -- 2026_11_03_security_quotes.sql
+    (18, 'table security_quotes', '2026_11_03_security_quotes.sql',
+        to_regclass('public.security_quotes') IS NOT NULL),
+    (19, 'RLS on security_quotes', '2026_11_03_security_quotes.sql',
+        COALESCE((SELECT relrowsecurity FROM pg_class
+                   WHERE oid = to_regclass('public.security_quotes')), false))
 )
 SELECT
     CASE WHEN present THEN 'OK     ' ELSE 'MISSING' END AS status,
