@@ -89,3 +89,52 @@ def last_settled_close(market: Optional[str], now: Optional[datetime] = None) ->
                 return settled.astimezone(timezone.utc)
         day -= timedelta(days=1)
     return None
+
+
+# Opening times, for what a page shows ("open", "last close Fri"). Only the
+# markets above with a regular session; FX and crypto trade around the clock.
+_OPENS = {"TW": time(9, 0), "TW-INDEX": time(9, 0), "US": time(9, 30)}
+_ALIASES = {"NYSE": "US", "NASDAQ": "US", "AMEX": "US", "TWSE": "TW", "TPEX": "TW", "TWO": "TW"}
+
+
+def session_market(market: Optional[str]) -> str:
+    """The session a holding's market label trades on (NYSE → US, TWSE → TW)."""
+    key = (market or "").upper()
+    return _ALIASES.get(key, key)
+
+
+def is_trading(market: Optional[str], now: Optional[datetime] = None) -> Optional[bool]:
+    """True while `market` is in session, False outside it, None if unmodelled.
+
+    Crypto always trades. No holiday calendar: a weekday holiday reads as open
+    during hours (the price simply does not move).
+    """
+    key = session_market(market)
+    if key in _ALWAYS_OPEN:
+        return True
+    if key not in _OPENS:
+        return None
+    tz, closing_time = _SESSIONS[key]
+    local = (now or datetime.now(timezone.utc)).astimezone(tz)
+    return local.weekday() < 5 and _OPENS[key] <= local.time() < closing_time
+
+
+def price_session_date(market: Optional[str], stamp: Optional[datetime]) -> Optional[date]:
+    """The trading day a price stamped at `stamp` belongs to, in the market's zone.
+
+    A price fetched before a day's open (or on a weekend) is the previous
+    session's close, so it belongs to that session. None when unknown.
+    """
+    key = session_market(market)
+    if stamp is None or key not in _OPENS:
+        return None
+    if stamp.tzinfo is None:
+        stamp = stamp.replace(tzinfo=timezone.utc)
+    tz, _ = _SESSIONS[key]
+    local = stamp.astimezone(tz)
+    day = local.date()
+    if local.weekday() >= 5 or local.time() < _OPENS[key]:
+        day -= timedelta(days=1)
+    while day.weekday() >= 5:
+        day -= timedelta(days=1)
+    return day

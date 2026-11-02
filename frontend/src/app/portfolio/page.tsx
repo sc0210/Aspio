@@ -1,5 +1,6 @@
 'use client';
 
+import { MarketStatusStrip } from '@/components/portfolio/MarketStatusStrip';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { Menu, MenuButton, MenuItems, MenuItem } from '@headlessui/react';
@@ -324,6 +325,8 @@ function DesktopPortfolioPage() {
           onTodayChangeClick={actions.handleTodayChangeClick}
           onViewTrendClick={actions.handleViewTrendClick}
         />
+
+        <MarketStatusStrip holdings={portfolioData?.holdings ?? []} />
 
         {/* Retirement Progress Tracker - Always visible; shows "Set Goal" prompt when no goal exists */}
         {retirementProjection && (

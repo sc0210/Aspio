@@ -501,7 +501,8 @@
     "viewTrendTooltip": "View asset trend chart",
     "volatility": "Vol (ann.)",
     "yieldOnCost": "YoC",
-    "yieldOnValue": "Yield"
+    "yieldOnValue": "Yield",
+    "lastSessionChange": "Change · {{day}}"
   },
   "subtitle": "Track your investment performance in real-time",
   "sync": {
@@ -777,5 +778,14 @@
     "broad_market": "Broad market",
     "global_market": "Global market"
   },
-  "editStale": "This holding changed since you opened it (a sale or another edit). Reload the page and try again."
+  "editStale": "This holding changed since you opened it (a sale or another edit). Reload the page and try again.",
+  "lastSessionShort": "{{day}}",
+  "marketStatus": {
+    "label": "Markets and exchange rates",
+    "open": "Open",
+    "closed": "Closed",
+    "closedSince": "Closed · last close {{day}}",
+    "fxLive": "live",
+    "fxEstimate": "estimate"
+  }
 }

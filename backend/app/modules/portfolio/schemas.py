@@ -5,8 +5,9 @@ This module defines request/response schemas for portfolio operations,
 providing validation and serialization for API endpoints.
 """
 
-from datetime import datetime
+from datetime import date, datetime
 from decimal import Decimal
+from app.utils.market_sessions import is_trading, price_session_date
 from typing import Any, Dict, List, Optional
 
 from pydantic import BaseModel, Field, field_validator, model_validator, computed_field, ConfigDict, AliasChoices
@@ -407,6 +408,26 @@ class HoldingResponse(BaseModel):
     def manually_priced(self) -> bool:
         """No feed prices this holding, so its price is the user's to set."""
         return is_manually_priced(self.symbol, self.type)
+
+    @computed_field(alias="marketState")
+    @property
+    def market_state(self) -> str:
+        """open | closed | manual | unknown — what the page shows beside the price."""
+        if is_manually_priced(self.symbol, self.type):
+            return "manual"
+        trading = is_trading(self.market)
+        if trading is None:
+            return "unknown"
+        return "open" if trading else "closed"
+
+    @computed_field(alias="priceSession")
+    @property
+    def price_session(self) -> Optional[date]:
+        """The trading day the stored price belongs to, so "today" is said only
+        when it is today's session; None when unknown."""
+        if is_manually_priced(self.symbol, self.type):
+            return None
+        return price_session_date(self.market, self.last_price_update_at)
 
     model_config = ConfigDict(
         from_attributes=True,

@@ -497,7 +497,8 @@
     "viewTrendTooltip": "查看資產趨勢圖",
     "volatility": "年化波動",
     "yieldOnCost": "成本殖利率",
-    "yieldOnValue": "市值殖利率"
+    "yieldOnValue": "市值殖利率",
+    "lastSessionChange": "漲跌 · {{day}}"
   },
   "subtitle": "即時追蹤您的投資績效",
   "sync": {
@@ -772,5 +773,14 @@
     "broad_market": "大盤市場",
     "global_market": "全球市場"
   },
-  "editStale": "開啟後這筆持倉已變動（有賣出或其他編輯）。請重新整理頁面再試一次。"
+  "editStale": "開啟後這筆持倉已變動（有賣出或其他編輯）。請重新整理頁面再試一次。",
+  "lastSessionShort": "{{day}}",
+  "marketStatus": {
+    "label": "市場與匯率",
+    "open": "交易中",
+    "closed": "已收盤",
+    "closedSince": "已收盤 · 最近收盤 {{day}}",
+    "fxLive": "即時",
+    "fxEstimate": "估計值"
+  }
 }

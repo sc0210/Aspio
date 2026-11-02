@@ -177,6 +177,10 @@ export interface PortfolioHolding {
   purchaseDate?: string;
   /** No feed prices this holding (cash, crypto, lending), so the user sets its value. */
   manuallyPriced?: boolean;
+  /** Whether the holding's market is trading now (from the backend's session table). */
+  marketState?: 'open' | 'closed' | 'manual' | 'unknown';
+  /** The trading day (YYYY-MM-DD, market time) the stored price belongs to. */
+  priceSession?: string;
   priceHistory?: PricePoint[];
   sparklineData?: number[]; // Historical price data for sparkline (last 30 days)
   lastUpdated: Date;

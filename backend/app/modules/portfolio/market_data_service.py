@@ -23,7 +23,7 @@ This service routes market data requests to appropriate APIs based on market typ
 import logging
 import asyncio
 import math
-from datetime import datetime, timedelta, time as dt_time, date as date_cls
+from datetime import datetime, timedelta, timezone, time as dt_time, date as date_cls
 from typing import List, Dict, Optional, Any
 from decimal import Decimal
 from zoneinfo import ZoneInfo
@@ -183,6 +183,33 @@ def _parse_twse_row(row: List[str]) -> Optional[Dict[str, Any]]:
         "volume": int(volume) if volume is not None else None,
         "source": "twse",
     }
+
+
+def finlab_close_is_current(bar_date, now=None) -> bool:
+    """Whether a FinLab daily close dated `bar_date` can stand as TW's current price.
+
+    FinLab serves daily closes, not quotes. During the session (open to bell +
+    grace) its last bar is yesterday's, so taking it as "current" priced every TW
+    holding at yesterday's close all day. After the bell it is current only once
+    FinLab has published today's bar; before that, the 14:00 job stored
+    yesterday's close as today's and the gate then held it all evening. A close
+    passes only when TW is not trading and the bar is the latest settled session.
+    """
+    from app.utils.market_sessions import GRACE_MINUTES, last_settled_close
+
+    tz = ZoneInfo("Asia/Taipei")
+    now = now or datetime.now(timezone.utc)
+    local = now.astimezone(tz)
+    session_start = local.replace(hour=9, minute=0, second=0, microsecond=0)
+    session_end = local.replace(hour=13, minute=30, second=0, microsecond=0) + timedelta(
+        minutes=GRACE_MINUTES
+    )
+    if local.weekday() < 5 and session_start <= local < session_end:
+        return False
+    settled = last_settled_close("TW", now)
+    if settled is None:
+        return False
+    return bar_date >= settled.astimezone(tz).date()
 
 
 def resolve_symbol_market(symbol: str, candidate_markets) -> str:
@@ -1196,11 +1223,11 @@ class MarketDataService:
                             # which the broad `except` below logs at debug and
                             # swallows, so every TW symbol would quietly fall
                             # through to Yahoo with nothing above debug to say why.
-                            if (business_now().replace(tzinfo=None) - last_dt).days > 7:
-                                logger.warning(
-                                    f"⚠️ FinLab data for {symbol} is stale "
-                                    f"(latest {getattr(last_idx, 'date', lambda: last_idx)()}); "
-                                    f"skipping FinLab real-time price"
+                            if not finlab_close_is_current(last_dt.date()):
+                                logger.info(
+                                    f"FinLab close for {symbol} is dated "
+                                    f"{last_dt.date()}, not the latest settled session; "
+                                    f"using the live quote instead"
                                 )
                             else:
                                 price = float(close_series.iloc[-1])

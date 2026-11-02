@@ -16,6 +16,8 @@ import { usePrivacy } from '@/contexts/PrivacyContext';
 import { formatTWD, formatTWDCompact, toTWD } from '@/utils/formatters';
 import { cn } from '@/utils/cn';
 import type { PortfolioHolding } from '@/shared/types';
+import { MarketStatusStrip } from '@/components/portfolio/MarketStatusStrip';
+import { lastSessionWeekday } from '@/utils/marketStatus';
 import { Card } from '@/components/ui/Card';
 
 
@@ -35,7 +37,7 @@ function arc(startFrac: number, endFrac: number, r = 15.9, cx = 21, cy = 21) {
 }
 
 export function MobilePortfolio() {
-    const { t } = useTranslation(['portfolio', 'dashboard', 'common']);
+    const { t, i18n } = useTranslation(['portfolio', 'dashboard', 'common']);
     const { portfolio, isLoading } = usePortfolio();
     const { isValueVisible } = usePrivacy();
     const { user } = useAppMode();
@@ -110,6 +112,8 @@ export function MobilePortfolio() {
 
     const totalUp = model.totalGain >= 0;
     const todayUp = model.todayGain >= 0;
+    // On a Saturday the move shown is Friday's: say so instead of "today".
+    const lastSessionDay = lastSessionWeekday(data?.holdings ?? [], i18n?.language || 'en');
     const hidden = '••••';
 
     // Cumulative donut offsets.
@@ -171,9 +175,15 @@ export function MobilePortfolio() {
                         </svg>
                     </div>
 
+                    <MarketStatusStrip holdings={data?.holdings ?? []} className="mt-4" />
+
                     {/* Today's change */}
                     <div className="mt-4 pt-3 border-t border-gray-100 dark:border-gray-700 flex items-center justify-between">
-                        <span className="text-xs font-semibold text-gray-500 dark:text-gray-500">{t('portfolio:todayChange', "Today")}</span>
+                        <span className="text-xs font-semibold text-gray-500 dark:text-gray-500">
+                            {lastSessionDay
+                                ? t('portfolio:lastSessionShort', { day: lastSessionDay, defaultValue: '{{day}}' })
+                                : t('portfolio:todayChange', "Today")}
+                        </span>
                         <span className={cn('text-sm font-bold tabular-nums', todayUp ? 'text-prosperity-700 dark:text-prosperity-400' : 'text-error-700 dark:text-error-500')}>
                             {todayUp ? '▲' : '▼'} {isValueVisible ? formatTWDCompact(Math.abs(model.todayGain)) : '•••'} · {todayUp ? '+' : '−'}{Math.abs(model.todayGainPct).toFixed(2)}%
                         </span>

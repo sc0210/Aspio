@@ -285,8 +285,22 @@ jobs:
         with:
           python-version: "3.14"
           cache: pip
-          cache-dependency-path: backend/requirements.txt
-      - run: pip install -r requirements.txt
+          cache-dependency-path: |
+            backend/requirements.txt
+            backend/requirements-dev.txt
+      - run: pip install -r requirements.txt -r requirements-dev.txt
+      # Row and advisory locks: SQLite ignores both, so the SQLite suite above cannot
+      # see two requests racing. These run two sessions against this real Postgres
+      # (each test creates and drops its own database) and fail if a writer stops
+      # taking the lock: a loan balance moved twice, sold shares resurrected by a
+      # concurrent buy, a delete refunding a lot a sale just closed.
+      - name: Concurrency tests on real Postgres
+        run: >-
+          python -m pytest -m integration -o "addopts=" -p no:cacheprovider -q
+          tests/test_loan_row_lock_postgres.py tests/test_portfolio_position_lock_postgres.py
+        env:
+          ASPIRO_PG_LOCK_TEST_URL: postgresql+asyncpg://aspiro:aspiro@localhost:5432/postgres
+          RATE_LIMIT_ENABLED: "false"
       - name: Without --init, an empty database is refused
         run: |
           if bash scripts/migrate.sh; then echo "empty DB was bootstrapped without --init"; exit 1; fi

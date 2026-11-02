@@ -31,6 +31,7 @@ one by hand or on a host with `ENABLE_SCHEDULER=false`.
 |---|---|
 | `backfill_price_gaps.py` | Fills holes in `historical_prices` |
 | `backfill_fx_history.py` | Daily USD/TWD rate series used by TWR |
+| `restate_fx_bridge_legs.py` | Report (or `--apply`, with an undo CSV) USD buy legs booked before #91 at the frozen 31.25 rate, restated at that day's TWD=X close. Dry run by default |
 | `calculate_irr.py` | Recomputes every open lot's stored IRR (`--dry-run` first) |
 
 ## Admin and data movement
