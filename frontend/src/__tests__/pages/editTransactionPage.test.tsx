@@ -504,6 +504,11 @@ describe('EditTransactionPage — delete and duplicate', () => {
     expect(screen.getByRole('dialog')).toHaveTextContent('transactions:form.deleteLoanLinked');
   });
 
+  it('offers no delete on any cash leg of a holding, whatever its category', async () => {
+    await renderAndLoad({ ...expenseTx, holdingId: 'holding-1' });
+    expect(screen.queryByRole('button', { name: /Delete transaction/ })).not.toBeInTheDocument();
+  });
+
   it('offers no delete on an investment purchase', async () => {
     await renderAndLoad(investTx);
     expect(screen.queryByRole('button', { name: /Delete transaction/ })).not.toBeInTheDocument();

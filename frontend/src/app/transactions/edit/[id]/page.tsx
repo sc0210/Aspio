@@ -63,6 +63,7 @@ interface LoadedRow {
   tags: string[];
   transferGroupId?: string;
   loanId?: string;
+  holdingId?: string;
 }
 
 export default function EditTransactionPage() {
@@ -143,6 +144,9 @@ export default function EditTransactionPage() {
         setTransferUnlinked(false);
         setIsInvestMode(false);
         setIsSaleMode(false);
+        setLoaded(null);
+        setHoldingId(null);
+        setInvestLink('unlinked');
         let txn: Transaction | null | undefined = null;
 
         if (isDemo) {
@@ -170,6 +174,7 @@ export default function EditTransactionPage() {
             tags: txn.tags || [],
             transferGroupId: txn.transferGroupId,
             loanId: txnLoanId || undefined,
+            holdingId: txn.holdingId,
           });
 
           // Investment Purchase: special investment mode
@@ -602,7 +607,8 @@ export default function EditTransactionPage() {
   // An investment row is the cash side of a holding: deleting it alone would
   // leave the holding (or the realized P/L) with no money behind it, which is
   // the double count the Life -> Portfolio bridge exists to prevent.
-  const canDelete = !!loaded && !isInvestMode && !isSaleMode;
+  // Keyed on the link too, not only the category: any cash leg of a holding.
+  const canDelete = !!loaded && !isInvestMode && !isSaleMode && !loaded.holdingId;
   const isTransferRow = formData.type === 'transfer';
   const walletName = (w: string) => t(`transactions:form.wallets.${w}`, w === 'emergency' ? 'Emergency Wallet' : 'Life Wallet');
   const deleteMessage = (() => {
