@@ -1375,3 +1375,31 @@ class TestHoldingLinkedRowsFollowTheirHolding:
 
         unlinked = make_mock_transaction()
         assert await svc.holding_sole_purchase(unlinked) is None
+
+
+@pytest.mark.unit
+class TestSameValueForHoldingLinkedResends:
+    """An unchanged value resent in another form is not a change to the leg."""
+
+    def test_days_compare_in_business_time(self):
+        from datetime import date
+        same = TransactionService._same_value
+        stored = date(2026, 3, 2)
+        assert same(stored, "2026-03-02")
+        # 20:00 UTC on 03-01 is 04:00 on 03-02 in Taipei: the same business day.
+        assert same(stored, "2026-03-01T20:00:00+00:00")
+        assert same(stored, "2026-03-01T20:00:00Z")
+        assert not same(stored, "2026-03-01")
+        assert not same(stored, "2026-03-01T10:00:00+00:00")
+
+    def test_codes_and_enums_compare_in_any_case(self):
+        same = TransactionService._same_value
+        assert same("TWD", "twd")
+        assert same(TransactionType.EXPENSE, TransactionType.EXPENSE.value.upper())
+        assert not same(TransactionType.EXPENSE, TransactionType.INCOME.value)
+        assert not same("TWD", "USD")
+
+    def test_amounts_compare_as_decimals(self):
+        same = TransactionService._same_value
+        assert same(Decimal("3000"), "3000.00")
+        assert not same(Decimal("3000"), 3000.5)

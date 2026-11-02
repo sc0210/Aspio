@@ -692,7 +692,11 @@ class TransactionService:
                     return business_day_of(value)
                 if isinstance(value, date):
                     return value
-                return date.fromisoformat(str(value)[:10])
+                text = str(value)
+                if len(text) > 10:
+                    # A timestamp is read in business time, like a datetime above.
+                    return business_day_of(datetime.fromisoformat(text.replace("Z", "+00:00")))
+                return date.fromisoformat(text)
             return as_day(stored) == as_day(incoming)
         stored_value = getattr(stored, "value", stored)
         incoming_value = getattr(incoming, "value", incoming)
