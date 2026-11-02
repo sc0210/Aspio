@@ -306,6 +306,60 @@ class TestPerUserRefresh:
         assert stats["total"] == 0 and stats["skipped"] == 1
 
 
+class TestRefreshTransactionOwnership:
+    @pytest.mark.asyncio
+    async def test_a_callers_open_transaction_is_not_committed_early(self, async_session):
+        """Flushed rows leave session.new/dirty empty, so only "was a transaction
+        already open" tells whether the caller has work in flight."""
+        from sqlalchemy import select as sa_select
+        user_id, _ = await _seed_lots(async_session, [dict(symbol="0050")])
+        await async_session.execute(sa_select(1))  # the caller's transaction
+        service = PriceUpdateService(async_session)
+        during_fetch = []
+
+        async def fetch(symbol, market):
+            during_fetch.append(async_session.in_transaction())
+            return None
+
+        with patch.object(service, "_fetch_live_quote", side_effect=fetch):
+            await service.update_portfolio_prices(user_id, force=True)
+        assert during_fetch == [True]
+
+    @pytest.mark.asyncio
+    async def test_its_own_read_transaction_is_released_before_the_wait(self, async_session):
+        user_id, _ = await _seed_lots(async_session, [dict(symbol="0050")])
+        service = PriceUpdateService(async_session)
+        during_fetch = []
+
+        async def fetch(symbol, market):
+            during_fetch.append(async_session.in_transaction())
+            return None
+
+        with patch.object(service, "_fetch_live_quote", side_effect=fetch):
+            await service.update_portfolio_prices(user_id, force=True)
+        assert during_fetch == [False]
+
+
+class TestSchedulerTotalsSync:
+    @pytest.mark.asyncio
+    async def test_a_failed_portfolio_sync_is_counted_not_hidden(self, async_session):
+        await _seed_lots(async_session, [dict(symbol="0050")])
+        await _seed_lots(async_session, [dict(symbol="0050")])
+        service = PriceUpdateService(async_session)
+        from app.modules.portfolio.services import PortfolioService
+
+        with patch.object(service, "_get_price_with_fallback", new_callable=AsyncMock,
+                          return_value=Decimal("120")), \
+             patch.object(service.market_data_service, "get_previous_close",
+                          new_callable=AsyncMock, return_value=None), \
+             patch.object(PortfolioService, "_update_portfolio_totals",
+                          new_callable=AsyncMock, side_effect=RuntimeError("fx down")):
+            stats = await service.update_all_symbols_prices(force=True)
+
+        assert stats["updated"] == 1
+        assert (stats["portfolios_synced"], stats["portfolios_failed"]) == (0, 2)
+
+
 class TestPriceUpdateEdgeCases:
     """Test edge cases and error scenarios"""
 

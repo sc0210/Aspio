@@ -335,6 +335,11 @@ class PriceUpdateService:
         )
         if portfolio_id:
             query = query.where(PortfolioHolding.portfolio_id == portfolio_id)
+        # Whether the read transaction below is ours to end. A session already in
+        # a transaction belongs to the caller, who may have flushed work (which
+        # leaves session.new/dirty empty), and committing it here would split
+        # their unit of work.
+        owns_transaction = not self.session.in_transaction()
         rows = (await self.session.execute(query)).all()
 
         if not rows:
@@ -390,10 +395,9 @@ class PriceUpdateService:
             return stats
 
         # End the read transaction before the network wait, so no pooled
-        # connection is pinned across provider calls — but only when this session
-        # holds nothing of the caller's: committing pending work here would split
-        # the caller's unit of work. With writes pending, keep the transaction.
-        if not (self.session.new or self.session.dirty or self.session.deleted):
+        # connection is pinned across provider calls — only when this method
+        # opened it (see owns_transaction).
+        if owns_transaction:
             await self.session.commit()
 
         sem = asyncio.Semaphore(self.SYMBOL_FETCH_CONCURRENCY)
@@ -485,7 +489,10 @@ class PriceUpdateService:
         if not symbol_market_pairs:
             return {"total_symbols": 0, "updated": 0, "cached": 0, "failed": 0, "users": 0}
 
-        stats = {"total_symbols": len(symbol_market_pairs), "updated": 0, "cached": 0, "failed": 0}
+        stats = {
+            "total_symbols": len(symbol_market_pairs), "updated": 0, "cached": 0, "failed": 0,
+            "portfolios_synced": 0, "portfolios_failed": 0,
+        }
         priced_users: set = set()
         now = datetime.now(ZoneInfo("UTC"))
 
@@ -612,8 +619,6 @@ class PriceUpdateService:
                 .distinct()
             )).all()
             portfolio_service = PortfolioService(self.session)
-            stats["portfolios_synced"] = 0
-            stats["portfolios_failed"] = 0
             for portfolio_id, owner_id in affected:
                 try:
                     await portfolio_service._update_portfolio_totals(portfolio_id, owner_id)
