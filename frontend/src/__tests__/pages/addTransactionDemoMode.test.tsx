@@ -60,7 +60,10 @@ jest.mock('@/services/transactionService', () => ({
 }));
 
 jest.mock('@/services/portfolioService', () => ({
-  portfolioService: { getPortfolio: jest.fn().mockResolvedValue({ success: true, data: { holdings: [] } }) },
+  portfolioService: {
+    getPortfolio: jest.fn().mockResolvedValue({ success: true, data: { holdings: [] } }),
+    sellHolding: jest.fn(),
+  },
 }));
 
 jest.mock('@/services/loanService', () => ({
@@ -108,7 +111,10 @@ jest.mock('@/components/layout/DashboardLayout', () => ({
   DashboardLayout: ({ children }: { children: React.ReactNode }) => <div>{children}</div>,
 }));
 
-jest.mock('@/utils/formatters', () => ({ localDateString: () => '2026-05-23' }));
+jest.mock('@/utils/formatters', () => ({
+  localDateString: () => '2026-05-23',
+  formatCurrency: (n: number, c: string) => `${c} ${n}`,
+}));
 
 const mockUseDemo = useDemo as jest.Mock;
 const mockUseModeAwareUI = useModeAwareUI as jest.Mock;
@@ -132,8 +138,8 @@ async function fillAndSubmitExpenseForm(user: ReturnType<typeof userEvent.setup>
   await user.type(descInput, 'Coffee');
   // Category — click the button whose accessible name includes 'Dining'
   await user.click(screen.getByRole('button', { name: /Dining/i }));
-  // Submit
-  await user.click(screen.getByRole('button', { name: /Add Transaction/i }));
+  // Submit: the label says what is saved, "Add expense · <amount>".
+  await user.click(screen.getByRole('button', { name: /^Add expense/i }));
 }
 
 describe('AddTransactionPage — demo mode', () => {
@@ -205,7 +211,7 @@ describe('AddTransactionPage — demo mode', () => {
       await user.clear(descriptionInput);
       await user.type(descriptionInput, 'Wallet transfer');
     }
-    await user.click(screen.getByRole('button', { name: /Add Transaction/i }));
+    await user.click(screen.getByRole('button', { name: /^Transfer .* → /i }));
 
     await waitFor(() => {
       expect(mockToast.success).toHaveBeenCalledWith('common:demoAlert.changesSimulated');
@@ -220,5 +226,63 @@ describe('AddTransactionPage — demo mode', () => {
     expect(legs.every((l) => l.amount === 500)).toBe(true);
     const { transactionService } = jest.requireMock('@/services/transactionService');
     expect(transactionService.createTransfer).not.toHaveBeenCalled();
+  });
+
+  it('Save & add another keeps the run (date, wallet) and clears the entry, staying on the form', async () => {
+    const user = userEvent.setup();
+    const { addDemoTransaction } = setupDemoMode(true);
+    render(<AddTransactionPage />);
+
+    await user.click(screen.getByRole('button', { name: 'Emergency Wallet' }));
+    const amountInput = screen.getAllByPlaceholderText('0')[0];
+    await user.type(amountInput, '80');
+    await user.type(screen.getByPlaceholderText("What's this for?"), 'Taxi');
+    await user.click(screen.getByRole('button', { name: /Transport/i }));
+    await user.click(screen.getByRole('button', { name: 'Save & add another' }));
+
+    await waitFor(() => expect(addDemoTransaction).toHaveBeenCalledTimes(1));
+    expect(addDemoTransaction.mock.calls[0][0]).toMatchObject({ amount: 80, walletType: 'emergency', category: 'Transportation' });
+    expect(mockPush).not.toHaveBeenCalled();
+    // Cleared for the next entry...
+    expect(screen.getAllByPlaceholderText('0')[0]).toHaveValue(null);
+    expect(screen.getByPlaceholderText("What's this for?")).toHaveValue('');
+    // ...while the wallet stays as picked.
+    expect(screen.getByRole('button', { name: 'Emergency Wallet' })).toHaveAttribute('aria-pressed', 'true');
+  });
+
+  it('does not carry a buy price into a sale (it was sent as the sell price, and P/L with it)', async () => {
+    const user = userEvent.setup();
+    setupDemoMode(false);
+    const { portfolioService } = jest.requireMock('@/services/portfolioService');
+    portfolioService.getPortfolio.mockResolvedValue({
+      success: true,
+      data: { holdings: [{ id: 'h1', symbol: '0050', name: 'Taiwan 50', quantity: 10, currency: 'TWD', walletType: 'portfolio' }] },
+    });
+    portfolioService.sellHolding.mockResolvedValue({
+      success: true,
+      data: { quantitySold: 10, symbol: '0050', netProceeds: 2000, realizedGainLoss: 100 },
+    });
+    render(<AddTransactionPage />);
+
+    await user.click(screen.getByRole('button', { name: /^Invest/ }));
+    await user.type(document.getElementById('tx-invest-priceperunit')!, '999');
+    await user.click(screen.getByRole('button', { name: 'Sell Asset' }));
+    await user.click(await screen.findByRole('button', { name: /0050/ }));
+
+    expect(document.getElementById('tx-invest-sell-price')).toHaveValue(null);
+    await user.click(screen.getByRole('button', { name: 'Record Sale' }));
+
+    await waitFor(() => expect(portfolioService.sellHolding).toHaveBeenCalled());
+    expect(portfolioService.sellHolding.mock.calls[0][0]).toMatchObject({ holdingId: 'h1', quantity: 10, price: undefined });
+  });
+
+  it('Enter in a field is a plain save, not "add another"', async () => {
+    const user = userEvent.setup();
+    setupDemoMode(true);
+    render(<AddTransactionPage />);
+    await user.type(screen.getAllByPlaceholderText('0')[0], '40');
+    await user.click(screen.getByRole('button', { name: /Dining/i }));
+    await user.type(screen.getByPlaceholderText("What's this for?"), 'Tea{Enter}');
+    await waitFor(() => expect(mockPush).toHaveBeenCalledWith('/transactions'));
   });
 });

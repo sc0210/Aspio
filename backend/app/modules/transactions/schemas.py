@@ -329,6 +329,10 @@ class TransactionResponse(TransactionBase, TimestampMixin):
         None,
         description="The loan this expense is applied to (reduces its balance); null otherwise",
     )
+    holding_id: Optional[str] = Field(
+        None,
+        description="The portfolio holding this row is the cash leg of (a buy, or sale proceeds); null otherwise",
+    )
 
     @field_validator(
         "id",
@@ -337,6 +341,7 @@ class TransactionResponse(TransactionBase, TimestampMixin):
         "recurring_transaction_id",
         "transfer_group_id",
         "loan_id",
+        "holding_id",
         mode="before",
     )
     @classmethod

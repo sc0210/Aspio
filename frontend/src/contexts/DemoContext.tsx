@@ -517,6 +517,9 @@ interface DemoContextType {
   getDemoRebalancingData: () => DemoRebalancingData;
   addDemoTransaction: (transaction: Omit<Transaction, 'id' | 'userId' | 'createdAt' | 'updatedAt'>) => void;
   removeDemoTransaction: (id: string) => void;
+  updateDemoTransaction: (id: string, updates: Partial<Omit<Transaction, 'id' | 'userId'>>) => void;
+  /** Rewrites both legs of a demo transfer, as PUT /transactions/transfer does. */
+  updateDemoTransfer: (transferGroupId: string, updates: { fromWallet: 'life' | 'emergency'; toWallet: 'life' | 'emergency'; amount: number; currency: string; date: string; description: string }) => void;
   addDemoGoal: (goal: Omit<FinancialGoal, 'id' | 'userId' | 'createdAt' | 'updatedAt' | 'milestones' | 'contributions'>) => void;
   updateDemoGoal: (id: string, updates: Partial<Omit<FinancialGoal, 'id' | 'userId'>>) => void;
   removeDemoGoal: (id: string) => void;
@@ -670,8 +673,36 @@ export function DemoProvider({ children }: { children: ReactNode }) {
     bumpRevision();
   }, [bumpRevision]);
 
+  // A transfer leg takes its pair with it, as the backend's delete does: one leg
+  // alone would leave money in one wallet that never left the other.
   const removeDemoTransaction = useCallback((id: string) => {
-    setDemoTransactions(prev => prev.filter(t => t.id !== id));
+    setDemoTransactions(prev => {
+      const group = prev.find(t => t.id === id)?.transferGroupId;
+      return prev.filter(t => t.id !== id && !(group && t.transferGroupId === group));
+    });
+    bumpRevision();
+  }, [bumpRevision]);
+
+  const updateDemoTransaction = useCallback((id: string, updates: Partial<Omit<Transaction, 'id' | 'userId'>>) => {
+    setDemoTransactions(prev => prev.map(t => (t.id === id ? { ...t, ...updates, updatedAt: new Date() } : t)));
+    bumpRevision();
+  }, [bumpRevision]);
+
+  const updateDemoTransfer = useCallback((transferGroupId: string, u: { fromWallet: 'life' | 'emergency'; toWallet: 'life' | 'emergency'; amount: number; currency: string; date: string; description: string }) => {
+    setDemoTransactions(prev => prev.map(t => (
+      t.transferGroupId === transferGroupId
+        ? {
+            ...t,
+            amount: u.amount,
+            currency: u.currency,
+            date: u.date,
+            description: u.description || t.description,
+            // The expense leg leaves the From wallet; the income leg lands in To.
+            walletType: t.type === 'expense' ? u.fromWallet : u.toWallet,
+            updatedAt: new Date(),
+          }
+        : t
+    )));
     bumpRevision();
   }, [bumpRevision]);
 
@@ -718,6 +749,8 @@ export function DemoProvider({ children }: { children: ReactNode }) {
       getDemoRebalancingData,
       addDemoTransaction,
       removeDemoTransaction,
+      updateDemoTransaction,
+      updateDemoTransfer,
       addDemoGoal,
       updateDemoGoal,
       removeDemoGoal,

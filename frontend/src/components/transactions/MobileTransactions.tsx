@@ -15,7 +15,7 @@ import { cn } from '@/utils/cn';
 import type { Transaction } from '@/shared/types';
 import { Card } from '@/components/ui/Card';
 import { isWalletTransfer } from '@/utils/expenseGroups';
-import { useEditHref } from '@/lib/transactions/returnTo';
+import { useAddHref, useEditHref } from '@/lib/transactions/returnTo';
 
 
 function startOfMonth(): Date {
@@ -26,6 +26,7 @@ function startOfMonth(): Date {
 export function MobileTransactions() {
     // Edit links carry the list view they were opened from, so saving comes back to it.
     const editHref = useEditHref();
+    const addHref = useAddHref();
     const { t, i18n } = useTranslation(['transactions', 'dashboard', 'common']);
     const { transactions, isLoading } = useTransactions();
     const { isValueVisible } = usePrivacy();
@@ -99,7 +100,7 @@ export function MobileTransactions() {
                             className="grid place-items-center w-11 h-11 rounded-full bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-400">
                             <CameraIcon className="w-5 h-5" />
                         </Link>
-                        <Link href="/transactions/add" aria-label={t('transactions:add', 'Add transaction')}
+                        <Link href={addHref} aria-label={t('transactions:add', 'Add transaction')}
                             className="grid place-items-center w-11 h-11 rounded-full bg-primary-700 hover:bg-primary-800 text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-400">
                             <PlusIcon className="w-5 h-5" />
                         </Link>

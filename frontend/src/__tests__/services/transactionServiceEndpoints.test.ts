@@ -121,7 +121,7 @@ describe('getTransactionById', () => {
     api.get.mockResolvedValue({
       success: true,
       data: backendRow({
-        category_obj: { name: 'Dining' }, transfer_group_id: 'g1', loan_id: 'L1', payment_method: 'card',
+        category_obj: { name: 'Dining' }, transfer_group_id: 'g1', loan_id: 'L1', holding_id: 'h1', payment_method: 'card',
       }),
     });
 
@@ -131,9 +131,10 @@ describe('getTransactionById', () => {
     expect(result.success).toBe(true);
     expect(result.data).toMatchObject({
       id: 't1', userId: 'u1', category: 'Dining', walletType: 'life', paymentMethod: 'card',
-      transferGroupId: 'g1', loan_id: 'L1',
+      transferGroupId: 'g1', loan_id: 'L1', holdingId: 'h1',
     });
-    expect(result.data!.date).toEqual(new Date('2026-10-20'));
+    // The day as sent: a Date would be UTC midnight, the previous day west of UTC.
+    expect(result.data!.date).toBe('2026-10-20');
   });
 
   it('falls back to Other and the life wallet when the row omits them', async () => {

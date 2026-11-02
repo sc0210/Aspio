@@ -1267,3 +1267,28 @@ class TestOneCommitPerRequest:
         assert t_repo.soft_delete.await_args.kwargs == {"commit": False}
         t_repo.db.commit.assert_not_awaited()
         t_repo.db.rollback.assert_awaited_once()
+
+
+@pytest.mark.unit
+class TestTransactionResponseHoldingLink:
+    """The edit form saves a buy through its holding, so the link must reach it."""
+
+    def test_holding_id_is_serialized_as_a_string(self):
+        from app.modules.transactions.schemas import TransactionResponse
+
+        holding = uuid4()
+        t = make_mock_transaction()
+        t.transfer_group_id = None
+        t.loan_id = None
+        t.holding_id = holding
+        response = TransactionResponse.model_validate(t)
+        assert response.holding_id == str(holding)
+
+    def test_holding_id_is_null_for_ordinary_spending(self):
+        from app.modules.transactions.schemas import TransactionResponse
+
+        t = make_mock_transaction()
+        t.transfer_group_id = None
+        t.loan_id = None
+        t.holding_id = None
+        assert TransactionResponse.model_validate(t).holding_id is None
