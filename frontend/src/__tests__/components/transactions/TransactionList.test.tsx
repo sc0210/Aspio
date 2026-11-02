@@ -1,5 +1,5 @@
 import React from 'react';
-import { render, screen, fireEvent, waitFor } from '@testing-library/react';
+import { act, render, screen, fireEvent, waitFor } from '@testing-library/react';
 import { TransactionList } from '@/components/transactions/TransactionList';
 import toast from 'react-hot-toast';
 import type { Transaction } from '@/shared/types';
@@ -288,6 +288,37 @@ describe('TransactionList', () => {
 
       // Modal shown — but no deletion yet
       expect(mockMutateAsync).not.toHaveBeenCalled();
+    });
+  });
+
+  describe("a holding's cash side", () => {
+    it('offers no row Delete (it goes with its holding)', () => {
+      const txns = [
+        makeTransaction({ id: '1', description: 'Lunch', date: new Date('2024-03-15T10:00:00Z') }),
+        makeTransaction({ id: '2', description: 'Buy 0050', holdingId: 'h1', date: new Date('2024-03-15T11:00:00Z') }),
+      ];
+      render(<TransactionList transactions={txns} />);
+      fireEvent.click(screen.getByRole('button', { name: /Expand|Collapse/i }));
+      // One row menu has Delete, the holding's row has none.
+      expect(screen.getAllByText('Delete')).toHaveLength(1);
+    });
+
+    it('is left out of a bulk delete, and the user is told', () => {
+      jest.useFakeTimers();
+      const txns = [
+        makeTransaction({ id: '1', description: 'Lunch', date: new Date('2024-03-15T10:00:00Z') }),
+        makeTransaction({ id: '2', description: 'Buy 0050', holdingId: 'h1', date: new Date('2024-03-15T11:00:00Z') }),
+      ];
+      render(<TransactionList transactions={txns} />);
+      fireEvent.click(screen.getByRole('button', { name: /Expand|Collapse/i }));
+      const checkboxes = screen.getAllByRole('checkbox');
+      fireEvent.click(checkboxes[0]);
+      fireEvent.click(checkboxes[1]);
+      fireEvent.click(screen.getAllByText('Delete')[0]);
+      act(() => { jest.advanceTimersByTime(5100); });
+      expect(mockMutateAsync).toHaveBeenCalledTimes(1);
+      expect(mockMutateAsync).toHaveBeenCalledWith('1');
+      jest.useRealTimers();
     });
   });
 

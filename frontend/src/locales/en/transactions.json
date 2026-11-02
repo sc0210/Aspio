@@ -236,8 +236,8 @@
       "title": "Investment purchase",
       "note": "Changes here update the transaction record. To update the portfolio holding, visit the Portfolio page.",
       "noteHolding": "Saving updates the holding and this Life Wallet entry together.",
-      "noteLot": "This buy is part of a lot with other buys, so its quantity and price are edited on Portfolio. Tags can be changed here.",
-      "noteUnlinked": "This older entry isn't linked to a holding. Saving changes only this cash entry; update the holding on Portfolio."
+      "noteLot": "This buy shares its holding with other entries, so its amount and date are changed on Portfolio. Tags can be changed here.",
+      "noteUnlinked": "This older entry isn't linked to a holding. Saving also updates a holding of this symbol bought that day, if there is one; check it on Portfolio."
     },
     "today": "Today",
     "yesterday": "Yesterday",
@@ -304,7 +304,8 @@
     "transactionCount": "{{count}}",
     "undo": "Undo",
     "updating": "Updating…",
-    "walletPlaceholder": "Reassign wallet"
+    "walletPlaceholder": "Reassign wallet",
+    "holdingLinkedSkipped": "{{count}} selected entries belong to portfolio holdings and were left as they are. Change them on Portfolio."
   },
   "monthlySummary": "Monthly Summary",
   "monthlySummaryPage": {

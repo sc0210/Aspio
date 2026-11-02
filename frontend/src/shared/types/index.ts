@@ -104,7 +104,8 @@ export interface Transaction {
   recurringRule?: RecurringRule;
   transferGroupId?: string; // Links both legs of a wallet transfer; unset for regular income/expense rows
   loanId?: string; // The loan this expense pays down; unset for ordinary spending
-  holdingId?: string; // The portfolio holding this row is the cash leg of (a buy or a sale's proceeds)
+  holdingId?: string; // The portfolio holding this row is the cash leg of
+  holdingSolePurchase?: boolean; // Single reads only: this row is its holding's only purchase leg, so a holding edit rewrites it
   createdAt: Date;
   updatedAt: Date;
 }

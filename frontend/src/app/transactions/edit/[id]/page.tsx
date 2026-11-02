@@ -33,22 +33,17 @@ const INVESTMENT_PURCHASE = 'Investment Purchase';
 const INVESTMENT_SALE = 'Investment Sale';
 
 /**
- * How an Investment Purchase row may be edited, decided once on load.
- * - `holding`: linked (holding_id) to a lot that is exactly this buy. Saved through
- *   the holding, whose update rewrites this cash leg, so the two cannot drift.
- * - `lot`: linked to a lot that holds more than this buy (several buys folded
- *   into one). Writing this buy's quantity onto the lot would shrink it, and the
- *   leg cannot be restated alone, so quantity and price are read-only here.
- * - `unlinked`: an older row with no holding link. Only the cash entry changes.
+ * How an Investment Purchase row may be edited, decided once on load from the
+ * backend's own rule (holding_sole_purchase: the rule the holding update uses to
+ * decide whether it rewrites this leg), never from parsing the description.
+ * - `holding`: this row is its lot's only purchase leg. Edited as the lot (its
+ *   current quantity and cost), saved through the holding, which rewrites this leg.
+ * - `lot`: the lot holds other buys, or cash withdrawn against it. Writing this
+ *   buy's figures onto the lot would be wrong, and the API refuses changing the
+ *   leg's money alone, so quantity, price and date are read-only here.
+ * - `unlinked`: an older row with no holding link.
  */
 type InvestLink = 'holding' | 'lot' | 'unlinked';
-
-/** Equal within the precision the purchase description keeps: an absolute step
- *  (half of 0.01 for price, of 0.0001 for quantity), not a share of the value, so a
- *  lot corrected on Portfolio since (1000 -> 1004) no longer reads as this buy. */
-function near(a: number, b: number, halfStep: number) {
-  return Math.abs(a - b) <= halfStep + 1e-9;
-}
 
 /** What the row was when loaded: delete and duplicate describe this, not unsaved edits. */
 interface LoadedRow {
@@ -181,30 +176,39 @@ export default function EditTransactionPage() {
           if (txn.category === INVESTMENT_PURCHASE) {
             const parsed = parseInvestDescription(txn.description);
             setIsInvestMode(true);
-            setInvestSymbol(parsed?.symbol || '');
-            setInvestQty(parsed?.qty || '');
-            setInvestPrice(parsed?.price || '');
-            setInvestCurrency(parsed?.currency || defaultCurrency);
-            setLoadedInvest(parsed ? { qty: parsed.qty, price: parsed.price } : null);
+            let qty = parsed?.qty || '';
+            let price = parsed?.price || '';
+            let currency = parsed?.currency || defaultCurrency;
 
             let link: InvestLink = 'unlinked';
             setHoldingId(txn.holdingId ?? null);
             if (txn.holdingId && !isDemo) {
-              // Linked: is the lot this one buy, or several folded together?
               link = 'lot';
-              try {
-                const holdingResp = await portfolioService.getHolding(txn.holdingId);
-                const h = holdingResp.success ? holdingResp.data : null;
-                if (h && parsed
-                  && near(Number(h.quantity), Number(parsed.qty), 0.00005)
-                  && near(Number(h.averageCost), Number(parsed.price), 0.005)) {
-                  link = 'holding';
+              if (txn.holdingSolePurchase) {
+                // The lot is what gets edited, so show the lot as it stands: the
+                // description rounds the price, and a later Portfolio edit or a
+                // sale may have moved the figures since.
+                try {
+                  const holdingResp = await portfolioService.getHolding(txn.holdingId);
+                  const h = holdingResp.success ? holdingResp.data : null;
+                  if (h) {
+                    link = 'holding';
+                    qty = String(Number(h.quantity));
+                    price = String(Number(h.averageCost));
+                    currency = h.currency || currency;
+                  }
+                } catch (error) {
+                  // Without the lot's own figures, nothing safe to send it: read-only.
+                  log.error('Failed to load the linked holding:', error);
                 }
-              } catch (error) {
-                log.error('Failed to load the linked holding:', error);
               }
             }
             setInvestLink(link);
+            setInvestSymbol(parsed?.symbol || '');
+            setInvestQty(qty);
+            setInvestPrice(price);
+            setInvestCurrency(currency);
+            setLoadedInvest({ qty, price });
 
             setFormData({
               type: 'expense',
@@ -814,8 +818,8 @@ export default function EditTransactionPage() {
                     {investLink === 'holding'
                       ? t('transactions:form.investEdit.noteHolding', 'Saving updates the holding and this Life Wallet entry together.')
                       : investLink === 'lot'
-                        ? t('transactions:form.investEdit.noteLot', 'This buy is part of a lot with other buys, so its quantity and price are edited on Portfolio. Tags can be changed here.')
-                        : t('transactions:form.investEdit.noteUnlinked', "This older entry isn't linked to a holding. Saving changes only this cash entry; update the holding on Portfolio.")}
+                        ? t('transactions:form.investEdit.noteLot', 'This buy shares its holding with other entries, so its amount and date are changed on Portfolio. Tags can be changed here.')
+                        : t('transactions:form.investEdit.noteUnlinked', "This older entry isn't linked to a holding. Saving also updates a holding of this symbol bought that day, if there is one; check it on Portfolio.")}
                     {investLink !== 'holding' && (
                       <>
                         {' '}

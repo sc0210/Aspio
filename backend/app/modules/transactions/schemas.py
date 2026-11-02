@@ -331,7 +331,14 @@ class TransactionResponse(TransactionBase, TimestampMixin):
     )
     holding_id: Optional[str] = Field(
         None,
-        description="The portfolio holding this row is the cash leg of (a buy, or sale proceeds); null otherwise",
+        description="The portfolio holding this row is the cash leg of; null otherwise",
+    )
+    holding_sole_purchase: Optional[bool] = Field(
+        None,
+        description=(
+            "Single-transaction reads only: true when this row is its holding's only "
+            "purchase leg, so editing the holding rewrites it; null when unlinked"
+        ),
     )
 
     @field_validator(

@@ -386,14 +386,17 @@ describe('EditTransactionPage — Invest Submit: an older buy with no holding li
     expect(mockUpdateHolding).not.toHaveBeenCalled();
   });
 
-  it('says that only the cash entry changes', async () => {
+  it('says it is not linked, and what saving may still touch', async () => {
     await renderAndLoad(investTx);
     expect(screen.getByText(/isn't linked to a holding/)).toBeInTheDocument();
   });
 });
 
 describe('EditTransactionPage — Invest Submit: through the linked holding', () => {
-  const linkedTx = { ...investTx, holdingId: 'holding-1' };
+  // The backend says whether this row is its lot's only purchase leg (the rule its
+  // holding update uses to rewrite the leg); the page no longer guesses from the description.
+  const soleTx = { ...investTx, holdingId: 'holding-1', holdingSolePurchase: true };
+  const sharedTx = { ...investTx, holdingId: 'holding-1', holdingSolePurchase: false };
 
   beforeEach(() => {
     jest.clearAllMocks();
@@ -401,10 +404,18 @@ describe('EditTransactionPage — Invest Submit: through the linked holding', ()
     mockUpdateHolding.mockResolvedValue({ success: true, data: {} });
   });
 
-  it('saves a buy whose lot is exactly this buy with one holding update, not a transaction PUT', async () => {
-    mockGetHolding.mockResolvedValue({ success: true, data: { id: 'holding-1', quantity: 100, averageCost: 1000 } });
-    await renderAndLoad(linkedTx);
+  it("edits a sole-leg buy as its lot, from the lot's own figures", async () => {
+    // The description says 100 @ 1,000.00; the lot was corrected since.
+    mockGetHolding.mockResolvedValue({ success: true, data: { id: 'holding-1', quantity: 90, averageCost: 1004.5, currency: 'TWD' } });
+    await renderAndLoad(soleTx);
     expect(mockGetHolding).toHaveBeenCalledWith('holding-1');
+    expect(screen.getByPlaceholderText('100')).toHaveValue(90);
+    expect(screen.getByPlaceholderText('100.00')).toHaveValue(1004.5);
+  });
+
+  it('saves a changed quantity with one holding update, not a transaction PUT', async () => {
+    mockGetHolding.mockResolvedValue({ success: true, data: { id: 'holding-1', quantity: 100, averageCost: 1000, currency: 'TWD' } });
+    await renderAndLoad(soleTx);
 
     fireEvent.change(screen.getByPlaceholderText('100'), { target: { value: '120' } });
     await act(async () => {
@@ -412,8 +423,7 @@ describe('EditTransactionPage — Invest Submit: through the linked holding', ()
     });
 
     await waitFor(() => expect(mockUpdateHolding).toHaveBeenCalledTimes(1));
-    // Only what changed: resending the 2 dp price from the description would
-    // restate an untouched cost basis and its cash leg.
+    // Only what changed: an untouched cost is not resent.
     expect(mockUpdateHolding).toHaveBeenCalledWith({ id: 'holding-1', quantity: 120 });
     // The holding update rewrites this cash leg itself; a second write could disagree.
     expect(mockUpdateTransaction).not.toHaveBeenCalled();
@@ -421,8 +431,8 @@ describe('EditTransactionPage — Invest Submit: through the linked holding', ()
   });
 
   it('leaves the holding alone when nothing it holds was changed', async () => {
-    mockGetHolding.mockResolvedValue({ success: true, data: { id: 'holding-1', quantity: 100, averageCost: 1000.004 } });
-    await renderAndLoad(linkedTx);
+    mockGetHolding.mockResolvedValue({ success: true, data: { id: 'holding-1', quantity: 100, averageCost: 1000.004, currency: 'TWD' } });
+    await renderAndLoad(soleTx);
     await act(async () => {
       fireEvent.click(screen.getByText('Update Investment Transaction'));
     });
@@ -430,19 +440,13 @@ describe('EditTransactionPage — Invest Submit: through the linked holding', ()
     expect(mockUpdateHolding).not.toHaveBeenCalled();
   });
 
-  it('treats a lot corrected on Portfolio since (1000 -> 1004) as not this buy', async () => {
-    mockGetHolding.mockResolvedValue({ success: true, data: { id: 'holding-1', quantity: 100, averageCost: 1004 } });
-    await renderAndLoad(linkedTx);
-    expect(screen.getByPlaceholderText('100.00')).toHaveAttribute('readonly');
-  });
+  it('locks a buy that shares its lot, without even reading the lot, and saves only tags', async () => {
+    await renderAndLoad(sharedTx);
 
-  it('locks quantity and price when the lot holds other buys, and saves only tags', async () => {
-    mockGetHolding.mockResolvedValue({ success: true, data: { id: 'holding-1', quantity: 300, averageCost: 980 } });
-    await renderAndLoad(linkedTx);
-
+    expect(mockGetHolding).not.toHaveBeenCalled();
     expect(screen.getByPlaceholderText('100')).toHaveAttribute('readonly');
     expect(screen.getByPlaceholderText('100.00')).toHaveAttribute('readonly');
-    expect(screen.getByText(/part of a lot with other buys/)).toBeInTheDocument();
+    expect(screen.getByText(/shares its holding with other entries/)).toBeInTheDocument();
 
     await act(async () => {
       fireEvent.click(screen.getByText('Update Investment Transaction'));
@@ -450,6 +454,12 @@ describe('EditTransactionPage — Invest Submit: through the linked holding', ()
     await waitFor(() => expect(mockUpdateTransaction).toHaveBeenCalled());
     expect(mockUpdateTransaction.mock.calls[0][1]).toEqual({ tags: [] });
     expect(mockUpdateHolding).not.toHaveBeenCalled();
+  });
+
+  it('falls back to read-only when the lot cannot be read', async () => {
+    mockGetHolding.mockRejectedValue(new Error('offline'));
+    await renderAndLoad(soleTx);
+    expect(screen.getByPlaceholderText('100')).toHaveAttribute('readonly');
   });
 });
 

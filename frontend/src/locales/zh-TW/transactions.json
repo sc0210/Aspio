@@ -236,8 +236,8 @@
       "title": "投資買入",
       "note": "此處的修改只會更新交易紀錄。若要更新持股，請前往投資組合頁面。",
       "noteHolding": "儲存時會同時更新持倉與這筆生活錢包紀錄。",
-      "noteLot": "這筆買入與其他買入合併在同一批持倉中，數量與價格請到投資組合編輯。標籤可在這裡修改。",
-      "noteUnlinked": "這筆舊紀錄沒有連結到持倉。儲存只會修改這筆現金紀錄；持倉請到投資組合更新。"
+      "noteLot": "這筆買入與其他紀錄共用同一個持倉，金額與日期請到投資組合修改。標籤可在這裡修改。",
+      "noteUnlinked": "這筆舊紀錄沒有連結到持倉。儲存時也會更新同一天買入、同一代號的持倉（若有）；請到投資組合確認。"
     },
     "today": "今天",
     "yesterday": "昨天",
@@ -304,7 +304,8 @@
     "transactionCount": "{{count}} 筆",
     "undo": "復原",
     "updating": "更新中…",
-    "walletPlaceholder": "重新分配錢包"
+    "walletPlaceholder": "重新分配錢包",
+    "holdingLinkedSkipped": "有 {{count}} 筆選取的紀錄屬於投資組合持倉，已保持不變。請到投資組合修改。"
   },
   "monthlySummary": "月度總結",
   "monthlySummaryPage": {

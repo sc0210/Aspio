@@ -191,6 +191,8 @@ function TransactionRowBase({
                               </Link>
                             )}
                           </MenuItem>
+                          {/* A holding's cash side goes with the holding (the API refuses it alone). */}
+                          {!transaction.holdingId && (
                           <MenuItem>
                             {({ active }) => (
                               <button
@@ -209,6 +211,7 @@ function TransactionRowBase({
                               </button>
                             )}
                           </MenuItem>
+                          )}
                         </div>
                       </MenuItems>
                     </Transition>

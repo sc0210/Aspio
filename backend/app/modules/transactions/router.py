@@ -156,6 +156,12 @@ async def _sync_portfolio_on_update(old_transaction_obj, new_transaction_obj) ->
     """Update the matching PortfolioHolding when an investment purchase transaction is edited."""
     if old_transaction_obj is None:
         return
+    # A linked row's holding is known exactly, and only the holding may change its
+    # money (TransactionService.update_transaction refuses otherwise), so the
+    # symbol-and-date guess below must not touch it: on a lot of several buys it
+    # wrote this one buy's quantity onto the whole lot.
+    if getattr(old_transaction_obj, 'holding_id', None) is not None:
+        return
     old_desc = getattr(old_transaction_obj, 'description', None) or ''
     cat_obj = getattr(old_transaction_obj, 'category_obj', None)
     cat_name = (getattr(cat_obj, 'name', '') or '').lower() if cat_obj else ''
@@ -1628,6 +1634,13 @@ async def get_transaction(
     if not transaction:
         raise HTTPException(status_code=404, detail="Transaction not found")
 
+    if current_user is not None and transaction.holding_id is not None:
+        # Whether editing the holding rewrites this row: the edit form routes a buy
+        # through its holding only then, by the same rule the holding update uses.
+        response = TransactionResponse.model_validate(transaction)
+        response.holding_sole_purchase = await transaction_service.holding_sole_purchase(transaction)
+        return response
+
     return transaction
 
 
@@ -1673,7 +1686,9 @@ async def update_transaction(
             raise HTTPException(status_code=404, detail="Transaction not found")
 
         return transaction
-    except HTTPException:
+    except (HTTPException, AspiroException):
+        # AspiroException carries its own status (e.g. a holding-linked row refusing
+        # an amount change); the catch-all below would turn it into a bare 500.
         raise
     except ValueError as e:
         raise HTTPException(status_code=400, detail=str(e))
