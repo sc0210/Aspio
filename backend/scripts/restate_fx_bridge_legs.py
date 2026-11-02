@@ -26,7 +26,7 @@ first, so the change can be reversed with a plain UPDATE per row.
 
     python scripts/restate_fx_bridge_legs.py                 # report only
     python scripts/restate_fx_bridge_legs.py --user EMAIL    # one account
-    python scripts/restate_fx_bridge_legs.py --apply --undo-file restate_undo.csv
+    python scripts/restate_fx_bridge_legs.py --apply --before 2026-11-03 --undo-file restate_undo.csv
 
 Run it against a backup-taken database; it is a cash-history change.
 """
@@ -177,4 +177,9 @@ if __name__ == "__main__":
                         help="only legs dated before this day (YYYY-MM-DD), e.g. the #91 deploy date")
     parser.add_argument("--undo-file", default="restate_fx_bridge_legs_undo.csv",
                         help="where --apply writes the previous amounts")
-    sys.exit(asyncio.run(main(parser.parse_args())))
+    parsed = parser.parse_args()
+    # 31.5 is also a plausible live rate: without a cutoff, a correct leg booked
+    # after #91 at ~31.50 would look frozen. Writing needs the deploy date.
+    if parsed.apply and not parsed.before:
+        parser.error("--apply needs --before YYYY-MM-DD (the day #91 was deployed)")
+    sys.exit(asyncio.run(main(parsed)))

@@ -367,7 +367,7 @@ async def get_daily_performance(
             i = bisect_right(dates, day) - 1
             # A weekend or holiday carries the last close; a longer gap is a
             # missing series, not a market at rest.
-            if i < 0 or (day - dates[i]).days > 4:
+            if i < 0 or (day - dates[i]).days > 7:
                 return None
             return closes[i]
 
