@@ -36,7 +36,7 @@ from .schemas import (
     BulkTransactionResponse,
     RecurringTransactionUpdate,
 )
-from app.utils.datetime_helpers import business_today
+from app.utils.datetime_helpers import business_day_of, business_today
 
 logger = logging.getLogger(__name__)
 
@@ -680,12 +680,25 @@ class TransactionService:
 
     @staticmethod
     def _same_value(stored, incoming) -> bool:
-        """Equal as stored: Decimal amounts, enum values, dates."""
+        """Equal as stored: Decimal amounts, enum values, days, currency codes in any case."""
         if stored is None or incoming is None:
             return stored is incoming
         if isinstance(stored, Decimal):
             return stored == Decimal(str(incoming))
-        return getattr(stored, "value", stored) == getattr(incoming, "value", incoming)
+        if isinstance(stored, (date, datetime)) or isinstance(incoming, (date, datetime)):
+            # The column is a day; compare days, whatever form the client sent.
+            def as_day(value):
+                if isinstance(value, datetime):
+                    return business_day_of(value)
+                if isinstance(value, date):
+                    return value
+                return date.fromisoformat(str(value)[:10])
+            return as_day(stored) == as_day(incoming)
+        stored_value = getattr(stored, "value", stored)
+        incoming_value = getattr(incoming, "value", incoming)
+        if isinstance(stored_value, str) and isinstance(incoming_value, str):
+            return stored_value.upper() == incoming_value.upper()
+        return stored_value == incoming_value
 
     async def holding_sole_purchase(self, transaction) -> Optional[bool]:
         """Whether editing this row's holding rewrites this row (None: no holding)."""
