@@ -603,8 +603,9 @@ class TestMarketHoursTTLGate:
 
         with (
             patch.object(MarketHoursManager, "is_market_open", return_value=False),
-            patch.object(MarketHoursManager, "get_market_close_time",
-                         return_value=market_close),
+            # The gate compares against the latest settled close (bell + grace).
+            patch("app.modules.portfolio.price_update_service.last_settled_close",
+                  return_value=market_close),
         ):
             assert MarketHoursManager.should_update_price("TW", last_update) is False
 
@@ -620,8 +621,9 @@ class TestMarketHoursTTLGate:
 
         with (
             patch.object(MarketHoursManager, "is_market_open", return_value=False),
-            patch.object(MarketHoursManager, "get_market_close_time",
-                         return_value=market_close),
+            # The gate compares against the latest settled close (bell + grace).
+            patch("app.modules.portfolio.price_update_service.last_settled_close",
+                  return_value=market_close),
         ):
             assert MarketHoursManager.should_update_price("TW", last_update) is True
 

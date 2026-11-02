@@ -94,17 +94,37 @@ class TestMarketHoursManager:
             assert result == True
 
     def test_should_update_price_market_closed_not_updated_today(self):
-        """Should update if market closed and not updated after close"""
-        # Last update: yesterday
+        """Should update if market closed and not updated since the last settled close"""
         last_update = datetime.now(ZoneInfo("UTC")) - timedelta(days=1)
 
         with patch.object(MarketHoursManager, 'is_market_open', return_value=False):
-            with patch.object(MarketHoursManager, 'get_market_close_time') as mock_close:
-                # Market close time: today 13:30 TST
-                mock_close.return_value = datetime.now(ZoneInfo("UTC"))
-
+            with patch("app.modules.portfolio.price_update_service.last_settled_close",
+                       return_value=datetime.now(ZoneInfo("UTC"))):
                 result = MarketHoursManager.should_update_price("TW", last_update)
                 assert result == True
+
+    @pytest.mark.parametrize("now_taipei,last_taipei,due", [
+        # A write in the minutes after the bell is mid-auction, not the close:
+        # once the grace period passes the close is due again.
+        ("2026-05-13 14:05", "2026-05-13 13:45", True),
+        # Updated after today's settled close (13:30 + 30 min): nothing to do.
+        ("2026-05-13 16:00", "2026-05-13 14:10", False),
+        # Before the open the latest close is yesterday's: a write after it is
+        # current, so a pre-open refresh does not refetch every lot.
+        ("2026-05-13 08:00", "2026-05-12 22:00", False),
+        ("2026-05-13 08:00", "2026-05-12 13:40", True),
+        # Weekend: Friday's settled close decides.
+        ("2026-05-16 11:00", "2026-05-15 15:00", False),
+        ("2026-05-16 11:00", "2026-05-15 13:50", True),
+    ])
+    def test_closed_market_gate_follows_the_last_settled_close(self, now_taipei, last_taipei, due):
+        tz = ZoneInfo("Asia/Taipei")
+        now = datetime.strptime(now_taipei, "%Y-%m-%d %H:%M").replace(tzinfo=tz)
+        last = datetime.strptime(last_taipei, "%Y-%m-%d %H:%M").replace(tzinfo=tz)
+        with patch("app.modules.portfolio.price_update_service.datetime") as mock_dt:
+            mock_dt.now.side_effect = lambda zone=None: now.astimezone(zone) if zone else now
+            mock_dt.combine = datetime.combine
+            assert MarketHoursManager.should_update_price("TW", last) is due
 
     def test_should_update_price_crypto_30_min_interval(self):
         """Crypto should update every 30 minutes"""
@@ -123,236 +143,167 @@ class TestMarketHoursManager:
         assert result == False
 
 
-class TestPriceUpdateService:
-    """Test suite for price update service"""
+async def _seed_lots(session, lots, *, user_id=None):
+    """One user, one portfolio, the given lots; returns (user_id, [lots])."""
+    import uuid
+    from datetime import date
+    from app.modules.portfolio.models import Portfolio
+    from app.modules.users.models import User
 
-    @pytest.fixture
-    def mock_session(self):
-        """Mock database session"""
-        session = AsyncMock()
-        session.commit = AsyncMock()
-        session.rollback = AsyncMock()
-        session.execute = AsyncMock()
-        return session
+    if user_id is None:
+        user = User(id=uuid.uuid4(), email=f"{uuid.uuid4()}@example.com", name="U",
+                    hashed_password="x", is_active=True)
+        session.add(user)
+        await session.flush()
+        user_id = user.id
+    portfolio = Portfolio(id=uuid.uuid4(), user_id=user_id, name=f"P{uuid.uuid4()}",
+                          is_default=False, currency="TWD")
+    session.add(portfolio)
+    await session.flush()
+    rows = []
+    for lot in lots:
+        qty = Decimal(lot.get("qty", "10"))
+        avg = Decimal(lot.get("avg", "100"))
+        price = Decimal(lot.get("price", "100"))
+        row = PortfolioHolding(
+            id=uuid.uuid4(), portfolio_id=portfolio.id, user_id=user_id,
+            symbol=lot["symbol"], name=lot["symbol"], quantity=qty, average_cost=avg,
+            current_price=price, previous_close=lot.get("prev"),
+            currency="TWD", market=lot.get("market", "TW"), type=lot.get("type", "stock"),
+            exchange="X", total_cost=qty * avg, total_value=qty * price,
+            purchase_date=date(2026, 9, 1), is_active=True,
+            last_price_update_at=lot.get("stamp"),
+        )
+        session.add(row)
+        rows.append(row)
+    await session.commit()
+    return user_id, rows
 
-    @pytest.fixture
-    def mock_holding(self):
-        """Create mock holding"""
-        holding = Mock(spec=PortfolioHolding)
-        holding.id = "holding-123"
-        holding.symbol = "0050"
-        holding.market = "TW"
-        holding.quantity = Decimal("100")
-        holding.average_cost = Decimal("120.5")
-        holding.current_price = Decimal("125.0")
-        holding.total_cost = Decimal("12050")
-        holding.total_value = Decimal("12500")
-        holding.last_price_update_at = None
-        return holding
 
-    @pytest.mark.asyncio
-    async def test_update_holding_price_force_flag_bypasses_cache(self, mock_session, mock_holding):
-        """Force flag should bypass all caching logic"""
-        service = PriceUpdateService(mock_session)
+class TestPerUserRefresh:
+    """update_portfolio_prices: one user's refresh, written through apply_quote."""
 
-        # Set last update to 10 minutes ago (within cache TTL)
-        mock_holding.last_price_update_at = datetime.now(ZoneInfo("UTC")) - timedelta(minutes=10)
-
-        # Mock market data service to return new price
-        with patch.object(service.market_data_service, 'get_current_price', new_callable=AsyncMock) as mock_price:
-            mock_price.return_value = Decimal("130.0")
-
-            # Call with force=True
-            result = await service.update_holding_price(mock_holding, force=True)
-
-            # Should update despite cache being valid
-            assert result == True
-            assert mock_price.called == True
-            assert mock_holding.current_price == Decimal("130.0")
+    OLD = datetime(2026, 1, 5, 6, 0, tzinfo=ZoneInfo("UTC"))
 
     @pytest.mark.asyncio
-    async def test_update_holding_price_respects_cache_when_not_forced(self, mock_session, mock_holding):
-        """Should respect cache when force=False"""
-        service = PriceUpdateService(mock_session)
+    async def test_fetches_each_symbol_once_and_writes_derived_columns(self, async_session):
+        user_id, (a, b, c) = await _seed_lots(async_session, [
+            dict(symbol="0050"), dict(symbol="0050", qty="5"), dict(symbol="2330"),
+        ])
+        service = PriceUpdateService(async_session)
+        with patch.object(service, "_fetch_live_quote", new_callable=AsyncMock,
+                          return_value=(Decimal("150"), Decimal("140"))) as fetch:
+            stats = await service.update_portfolio_prices(user_id, force=True)
 
-        # Set last update to 10 minutes ago (within cache TTL)
-        mock_holding.last_price_update_at = datetime.now(ZoneInfo("UTC")) - timedelta(minutes=10)
-
-        # Mock should_update_price to return False (cache valid)
-        with patch.object(service.market_hours_manager, 'should_update_price', return_value=False):
-            with patch.object(service.market_data_service, 'get_current_price', new_callable=AsyncMock) as mock_price:
-                result = await service.update_holding_price(mock_holding, force=False)
-
-                # Should NOT update (cache hit)
-                assert result == False
-                assert mock_price.called == False
-
-    @pytest.mark.asyncio
-    async def test_update_portfolio_prices_prefetches_each_symbol_once(self, mock_session):
-        """The batch path fetches each symbol's price exactly once (concurrent
-        prefetch) and reuses it in the sequential apply loop — never a second,
-        serial fetch (which is what made refresh-prices ~31s for ~60 symbols)."""
-        service = PriceUpdateService(mock_session)
-
-        def _holding(symbol):
-            h = Mock(spec=PortfolioHolding)
-            h.id, h.symbol, h.market, h.type = f"h-{symbol}", symbol, "TW", "stock"
-            h.quantity = Decimal("100")
-            h.average_cost = h.current_price = Decimal("100")
-            h.total_cost = h.total_value = Decimal("10000")
-            h.last_price_update_at = None
-            return h
-
-        holdings = [_holding("0050"), _holding("2330"), _holding("0056")]
-        result = Mock()
-        result.scalars.return_value.all.return_value = holdings
-        mock_session.execute.return_value = result
-
-        with patch.object(service.market_hours_manager, "should_update_price", return_value=True):
-            with patch.object(service.market_data_service, "get_current_price", new_callable=AsyncMock) as mock_price:
-                mock_price.return_value = Decimal("150.0")
-
-                stats = await service.update_portfolio_prices(user_id="u1")
-
-        # Exactly one fetch per unique symbol — the prefetched result is reused.
-        assert mock_price.call_count == 3
-        assert sorted(c.args[0] for c in mock_price.call_args_list) == ["0050", "0056", "2330"]
+        assert sorted(call.args[0] for call in fetch.call_args_list) == ["0050", "2330"]
         assert stats["updated"] == 3
-        assert all(h.current_price == Decimal("150.0") for h in holdings)
+        for lot in (a, b, c):
+            await async_session.refresh(lot)
+            assert lot.current_price == Decimal("150")
+            assert lot.total_value == lot.quantity * Decimal("150")
+            assert lot.total_cost == lot.quantity * lot.average_cost
+            assert lot.previous_close == Decimal("140")
 
     @pytest.mark.asyncio
-    async def test_update_holding_price_calculates_metrics_correctly(self, mock_session, mock_holding):
-        """Should correctly calculate total_value, gain_loss, and percentage"""
-        service = PriceUpdateService(mock_session)
+    async def test_a_failed_fetch_writes_nothing_and_stamps_nothing(self, async_session):
+        """It used to write the stored price back with a fresh stamp, so the gate
+        stopped retrying and every user's scheduled refresh skipped the symbol."""
+        user_id, (lot,) = await _seed_lots(async_session, [
+            dict(symbol="0050", price="100", stamp=self.OLD),
+        ])
+        service = PriceUpdateService(async_session)
+        with patch.object(service.market_data_service, "get_current_price",
+                          new_callable=AsyncMock, return_value=None):
+            stats = await service.update_portfolio_prices(user_id, force=True)
 
-        mock_holding.quantity = Decimal("100")
-        mock_holding.average_cost = Decimal("120.0")
-
-        # Mock market data service
-        with patch.object(service.market_data_service, 'get_current_price', new_callable=AsyncMock) as mock_price:
-            mock_price.return_value = Decimal("150.0")  # 25% gain
-
-            result = await service.update_holding_price(mock_holding, force=True)
-
-            assert result == True
-            assert mock_holding.current_price == Decimal("150.0")
-            assert mock_holding.total_value == Decimal("15000")  # 100 * 150
-            assert mock_holding.total_cost == Decimal("12000")  # 100 * 120
-            assert mock_holding.gain_loss == Decimal("3000")  # 15000 - 12000
-            assert mock_holding.gain_loss_percentage == Decimal("25")  # (3000 / 12000) * 100
+        await async_session.refresh(lot)
+        assert stats["failed"] == 1 and stats["updated"] == 0
+        assert lot.current_price == Decimal("100")
+        assert lot.last_price_update_at.replace(tzinfo=None) == self.OLD.replace(tzinfo=None)
 
     @pytest.mark.asyncio
-    async def test_update_holding_price_handles_api_failure_gracefully(self, mock_session, mock_holding):
-        """Should handle API failures without crashing"""
-        service = PriceUpdateService(mock_session)
+    async def test_a_sale_during_the_quote_wait_is_respected(self, async_session):
+        """The refresh used to compute value and cost from the quantity it read
+        before the network wait, overwriting a sale that committed meanwhile."""
+        user_id, (lot,) = await _seed_lots(async_session, [dict(symbol="0050", qty="10")])
+        service = PriceUpdateService(async_session)
 
-        # Mock market data service to raise exception
-        with patch.object(service.market_data_service, 'get_current_price', new_callable=AsyncMock) as mock_price:
-            mock_price.side_effect = Exception("API timeout")
+        async def sale_lands_while_waiting(symbol, market):
+            # Another request sells 6 and commits while this one waits on Yahoo.
+            from sqlalchemy import update as sa_update
+            await async_session.execute(
+                sa_update(PortfolioHolding).where(PortfolioHolding.id == lot.id)
+                .values(quantity=Decimal("4"), total_cost=Decimal("400"))
+            )
+            await async_session.commit()
+            return Decimal("120"), None
 
-            result = await service.update_holding_price(mock_holding, force=True)
+        with patch.object(service, "_fetch_live_quote", side_effect=sale_lands_while_waiting):
+            await service.update_portfolio_prices(user_id, force=True)
 
-            # _get_price_with_fallback falls back to existing price on API failure
-            assert result == True
-            assert mock_holding.current_price == Decimal("125.0")  # Existing price used as fallback
-
-    @pytest.mark.asyncio
-    async def test_update_holding_price_handles_zero_price(self, mock_session, mock_holding):
-        """Should handle zero or None price from API"""
-        service = PriceUpdateService(mock_session)
-
-        # Mock market data service to return None
-        with patch.object(service.market_data_service, 'get_current_price', new_callable=AsyncMock) as mock_price:
-            mock_price.return_value = None
-
-            result = await service.update_holding_price(mock_holding, force=True)
-
-            # _get_price_with_fallback falls back to existing price when API returns None
-            assert result == True
-            assert mock_holding.current_price == Decimal("125.0")  # Existing price used as fallback
+        await async_session.refresh(lot)
+        assert lot.quantity == Decimal("4")
+        assert lot.total_value == Decimal("480")
+        assert lot.total_cost == Decimal("400")
 
     @pytest.mark.asyncio
-    async def test_update_portfolio_prices_filters_non_tradable_symbols(self, mock_session):
-        """Should skip non-tradable symbols like CASH, SAVINGS, CRYPTO"""
-        service = PriceUpdateService(mock_session)
-
-        # Create mock holdings with mixed types
-        holdings = [
-            Mock(symbol="0050", market="TW", type="stock"),
-            Mock(symbol="CASH-TWD", market="TW", type="cash"),
-            Mock(symbol="BTC-USD", market="CRYPTO", type="crypto"),
-            Mock(symbol="TWD-SAVINGS", market="TW", type="savings"),
-        ]
-
-        # Mock database query (MagicMock — scalars/all are synchronous)
-        mock_result = MagicMock()
-        mock_result.scalars.return_value.all.return_value = holdings
-        mock_session.execute.return_value = mock_result
-
-        # Mock update function
-        with patch.object(service, 'update_holding_price') as mock_update:
-            mock_update.return_value = True
-
-            result = await service.update_portfolio_prices("user-123", force=True)
-
-            # Should only update tradable holding (0050)
-            assert result['total'] == 1
-            assert mock_update.call_count == 1
+    async def test_an_older_quote_never_overwrites_a_newer_one(self, async_session):
+        later = datetime.now(ZoneInfo("UTC")) + timedelta(hours=1)
+        _, (lot,) = await _seed_lots(async_session, [
+            dict(symbol="0050", price="130", stamp=later),
+        ])
+        written = await PriceUpdateService(async_session).apply_quote(
+            "0050", Decimal("99"), None, datetime.now(ZoneInfo("UTC"))
+        )
+        await async_session.commit()
+        await async_session.refresh(lot)
+        assert written == 0
+        assert lot.current_price == Decimal("130")
 
     @pytest.mark.asyncio
-    async def test_update_portfolio_prices_commits_partial_success(self, mock_session):
-        """Should commit successful updates even if some fail"""
-        service = PriceUpdateService(mock_session)
-
-        # Create 3 mock holdings
-        holdings = [
-            Mock(symbol="0050", market="TW", type="stock"),
-            Mock(symbol="2330", market="TW", type="stock"),
-            Mock(symbol="AAPL", market="US", type="stock"),
-        ]
-
-        # Mock database query (MagicMock — scalars/all are synchronous)
-        mock_result = MagicMock()
-        mock_result.scalars.return_value.all.return_value = holdings
-        mock_session.execute.return_value = mock_result
-
-        # 3rd holding returns False (cache hit, not a failure)
-        update_results = [True, True, False]
-        with patch.object(service, 'update_holding_price') as mock_update:
-            mock_update.side_effect = update_results
-
-            result = await service.update_portfolio_prices("user-123", force=True)
-
-            # False return = cached (not failed); failed only increments on exception
-            assert result['total'] == 3
-            assert result['updated'] == 2
-            assert result['cached'] == 1
-            assert result['failed'] == 0
-
-            # Should commit all updates
-            assert mock_session.commit.called == True
+    async def test_a_missing_previous_close_is_cleared_not_kept(self, async_session):
+        """Kept beside a new price it could be days old: a multi-day move shown
+        as today's change."""
+        _, (lot,) = await _seed_lots(async_session, [
+            dict(symbol="0050", prev=Decimal("80")),
+        ])
+        await PriceUpdateService(async_session).apply_quote(
+            "0050", Decimal("110"), None, datetime.now(ZoneInfo("UTC"))
+        )
+        await async_session.commit()
+        await async_session.refresh(lot)
+        assert lot.current_price == Decimal("110")
+        assert lot.previous_close is None
 
     @pytest.mark.asyncio
-    async def test_update_portfolio_prices_rollback_on_commit_failure(self, mock_session):
-        """Should rollback if commit fails"""
-        service = PriceUpdateService(mock_session)
+    async def test_the_stalest_lot_decides_whether_a_symbol_is_due(self, async_session):
+        """A lot refreshed a minute ago must not hide an older sibling."""
+        now = datetime.now(ZoneInfo("UTC"))
+        user_id, _ = await _seed_lots(async_session, [
+            dict(symbol="0050", stamp=now), dict(symbol="0050", stamp=self.OLD),
+        ])
+        service = PriceUpdateService(async_session)
+        seen = []
 
-        holdings = [Mock(symbol="0050", market="TW", type="stock")]
+        def gate(market, last_update):
+            seen.append(last_update)
+            return False
 
-        # Mock database query (MagicMock — scalars/all are synchronous)
-        mock_result = MagicMock()
-        mock_result.scalars.return_value.all.return_value = holdings
-        mock_session.execute.return_value = mock_result
+        with patch.object(service.market_hours_manager, "should_update_price", gate):
+            await service.update_portfolio_prices(user_id)
 
-        # Mock commit to fail
-        mock_session.commit.side_effect = Exception("Database deadlock")
+        assert [s.replace(tzinfo=None) for s in seen] == [self.OLD.replace(tzinfo=None)]
 
-        with patch.object(service, 'update_holding_price', return_value=True):
-            with pytest.raises(Exception, match="Database deadlock"):
-                await service.update_portfolio_prices("user-123", force=True)
-
-            # Should call rollback
-            assert mock_session.rollback.called == True
+    @pytest.mark.asyncio
+    async def test_manually_priced_lots_are_left_alone(self, async_session):
+        user_id, (cash,) = await _seed_lots(async_session, [
+            dict(symbol="USDC", type="lending", price="1.02"),
+        ])
+        service = PriceUpdateService(async_session)
+        with patch.object(service, "_fetch_live_quote", new_callable=AsyncMock) as fetch:
+            stats = await service.update_portfolio_prices(user_id, force=True)
+        assert fetch.call_count == 0
+        assert stats["total"] == 0 and stats["skipped"] == 1
 
 
 class TestPriceUpdateEdgeCases:
@@ -383,16 +334,6 @@ class TestPriceUpdateEdgeCases:
         result = MarketHoursManager.should_update_price("TW", last_update_naive)
         assert isinstance(result, bool)
 
-    def test_get_market_close_time_on_weekend_returns_none(self):
-        """Should return None for market close on weekend"""
-        # Saturday
-        with patch('app.modules.portfolio.price_update_service.datetime') as mock_dt:
-            mock_now = datetime(2026, 4, 4, 10, 0, 0, tzinfo=ZoneInfo("Asia/Taipei"))
-            mock_dt.now.return_value = mock_now
-
-            close_time = MarketHoursManager.get_market_close_time("TW")
-            assert close_time is None
-
     def test_unknown_market_defaults_to_us_hours(self):
         """Unknown market should default to US market hours"""
         with patch('app.modules.portfolio.price_update_service.datetime') as mock_dt:
@@ -422,6 +363,24 @@ class TestUpdateAllSymbolsPrices:
         row.market = market
         return row
 
+    @staticmethod
+    def _wire(session, first):
+        """First execute() is the symbol query; every later one (per-symbol UPDATE,
+        the affected-portfolios read) gets an empty, generic result."""
+        def _rest():
+            res = MagicMock()
+            res.fetchall.return_value = []
+            res.all.return_value = []
+            res.rowcount = 1
+            return res
+        calls = {"n": 0}
+
+        async def _execute(*args, **kwargs):
+            calls["n"] += 1
+            return first if calls["n"] == 1 else _rest()
+
+        session.execute = AsyncMock(side_effect=_execute)
+
     @pytest.mark.asyncio
     async def test_no_holdings_returns_zero_stats(self, mock_session):
         """Returns early with zeros when no tradable holdings exist."""
@@ -447,7 +406,7 @@ class TestUpdateAllSymbolsPrices:
         mock_result = MagicMock()
         mock_result.fetchall.return_value = rows
         # Second/third execute calls are bulk UPDATEs (force=True skips sample query)
-        mock_session.execute.side_effect = [mock_result, MagicMock(), MagicMock()]
+        self._wire(mock_session, mock_result)
 
         service = PriceUpdateService(mock_session)
 
@@ -468,7 +427,7 @@ class TestUpdateAllSymbolsPrices:
         mock_result = MagicMock()
         mock_result.fetchall.return_value = rows
         # execute calls: initial query + bulk UPDATE (force=True skips sample)
-        mock_session.execute.side_effect = [mock_result, MagicMock()]
+        self._wire(mock_session, mock_result)
 
         service = PriceUpdateService(mock_session)
 
@@ -521,7 +480,7 @@ class TestUpdateAllSymbolsPrices:
         # last_price_update_at = 30 minutes ago (within TTL)
         recent = datetime.now(ZoneInfo("UTC")) - timedelta(minutes=30)
         sample_result = MagicMock()
-        sample_result.fetchone.return_value = (recent,)
+        sample_result.fetchall.return_value = [("0050", recent, 0)]
         mock_session.execute.side_effect = [mock_result, sample_result]
 
         service = PriceUpdateService(mock_session)
@@ -535,22 +494,22 @@ class TestUpdateAllSymbolsPrices:
         assert stats["updated"] == 0
 
     @pytest.mark.asyncio
-    async def test_rollback_on_commit_failure(self, mock_session):
-        """Session is rolled back if commit raises."""
+    async def test_a_failed_commit_loses_one_symbol_not_the_run(self, mock_session):
+        """Each symbol commits on its own: a failure rolls back that symbol only
+        (it used to roll back every symbol before it, the whole market)."""
         rows = [self._make_symbol_row("AAPL", "US")]
         mock_result = MagicMock()
         mock_result.fetchall.return_value = rows
-        # execute calls: initial query + bulk UPDATE (force=True skips sample)
-        mock_session.execute.side_effect = [mock_result, MagicMock()]
+        self._wire(mock_session, mock_result)
         mock_session.commit.side_effect = Exception("deadlock")
 
         service = PriceUpdateService(mock_session)
 
         with patch.object(service, '_get_price_with_fallback', return_value=Decimal("150.0")):
-            with pytest.raises(Exception, match="deadlock"):
-                await service.update_all_symbols_prices(force=True)
+            stats = await service.update_all_symbols_prices(force=True)
 
         assert mock_session.rollback.called == True
+        assert stats["failed"] == 1 and stats["updated"] == 0
 
     @pytest.mark.asyncio
     async def test_one_symbol_exception_does_not_abort_others(self, mock_session):
@@ -563,7 +522,7 @@ class TestUpdateAllSymbolsPrices:
         mock_result.fetchall.return_value = rows
         # execute calls: initial query + 1× bulk UPDATE for AAPL (CRASH fails before UPDATE)
         # force=True skips sample queries
-        mock_session.execute.side_effect = [mock_result, MagicMock()]
+        self._wire(mock_session, mock_result)
 
         service = PriceUpdateService(mock_session)
 
@@ -628,23 +587,6 @@ class TestHistoricalFallbackGuard:
 
         assert price is None, "must not surface a historical close to this caller"
 
-    @pytest.mark.asyncio
-    async def test_existing_price_still_wins_over_nothing(self, mock_session):
-        """Disabling the historical fallback must not disable fallback 1."""
-        service = PriceUpdateService(mock_session)
-
-        with patch.object(
-            service.market_data_service, "get_current_price", return_value=None
-        ):
-            price = await service._get_price_with_fallback(
-                symbol="0050",
-                market="US",
-                current_price=Decimal("106.40"),
-                allow_historical_fallback=False,
-            )
-
-        assert price == Decimal("106.40")
-
 
 class TestSymbolBatchConcurrency:
     """update_all_symbols_prices — the scheduler's symbol-first batch path.
@@ -673,9 +615,9 @@ class TestSymbolBatchConcurrency:
         """First execute() returns the distinct (symbol, market) rows, the second
         the per-symbol last_price_update_at; everything after is an UPDATE."""
         symbol_rows = [self._row(symbol=s, market=m) for s, m in symbols]
-        # The freshness query selects (symbol, MAX(last_price_update_at)) and is
-        # read positionally, matching how SQLAlchemy hands back grouped rows.
-        stale_rows = [(s, (last_updates or {}).get(s)) for s, _ in symbols]
+        # The freshness query selects (symbol, MIN(last_price_update_at), count of
+        # never-priced lots) and is read positionally.
+        stale_rows = [(s, (last_updates or {}).get(s), 0) for s, _ in symbols]
         results = [symbol_rows, stale_rows]
         calls = {"n": 0}
 
@@ -684,6 +626,8 @@ class TestSymbolBatchConcurrency:
             i = calls["n"]
             calls["n"] += 1
             res.fetchall.return_value = results[i] if i < len(results) else []
+            res.all.return_value = []
+            res.rowcount = 1
             return res
 
         session.execute = AsyncMock(side_effect=_execute)

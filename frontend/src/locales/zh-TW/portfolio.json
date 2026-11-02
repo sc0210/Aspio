@@ -771,5 +771,6 @@
   "sectors": {
     "broad_market": "大盤市場",
     "global_market": "全球市場"
-  }
+  },
+  "editStale": "開啟後這筆持倉已變動（有賣出或其他編輯）。請重新整理頁面再試一次。"
 }

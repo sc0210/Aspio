@@ -244,7 +244,14 @@ class PortfolioService:
             "gain_loss": Decimal("0"),
             "gain_loss_percentage": Decimal("0"),
             "is_active": True,
-            "last_price_update_at": utc_now(),
+            # Priced at what was paid, not quoted: no freshness stamp for a lot a
+            # feed prices, so every price gate treats it as due until the first
+            # real quote. A manually priced lot's price is the user's own.
+            "last_price_update_at": (
+                utc_now()
+                if holding_data.type.lower() in PortfolioSettings.SKIP_PRICE_FETCH_TYPES
+                else None
+            ),
             "item_metadata": {},
         }
 
@@ -342,32 +349,32 @@ class PortfolioService:
                     )
 
                     if current_price and current_price > 0:
-                        # Update in a new database session
+                        # Update in a new database session, through the same
+                        # set-based write every price path uses: it computes from
+                        # the row as committed, so a sale or edit that landed
+                        # while this fetch waited is respected.
                         async with async_session() as bg_session:
+                            from app.modules.portfolio.price_update_service import (
+                                PriceUpdateService,
+                            )
                             from app.modules.portfolio.repositories import (
                                 HoldingRepository,
                             )
 
-                            holding_repo = HoldingRepository(bg_session)
-
-                            # Refresh holding from database
-                            bg_holding = await holding_repo.get_by_id(
+                            previous_close = await market_data_service.get_previous_close(
+                                holding_data.symbol, holding_create_data["market"]
+                            )
+                            await PriceUpdateService(bg_session).apply_quote(
+                                holding.symbol,
+                                current_price,
+                                previous_close,
+                                utc_now(),
+                                user_id=user_id,
+                            )
+                            bg_holding = await HoldingRepository(bg_session).get_by_id(
                                 holding.id, user_id
                             )
                             if bg_holding:
-                                bg_holding.current_price = current_price
-                                bg_holding.total_value = (
-                                    bg_holding.quantity * current_price
-                                )
-                                bg_holding.gain_loss = (
-                                    bg_holding.total_value - bg_holding.total_cost
-                                )
-                                if bg_holding.total_cost > 0:
-                                    bg_holding.gain_loss_percentage = (
-                                        bg_holding.gain_loss / bg_holding.total_cost
-                                    ) * 100
-                                bg_holding.last_price_update_at = utc_now()
-
                                 # The lot's own annualised return (see lot_irr: an XIRR
                                 # over the symbol's whole ledger mis-stated every lot).
                                 bg_holding.irr = lot_irr(
@@ -375,16 +382,15 @@ class PortfolioService:
                                     bg_holding.total_value,
                                     bg_holding.purchase_date,
                                 )
-
-                                await bg_session.commit()
-                                logger.info(
-                                    f"Background: Updated {holding_data.symbol} with price: {current_price}"
-                                )
-                                return {
-                                    "symbol": holding_data.symbol,
-                                    "price": float(current_price),
-                                    "status": "success",
-                                }
+                            await bg_session.commit()
+                            logger.info(
+                                f"Background: Updated {holding_data.symbol} with price: {current_price}"
+                            )
+                            return {
+                                "symbol": holding_data.symbol,
+                                "price": float(current_price),
+                                "status": "success",
+                            }
                     else:
                         logger.warning(
                             f"Background: Could not fetch price for {holding_data.symbol}"
@@ -568,41 +574,11 @@ class PortfolioService:
 
                 # Convert to TWD so all wallet transactions share a single currency
                 # and summary totals (which SUM amount directly) remain accurate.
-                twd_amount = amount
-                display_currency = asset_currency
-                if asset_currency != "TWD":
-                    try:
-                        from app.modules.transactions.models import Currency as CurrencyModel
-                        stmt_fc = select(CurrencyModel).where(
-                            and_(CurrencyModel.code == asset_currency, CurrencyModel.is_active == True)
-                        )
-                        stmt_twd = select(CurrencyModel).where(
-                            and_(CurrencyModel.code == "TWD", CurrencyModel.is_active == True)
-                        )
-                        res_fc = await self.session.execute(stmt_fc)
-                        res_twd = await self.session.execute(stmt_twd)
-                        fc_row = res_fc.scalar_one_or_none()
-                        twd_row = res_twd.scalar_one_or_none()
-                        if fc_row and twd_row and twd_row.exchange_rate_usd > 0:
-                            # exchange_rate_usd = how much 1 unit is worth in USD
-                            twd_amount = amount * fc_row.exchange_rate_usd / twd_row.exchange_rate_usd
-                            display_currency = "TWD"
-                        else:
-                            # Static fallback rates (USD→TWD, etc.)
-                            _FALLBACK_TO_TWD = {
-                                "USD": Decimal("31.5"),
-                                "EUR": Decimal("34.0"),
-                                "JPY": Decimal("0.21"),
-                                "HKD": Decimal("4.05"),
-                                "SGD": Decimal("23.5"),
-                                "CNY": Decimal("4.4"),
-                            }
-                            if asset_currency in _FALLBACK_TO_TWD:
-                                twd_amount = amount * _FALLBACK_TO_TWD[asset_currency]
-                                display_currency = "TWD"
-                    except Exception as conv_err:
-                        logger.warning(f"Currency conversion to TWD failed for {asset_currency}: {conv_err}")
-                        # Keep original currency if conversion fails
+                # Booked at the trade day's rate from the same source that values
+                # the holding, so a buy moves no money between wallets on its own.
+                twd_amount, display_currency = await self._to_twd(
+                    amount, asset_currency, on_day=business_day_of(transaction_date)
+                )
 
                 description = (
                     f"Buy {holding_data.symbol} ×{qty:g} @ "
@@ -650,40 +626,61 @@ class PortfolioService:
             # FastAPI request, the caller must handle that itself.
             raise
 
-    async def _to_twd(self, amount: Decimal, currency: str):
+    # Daily FX closes stored in historical_prices (scripts/backfill_fx_history.py),
+    # as in performance_tracker.FX_SERIES: how many TWD one unit buys.
+    _FX_SERIES = {"USD": "TWD=X"}
+    # A dated close older than this before the trade day is not that day's rate.
+    _FX_SERIES_MAX_AGE_DAYS = 7
+
+    async def _to_twd(self, amount: Decimal, currency: str, on_day: Optional[date] = None):
         """Convert ``amount`` in ``currency`` to TWD → (twd_amount, "TWD").
 
-        Tries the live Currency table, falls back to static rates, and only
-        returns the original (amount, currency) if the currency is unknown.
+        One rate source for the cash bridge and for valuation, so a buy or sale
+        moves no money between wallets by itself. A trade dated before today uses
+        that day's stored FX close when there is one; anything else uses the
+        ExchangeRateService chain that values holdings on the dashboard and the
+        portfolio page. (This used to read the seeded ``currencies`` table, which
+        nothing updates — 31.25 TWD/USD — so every USD trade booked a fake gain or
+        loss against the live-rate valuation.)
+
+        Returns ``(amount, currency)`` unchanged only when no rate is known at all.
         """
         amount = Decimal(str(amount))
         cur = (currency or "TWD").upper()
         if cur == "TWD":
             return amount, "TWD"
-        try:
-            from app.modules.transactions.models import Currency as CurrencyModel
 
-            fc_row = (await self.session.execute(
-                select(CurrencyModel).where(
-                    and_(CurrencyModel.code == cur, CurrencyModel.is_active == True)
-                )
-            )).scalar_one_or_none()
-            twd_row = (await self.session.execute(
-                select(CurrencyModel).where(
-                    and_(CurrencyModel.code == "TWD", CurrencyModel.is_active == True)
-                )
-            )).scalar_one_or_none()
-            if fc_row and twd_row and twd_row.exchange_rate_usd > 0:
-                return amount * fc_row.exchange_rate_usd / twd_row.exchange_rate_usd, "TWD"
+        if on_day is not None and on_day < business_today() and cur in self._FX_SERIES:
+            try:
+                from app.modules.portfolio.models import HistoricalPrice
+
+                # A savepoint: a failed read must not abort the trade's transaction.
+                async with self.session.begin_nested():
+                    row = (await self.session.execute(
+                        select(HistoricalPrice.close)
+                        .where(
+                            HistoricalPrice.symbol == self._FX_SERIES[cur],
+                            HistoricalPrice.date <= on_day,
+                            HistoricalPrice.date
+                            >= on_day - timedelta(days=self._FX_SERIES_MAX_AGE_DAYS),
+                        )
+                        .order_by(HistoricalPrice.date.desc())
+                        .limit(1)
+                    )).scalar_one_or_none()
+                if row and Decimal(str(row)) > 0:
+                    return amount * Decimal(str(row)), "TWD"
+            except Exception as fx_err:
+                logger.warning(f"Dated FX lookup failed for {cur} on {on_day}: {fx_err}")
+
+        try:
+            from app.utils.exchange_rate_service import get_exchange_rate_service
+
+            rate = await get_exchange_rate_service(self.session).get_exchange_rate(cur, "TWD")
+            if rate is not None and Decimal(str(rate)) > 0:
+                return amount * Decimal(str(rate)), "TWD"
         except Exception as conv_err:
             logger.warning(f"Currency conversion to TWD failed for {cur}: {conv_err}")
-
-        _FALLBACK_TO_TWD = {
-            "USD": Decimal("31.5"), "EUR": Decimal("34.0"), "JPY": Decimal("0.21"),
-            "HKD": Decimal("4.05"), "SGD": Decimal("23.5"), "CNY": Decimal("4.4"),
-        }
-        if cur in _FALLBACK_TO_TWD:
-            return amount * _FALLBACK_TO_TWD[cur], "TWD"
+        logger.warning(f"No {cur}->TWD rate; booking {amount} {cur} in its own currency")
         return amount, cur
 
     async def credit_sale_proceeds_to_life(
@@ -729,7 +726,9 @@ class PortfolioService:
                 })
                 logger.info(f"Created 'Investment Sale' category for user {user_id}")
 
-            twd_amount, display_currency = await self._to_twd(net_proceeds, currency)
+            twd_amount, display_currency = await self._to_twd(
+                net_proceeds, currency, on_day=business_day_of(transaction_date)
+            )
 
             transaction_data = {
                 "user_id": user_id,

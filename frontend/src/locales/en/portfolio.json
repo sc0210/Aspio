@@ -776,5 +776,6 @@
   "sectors": {
     "broad_market": "Broad market",
     "global_market": "Global market"
-  }
+  },
+  "editStale": "This holding changed since you opened it (a sale or another edit). Reload the page and try again."
 }

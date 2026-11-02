@@ -227,6 +227,16 @@ class HoldingUpdate(BaseModel):
     )
     sector: Optional[str] = Field(None, max_length=50)
     region: Optional[str] = Field(None, max_length=50)
+    expected_quantity: Optional[Decimal] = Field(
+        None,
+        ge=0,
+        alias="expectedQuantity",
+        description=(
+            "The quantity the edit form loaded. When it no longer matches (a sale or "
+            "another edit landed meanwhile) the update is refused with 409 rather "
+            "than writing the old quantity back over the sale."
+        ),
+    )
 
     model_config = ConfigDict(populate_by_name=True)
 

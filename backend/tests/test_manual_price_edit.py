@@ -996,7 +996,7 @@ async def test_price_refresh_leaves_a_hand_set_price_alone(async_session, test_u
     ])
 
     with patch.object(
-        PriceUpdateService, "update_holding_price", autospec=True,
+        PriceUpdateService, "_fetch_live_quote", autospec=True,
         side_effect=AssertionError("a manually priced holding was sent to the feed"),
     ):
         stats = await PriceUpdateService(async_session).update_portfolio_prices(

@@ -11,7 +11,7 @@ The rule here is the one the scheduler already follows for its own jobs: a bar
 belongs in the daily history once its market has closed for that date.
 """
 
-from datetime import date, datetime, time, timezone
+from datetime import date, datetime, time, timedelta, timezone
 from typing import Optional
 from zoneinfo import ZoneInfo
 
@@ -62,3 +62,30 @@ def session_closed(
 
     closes_at = datetime.combine(bar_date, closing_time, tzinfo=tz)
     return (local_now - closes_at).total_seconds() >= GRACE_MINUTES * 60
+
+
+def last_settled_close(market: Optional[str], now: Optional[datetime] = None) -> Optional[datetime]:
+    """The most recent close of `market` that is final by `now`, in UTC.
+
+    "Final" is the bell plus the grace period, the same rule `session_closed`
+    applies to bars. Weekends are skipped (no holiday calendar: a weekday holiday
+    still has a nominal close, which only means one redundant refresh). None for
+    markets this module does not model.
+
+    A price stamped at or after this instant already reflects the latest close;
+    one stamped before it is from an earlier session (or from mid-auction).
+    """
+    session = _SESSIONS.get((market or "").upper())
+    if session is None:
+        return None
+    tz, closing_time = session
+    now = now or datetime.now(timezone.utc)
+    local_now = now.astimezone(tz)
+    day = local_now.date()
+    for _ in range(8):
+        if day.weekday() < 5:
+            settled = datetime.combine(day, closing_time, tzinfo=tz) + timedelta(minutes=GRACE_MINUTES)
+            if settled <= local_now:
+                return settled.astimezone(timezone.utc)
+        day -= timedelta(days=1)
+    return None
