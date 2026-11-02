@@ -285,6 +285,9 @@ _TPE = _Zone("Asia/Taipei")
     # Weekend: Friday's close.
     (_dt(2026, 5, 16, 12, 0, tzinfo=_TPE), _date(2026, 5, 15), True),
     (_dt(2026, 5, 16, 12, 0, tzinfo=_TPE), _date(2026, 5, 14), False),
+    # A weekday holiday has no bar of its own: after 14:00 the latest bar is the
+    # day before, which is not "today's close", so the live quote is used.
+    (_dt(2026, 6, 19, 15, 0, tzinfo=_TPE), _date(2026, 6, 18), False),
 ])
 def test_finlab_close_counts_only_for_the_latest_settled_session(now, bar, ok):
     assert finlab_close_is_current(bar, now) is ok

@@ -37,4 +37,14 @@ describe('marketStatus', () => {
     // Prices from today's session are today's move.
     expect(lastSessionWeekday([h({ marketState: 'closed', priceSession: '2026-05-16' })], 'en', saturday)).toBeNull();
   });
+
+  it("asks \"is it today\" in the market's own zone", () => {
+    // 2026-05-15 Fri 23:00 New York = Sat 11:00 Taipei: a Friday US session is
+    // still today in New York, so a Taipei viewer sees "today" until it is over there.
+    const fridayNightNY = new Date('2026-05-16T03:00:00Z');
+    expect(lastSessionWeekday([h({ market: 'US', marketState: 'closed', priceSession: '2026-05-15' })], 'en', fridayNightNY)).toBeNull();
+    // The same session seen once New York is in Saturday too.
+    const saturdayNY = new Date('2026-05-16T15:00:00Z');
+    expect(lastSessionWeekday([h({ market: 'US', marketState: 'closed', priceSession: '2026-05-15' })], 'en', saturdayNY)).toBe('Fri');
+  });
 });

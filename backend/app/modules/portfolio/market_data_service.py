@@ -1223,7 +1223,14 @@ class MarketDataService:
                             # which the broad `except` below logs at debug and
                             # swallows, so every TW symbol would quietly fall
                             # through to Yahoo with nothing above debug to say why.
-                            if not finlab_close_is_current(last_dt.date()):
+                            if (business_now().replace(tzinfo=None) - last_dt).days > 7:
+                                # A dataset ending this long ago is an outdated client
+                                # or token, not a late publish: worth a warning.
+                                logger.warning(
+                                    f"⚠️ FinLab data for {symbol} is stale "
+                                    f"(latest {last_dt.date()}); using the live quote"
+                                )
+                            elif not finlab_close_is_current(last_dt.date()):
                                 logger.info(
                                     f"FinLab close for {symbol} is dated "
                                     f"{last_dt.date()}, not the latest settled session; "

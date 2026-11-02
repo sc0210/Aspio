@@ -11,6 +11,14 @@ export function sessionMarket(market?: string): string {
   return SESSION_ALIASES[key] ?? key;
 }
 
+const MARKET_ZONES: Record<string, string> = { TW: 'Asia/Taipei', 'TW-INDEX': 'Asia/Taipei', US: 'America/New_York' };
+
+/** Today's date (YYYY-MM-DD) in a market's own zone; the viewer's for unmodelled ones. */
+function todayIn(market: string, now: Date): string {
+  const zone = MARKET_ZONES[market];
+  return zone ? new Intl.DateTimeFormat('en-CA', { timeZone: zone }).format(now) : localDateString(now);
+}
+
 export interface MarketSummary {
   market: string;
   state: 'open' | 'closed';
@@ -68,7 +76,9 @@ export function lastSessionWeekday(holdings: PortfolioHolding[], locale: string,
   if (counted.length === 0 || counted.some((h) => h.marketState === 'open')) return null;
   const sessions = counted.map((h) => h.priceSession).filter((d): d is string => Boolean(d));
   if (sessions.length === 0) return null;
+  // A session date is in its market's zone, so "is it today" is asked there too:
+  // a Friday New York session is not "today" for a viewer who is already in Saturday.
+  if (counted.some((h) => h.priceSession && h.priceSession >= todayIn(sessionMarket(h.market), now))) return null;
   const latest = sessions.reduce((a, b) => (b > a ? b : a));
-  if (latest >= localDateString(now)) return null;
   return new Date(`${latest}T12:00:00`).toLocaleDateString(locale, { weekday: 'short' });
 }

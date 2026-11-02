@@ -355,12 +355,19 @@ async def get_daily_performance(
         live_fx: Dict[str, Optional[Decimal]] = {}
 
         def _series_twd_per(currency: str, day) -> Optional[Decimal]:
+            # Today is converted at the live rate, as the page's own total is: the
+            # series has no close for today yet, and yesterday's would make the
+            # chart's last point disagree with the headline whenever FX moved.
+            if day is None or day >= end_date:
+                return None
             dates_closes = fx_closes.get(FX_SERIES.get(currency, ""))
-            if not dates_closes or day is None:
+            if not dates_closes:
                 return None
             dates, closes = dates_closes
             i = bisect_right(dates, day) - 1
-            if i < 0 or (day - dates[i]).days > 10:
+            # A weekend or holiday carries the last close; a longer gap is a
+            # missing series, not a market at rest.
+            if i < 0 or (day - dates[i]).days > 4:
                 return None
             return closes[i]
 

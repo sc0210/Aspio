@@ -182,8 +182,11 @@ async def test_foreign_holdings_use_each_days_fx_and_cost_keeps_the_purchase_rat
     await async_session.commit()
     _hist_cache.clear()
 
+    today_str = today.isoformat()
     for d, p in {p["date"]: p for p in _series(authenticated_client)}.items():
-        rate = 32 if d >= bought else 30
+        # Today is at the live rate (stubbed to 30), as the page's own total is:
+        # the stored series has no close for today yet.
+        rate = 30 if d == today_str else (32 if d >= bought else 30)
         aapl = 2 * 50 * rate
         assert p["value"] == pytest.approx(1000 + aapl + (600 if d >= bought else 0)), d
         # 0050 cost 800 + AAPL 2 × 40 at the purchase-day rate (30) + 2330 once bought.

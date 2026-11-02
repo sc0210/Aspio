@@ -6,7 +6,12 @@ at the live rate. Each USD buy therefore moved Total Asset by the difference on
 the day it was made, and that gap is still in the ledger. Code since #91 books at
 the day's stored TWD=X close; this script brings older legs to the same rule.
 
-It only touches rows it can recompute exactly:
+It only touches rows it can recompute exactly AND that were booked at the old
+frozen rate: a leg whose own TWD/native ratio is the seeded 31.25 (or the old
+31.5 fallback table). Legs booked since #91 carry the live rate at trade time,
+which is correct and is left alone. --before narrows it further by date.
+
+The rows must also be:
 - linked to a holding (`holding_id`), category "Investment Purchase", booked in TWD;
 - the holding is in a currency with a stored daily series (USD → TWD=X);
 - the leg's own description gives its quantity and price ("Buy VT ×10 @ 98.50 USD");
@@ -30,7 +35,7 @@ import argparse
 import asyncio
 import csv
 import sys
-from datetime import timedelta
+from datetime import date, timedelta
 from decimal import ROUND_HALF_UP, Decimal
 from pathlib import Path
 
@@ -51,6 +56,10 @@ from app.modules.users.models import User  # noqa: E402
 
 MAX_RATE_AGE_DAYS = 7
 CENT = Decimal("0.01")
+# The rates the old bridge used: the seeded currencies table (TWD 0.032 USD) and
+# its hard-coded fallback. A leg at any other rate was not booked by that code.
+FROZEN_RATES = (Decimal("31.25"), Decimal("31.5"))
+FROZEN_TOLERANCE = Decimal("0.005")
 
 
 async def _rate_on(session, fx_symbol, day):
@@ -70,7 +79,8 @@ async def main(args) -> int:
     out = csv.writer(sys.stdout)
     out.writerow(["transaction_id", "date", "symbol", "native", "currency", "rate", "old_twd", "new_twd", "delta"])
     changes = []
-    skipped = {"no_rate": 0, "unparsed": 0, "unchanged": 0, "currency_without_series": 0}
+    skipped = {"no_rate": 0, "unparsed": 0, "unchanged": 0, "currency_without_series": 0,
+               "not_at_frozen_rate": 0, "after_cutoff": 0}
 
     async with async_session() as session:
         stmt = (
@@ -101,11 +111,18 @@ async def main(args) -> int:
                 skipped["unparsed"] += 1
                 continue
             _, qty, price, _ = parsed
+            native = Decimal(str(qty)) * Decimal(str(price))
+            implied = Decimal(str(txn.amount)) / native if native else Decimal("0")
+            if not any(abs(implied - frozen) <= FROZEN_TOLERANCE for frozen in FROZEN_RATES):
+                skipped["not_at_frozen_rate"] += 1
+                continue
+            if args.before and txn.transaction_date >= args.before:
+                skipped["after_cutoff"] += 1
+                continue
             rate = await _rate_on(session, fx_symbol, txn.transaction_date)
             if not rate:
                 skipped["no_rate"] += 1
                 continue
-            native = Decimal(str(qty)) * Decimal(str(price))
             new_amount = (native * Decimal(str(rate))).quantize(CENT, ROUND_HALF_UP)
             old_amount = Decimal(str(txn.amount)).quantize(CENT, ROUND_HALF_UP)
             if new_amount == old_amount:
@@ -156,6 +173,8 @@ if __name__ == "__main__":
     parser = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     parser.add_argument("--apply", action="store_true", help="write the changes (default: report only)")
     parser.add_argument("--user", help="only this account's rows (email)")
+    parser.add_argument("--before", type=date.fromisoformat,
+                        help="only legs dated before this day (YYYY-MM-DD), e.g. the #91 deploy date")
     parser.add_argument("--undo-file", default="restate_fx_bridge_legs_undo.csv",
                         help="where --apply writes the previous amounts")
     sys.exit(asyncio.run(main(parser.parse_args())))
