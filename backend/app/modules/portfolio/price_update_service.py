@@ -389,9 +389,12 @@ class PriceUpdateService:
         if not to_fetch:
             return stats
 
-        # End the read transaction before the network wait (nothing is pending:
-        # the caller's writes, if any, come after this call).
-        await self.session.commit()
+        # End the read transaction before the network wait, so no pooled
+        # connection is pinned across provider calls — but only when this session
+        # holds nothing of the caller's: committing pending work here would split
+        # the caller's unit of work. With writes pending, keep the transaction.
+        if not (self.session.new or self.session.dirty or self.session.deleted):
+            await self.session.commit()
 
         sem = asyncio.Semaphore(self.SYMBOL_FETCH_CONCURRENCY)
 
@@ -609,16 +612,21 @@ class PriceUpdateService:
                 .distinct()
             )).all()
             portfolio_service = PortfolioService(self.session)
-            synced = 0
+            stats["portfolios_synced"] = 0
+            stats["portfolios_failed"] = 0
             for portfolio_id, owner_id in affected:
                 try:
                     await portfolio_service._update_portfolio_totals(portfolio_id, owner_id)
                     await self.session.commit()
-                    synced += 1
+                    stats["portfolios_synced"] += 1
                 except Exception as e:
                     await self.session.rollback()
+                    stats["portfolios_failed"] += 1
                     logger.error(f"Failed to sync totals for portfolio {portfolio_id}: {e}")
-            logger.info(f"Portfolio totals synced for {synced} portfolio(s) after symbol-batch update")
+            logger.info(
+                f"Portfolio totals synced for {stats['portfolios_synced']} portfolio(s) "
+                f"({stats['portfolios_failed']} failed) after symbol-batch update"
+            )
 
         return stats
 

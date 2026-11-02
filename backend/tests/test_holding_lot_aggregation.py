@@ -114,3 +114,17 @@ async def test_lots_of_other_symbols_and_users_are_not_touched(repo, pf, test_us
 async def test_symbol_is_required(repo, pf, test_user, data):
     with pytest.raises(ValueError, match="Symbol is required"):
         await repo.create_or_aggregate_holding(pf.id, test_user.id, data)
+
+
+async def test_a_buy_in_another_currency_opens_its_own_lot(repo, pf, test_user):
+    """A weighted average across USD and TWD would mix two units."""
+    a = await repo.create_or_aggregate_holding(pf.id, test_user.id, lot("10", "100", currency="USD"))
+    b = await repo.create_or_aggregate_holding(pf.id, test_user.id, lot("10", "3000", currency="TWD"))
+    assert a.id != b.id and a.average_cost == Decimal("100")
+
+
+async def test_an_emergency_wallet_buy_does_not_merge_into_a_portfolio_lot(repo, pf, test_user):
+    """Merging would move a holding between wallets."""
+    a = await repo.create_or_aggregate_holding(pf.id, test_user.id, lot("10", "100", wallet_type=HoldingWalletType.PORTFOLIO))
+    b = await repo.create_or_aggregate_holding(pf.id, test_user.id, lot("10", "100", wallet_type=HoldingWalletType.EMERGENCY))
+    assert a.id != b.id
