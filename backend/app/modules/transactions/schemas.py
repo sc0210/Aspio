@@ -329,6 +329,17 @@ class TransactionResponse(TransactionBase, TimestampMixin):
         None,
         description="The loan this expense is applied to (reduces its balance); null otherwise",
     )
+    holding_id: Optional[str] = Field(
+        None,
+        description="The portfolio holding this row is the cash leg of; null otherwise",
+    )
+    holding_sole_purchase: Optional[bool] = Field(
+        None,
+        description=(
+            "Single-transaction reads only: true when this row is its holding's only "
+            "purchase leg, so editing the holding rewrites it; null when unlinked"
+        ),
+    )
 
     @field_validator(
         "id",
@@ -337,6 +348,7 @@ class TransactionResponse(TransactionBase, TimestampMixin):
         "recurring_transaction_id",
         "transfer_group_id",
         "loan_id",
+        "holding_id",
         mode="before",
     )
     @classmethod

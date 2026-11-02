@@ -67,13 +67,18 @@ jest.mock('@/services/transactionService', () => ({
   },
 }));
 
-const mockGetPortfolio = jest.fn();
+const mockGetHolding = jest.fn();
 const mockUpdateHolding = jest.fn();
 jest.mock('@/services/portfolioService', () => ({
   portfolioService: {
-    getPortfolio: (...a: unknown[]) => mockGetPortfolio(...a),
+    getHolding: (...a: unknown[]) => mockGetHolding(...a),
     updateHolding: (...a: unknown[]) => mockUpdateHolding(...a),
   },
+}));
+
+const mockDeleteTransaction = jest.fn();
+jest.mock('@/hooks/api-hooks', () => ({
+  useDeleteTransaction: () => ({ mutateAsync: (...a: unknown[]) => mockDeleteTransaction(...a), isPending: false }),
 }));
 
 // ─── Data-sync ────────────────────────────────────────────────────────────────
@@ -95,7 +100,7 @@ jest.mock('@/hooks/useDataSynchronization', () => ({
 // ─── UI / Context mocks ───────────────────────────────────────────────────────
 const mockDemoTransactions: unknown[] = [];
 jest.mock('@/contexts/DemoContext', () => ({
-  useDemo: () => ({ demoTransactions: mockDemoTransactions }),
+  useDemo: () => ({ demoTransactions: mockDemoTransactions, updateDemoTransaction: jest.fn(), updateDemoTransfer: jest.fn() }),
 }));
 jest.mock('@/hooks/useAppMode', () => ({
     // The module also exports useAppMode, which components call directly. A mock
@@ -175,6 +180,8 @@ jest.mock('@heroicons/react/24/outline', () => ({
   ArrowLeftIcon: () => <svg data-testid="arrow-left" />,
   CheckIcon: () => <svg data-testid="check-icon" />,
   ChevronRightIcon: () => <svg data-testid="chevron-right" />,
+  DocumentDuplicateIcon: () => <svg data-testid="duplicate-icon" />,
+  TrashIcon: () => <svg data-testid="trash-icon" />,
 }));
 
 // ─── Component under test ─────────────────────────────────────────────────────
@@ -267,8 +274,8 @@ describe('EditTransactionPage — Investment Mode', () => {
 
   it('displays the auto-calculated total (qty × price)', async () => {
     await renderAndLoad(investTx);
-    // 100 × 1000 = 100,000.00
-    expect(screen.getByText(/100,000\.00/)).toBeInTheDocument();
+    // 100 × 1000, formatted as on the add form (no forced decimals)
+    expect(screen.getByText('TWD 100,000')).toBeInTheDocument();
   });
 
   it('hides the standard Transaction Type toggle', async () => {
@@ -290,8 +297,7 @@ describe('EditTransactionPage — Investment Mode', () => {
     await renderAndLoad(investTx);
     const qtyInput = screen.getByPlaceholderText('100');
     fireEvent.change(qtyInput, { target: { value: '200' } });
-    // 200 × 1000 = 200,000.00
-    await waitFor(() => expect(screen.getByText(/200,000\.00/)).toBeInTheDocument());
+    await waitFor(() => expect(screen.getByText('TWD 200,000')).toBeInTheDocument());
   });
 });
 
@@ -348,20 +354,14 @@ describe('EditTransactionPage — Invest Mode Validation', () => {
   });
 });
 
-describe('EditTransactionPage — Invest Submit: holding found', () => {
+describe('EditTransactionPage — Invest Submit: an older buy with no holding link', () => {
   beforeEach(() => {
     jest.clearAllMocks();
     mockUpdateTransaction.mockResolvedValue({ success: true, data: {} });
-    mockGetPortfolio.mockResolvedValue({
-      success: true,
-      data: {
-        holdings: [{ id: 'holding-1', symbol: '0050', averageCost: 1000, quantity: 100 }],
-      },
-    });
     mockUpdateHolding.mockResolvedValue({ success: true, data: {} });
   });
 
-  it('calls updateTransaction with canonical description and correct amount', async () => {
+  it('updates the cash entry with the canonical description and amount', async () => {
     await renderAndLoad(investTx);
 
     await act(async () => {
@@ -369,7 +369,6 @@ describe('EditTransactionPage — Invest Submit: holding found', () => {
     });
 
     await waitFor(() => expect(mockUpdateTransaction).toHaveBeenCalled());
-
     const [, payload] = mockUpdateTransaction.mock.calls[0];
     expect(payload.description).toBe('Buy 0050 ×100 @ 1,000.00 TWD');
     expect(payload.amount).toBeCloseTo(100000);
@@ -377,27 +376,168 @@ describe('EditTransactionPage — Invest Submit: holding found', () => {
     expect(payload.category).toBe('Investment Purchase');
   });
 
-  it('syncs the matching portfolio holding', async () => {
+  it('no longer guesses a holding by symbol (it rewrote whole lots from one buy)', async () => {
     await renderAndLoad(investTx);
-
     await act(async () => {
       fireEvent.click(screen.getByText('Update Investment Transaction'));
     });
-
-    await waitFor(() => expect(mockUpdateHolding).toHaveBeenCalled());
-    expect(mockUpdateHolding).toHaveBeenCalledWith(
-      expect.objectContaining({ id: 'holding-1', averageCost: 1000, quantity: 100 }),
-    );
+    await waitFor(() => expect(mockPush).toHaveBeenCalledWith('/transactions'));
+    expect(mockGetHolding).not.toHaveBeenCalled();
+    expect(mockUpdateHolding).not.toHaveBeenCalled();
   });
 
-  it('navigates to /transactions after saving', async () => {
+  it('says it is not linked, and what saving may still touch', async () => {
     await renderAndLoad(investTx);
+    expect(screen.getByText(/isn't linked to a holding/)).toBeInTheDocument();
+  });
+});
 
+describe('EditTransactionPage — Invest Submit: through the linked holding', () => {
+  // The backend says whether this row is its lot's only purchase leg (the rule its
+  // holding update uses to rewrite the leg); the page no longer guesses from the description.
+  const soleTx = { ...investTx, holdingId: 'holding-1', holdingSolePurchase: true };
+  const sharedTx = { ...investTx, holdingId: 'holding-1', holdingSolePurchase: false };
+
+  beforeEach(() => {
+    jest.clearAllMocks();
+    mockUpdateTransaction.mockResolvedValue({ success: true, data: {} });
+    mockUpdateHolding.mockResolvedValue({ success: true, data: {} });
+  });
+
+  it("edits a sole-leg buy as its lot, from the lot's own figures", async () => {
+    // The description says 100 @ 1,000.00; the lot was corrected since.
+    mockGetHolding.mockResolvedValue({ success: true, data: { id: 'holding-1', quantity: 90, averageCost: 1004.5, currency: 'TWD' } });
+    await renderAndLoad(soleTx);
+    expect(mockGetHolding).toHaveBeenCalledWith('holding-1');
+    expect(screen.getByPlaceholderText('100')).toHaveValue(90);
+    expect(screen.getByPlaceholderText('100.00')).toHaveValue(1004.5);
+  });
+
+  it('saves a changed quantity with one holding update, not a transaction PUT', async () => {
+    mockGetHolding.mockResolvedValue({ success: true, data: { id: 'holding-1', quantity: 100, averageCost: 1000, currency: 'TWD' } });
+    await renderAndLoad(soleTx);
+
+    fireEvent.change(screen.getByPlaceholderText('100'), { target: { value: '120' } });
     await act(async () => {
       fireEvent.click(screen.getByText('Update Investment Transaction'));
     });
 
+    await waitFor(() => expect(mockUpdateHolding).toHaveBeenCalledTimes(1));
+    // Only what changed: an untouched cost is not resent.
+    expect(mockUpdateHolding).toHaveBeenCalledWith({ id: 'holding-1', quantity: 120 });
+    // The holding update rewrites this cash leg itself; a second write could disagree.
+    expect(mockUpdateTransaction).not.toHaveBeenCalled();
+    expect(mockPush).toHaveBeenCalledWith('/transactions');
+  });
+
+  it('leaves the holding alone when nothing it holds was changed', async () => {
+    mockGetHolding.mockResolvedValue({ success: true, data: { id: 'holding-1', quantity: 100, averageCost: 1000.004, currency: 'TWD' } });
+    await renderAndLoad(soleTx);
+    await act(async () => {
+      fireEvent.click(screen.getByText('Update Investment Transaction'));
+    });
     await waitFor(() => expect(mockPush).toHaveBeenCalledWith('/transactions'));
+    expect(mockUpdateHolding).not.toHaveBeenCalled();
+  });
+
+  it('locks a buy that shares its lot, without even reading the lot, and saves only tags', async () => {
+    await renderAndLoad(sharedTx);
+
+    expect(mockGetHolding).not.toHaveBeenCalled();
+    expect(screen.getByPlaceholderText('100')).toHaveAttribute('readonly');
+    expect(screen.getByPlaceholderText('100.00')).toHaveAttribute('readonly');
+    expect(screen.getByText(/shares its holding with other entries/)).toBeInTheDocument();
+
+    await act(async () => {
+      fireEvent.click(screen.getByText('Update Investment Transaction'));
+    });
+    await waitFor(() => expect(mockUpdateTransaction).toHaveBeenCalled());
+    expect(mockUpdateTransaction.mock.calls[0][1]).toEqual({ tags: [] });
+    expect(mockUpdateHolding).not.toHaveBeenCalled();
+  });
+
+  it('falls back to read-only when the lot cannot be read', async () => {
+    mockGetHolding.mockRejectedValue(new Error('offline'));
+    await renderAndLoad(soleTx);
+    expect(screen.getByPlaceholderText('100')).toHaveAttribute('readonly');
+  });
+});
+
+describe('EditTransactionPage — sale proceeds', () => {
+  const saleTx = { ...expenseTx, type: 'income', category: 'Investment Sale', description: 'Sell 0050 ×10', holdingId: 'holding-1' };
+
+  beforeEach(() => {
+    jest.clearAllMocks();
+    mockUpdateTransaction.mockResolvedValue({ success: true, data: {} });
+  });
+
+  it('shows the amount as read-only and saves only the description and tags', async () => {
+    await renderAndLoad(saleTx);
+    expect(screen.getByText(/follow the sale/)).toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: 'Expense' })).not.toBeInTheDocument();
+
+    fireEvent.change(screen.getByLabelText('Description'), { target: { value: 'Trim 0050' } });
+    await act(async () => {
+      fireEvent.click(screen.getByRole('button', { name: 'Update Transaction' }));
+    });
+    await waitFor(() => expect(mockUpdateTransaction).toHaveBeenCalled());
+    expect(mockUpdateTransaction.mock.calls[0][1]).toEqual({ description: 'Trim 0050', tags: [] });
+  });
+
+  it('offers no delete: removing the cash alone would strand the realized P/L', async () => {
+    await renderAndLoad(saleTx);
+    expect(screen.queryByRole('button', { name: /Delete transaction/ })).not.toBeInTheDocument();
+  });
+});
+
+describe('EditTransactionPage — delete and duplicate', () => {
+  beforeEach(() => {
+    jest.clearAllMocks();
+    mockDeleteTransaction.mockResolvedValue({ success: true });
+  });
+
+  it('deletes after a confirm and returns to the list', async () => {
+    await renderAndLoad(expenseTx);
+    fireEvent.click(screen.getByRole('button', { name: /Delete transaction/ }));
+    // The confirm names what goes: an expense of its amount, on its day.
+    expect(screen.getByRole('dialog')).toHaveTextContent('transactions:form.deletePlain');
+    await act(async () => {
+      fireEvent.click(screen.getByRole('button', { name: 'Delete' }));
+    });
+    expect(mockDeleteTransaction).toHaveBeenCalledWith('test-transaction-id');
+    await waitFor(() => expect(mockPush).toHaveBeenCalledWith('/transactions'));
+  });
+
+  it('tells a loan-linked expense that its amount goes back onto the loan', async () => {
+    await renderAndLoad({ ...expenseTx, category: 'Loan Payment', loan_id: 'loan-1' });
+    fireEvent.click(screen.getByRole('button', { name: /Delete transaction/ }));
+    expect(screen.getByRole('dialog')).toHaveTextContent('transactions:form.deleteLoanLinked');
+  });
+
+  it('offers no delete on any cash leg of a holding, whatever its category', async () => {
+    await renderAndLoad({ ...expenseTx, holdingId: 'holding-1' });
+    expect(screen.queryByRole('button', { name: /Delete transaction/ })).not.toBeInTheDocument();
+  });
+
+  it('offers no delete on an investment purchase', async () => {
+    await renderAndLoad(investTx);
+    expect(screen.queryByRole('button', { name: /Delete transaction/ })).not.toBeInTheDocument();
+  });
+
+  it('puts the delete in the unlinked-transfer notice, the way out it names', async () => {
+    await renderAndLoad({ ...expenseTx, category: 'Transfer', description: 'Old transfer' });
+    expect(screen.getByRole('status')).toContainElement(screen.getByRole('button', { name: /Delete transaction/ }));
+  });
+
+  it('duplicates an expense into the add form, dated today', async () => {
+    await renderAndLoad(expenseTx);
+    const href = screen.getByRole('link', { name: /Duplicate/ }).getAttribute('href')!;
+    const q = new URL(href, 'http://x').searchParams;
+    expect(href.startsWith('/transactions/add?')).toBe(true);
+    expect(q.get('type')).toBe('expense');
+    expect(q.get('amount')).toBe('250');
+    expect(q.get('category')).toBe('Dining');
+    expect(q.get('date')).toBeNull();
   });
 });
 
@@ -448,55 +588,6 @@ describe('EditTransactionPage — coming back to the list you left', () => {
   });
 });
 
-describe('EditTransactionPage — Invest Submit: holding deleted', () => {
-  beforeEach(() => {
-    jest.clearAllMocks();
-    mockUpdateTransaction.mockResolvedValue({ success: true, data: {} });
-    // Portfolio returns no matching holding
-    mockGetPortfolio.mockResolvedValue({ success: true, data: { holdings: [] } });
-  });
-
-  it('updates the transaction even when holding is not found', async () => {
-    await renderAndLoad(investTx);
-
-    await act(async () => {
-      fireEvent.click(screen.getByText('Update Investment Transaction'));
-    });
-
-    await waitFor(() => expect(mockUpdateTransaction).toHaveBeenCalled());
-    expect(mockUpdateHolding).not.toHaveBeenCalled();
-  });
-
-  it('navigates to /transactions even when holding is missing', async () => {
-    await renderAndLoad(investTx);
-
-    await act(async () => {
-      fireEvent.click(screen.getByText('Update Investment Transaction'));
-    });
-
-    await waitFor(() => expect(mockPush).toHaveBeenCalledWith('/transactions'));
-  });
-});
-
-describe('EditTransactionPage — Invest Submit: portfolio API failure', () => {
-  beforeEach(() => {
-    jest.clearAllMocks();
-    mockUpdateTransaction.mockResolvedValue({ success: true, data: {} });
-    mockGetPortfolio.mockRejectedValue(new Error('Network error'));
-  });
-
-  it('still navigates after portfolio sync failure', async () => {
-    await renderAndLoad(investTx);
-
-    await act(async () => {
-      fireEvent.click(screen.getByText('Update Investment Transaction'));
-    });
-
-    await waitFor(() => expect(mockPush).toHaveBeenCalledWith('/transactions'));
-    expect(mockUpdateHolding).not.toHaveBeenCalled();
-  });
-});
-
 // ─── Fixes from the UI/UX review ─────────────────────────────────────────────
 describe('EditTransactionPage — what an edit may and may not change', () => {
   beforeEach(() => jest.clearAllMocks());
@@ -529,7 +620,7 @@ describe('EditTransactionPage — what an edit may and may not change', () => {
   it('keeps a category the form does not list, instead of re-categorising the row on save', async () => {
     mockUpdateTransaction.mockResolvedValue({ success: true, data: {} });
     await renderAndLoad({ ...expenseTx, category: 'Insurance' });
-    expect(screen.getByRole('button', { name: /Insurance/ })).toHaveAttribute('aria-pressed', 'true');
+    expect(screen.getByText('Insurance')).toBeInTheDocument();
     fireEvent.click(screen.getByRole('button', { name: 'Update Transaction' }));
     await waitFor(() => expect(mockUpdateTransaction).toHaveBeenCalled());
     expect(mockUpdateTransaction.mock.calls[0][1].category).toBe('Insurance');

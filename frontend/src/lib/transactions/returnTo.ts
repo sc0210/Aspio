@@ -75,3 +75,18 @@ export function useEditHref(): (id: string) => string {
         [pathname, query],
     );
 }
+
+/**
+ * The add link's counterpart: `/transactions/add?returnTo=<this list view>`, so saving
+ * a new entry lands back on the filtered list it was started from.
+ */
+export function useAddHref(): string {
+    const pathname = usePathname();
+    const query = useSearchParams().toString();
+    const listUrl = query ? `${pathname}?${query}` : pathname;
+    const base = `${TRANSACTIONS_LIST}/add`;
+    // Only a filtered list view is worth carrying (safeReturnTo would drop any other
+    // path on arrival). Compared by path: the query may hold encoded filters.
+    if (pathname !== TRANSACTIONS_LIST || !query) return base;
+    return `${base}?${RETURN_TO_PARAM}=${encodeURIComponent(listUrl)}`;
+}

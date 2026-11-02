@@ -216,3 +216,41 @@ describe('DemoContext — addDemoTransaction', () => {
     expect(after).toBe(before + 1);
   });
 });
+
+describe('DemoContext — editing and deleting a demo transfer', () => {
+  function TransferConsumer() {
+    const ctx = useDemo();
+    const pair = ctx.demoTransactions.filter((t) => t.transferGroupId);
+    const groupId = pair[0]?.transferGroupId;
+    return (
+      <div>
+        <span data-testid="tx-count">{ctx.demoTransactions.length}</span>
+        <span data-testid="pair">{pair.map((t) => `${t.type}:${t.walletType}:${t.amount}`).sort().join('|')}</span>
+        <button onClick={() => ctx.removeDemoTransaction(pair[0].id)}>delete-leg</button>
+        <button onClick={() => groupId && ctx.updateDemoTransfer(groupId, {
+          fromWallet: 'emergency', toWallet: 'life', amount: 42, currency: 'TWD', date: '2026-11-01', description: '',
+        })}>swap</button>
+      </div>
+    );
+  }
+
+  function renderTransfer() {
+    useSession.mockReturnValue({ data: null, status: 'unauthenticated' });
+    return render(<DemoProvider><TransferConsumer /></DemoProvider>);
+  }
+
+  it('deletes both legs when one is deleted, as the backend does', () => {
+    renderTransfer();
+    const before = Number(screen.getByTestId('tx-count').textContent);
+    expect(screen.getByTestId('pair').textContent).not.toBe('');
+    act(() => { fireEvent.click(screen.getByText('delete-leg')); });
+    expect(Number(screen.getByTestId('tx-count').textContent)).toBe(before - 2);
+    expect(screen.getByTestId('pair').textContent).toBe('');
+  });
+
+  it('rewrites both legs on edit: out of the From wallet, into the To wallet', () => {
+    renderTransfer();
+    act(() => { fireEvent.click(screen.getByText('swap')); });
+    expect(screen.getByTestId('pair').textContent).toBe('expense:emergency:42|income:life:42');
+  });
+});

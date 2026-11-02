@@ -117,6 +117,7 @@ class TransactionService {
       location: tx.location as string | undefined,
       transferGroupId: (tx.transferGroupId ?? tx.transfer_group_id) as string | undefined,
       loanId: (tx.loanId ?? tx.loan_id) as string | undefined,
+      holdingId: (tx.holdingId ?? tx.holding_id) as string | undefined,
       createdAt: new Date(tx.created_at as string),
       updatedAt: new Date(tx.updated_at as string)
     } as Transaction;
@@ -334,7 +335,8 @@ class TransactionService {
           category: ((tx.category_obj as Record<string, unknown> | undefined)?.name ?? tx.category ?? 'Other') as string,
           subcategory: tx.subcategory as string | undefined,
           description: tx.description as string,
-          date: new Date(tx.transaction_date as string),
+          // The day as sent (a bare date); a Date would be UTC midnight, a day early west of UTC.
+          date: tx.transaction_date as string,
           paymentMethod: tx.payment_method as string | undefined,
           walletType: ((tx.walletType ?? tx.wallet_type) ?? 'life') as Transaction['walletType'],
           tags: (tx.tags as string[]) || [],
@@ -342,6 +344,9 @@ class TransactionService {
           transferGroupId: (tx.transferGroupId ?? tx.transfer_group_id) as string | undefined,
           // Surfaced so the edit form can pre-fill the "Link to Loan" selector.
           loan_id: (tx.loan_id ?? tx.loanId) as string | null | undefined,
+          // Lets the edit form save a buy through its holding, not by guessing a symbol.
+          holdingId: (tx.holdingId ?? tx.holding_id ?? undefined) as string | undefined,
+          holdingSolePurchase: (tx.holdingSolePurchase ?? tx.holding_sole_purchase ?? undefined) as boolean | undefined,
           createdAt: new Date(tx.created_at as string),
           updatedAt: new Date(tx.updated_at as string)
         };

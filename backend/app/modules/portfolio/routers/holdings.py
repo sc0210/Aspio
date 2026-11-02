@@ -325,11 +325,6 @@ async def update_holding(
         return demo_holding
 
     try:
-        from ...transactions.models import (
-            Transaction,
-            TransactionStatus,
-            TransactionType,
-        )
         from ..manual_pricing import is_manually_priced
         from ..models import PortfolioHolding
         from ..services import PortfolioService
@@ -449,23 +444,6 @@ async def update_holding(
 
             new_total = Decimal(str(new_qty)) * Decimal(str(new_cost))
 
-            linked_rows = (
-                await session.execute(
-                    select(Transaction)
-                    .where(
-                        and_(
-                            Transaction.holding_id == holding.id,
-                            Transaction.user_id == current_user.id,
-                            Transaction.is_deleted == False,  # noqa: E712
-                        )
-                    )
-                    # Ordered because this used to be `.first()` on an unordered
-                    # query: with more than one leg it corrected an arbitrary row,
-                    # differently from one run to the next.
-                    .order_by(Transaction.transaction_date, Transaction.id)
-                )
-            ).scalars().all()
-
             # holding_id is set on more than the leg that paid for the holding, so
             # the rows are sorted before anything is written.
             #
@@ -478,12 +456,15 @@ async def update_holding(
             #               the same money would sit in two wallets.
             # cancelled or failed rows are ignored entirely — they count toward no
             # total, so they neither take a correction nor block one.
-            live = [
-                row for row in linked_rows
-                if row.status == TransactionStatus.COMPLETED
-            ]
-            legs = [row for row in live if row.type == TransactionType.EXPENSE]
-            offsetting = [row for row in live if row.type == TransactionType.INCOME]
+            #
+            # The same partition tells the edit form (GET /transactions/{id},
+            # holding_sole_purchase) whether a buy may be edited through this
+            # endpoint, so the page and this rewrite cannot disagree.
+            from ...transactions.repositories import TransactionRepository
+
+            linked_rows, legs, offsetting = await TransactionRepository(
+                session
+            ).holding_purchase_legs(holding.id, current_user.id)
 
             # Name what changed, so a warning below points at the right thing.
             edited = " and ".join(

@@ -70,6 +70,19 @@ export function localDateString(date: Date = new Date()): string {
   return `${y}-${m}-${d}`;
 }
 
+// The value a <input type="date"> wants for a row's date. A bare "YYYY-MM-DD"
+// (what the API sends) is that day as written; anything else is read as a local
+// instant. toISOString() is the trap here: a demo row dated local midnight in
+// Taipei is the previous day in UTC, so the form loaded it a day early.
+export function toDateInputValue(date: string | Date): string {
+  if (typeof date === 'string') {
+    const day = date.match(/^(\d{4}-\d{2}-\d{2})(?:$|T00:00:00(?:\.0+)?Z?$)/);
+    if (day) return day[1];
+    return localDateString(new Date(date));
+  }
+  return localDateString(date);
+}
+
 // True when a row's date falls on a calendar day from range.start to range.end,
 // both inclusive, the way the server compares date_from/date_to. A bare
 // "YYYY-MM-DD" is that day as written: new Date() would read it as UTC midnight,

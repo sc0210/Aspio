@@ -234,7 +234,32 @@
     "sellSubmit": "Record Sale",
     "investEdit": {
       "title": "Investment purchase",
-      "note": "Changes here update the transaction record. To update the portfolio holding, visit the Portfolio page."
+      "note": "Changes here update the transaction record. To update the portfolio holding, visit the Portfolio page.",
+      "noteHolding": "Saving updates the holding and this Life Wallet entry together.",
+      "noteLot": "This buy shares its holding with other entries, so its amount and date are changed on Portfolio. Tags can be changed here.",
+      "noteUnlinked": "This older entry isn't linked to a holding. Saving also updates a holding of this symbol bought that day, if there is one; check it on Portfolio."
+    },
+    "today": "Today",
+    "yesterday": "Yesterday",
+    "currentCategory": "Current category:",
+    "saveAndAddAnother": "Save & add another",
+    "submitExpense": "Add expense",
+    "submitIncome": "Add income",
+    "submitTransfer": "Transfer {{amount}} → {{to}}",
+    "submitTransferPlain": "Add transfer",
+    "submitExpenseNoun": "expense",
+    "submitIncomeNoun": "income",
+    "deleteTransaction": "Delete transaction",
+    "deleteTransfer": "This removes both sides of the transfer: {{amount}} from {{from}} to {{to}}.",
+    "deleteUnlinkedTransfer": "This removes only this side of an older transfer. Its other half isn't linked, so check the other wallet afterwards.",
+    "deleteLoanLinked": "{{amount}} goes back onto {{loan}}.",
+    "deleteLoanFallback": "its loan",
+    "deletePlain": "Delete this {{what}} of {{amount}} on {{date}}?",
+    "duplicate": "Duplicate",
+    "goToPortfolio": "Go to Portfolio",
+    "saleEdit": {
+      "title": "Sale proceeds",
+      "note": "The amount, date and wallet follow the sale. To change them, edit or reverse the sale on Portfolio."
     }
   },
   "importExport": {
@@ -279,7 +304,8 @@
     "transactionCount": "{{count}}",
     "undo": "Undo",
     "updating": "Updating…",
-    "walletPlaceholder": "Reassign wallet"
+    "walletPlaceholder": "Reassign wallet",
+    "holdingLinkedSkipped": "{{count}} selected entries belong to portfolio holdings and were left as they are. Change them on Portfolio."
   },
   "monthlySummary": "Monthly Summary",
   "monthlySummaryPage": {
@@ -435,7 +461,10 @@
     "investSynced": "Transaction and portfolio holding updated",
     "investMultipleLots": "Transaction updated. This symbol has multiple lots — edit the specific lot on the Portfolio page to update its chart.",
     "investHoldingMissing": "Transaction updated. Holding not found — it may have been removed from Portfolio.",
-    "investSyncFailed": "Transaction updated. Could not sync portfolio holding — update it manually."
+    "investSyncFailed": "Transaction updated. Could not sync portfolio holding — update it manually.",
+    "savedAddNext": "Saved. Add the next one.",
+    "demoSaved": "Demo: saved for this session — sign up to keep real data",
+    "investTagsFailed": "The holding was saved, but the tags were not. Try saving again."
   },
   "types": {
     "expense": "Expense",

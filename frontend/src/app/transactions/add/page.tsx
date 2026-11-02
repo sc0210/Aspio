@@ -1,8 +1,10 @@
 'use client';
 
-import React, { useState, useEffect, useRef } from 'react';
-import { CheckIcon } from '@heroicons/react/24/outline';
-import { useRouter } from 'next/navigation';
+import React, { Suspense, useState, useEffect, useRef } from 'react';
+import { CheckIcon, PlusIcon } from '@heroicons/react/24/outline';
+import { useRouter, useSearchParams } from 'next/navigation';
+import { RETURN_TO_PARAM, safeReturnTo } from '@/lib/transactions/returnTo';
+import { readPrefill } from '@/lib/transactions/prefill';
 import { useQueryClient } from '@tanstack/react-query';
 import toast from 'react-hot-toast';
 import { useTranslation } from 'react-i18next';
@@ -18,15 +20,29 @@ import { useDemo } from '@/contexts/DemoContext';
 import { DashboardLayout } from '@/components/layout/DashboardLayout';
 import { PageHeader } from '@/components/layout/PageHeader';
 import { QUERY_KEYS, invalidateDashboardData } from '@/hooks/useDataSynchronization';
-import { localDateString } from '@/utils/formatters';
+import { formatCurrency, localDateString } from '@/utils/formatters';
 import { Card } from '@/components/ui/Card';
 import {
-  TRANSACTION_TYPES, CashFields, validateCashFields, StickySubmitBar, revealFirstError,
+  TRANSACTION_TYPES, CURRENCIES, CashFields, validateCashFields, StickySubmitBar, revealFirstError,
   FIELD_LABEL, FIELD_INPUT, CHIP_ROW, CHIP, CHIP_ON, CHIP_OFF, SEGMENTED, SEGMENT, SEGMENT_ON, SEGMENT_OFF, revealSelected,
 } from '@/components/transactions/TransactionFormFields';
 
+// useSearchParams needs a Suspense boundary on a statically rendered route.
 export default function AddTransactionPage() {
+  return (
+    <Suspense>
+      <AddTransactionForm />
+    </Suspense>
+  );
+}
+
+function AddTransactionForm() {
   const router = useRouter();
+  const searchParams = useSearchParams();
+  // The (filtered) list this add was started from; checked, as on edit.
+  const returnTo = safeReturnTo(searchParams.get(RETURN_TO_PARAM));
+  // Read once: a prefill is where the form starts, not something it follows.
+  const [prefill] = useState(() => readPrefill(searchParams));
   const queryClient = useQueryClient();
   const { isDemo } = useModeAwareUI();
   const { addDemoTransaction } = useDemo();
@@ -34,17 +50,17 @@ export default function AddTransactionPage() {
   const { data: currentUser } = useCurrentUser();
 
   const [formData, setFormData] = useState({
-    type: 'expense',
-    amount: '',
-    description: '',
-    category: '',
-    paymentMethod: '',
-    walletType: 'life',
+    type: (prefill?.type ?? 'expense') as string,
+    amount: prefill?.amount ?? '',
+    description: prefill?.description ?? '',
+    category: prefill?.category ?? '',
+    paymentMethod: prefill?.paymentMethod ?? '',
+    walletType: prefill?.walletType ?? 'life',
     fromWallet: 'life',
     toWallet: 'emergency',
-    date: localDateString(),
+    date: prefill?.date ?? localDateString(),
     tags: [] as string[],
-    currency: 'TWD',
+    currency: prefill?.currency ?? 'TWD',
     loanId: '',
   });
 
@@ -55,6 +71,9 @@ export default function AddTransactionPage() {
   const [investName, setInvestName]         = useState('');
   const [investQty, setInvestQty]           = useState('');
   const [investPrice, setInvestPrice]       = useState('');
+  // Its own state: sharing the buy price meant a price typed on Buy was sent as
+  // an explicit sell price after switching to Sell, and realized P/L with it.
+  const [investSellPrice, setInvestSellPrice] = useState('');
   const [investCurrency, setInvestCurrency] = useState('TWD');
   // Sell side: pick a holding (the backend draws down all lots of its symbol,
   // oldest-first/FIFO) and a quantity; price is optional (defaults to market).
@@ -63,6 +82,33 @@ export default function AddTransactionPage() {
 
   const [errors, setErrors]       = useState<Record<string, string>>({});
   const [isSubmitting, setIsSubmitting] = useState(false);
+  // Set by the "Save & add another" button just before it submits the form.
+  const addAnotherRef = useRef(false);
+
+  // After a save, either back to the list, or (add another) a fresh entry that
+  // keeps what a run of entries shares: type, date, wallet, currency, payment
+  // method. A transfer starts over at Life -> Emergency.
+  const finishCashSave = (message: string) => {
+    if (!addAnotherRef.current) {
+      toast.success(message);
+      router.push(returnTo);
+      return;
+    }
+    if (formData.loanId) setLoansReload(n => n + 1);
+    setFormData(prev => ({
+      ...prev,
+      amount: '',
+      description: '',
+      category: '',
+      tags: [],
+      loanId: '',
+      fromWallet: 'life',
+      toWallet: 'emergency',
+    }));
+    setErrors({});
+    toast.success(t('transactions:toast.savedAddNext', 'Saved. Add the next one.'));
+    requestAnimationFrame(() => document.getElementById('tx-amount')?.focus());
+  };
 
   const [portfolioHoldings, setPortfolioHoldings] = useState<PortfolioHolding[]>([]);
   const [holdingsLoading, setHoldingsLoading] = useState(false);
@@ -83,28 +129,31 @@ export default function AddTransactionPage() {
       .finally(() => setHoldingsLoading(false));
   }, [formData.type, investSide, isDemo, holdingsReload]);
 
+  // Bumped after "add another" on a loan payment, so the next entry sees the new balance.
+  const [loansReload, setLoansReload] = useState(0);
   const [activeLoans, setActiveLoans] = useState<{ id: string; name: string; current_balance: number; currency: string }[]>([]);
   useEffect(() => {
     if (isDemo) return;
     loanService.getLoans()
       .then(res => {
         if (res.success && res.data) {
-          setActiveLoans(
-            res.data
-              .filter(l => l.status === 'active')
-              .map(l => ({ id: l.id, name: l.name, current_balance: l.current_balance, currency: l.currency }))
-          );
+          const loans = res.data
+            .filter(l => l.status === 'active')
+            // Decimal money arrives as a string; formatCurrency needs a number.
+            .map(l => ({ id: l.id, name: l.name, current_balance: Number(l.current_balance) || 0, currency: l.currency }));
+          setActiveLoans(loans);
         }
       })
       .catch(() => {});
-  }, [isDemo]);
+  }, [isDemo, loansReload]);
 
   // Default the currency selectors to the user's account preference (falls
   // back to 'TWD' if unset/unauthenticated) instead of always starting on
   // TWD. Only applies once, before the user picks a currency themselves —
   // the refs guard against a late-arriving profile fetch stomping a manual
   // selection.
-  const hasUserSetCurrencyRef = useRef(false);
+  // A prefilled currency was chosen by whoever built the link: keep it.
+  const hasUserSetCurrencyRef = useRef(!!prefill?.currency);
   const hasUserSetInvestCurrencyRef = useRef(false);
   useEffect(() => {
     const preferred = currentUser?.preferred_currency;
@@ -153,6 +202,9 @@ export default function AddTransactionPage() {
 
   const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
+    // Which button submitted: read from the event, so Enter in a field is a plain save.
+    const submitter = (e.nativeEvent as SubmitEvent).submitter as HTMLElement | null;
+    addAnotherRef.current = submitter?.dataset.addAnother === 'true' && formData.type !== 'investment';
     if (!validateForm()) {
       revealFirstError(e.currentTarget);
       return;
@@ -175,7 +227,8 @@ export default function AddTransactionPage() {
         };
         addDemoTransaction({ ...leg, type: 'income', walletType: formData.toWallet as 'life' | 'emergency' });
         addDemoTransaction({ ...leg, type: 'expense', walletType: formData.fromWallet as 'life' | 'emergency' });
-        toast.success(t('common:demoAlert.changesSimulated'));
+        finishCashSave(t('common:demoAlert.changesSimulated'));
+        return;
       } else if (formData.type === 'investment') {
         // Add-holding in demo is the portfolio flow's to simulate; nothing lands
         // in the demo portfolio yet.
@@ -192,9 +245,10 @@ export default function AddTransactionPage() {
           walletType: formData.walletType as 'life' | 'emergency' | undefined,
           tags: formData.tags,
         });
-        toast.success(t('transactions:toast.demoAdded', 'Demo transaction added — sign up to save real data'));
+        finishCashSave(t('transactions:toast.demoAdded', 'Demo transaction added — sign up to save real data'));
+        return;
       }
-      router.push('/transactions');
+      router.push(returnTo);
       return;
     }
 
@@ -212,8 +266,7 @@ export default function AddTransactionPage() {
         if (response.success) {
           await queryClient.invalidateQueries({ queryKey: [QUERY_KEYS.TRANSACTIONS] });
           invalidateDashboardData(queryClient);
-          toast.success(t('transactions:toast.transferCreated'));
-          router.push('/transactions');
+          finishCashSave(t('transactions:toast.transferCreated'));
         } else {
           toast.error(response.message || t('transactions:toast.transferFailed'));
         }
@@ -251,7 +304,7 @@ export default function AddTransactionPage() {
             await queryClient.invalidateQueries({ queryKey: [QUERY_KEYS.PORTFOLIO] });
             invalidateDashboardData(queryClient);
             toast.success(t('transactions:toast.bought', { symbol: sym, defaultValue: 'Bought {{symbol}} — holding & expense recorded' }));
-            router.push('/transactions');
+            router.push(returnTo);
           } else {
             toast.error(holdingResponse.message || t('transactions:toast.createFailed'));
           }
@@ -260,11 +313,11 @@ export default function AddTransactionPage() {
           // holding's lots (oldest first), records realized P/L, and credits net
           // proceeds to the Life Wallet. (Previously this only logged a fake
           // income and left the holding untouched — double-counting.)
-          const priceNum = parseFloat(investPrice);
+          const priceNum = parseFloat(investSellPrice);
           const response = await portfolioService.sellHolding({
             holdingId: investHoldingId,
             quantity: parseFloat(investSellQty),
-            price: investPrice && !isNaN(priceNum) && priceNum > 0 ? priceNum : undefined,
+            price: investSellPrice && !isNaN(priceNum) && priceNum > 0 ? priceNum : undefined,
             transactionDate: formData.date ? new Date(formData.date).toISOString() : undefined,
           });
           if (response.success && response.data) {
@@ -281,7 +334,7 @@ export default function AddTransactionPage() {
               pl: `${pl >= 0 ? '+' : ''}${pl.toLocaleString()}`,
               defaultValue: 'Sold {{qty}} {{symbol}} · net {{net}} {{currency}} · P/L {{pl}}',
             }));
-            router.push('/transactions');
+            router.push(returnTo);
           } else {
             toast.error(response.message || t('transactions:toast.createFailed'));
           }
@@ -307,8 +360,7 @@ export default function AddTransactionPage() {
           if (formData.loanId) {
             await queryClient.invalidateQueries({ queryKey: ['loans'] });
           }
-          toast.success(t('transactions:toast.created'));
-          router.push('/transactions');
+          finishCashSave(t('transactions:toast.created'));
         } else {
           toast.error(response.message || t('transactions:toast.createFailed'));
         }
@@ -330,12 +382,31 @@ export default function AddTransactionPage() {
   };
   const inactiveClass = 'bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-400 hover:bg-gray-200 dark:hover:bg-gray-600';
 
+  // The sticky bar is the last thing read before saving, so it says what will be
+  // saved: "Add expense · NT$120", "Transfer NT$5,000 → Emergency".
+  const amountNum = parseFloat(formData.amount);
+  // Whole amounts without decimals: on a phone the label shares the bar with "+ Next".
+  const amountText = amountNum > 0
+    ? formatCurrency(amountNum, formData.currency, Number.isInteger(amountNum) ? { precision: 0 } : {})
+    : '';
+  const cashLabel = (() => {
+    if (formData.type === 'transfer') {
+      const to = t(`transactions:form.wallets.${formData.toWallet}`, formData.toWallet === 'life' ? 'Life Wallet' : 'Emergency Wallet');
+      return amountText
+        ? t('transactions:form.submitTransfer', { amount: amountText, to, defaultValue: 'Transfer {{amount}} → {{to}}' })
+        : t('transactions:form.submitTransferPlain', 'Add transfer');
+    }
+    const plain = formData.type === 'income'
+      ? t('transactions:form.submitIncome', 'Add income')
+      : t('transactions:form.submitExpense', 'Add expense');
+    return amountText ? `${plain} · ${amountText}` : plain;
+  })();
   const submitLabel =
     formData.type === 'investment'
       ? investSide === 'buy'
         ? t('transactions:form.buySubmit', 'Buy & Add to Portfolio')
         : t('transactions:form.sellSubmit', 'Record Sale')
-      : t('transactions:add', 'Add Transaction');
+      : cashLabel;
 
   return (
     <DashboardLayout>
@@ -343,7 +414,7 @@ export default function AddTransactionPage() {
         {/* Phone title + back; on desktop the top bar's title and breadcrumb cover both. */}
         <PageHeader
           title={t('transactions:add', 'Add Transaction')}
-          backHref="/transactions"
+          backHref={returnTo}
           backLabel={t('transactions:form.backToList', 'Back to Transactions')}
           className="mb-3"
         />
@@ -408,7 +479,11 @@ export default function AddTransactionPage() {
                           aria-pressed={investSide === side}
                           key={side}
                           type="button"
-                          onClick={() => setInvestSide(side)}
+                          onClick={() => {
+                            setInvestSide(side);
+                            // The other side's messages would point at fields no longer shown.
+                            setErrors(prev => Object.fromEntries(Object.entries(prev).filter(([k]) => !k.startsWith('invest'))));
+                          }}
                           className={cn(SEGMENT, 'px-4', investSide === side ? SEGMENT_ON : SEGMENT_OFF)}
                         >
                           {side === 'buy' ? t('transactions:form.invest.buyAsset', 'Buy Asset') : t('transactions:form.invest.sellAsset', 'Sell Asset')}
@@ -457,7 +532,6 @@ export default function AddTransactionPage() {
                             value={investSymbol}
                             onChange={(e) => setInvestSymbol(e.target.value.toUpperCase())}
                             placeholder={t('transactions:form.invest.symbolPlaceholder', 'e.g. 006208, AAPL, BTC')}
-                            autoFocus
                             className={cn(FIELD_INPUT, 'font-mono font-semibold uppercase placeholder:normal-case placeholder:font-sans placeholder:font-normal', errors.investSymbol && 'border-error-400')}
                           />
                           {errors.investSymbol && <p id="tx-invest-symbol-error" role="alert" className="text-xs text-error-700 dark:text-error-500 mt-1">{errors.investSymbol}</p>}
@@ -510,7 +584,7 @@ export default function AddTransactionPage() {
                               onChange={(e) => { hasUserSetInvestCurrencyRef.current = true; setInvestCurrency(e.target.value); }}
                               className={cn(FIELD_INPUT, 'w-auto px-2 font-semibold')}
                             >
-                              {['TWD', 'USD', 'HKD', 'JPY', 'EUR', 'SGD'].map(c => (
+                              {CURRENCIES.map(c => (
                                 <option key={c} value={c}>{c}</option>
                               ))}
                             </select>
@@ -660,8 +734,8 @@ export default function AddTransactionPage() {
                                   onWheel={(e) => e.currentTarget.blur()}
                                   step="any"
                                   min="0"
-                                  value={investPrice}
-                                  onChange={(e) => setInvestPrice(e.target.value)}
+                                  value={investSellPrice}
+                                  onChange={(e) => setInvestSellPrice(e.target.value)}
                                   placeholder={t('transactions:form.invest.marketPricePlaceholder', 'market price')}
                                   className={cn(FIELD_INPUT, 'flex-1 min-w-0 font-semibold')}
                                 />
@@ -706,16 +780,38 @@ export default function AddTransactionPage() {
             )}
 
             <StickySubmitBar>
-              <Button
-                type="submit"
-                variant="primary"
-                size="lg"
-                fullWidth
-                isLoading={isSubmitting}
-                leftIcon={<CheckIcon className="w-5 h-5" />}
-              >
-                {isSubmitting ? t('transactions:form.saving', 'Saving…') : submitLabel}
-              </Button>
+              {/* The primary save comes first in the markup: Enter in a field submits
+                  through the first submit button, and that must be a plain save. The
+                  row reverses so "+" still sits on the left. */}
+              <div className="flex flex-row-reverse gap-2">
+                <Button
+                  type="submit"
+                  variant="primary"
+                  size="lg"
+                  fullWidth
+                  isLoading={isSubmitting}
+                  leftIcon={<CheckIcon className="w-5 h-5 max-sm:hidden" />}
+                  className="min-w-0 flex-1"
+                >
+                  <span className="truncate">{isSubmitting ? t('transactions:form.saving', 'Saving…') : submitLabel}</span>
+                </Button>
+                {/* Not for an investment: a buy or sale goes back to the list to show the holding's change.
+                    Just "+" on a phone (named for screen readers), so the save button keeps room to name the amount. */}
+                {formData.type !== 'investment' && (
+                  <Button
+                    type="submit"
+                    data-add-another="true"
+                    variant="secondary"
+                    size="lg"
+                    disabled={isSubmitting}
+                    aria-label={t('transactions:form.saveAndAddAnother', 'Save & add another')}
+                    leftIcon={<PlusIcon className="w-5 h-5" aria-hidden="true" />}
+                    className="shrink-0 px-3 sm:px-4 max-sm:gap-0"
+                  >
+                    <span className="max-sm:hidden">{t('transactions:form.saveAndAddAnother', 'Save & add another')}</span>
+                  </Button>
+                )}
+              </div>
             </StickySubmitBar>
           </form>
         </Card>

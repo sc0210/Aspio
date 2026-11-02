@@ -583,6 +583,44 @@ class TransactionRepository:
 
         return result.scalar_one_or_none()
 
+    async def holding_purchase_legs(
+        self, holding_id, user_id
+    ) -> Tuple[List[Transaction], List[Transaction], List[Transaction]]:
+        """The rows linked to a holding, sorted the way a holding edit needs them.
+
+        Returns ``(linked, legs, offsetting)``: every live row with this holding_id,
+        ordered; the completed EXPENSE rows (the purchase legs); and the completed
+        INCOME rows (cash withdrawn against the holding). Cancelled or failed rows
+        count toward neither. A holding edit rewrites a leg only when there is
+        exactly one leg and nothing offsetting it — see ``is_sole_purchase_leg``.
+        """
+        holding_uuid = (
+            uuid_module.UUID(holding_id) if isinstance(holding_id, str) else holding_id
+        )
+        user_uuid = uuid_module.UUID(user_id) if isinstance(user_id, str) else user_id
+        stmt = (
+            select(Transaction)
+            .where(
+                and_(
+                    Transaction.holding_id == holding_uuid,
+                    Transaction.user_id == user_uuid,
+                    Transaction.is_deleted == False,  # noqa: E712
+                )
+            )
+            # Ordered: with more than one leg, which one is corrected must not vary.
+            .order_by(Transaction.transaction_date, Transaction.id)
+        )
+        linked = list((await self.db.execute(stmt)).scalars().all())
+        live = [row for row in linked if row.status == TransactionStatus.COMPLETED]
+        legs = [row for row in live if row.type == TransactionType.EXPENSE]
+        offsetting = [row for row in live if row.type == TransactionType.INCOME]
+        return linked, legs, offsetting
+
+    @staticmethod
+    def is_sole_purchase_leg(row, legs, offsetting) -> bool:
+        """True when ``row`` alone equals its lot, so editing the holding rewrites it."""
+        return len(legs) == 1 and not offsetting and str(legs[0].id) == str(row.id)
+
     async def get_by_transfer_group(
         self, group_id: str, user_id: str
     ) -> List[Transaction]:

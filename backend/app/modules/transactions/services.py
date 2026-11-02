@@ -11,7 +11,7 @@ import re
 
 from sqlalchemy.exc import IntegrityError
 
-from app.core.exceptions import ValidationException
+from app.core.exceptions import BusinessLogicException, ValidationException
 
 from .repositories import (
     TransactionRepository,
@@ -36,7 +36,7 @@ from .schemas import (
     BulkTransactionResponse,
     RecurringTransactionUpdate,
 )
-from app.utils.datetime_helpers import business_today
+from app.utils.datetime_helpers import business_day_of, business_today
 
 logger = logging.getLogger(__name__)
 
@@ -579,6 +579,24 @@ class TransactionService:
             # Remove category_name from data (not a database field)
             data.pop("category_name", None)
 
+        # The cash side of a holding: its money follows the holding. Changing it here
+        # would leave the lot's cost basis and the Life Wallet disagreeing, so only
+        # what is the row's own (description, tags, notes, payment method) may change.
+        # Values resent unchanged pass, so a form that sends every field still saves.
+        if self._HOLDING_OWNED_FIELDS & data.keys():
+            stored = await self.transaction_repo.get_by_id(transaction_id, user_id)
+            if stored is not None and stored.holding_id is not None:
+                changed = [
+                    field for field in self._HOLDING_OWNED_FIELDS & data.keys()
+                    if not self._same_value(getattr(stored, field), data[field])
+                ]
+                if changed:
+                    raise BusinessLogicException(
+                        "This entry is the cash side of a portfolio holding. Edit the "
+                        "holding on Portfolio to change its amount, date or wallet.",
+                        details={"fields": sorted(changed)},
+                    )
+
         # Treat an empty loan_id as an explicit "unlink" (restore the balance).
         if "loan_id" in data and not data["loan_id"]:
             data["loan_id"] = None
@@ -657,6 +675,44 @@ class TransactionService:
 
         return transaction
 
+    # Fields of a holding-linked row that only the holding may change.
+    _HOLDING_OWNED_FIELDS = frozenset({"amount", "currency", "type", "wallet_type", "transaction_date"})
+
+    @staticmethod
+    def _same_value(stored, incoming) -> bool:
+        """Equal as stored: Decimal amounts, enum values, days, currency codes in any case."""
+        if stored is None or incoming is None:
+            return stored is incoming
+        if isinstance(stored, Decimal):
+            return stored == Decimal(str(incoming))
+        if isinstance(stored, (date, datetime)) or isinstance(incoming, (date, datetime)):
+            # The column is a day; compare days, whatever form the client sent.
+            def as_day(value):
+                if isinstance(value, datetime):
+                    return business_day_of(value)
+                if isinstance(value, date):
+                    return value
+                text = str(value)
+                if len(text) > 10:
+                    # A timestamp is read in business time, like a datetime above.
+                    return business_day_of(datetime.fromisoformat(text.replace("Z", "+00:00")))
+                return date.fromisoformat(text)
+            return as_day(stored) == as_day(incoming)
+        stored_value = getattr(stored, "value", stored)
+        incoming_value = getattr(incoming, "value", incoming)
+        if isinstance(stored_value, str) and isinstance(incoming_value, str):
+            return stored_value.upper() == incoming_value.upper()
+        return stored_value == incoming_value
+
+    async def holding_sole_purchase(self, transaction) -> Optional[bool]:
+        """Whether editing this row's holding rewrites this row (None: no holding)."""
+        if transaction is None or transaction.holding_id is None:
+            return None
+        _, legs, offsetting = await self.transaction_repo.holding_purchase_legs(
+            transaction.holding_id, str(transaction.user_id)
+        )
+        return self.transaction_repo.is_sole_purchase_leg(transaction, legs, offsetting)
+
     async def set_day_order(self, user_id: str, day: date, ids: List[str]) -> List[str]:
         """Order one day's rows as the user dragged them (#478); see the repository."""
         return await self.transaction_repo.set_day_order(str(user_id), day, ids)
@@ -665,6 +721,15 @@ class TransactionService:
         """Soft delete a transaction"""
         # Fetch before deleting so we can reverse any loan balance change
         existing = await self._lock_for_loan_edit(transaction_id, user_id)
+
+        # The cash side of a holding goes with the holding (DELETE
+        # /portfolio/holdings/{id} removes its linked rows). Deleting it alone would
+        # leave the holding counted in Total Asset with no money ever spent on it.
+        if existing is not None and existing.holding_id is not None:
+            raise BusinessLogicException(
+                "This entry is the cash side of a portfolio holding. Delete the "
+                "holding on Portfolio, which removes this entry with it.",
+            )
 
         # The delete, the loan balance it restores and a transfer's other leg are one
         # commit: no half-deleted transfer, no deleted payment still off its loan.

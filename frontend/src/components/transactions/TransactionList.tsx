@@ -139,10 +139,23 @@ export function TransactionList({ transactions, isLoading, isFetching, isSearchi
     }
   };
 
+  // A holding's cash side changes or goes only with its holding: the API refuses
+  // deleting it, or moving its wallet, on its own. Say so instead of a bare failure.
+  const holdingLinked = (ids: string[]) =>
+    ids.filter((id) => transactions.find((tx) => tx.id === id)?.holdingId);
+  const warnHoldingLinked = (count: number) =>
+    toast(t('transactions:list.holdingLinkedSkipped', {
+      count,
+      defaultValue: '{{count}} selected entries belong to portfolio holdings and were left as they are. Change them on Portfolio.',
+    }), { icon: 'ℹ️' });
+
   const handleBulkDelete = () => {
     if (selectedTransactions.length === 0) return;
 
-    const idsToDelete = [...selectedTransactions];
+    const linked = holdingLinked(selectedTransactions);
+    if (linked.length > 0) warnHoldingLinked(linked.length);
+    const idsToDelete = selectedTransactions.filter((id) => !linked.includes(id));
+    if (idsToDelete.length === 0) return;
     bulkDeleteCancelRef.current = false;
     setSelectedTransactions([]);
 
@@ -187,10 +200,15 @@ export function TransactionList({ transactions, isLoading, isFetching, isSearchi
 
   const handleBulkReassign = async (field: 'category' | 'walletType', value: string) => {
     if (!value || selectedTransactions.length === 0) return;
-    const count = selectedTransactions.length;
+    // A category is the row's own; a wallet is the holding's.
+    const linked = field === 'walletType' ? holdingLinked(selectedTransactions) : [];
+    if (linked.length > 0) warnHoldingLinked(linked.length);
+    const ids = selectedTransactions.filter((id) => !linked.includes(id));
+    if (ids.length === 0) return;
+    const count = ids.length;
     try {
       await Promise.all(
-        selectedTransactions.map(id =>
+        ids.map(id =>
           updateTransactionMutation.mutateAsync({ id, data: { [field]: value } })
         )
       );

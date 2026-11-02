@@ -11,7 +11,7 @@ import { useTranslation } from 'react-i18next';
 import Link from 'next/link';
 import { CheckIcon, ChevronRightIcon } from '@heroicons/react/24/outline';
 import { cn } from '@/utils/cn';
-import { formatCurrency } from '@/utils/formatters';
+import { formatCurrency, localDateString } from '@/utils/formatters';
 import { getCategoryColorGroup } from './categoryColorGroups';
 
 export const TRANSACTION_TYPES: { value: string; label: string; shortLabel?: string; color: string }[] = [
@@ -64,7 +64,8 @@ const WALLET_TYPES = [
   { value: 'emergency', label: 'Emergency Wallet' },
 ];
 
-const CURRENCIES = ['TWD', 'USD', 'HKD', 'JPY', 'EUR', 'SGD'];
+/** Every currency picker on the add and edit forms, in one order. */
+export const CURRENCIES = ['TWD', 'USD', 'HKD', 'JPY', 'EUR', 'SGD'];
 
 const LOAN_CATEGORY = 'Loan Payment';
 
@@ -114,9 +115,10 @@ export function validateCashFields(formData: CashFormData, t: T): Record<string,
 }
 
 // Shared field chrome. Inputs are text-base below sm: iOS Safari zooms the page
-// into any focused input under 16px, which on this form meant every tap.
+// into any focused input under 16px, which on this form meant every tap. 48px
+// tall below lg, as docs/UI_CONVENTIONS.md asks of form inputs on touch.
 export const FIELD_LABEL = 'block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1.5';
-export const FIELD_INPUT = 'w-full bg-transparent border border-gray-300 dark:border-gray-600 rounded-lg px-3 py-2.5 sm:py-2 text-base sm:text-sm text-gray-900 dark:text-white placeholder-gray-400 dark:placeholder-gray-500 focus-visible:ring-2 focus-visible:ring-primary-500 focus-visible:border-primary-500';
+export const FIELD_INPUT = 'w-full bg-transparent border border-gray-300 dark:border-gray-600 rounded-lg px-3 py-3 lg:py-2 text-base sm:text-sm text-gray-900 dark:text-white placeholder-gray-400 dark:placeholder-gray-500 focus-visible:ring-2 focus-visible:ring-primary-500 focus-visible:border-primary-500';
 
 // A choice with more options than fit is one row of chips. On a phone it swipes,
 // bleeding to the card edge (-mx-4 against the card's p-4) with the far end faded
@@ -348,8 +350,9 @@ export function CashFields({ idPrefix: p, formData, errors, onChange, onTagsChan
               type="date"
               value={formData.date}
               onChange={(e) => onChange('date', e.target.value)}
-              className={cn(FIELD_INPUT, 'px-2 min-h-[2.75rem] sm:min-h-0 lg:h-11')}
+              className={cn(FIELD_INPUT, 'px-2 min-h-12 lg:min-h-0 lg:h-11')}
             />
+            <DateShortcuts value={formData.date} onPick={(day) => onChange('date', day)} />
           </div>
         </div>
 
@@ -366,15 +369,17 @@ export function CashFields({ idPrefix: p, formData, errors, onChange, onTagsChan
               ref={revealSelected}
               className={CHIP_ROW}
             >
+              {/* Not a button: there is nothing to toggle, it only shows what the row
+                  holds. Picking a listed chip replaces it. */}
               {unknownCategory && (
-                <button
-                  aria-pressed={true}
-                  type="button"
+                <span
+                  data-current-category
                   className={cn(CHIP, 'font-semibold', getCategoryColorGroup(unknownCategory).lightBg, getCategoryColorGroup(unknownCategory).lightText, getCategoryColorGroup(unknownCategory).borderOn)}
                 >
                   <ChipCheck />
-                  {unknownCategory}
-                </button>
+                  <span className="sr-only">{t('transactions:form.currentCategory', 'Current category:')} </span>
+                  {t(`transactions:form.categories.${unknownCategory}`, unknownCategory)}
+                </span>
               )}
               {categories.map((category) => {
                 const isSelected = formData.category === category.value;
@@ -421,7 +426,7 @@ export function CashFields({ idPrefix: p, formData, errors, onChange, onTagsChan
           <div className="order-2 lg:order-none lg:col-span-2 space-y-3">
             {showInvestmentHint && (
               <div className="flex items-start gap-2 p-3 rounded-lg bg-amber-50 dark:bg-amber-900/20 text-amber-700 dark:text-amber-300 text-xs">
-                <span className="text-base">💡</span>
+                <span aria-hidden="true" className="text-base">💡</span>
                 <span>{t('transactions:form.transferHint.use', 'Use')} <strong>{t('transactions:form.types.transfer', 'Transfer')}</strong> {t('transactions:form.transferHint.mid', 'to move cash between wallets. To buy or sell assets, use the')} <strong>{t('transactions:form.types.investment', 'Investment')}</strong> {t('transactions:form.transferHint.end', 'tab instead.')}</span>
               </div>
             )}
@@ -430,7 +435,12 @@ export function CashFields({ idPrefix: p, formData, errors, onChange, onTagsChan
                 <span id={`${p}-group-${side}`} className="min-w-16 text-sm font-medium text-gray-700 dark:text-gray-300">
                   {side === 'fromWallet' ? t('transactions:form.fromWallet', 'From Wallet') : t('transactions:form.toWallet', 'To Wallet')}
                 </span>
-                <div role="group" aria-labelledby={`${p}-group-${side}`} className={SEGMENTED}>
+                <div
+                  role="group"
+                  aria-labelledby={`${p}-group-${side}`}
+                  aria-describedby={errors.transfer ? `${p}-transfer-error` : undefined}
+                  className={SEGMENTED}
+                >
                   {WALLET_TYPES.map((wallet) => {
                     const isSelected = formData[side] === wallet.value;
                     return (
@@ -456,7 +466,7 @@ export function CashFields({ idPrefix: p, formData, errors, onChange, onTagsChan
                 </div>
               </div>
             ))}
-            {errors.transfer && <p role="alert" className="text-sm text-error-700 dark:text-error-500 text-center">{errors.transfer}</p>}
+            {errors.transfer && <p id={`${p}-transfer-error`} role="alert" className="text-sm text-error-700 dark:text-error-500 text-center">{errors.transfer}</p>}
           </div>
         )}
       </div>
@@ -552,6 +562,48 @@ export function CashFields({ idPrefix: p, formData, errors, onChange, onTagsChan
         </div>
       )}
     </>
+  );
+}
+
+/** "YYYY-MM-DD" for the day `offset` days from today, in local time. */
+function dayFromToday(offset: number): string {
+  const d = new Date();
+  d.setDate(d.getDate() + offset);
+  return localDateString(d);
+}
+
+/**
+ * Today / Yesterday under the date: most entries are one or the other, and the
+ * native picker is a round trip for either. Local days, never toISOString(),
+ * which is the previous day in Taipei until 08:00.
+ */
+function DateShortcuts({ value, onPick }: { value: string; onPick: (day: string) => void }) {
+  const { t } = useTranslation(['transactions']);
+  const days = [
+    { offset: 0, label: t('transactions:form.today', 'Today') },
+    { offset: -1, label: t('transactions:form.yesterday', 'Yesterday') },
+  ];
+  return (
+    <div className="mt-1.5 flex gap-1.5">
+      {days.map(({ offset, label }) => {
+        const day = dayFromToday(offset);
+        const on = value === day;
+        return (
+          <button
+            key={offset}
+            type="button"
+            aria-pressed={on}
+            onClick={() => onPick(day)}
+            className={cn(
+              'flex-1 rounded-md px-1.5 min-h-11 lg:min-h-8 text-xs font-medium transition-colors motion-reduce:transition-none touch-manipulation focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-500',
+              on ? 'bg-primary-50 dark:bg-primary-900/40 text-primary-700 dark:text-primary-300' : 'bg-gray-100 dark:bg-gray-700/60 text-gray-600 dark:text-gray-300 hover:text-gray-900 dark:hover:text-white'
+            )}
+          >
+            {label}
+          </button>
+        );
+      })}
+    </div>
   );
 }
 

@@ -115,9 +115,11 @@ describe('CashFields — guarding against easy mistakes', () => {
     expect(screen.getByRole('link', { name: /Add one on Loans/ })).toHaveAttribute('href', '/loans');
   });
 
-  it('shows a category it does not list as a pressed chip of its own', () => {
+  it('shows a category it does not list as its own chip, which is not a control', () => {
     renderFields(form({ category: 'Insurance' }));
-    expect(screen.getByRole('button', { name: /Insurance/ })).toHaveAttribute('aria-pressed', 'true');
+    // Shown, so the row reads as what it is; not a toggle, since it does nothing when pressed.
+    expect(screen.getByText('Insurance')).toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: /Insurance/ })).not.toBeInTheDocument();
   });
 
   it('keeps the two sides of a transfer different: picking From sets To to the other wallet', async () => {

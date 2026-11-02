@@ -86,6 +86,8 @@ def make_mock_transaction(
     t.receipt_data = None
     t.category_obj = None
     t.recurring_transaction_id = None
+    # Not the cash side of a holding (those refuse delete and money edits).
+    t.holding_id = None
     t.created_at = datetime.now(timezone.utc)
     t.updated_at = datetime.now(timezone.utc)
     return t
@@ -1018,6 +1020,8 @@ def _make_loan_expense(loan_id=None, amount="100.00", principal=None):
     # A loan expense, not a transfer leg: a bare MagicMock attribute is truthy and
     # would send delete_transaction looking for the transfer's other leg.
     t.transfer_group_id = None
+    # Nor a holding's cash leg, which refuses delete and money edits.
+    t.holding_id = None
     return t
 
 
@@ -1267,3 +1271,135 @@ class TestOneCommitPerRequest:
         assert t_repo.soft_delete.await_args.kwargs == {"commit": False}
         t_repo.db.commit.assert_not_awaited()
         t_repo.db.rollback.assert_awaited_once()
+
+
+@pytest.mark.unit
+class TestTransactionResponseHoldingLink:
+    """The edit form saves a buy through its holding, so the link must reach it."""
+
+    def test_holding_id_is_serialized_as_a_string(self):
+        from app.modules.transactions.schemas import TransactionResponse
+
+        holding = uuid4()
+        t = make_mock_transaction()
+        t.transfer_group_id = None
+        t.loan_id = None
+        t.holding_id = holding
+        response = TransactionResponse.model_validate(t)
+        assert response.holding_id == str(holding)
+
+    def test_holding_id_is_null_for_ordinary_spending(self):
+        from app.modules.transactions.schemas import TransactionResponse
+
+        t = make_mock_transaction()
+        t.transfer_group_id = None
+        t.loan_id = None
+        assert TransactionResponse.model_validate(t).holding_id is None
+
+
+@pytest.mark.unit
+class TestHoldingLinkedRowsFollowTheirHolding:
+    """A holding's cash leg changes and goes only through the holding."""
+
+    def _linked(self, **kw):
+        t = make_mock_transaction(**kw)
+        t.holding_id = uuid4()
+        t.loan_id = None
+        t.transfer_group_id = None
+        t.principal_portion = None
+        return t
+
+    @pytest.mark.asyncio
+    async def test_delete_is_refused(self):
+        from app.core.exceptions import BusinessLogicException
+
+        linked = self._linked()
+        t_repo = MagicMock(spec=TransactionRepository)
+        t_repo.get_by_id = AsyncMock(return_value=linked)
+        t_repo.soft_delete = AsyncMock(return_value=True)
+        svc = make_service(transaction_repo=t_repo)
+        svc._lock_for_loan_edit = AsyncMock(return_value=linked)
+
+        with pytest.raises(BusinessLogicException):
+            await svc.delete_transaction(str(linked.id), "user")
+        t_repo.soft_delete.assert_not_awaited()
+
+    @pytest.mark.asyncio
+    async def test_an_amount_change_is_refused(self):
+        from app.core.exceptions import BusinessLogicException
+        from app.modules.transactions.schemas import TransactionUpdate
+
+        linked = self._linked(amount=Decimal("3000"))
+        t_repo = MagicMock(spec=TransactionRepository)
+        t_repo.get_by_id = AsyncMock(return_value=linked)
+        t_repo.update = AsyncMock(return_value=linked)
+        svc = make_service(transaction_repo=t_repo)
+
+        with pytest.raises(BusinessLogicException) as err:
+            await svc.update_transaction(str(linked.id), "user", TransactionUpdate(amount=Decimal("3500")))
+        assert err.value.details == {"fields": ["amount"]}
+        t_repo.update.assert_not_awaited()
+
+    @pytest.mark.asyncio
+    async def test_its_own_fields_and_unchanged_resends_save(self):
+        from app.modules.transactions.schemas import TransactionUpdate
+
+        linked = self._linked(amount=Decimal("3000"))
+        t_repo = MagicMock(spec=TransactionRepository)
+        t_repo.get_by_id = AsyncMock(return_value=linked)
+        t_repo.update = AsyncMock(return_value=linked)
+        svc = make_service(transaction_repo=t_repo)
+        svc._lock_for_loan_edit = AsyncMock(return_value=linked)
+
+        await svc.update_transaction(
+            str(linked.id), "user",
+            TransactionUpdate(amount=Decimal("3000.00"), tags=["etf"], description="Monthly buy"),
+        )
+        t_repo.update.assert_awaited_once()
+
+    @pytest.mark.asyncio
+    async def test_sole_purchase_follows_the_holding_update_rule(self):
+        row = self._linked()
+        other = self._linked()
+        t_repo = MagicMock(spec=TransactionRepository)
+        t_repo.is_sole_purchase_leg = TransactionRepository.is_sole_purchase_leg
+        svc = make_service(transaction_repo=t_repo)
+
+        t_repo.holding_purchase_legs = AsyncMock(return_value=([row], [row], []))
+        assert await svc.holding_sole_purchase(row) is True
+        # Folded into a lot with another buy, or with cash withdrawn against it: no.
+        t_repo.holding_purchase_legs = AsyncMock(return_value=([row, other], [row, other], []))
+        assert await svc.holding_sole_purchase(row) is False
+        t_repo.holding_purchase_legs = AsyncMock(return_value=([row, other], [row], [other]))
+        assert await svc.holding_sole_purchase(row) is False
+
+        unlinked = make_mock_transaction()
+        assert await svc.holding_sole_purchase(unlinked) is None
+
+
+@pytest.mark.unit
+class TestSameValueForHoldingLinkedResends:
+    """An unchanged value resent in another form is not a change to the leg."""
+
+    def test_days_compare_in_business_time(self):
+        from datetime import date
+        same = TransactionService._same_value
+        stored = date(2026, 3, 2)
+        assert same(stored, "2026-03-02")
+        # 20:00 UTC on 03-01 is 04:00 on 03-02 in Taipei: the same business day.
+        assert same(stored, "2026-03-01T20:00:00+00:00")
+        assert same(stored, "2026-03-01T20:00:00Z")
+        assert not same(stored, "2026-03-01")
+        assert not same(stored, "2026-03-01T10:00:00+00:00")
+
+    def test_codes_and_enums_compare_in_any_case(self):
+        same = TransactionService._same_value
+        assert same("TWD", "twd")
+        assert same(TransactionType.EXPENSE, TransactionType.EXPENSE.value.upper())
+        assert not same(TransactionType.EXPENSE, TransactionType.INCOME.value)
+        assert not same("TWD", "USD")
+
+    def test_amounts_compare_as_decimals(self):
+        same = TransactionService._same_value
+        assert same(Decimal("3000"), "3000.00")
+        assert not same(Decimal("3000"), 3000.5)

@@ -11,6 +11,7 @@ import {
   ArrowDownTrayIcon,
 } from '@heroicons/react/24/outline';
 import { useIsMobile } from '@/hooks/useMediaQuery';
+import { useAddHref } from '@/lib/transactions/returnTo';
 import { MobileTransactions } from '@/components/transactions/MobileTransactions';
 import { Button } from '@/components/ui/Button';
 import { EmptyState } from '@/components/ui/EmptyState';
@@ -103,6 +104,8 @@ function TransactionPager({
 
 function DesktopTransactionsPage() {
   const { t } = useTranslation(['common', 'transactions']);
+  // Saving a new entry comes back to this view, filters and all.
+  const addHref = useAddHref();
   const { getModeMessage, isDemo } = useModeAwareUI();
 
   const {
@@ -265,7 +268,7 @@ function DesktopTransactionsPage() {
           {t('transactions:scan.title')}
         </Link>
         <Link
-          href="/transactions/add"
+          href={addHref}
           className={TOP_BAR_PRIMARY}
         >
           <PlusIcon className="w-4 h-4" />
@@ -288,7 +291,7 @@ function DesktopTransactionsPage() {
                         </Link>
                     </Button>
                     <Button size="sm" variant="primary" className="gap-1.5 flex-1 sm:flex-none justify-center" asChild>
-                        <Link href="/transactions/add">
+                        <Link href={addHref}>
                             <PlusIcon className="w-4 h-4 flex-shrink-0" />
                             <span>{t('common:transactions.addTransaction')}</span>
                         </Link>
@@ -418,7 +421,7 @@ function DesktopTransactionsPage() {
                         {t('common:transactions.clearAllFilters')}
                       </Button>
                     )}
-                    <Link href="/transactions/add">
+                    <Link href={addHref}>
                       <Button type="button">{t('common:transactions.addTransaction')}</Button>
                     </Link>
                   </>
