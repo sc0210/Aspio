@@ -462,7 +462,8 @@
     "investHoldingMissing": "交易已更新。找不到對應持股，可能已從投資組合移除。",
     "investSyncFailed": "交易已更新，但無法同步持股，請手動更新。",
     "savedAddNext": "已儲存，請輸入下一筆。",
-    "demoSaved": "示範模式：本次工作階段已儲存，註冊後才能保留真實資料"
+    "demoSaved": "示範模式：本次工作階段已儲存，註冊後才能保留真實資料",
+    "investTagsFailed": "持倉已儲存，但標籤沒有儲存成功。請再儲存一次。"
   },
   "types": {
     "expense": "支出",

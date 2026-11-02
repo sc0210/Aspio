@@ -515,17 +515,19 @@ export default function EditTransactionPage() {
             return;
           }
         }
+        // The holding (and its cash leg) may have changed already: refresh before
+        // anything else can fail, so the lists never show the old figures.
+        await queryClient.invalidateQueries({ queryKey: [QUERY_KEYS.TRANSACTIONS] });
+        await queryClient.invalidateQueries({ queryKey: [QUERY_KEYS.PORTFOLIO] });
+        invalidateDashboardData(queryClient);
         // Tags live on the transaction only.
         if (tagsChanged()) {
           const tagsResp = await transactionService.updateTransaction(transactionId, { tags: formData.tags });
           if (!tagsResp.success) {
-            toast.error(tagsResp.message || t('transactions:toast.updateFailed'));
+            toast.error(t('transactions:toast.investTagsFailed', 'The holding was saved, but the tags were not. Try saving again.'));
             return;
           }
         }
-        await queryClient.invalidateQueries({ queryKey: [QUERY_KEYS.TRANSACTIONS] });
-        await queryClient.invalidateQueries({ queryKey: [QUERY_KEYS.PORTFOLIO] });
-        invalidateDashboardData(queryClient);
         toast.success(t('transactions:toast.investSynced', 'Transaction and portfolio holding updated'));
         router.push(returnTo);
         return;

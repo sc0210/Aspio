@@ -462,7 +462,8 @@
     "investHoldingMissing": "Transaction updated. Holding not found — it may have been removed from Portfolio.",
     "investSyncFailed": "Transaction updated. Could not sync portfolio holding — update it manually.",
     "savedAddNext": "Saved. Add the next one.",
-    "demoSaved": "Demo: saved for this session — sign up to keep real data"
+    "demoSaved": "Demo: saved for this session — sign up to keep real data",
+    "investTagsFailed": "The holding was saved, but the tags were not. Try saving again."
   },
   "types": {
     "expense": "Expense",

@@ -94,6 +94,7 @@ function AddTransactionForm() {
       router.push(returnTo);
       return;
     }
+    if (formData.loanId) setLoansReload(n => n + 1);
     setFormData(prev => ({
       ...prev,
       amount: '',
@@ -128,6 +129,8 @@ function AddTransactionForm() {
       .finally(() => setHoldingsLoading(false));
   }, [formData.type, investSide, isDemo, holdingsReload]);
 
+  // Bumped after "add another" on a loan payment, so the next entry sees the new balance.
+  const [loansReload, setLoansReload] = useState(0);
   const [activeLoans, setActiveLoans] = useState<{ id: string; name: string; current_balance: number; currency: string }[]>([]);
   useEffect(() => {
     if (isDemo) return;
@@ -142,7 +145,7 @@ function AddTransactionForm() {
         }
       })
       .catch(() => {});
-  }, [isDemo]);
+  }, [isDemo, loansReload]);
 
   // Default the currency selectors to the user's account preference (falls
   // back to 'TWD' if unset/unauthenticated) instead of always starting on
