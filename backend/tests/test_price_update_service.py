@@ -981,3 +981,31 @@ class TestSharedQuotes:
         await async_session.refresh(lot)
         assert lot.current_price == Decimal("123")
         assert lot.total_value == lot.quantity * Decimal("123")
+
+
+class TestFanOutWritesOnlyWhatIsMissing:
+    @pytest.mark.asyncio
+    async def test_a_lot_that_already_has_the_quote_is_not_rewritten(self, async_session):
+        now = datetime.now(ZoneInfo("UTC"))
+        _, (lot,) = await _seed_lots(async_session, [dict(symbol="0050", price="123", stamp=now)])
+        service = PriceUpdateService(async_session)
+        await service.store_quote("0050", Decimal("123"), None, now, market="TW", currency="TWD")
+        await async_session.commit()
+        written = await service.apply_quote("0050", Decimal("123"), None, now, store=False)
+        assert written == 0
+
+    @pytest.mark.asyncio
+    async def test_a_fan_out_only_run_still_syncs_portfolio_totals(self, async_session):
+        from app.modules.portfolio.services import PortfolioService
+        await _seed_lots(async_session, [dict(symbol="0050", price="100")])
+        service = PriceUpdateService(async_session)
+        await service.store_quote("0050", Decimal("123"), None, datetime.now(ZoneInfo("UTC")),
+                                  market="TW", currency="TWD")
+        await async_session.commit()
+
+        with patch.object(service.market_hours_manager, "should_update_price", return_value=False), \
+             patch.object(PortfolioService, "_update_portfolio_totals", new_callable=AsyncMock) as totals:
+            stats = await service.update_all_symbols_prices()
+
+        assert stats["updated"] == 0
+        assert totals.await_count == 1 and stats["portfolios_synced"] == 1

@@ -291,7 +291,12 @@ class PriceUpdateService:
             .where(
                 or_(
                     PortfolioHolding.last_price_update_at.is_(None),
-                    PortfolioHolding.last_price_update_at <= quote_time,
+                    # A new quote rewrites lots stamped at or before it; fanning a
+                    # stored one out touches only lots that do not have it yet, so a
+                    # scheduler run does not rewrite every lot of every fresh symbol.
+                    (PortfolioHolding.last_price_update_at <= quote_time)
+                    if store
+                    else (PortfolioHolding.last_price_update_at < quote_time),
                 )
             )
             .values(
@@ -599,6 +604,7 @@ class PriceUpdateService:
         # stalest lot decides. With MAX, one user's refresh at 13:45 (or a lot
         # added a minute ago) marked the symbol fresh and the job skipped it for
         # every other user until the next session.
+        fanned_symbols: set = set()
         if force:
             to_fetch = list(symbol_market_pairs)
         else:
@@ -632,12 +638,15 @@ class PriceUpdateService:
                     to_fetch.append((symbol, market))
                     continue
                 stats["cached"] += 1
-                if quote is not None:
+                oldest_lot = last_updates.get(symbol)
+                if quote is not None and (oldest_lot is None or oldest_lot < quote.quote_time):
                     try:
-                        await self.apply_quote(
+                        written = await self.apply_quote(
                             symbol, quote.price, quote.previous_close, quote.quote_time, store=False,
                         )
                         await self.session.commit()
+                        if written:
+                            fanned_symbols.add(symbol)
                     except Exception as e:
                         await self.session.rollback()
                         logger.error(f"Failed to fan out the stored quote for {symbol}: {e}")
@@ -720,10 +729,11 @@ class PriceUpdateService:
         # raw `SUM(total_value)` across currencies — NT$1,000,000 and US$10,000
         # stored as "1,010,000" — which then overwrote the converted figure the
         # LINE bot, dividend yields, rebalancing and admin read.
-        if stats["updated"] > 0:
+        # Lots priced by a fetch or by a fanned-out stored quote both move totals.
+        if stats["updated"] > 0 or fanned_symbols:
             from .services import PortfolioService
 
-            updated_symbols = {s for s, _ in to_fetch if s in quotes}
+            updated_symbols = {s for s, _ in to_fetch if s in quotes} | fanned_symbols
             affected = (await self.session.execute(
                 select(PortfolioHolding.portfolio_id, PortfolioHolding.user_id)
                 .where(PortfolioHolding.is_active == True)  # noqa: E712
