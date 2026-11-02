@@ -487,7 +487,10 @@ class PriceUpdateService:
             ]
 
         if not symbol_market_pairs:
-            return {"total_symbols": 0, "updated": 0, "cached": 0, "failed": 0, "users": 0}
+            return {
+                "total_symbols": 0, "updated": 0, "cached": 0, "failed": 0, "users": 0,
+                "portfolios_synced": 0, "portfolios_failed": 0,
+            }
 
         stats = {
             "total_symbols": len(symbol_market_pairs), "updated": 0, "cached": 0, "failed": 0,
