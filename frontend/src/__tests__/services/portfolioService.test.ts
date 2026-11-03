@@ -105,8 +105,8 @@ describe('PortfolioService — day change on price refresh', () => {
     const result = await portfolioService.getPortfolio({}, { updatePrices: true });
 
     expect(result.data!.todayGainLoss).toBeCloseTo(210);
-    // 210 / 1210 total value
-    expect(result.data!.todayGainLossPercentage).toBeCloseTo(17.3554, 3);
+    // 210 on the value at the previous close (1,000), not on today's 1,210.
+    expect(result.data!.todayGainLossPercentage).toBeCloseTo(21, 3);
   });
 
   it('leaves day change undefined when the backend sends no previous close', async () => {
@@ -191,7 +191,9 @@ describe("PortfolioService — today's gain across currencies", () => {
         // 1,000 × 111 = NT$111,000, plus 100 × US$110 = US$11,000 → NT$330,000.
         expect(result.data!.totalValue).toBeCloseTo(441_000);
         expect(result.data!.todayGainLoss).toBeCloseTo(31_000);
-        expect(result.data!.todayGainLossPercentage).toBeCloseTo((31_000 / 441_000) * 100, 4);
+        // Against the value at the previous close, both sides in TWD:
+        // 1,000 × 110 + 100 × US$100 × 30 = NT$410,000.
+        expect(result.data!.todayGainLossPercentage).toBeCloseTo((31_000 / 410_000) * 100, 4);
 
         // The cost basis converts with it, or the gain measured against it is fiction:
         // 1,000 × 100 = NT$100,000, plus 100 × US$100 = US$10,000 → NT$300,000.
@@ -205,7 +207,8 @@ describe("PortfolioService — today's gain across currencies", () => {
 
         const result = await portfolioService.getPortfolio();
 
-        // 31,000 of a 1,000,000 TWD portfolio.
-        expect(result.data!.todayGainLossPercentage).toBeCloseTo(3.1, 4);
+        // 31,000 on the TWD value of the same holdings at the previous close
+        // (NT$410,000): the stored total is not the base of a day's move.
+        expect(result.data!.todayGainLossPercentage).toBeCloseTo((31_000 / 410_000) * 100, 4);
     });
 });

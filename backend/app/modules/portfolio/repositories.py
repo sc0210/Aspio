@@ -11,7 +11,7 @@ from decimal import Decimal
 from typing import Any, Dict, List, Optional, Tuple
 from uuid import UUID
 
-from sqlalchemy import and_, desc, func, select, update
+from sqlalchemy import and_, desc, func, select, text, update
 from sqlalchemy.dialects.postgresql import insert as pg_insert
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
@@ -27,6 +27,28 @@ from .models import (
 )
 
 logger = logging.getLogger(__name__)
+
+
+async def lock_position(session: AsyncSession, user_id, symbol: str) -> None:
+    """Serialise every write to one user's position in one symbol until commit.
+
+    Sell already locks its lots (`get_sellable_lots`), but adding to a lot, editing
+    one and deleting one read without a lock, so each could interleave with a sell:
+    an aggregate buy wrote back a quantity it read before the sale (resurrecting
+    sold shares whose proceeds were already in the Life Wallet), and a delete that
+    raced a full sale refunded the purchase on top of the proceeds.
+
+    A transaction-scoped advisory lock per (user, symbol), taken first by every
+    writer, gives them one order and also covers the case no row lock can: two
+    first buys racing to create a lot that does not exist yet. Released at commit
+    or rollback. A no-op off Postgres (the SQLite unit tests).
+    """
+    if session.bind is None or session.bind.dialect.name != "postgresql":
+        return
+    await session.execute(
+        text("SELECT pg_advisory_xact_lock(hashtextextended(:key, 0))"),
+        {"key": f"position:{user_id}:{(symbol or '').upper()}"},
+    )
 
 
 class PortfolioRepository:
@@ -344,6 +366,32 @@ class HoldingRepository:
         result = await self.session.execute(stmt)
         return result.scalar_one_or_none()
 
+    async def get_by_id_locked(
+        self, holding_id: UUID, user_id: UUID
+    ) -> Optional[PortfolioHolding]:
+        """The holding, read again after taking its position lock (see lock_position).
+
+        None when it is gone — including when a request that held the lock first
+        sold it out or deleted it, so the caller answers 404 rather than acting on
+        the copy it read before the wait.
+        """
+        first = await self.get_by_id(holding_id, user_id)
+        if first is None:
+            return None
+        await lock_position(self.session, user_id, first.symbol)
+        stmt = (
+            select(PortfolioHolding)
+            .where(
+                and_(
+                    PortfolioHolding.id == holding_id,
+                    PortfolioHolding.user_id == user_id,
+                    PortfolioHolding.is_active == True,  # noqa: E712
+                )
+            )
+            .execution_options(populate_existing=True)
+        )
+        return (await self.session.execute(stmt)).scalar_one_or_none()
+
     async def get_by_portfolio_symbol(
         self, portfolio_id: UUID, symbol: str, user_id: UUID
     ) -> Optional[PortfolioHolding]:
@@ -360,6 +408,7 @@ class HoldingRepository:
             )
             .order_by(desc(PortfolioHolding.purchase_date))
             .limit(1)  # Only get the first (most recent) lot
+            .execution_options(populate_existing=True)
         )
 
         result = await self.session.execute(stmt)
@@ -380,6 +429,7 @@ class HoldingRepository:
                 )
             )
             .order_by(desc(PortfolioHolding.purchase_date))
+            .execution_options(populate_existing=True)
         )
 
         result = await self.session.execute(stmt)
@@ -511,6 +561,9 @@ class HoldingRepository:
 
             symbol = holding_data["symbol"].upper()
 
+            # Before any read: the lots read below must be the ones the write lands on.
+            await lock_position(self.session, user_id, symbol)
+
             # Get new purchase details
             new_quantity = holding_data.get("quantity", Decimal("0"))
             new_cost = holding_data.get("average_cost", Decimal("0"))
@@ -531,7 +584,11 @@ class HoldingRepository:
                 # Compare as UTC: a driver may hand back a naive datetime for a
                 # timezone-aware column, and naive != aware even at the same instant.
                 existing = next(
-                    (lot for lot in all_lots if to_utc(lot.purchase_date) == to_utc(purchase_date)),
+                    (
+                        lot for lot in all_lots
+                        if to_utc(lot.purchase_date) == to_utc(purchase_date)
+                        and self._same_position(lot, holding_data)
+                    ),
                     None,
                 )
 
@@ -549,6 +606,8 @@ class HoldingRepository:
                 existing = await self.get_by_portfolio_symbol(
                     portfolio_id, symbol, user_id
                 )
+                if existing is not None and not self._same_position(existing, holding_data):
+                    existing = None
 
             # ⚡ LOT TRACKING: Only aggregate if we found a matching lot
             should_aggregate = aggregate and existing is not None
@@ -580,9 +639,9 @@ class HoldingRepository:
                 existing.average_cost = weighted_avg_cost
                 existing.total_cost = total_cost_sum
 
-                # Update current price if provided, otherwise keep existing
-                if "current_price" in holding_data:
-                    existing.current_price = holding_data["current_price"]
+                # The lot keeps its market price. A buy's own price is what was
+                # paid, not a quote: copying it over (and stamping it fresh) made
+                # the whole lot read at the purchase price until the next refresh.
 
                 # Recalculate derived fields
                 existing.total_value = existing.quantity * existing.current_price
@@ -769,6 +828,21 @@ class HoldingRepository:
             await self.session.rollback()
             raise
 
+    @staticmethod
+    def _same_position(lot: PortfolioHolding, holding_data: Dict[str, Any]) -> bool:
+        """A buy merges only into a lot of the same currency and wallet.
+
+        Otherwise the weighted average mixes two units (a USD lot and a TWD buy of
+        the same code), or moves money between the Portfolio and Emergency wallets.
+        """
+        def norm(value) -> str:
+            return str(getattr(value, "value", value) or "").upper()
+
+        return (
+            norm(lot.currency) == norm(holding_data.get("currency") or lot.currency)
+            and norm(lot.wallet_type) == norm(holding_data.get("wallet_type") or lot.wallet_type)
+        )
+
     async def delete_holding(self, holding_id: UUID, user_id: UUID) -> bool:
         """Soft delete holding (mark as inactive)"""
         stmt = (
@@ -777,6 +851,8 @@ class HoldingRepository:
                 and_(
                     PortfolioHolding.id == holding_id,
                     PortfolioHolding.user_id == user_id,
+                    # Only a lot still active: one a concurrent sale closed is gone.
+                    PortfolioHolding.is_active == True,  # noqa: E712
                 )
             )
             .values(is_active=False, updated_at=datetime.now(timezone.utc))

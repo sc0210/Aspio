@@ -1,3 +1,4 @@
+import { todayChange } from '@/utils/todayChange';
 import { apiClient } from '@/lib/api-client';
 import { getPublicApiUrl } from '@/lib/api-url';
 import { getSession } from 'next-auth/react';
@@ -162,17 +163,8 @@ class PortfolioService {
         // before being added up: a US$823 day on the US holdings was going into the
         // total as NT$823, understating a NT$82.7k day as NT$57.3k and leaving this
         // card disagreeing with the dashboard's P&L calendar, which converts.
-        const holdingsWithDayChange = normalizedHoldings.filter((h: PortfolioHolding) => h.dayChange != null);
-        const todayGainLoss = holdingsWithDayChange.length > 0
-          ? holdingsWithDayChange.reduce(
-              (sum: number, h: PortfolioHolding) => sum + toTWD(h.dayChange ?? 0, h.currency || 'TWD'),
-              0,
-            )
-          : 0;
         const totalValue = portfolioData.totalValue || portfolioData.total_value || 0;
-        const todayGainLossPercentage = totalValue > 0 && holdingsWithDayChange.length > 0
-          ? (todayGainLoss / totalValue) * 100
-          : 0;
+        const { gain: todayGainLoss, percentage: todayGainLossPercentage } = todayChange(normalizedHoldings);
 
         // Derive cashWallet from cash-type holdings for the Available Cash stat card
         const cashWallet = normalizedHoldings
@@ -932,14 +924,9 @@ class PortfolioService {
     portfolio.lastPriceUpdateAt = new Date();
 
     // Today's gain, converted the same way.
-    const holdingsWithDayChange = portfolio.holdings.filter(h => h.dayChange != null);
-    portfolio.todayGainLoss = holdingsWithDayChange.reduce(
-      (sum, h) => sum + toTWD(h.dayChange ?? 0, h.currency || 'TWD'),
-      0,
-    );
-    portfolio.todayGainLossPercentage = portfolio.totalValue > 0 && holdingsWithDayChange.length > 0
-      ? (portfolio.todayGainLoss / portfolio.totalValue) * 100
-      : 0;
+    const today = todayChange(portfolio.holdings);
+    portfolio.todayGainLoss = today.gain;
+    portfolio.todayGainLossPercentage = today.percentage;
 
     // Rebuild cashWallet so the Available Cash stat card stays in sync
     const cashEntries = portfolio.holdings
@@ -1003,6 +990,8 @@ class PortfolioService {
       dayChangePercentage,
       purchaseDate: (holding.purchaseDate ?? holding.purchase_date) as string | undefined,
       manuallyPriced: Boolean(holding.manuallyPriced ?? holding.manually_priced),
+      marketState: (holding.marketState ?? holding.market_state) as PortfolioHolding['marketState'],
+      priceSession: (holding.priceSession ?? holding.price_session ?? undefined) as string | undefined,
       lastUpdated: new Date((holding.lastUpdated ?? holding.last_updated ?? holding.last_price_update_at ?? Date.now()) as string | number),
       priceHistory: (holding.priceHistory ?? holding.price_history) as PortfolioHolding['priceHistory'],
       sparklineData: sparklineData as PortfolioHolding['sparklineData'],

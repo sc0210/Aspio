@@ -329,6 +329,70 @@ async def get_daily_performance(
         if has_data_gaps:
             logger.info(f"⚠️ Data gaps detected for {len(gap_symbols)} symbols: {gap_symbols}")
 
+        # ── FX at each day's rate ─────────────────────────────────────────────
+        # Every past day used to be converted at today's live rate, so FX moves
+        # never showed on the chart and it disagreed with TWR, which already uses
+        # the stored daily series. Value converts at the day's close (carried over
+        # weekends), cost at the purchase day's (what was paid); a pair with no
+        # stored series falls back to the live rate, fetched once per currency.
+        from bisect import bisect_right
+        from ..performance_tracker import FX_SERIES
+
+        fx_from = min(
+            fetch_start_date,
+            (earliest_purchase - timedelta(days=10)) if earliest_purchase else fetch_start_date,
+        )
+        fx_raw = await hist_price_service.get_batch_price_range(
+            symbols=sorted(set(FX_SERIES.values())), start_date=fx_from, end_date=end_date
+        ) if base_currency.upper() in ("TWD", "USD") else {}
+        fx_closes: Dict[str, tuple] = {}
+        for fx_symbol, by_day in (fx_raw or {}).items():
+            points = sorted(
+                (date.fromisoformat(d), Decimal(str(v["close"])))
+                for d, v in by_day.items() if v and v.get("close")
+            )
+            fx_closes[fx_symbol] = ([d for d, _ in points], [c for _, c in points])
+        live_fx: Dict[str, Optional[Decimal]] = {}
+
+        def _series_twd_per(currency: str, day) -> Optional[Decimal]:
+            # Today is converted at the live rate, as the page's own total is: the
+            # series has no close for today yet, and yesterday's would make the
+            # chart's last point disagree with the headline whenever FX moved.
+            if day is None or day >= end_date:
+                return None
+            dates_closes = fx_closes.get(FX_SERIES.get(currency, ""))
+            if not dates_closes:
+                return None
+            dates, closes = dates_closes
+            i = bisect_right(dates, day) - 1
+            # A weekend or holiday carries the last close; a longer gap is a
+            # missing series, not a market at rest.
+            if i < 0 or (day - dates[i]).days > 7:
+                return None
+            return closes[i]
+
+        async def fx_rate(currency: str, day) -> Optional[Decimal]:
+            cur, base = (currency or "USD").upper(), base_currency.upper()
+            if cur == base:
+                return Decimal("1")
+            rate = None
+            if base == "TWD":
+                rate = _series_twd_per(cur, day)
+            elif cur == "TWD":
+                twd_per_base = _series_twd_per(base, day)
+                rate = (Decimal("1") / twd_per_base) if twd_per_base else None
+            if rate:
+                return rate
+            if cur not in live_fx:
+                try:
+                    live_fx[cur] = await exchange_service.get_exchange_rate(
+                        from_currency=cur, to_currency=base
+                    )
+                except Exception as e:
+                    logger.error(f"Error fetching {cur}->{base} rate: {e}")
+                    live_fx[cur] = None
+            return live_fx[cur]
+
         # Calculate portfolio value for each day
         daily_data = []
 
@@ -427,28 +491,22 @@ async def get_daily_performance(
                     # Calculate value in holding's currency
                     holding_value = Decimal(str(holding.quantity)) * price
 
-                    # Convert to base currency if needed
+                    # Convert to base currency at THIS day's rate.
                     holding_currency = holding.currency if holding.currency else "USD"
                     if holding_currency != base_currency:
-                        try:
-                            exchange_rate = await exchange_service.get_exchange_rate(
-                                from_currency=holding_currency,
-                                to_currency=base_currency,
+                        exchange_rate = await fx_rate(holding_currency, current_day)
+                        if exchange_rate:
+                            holding_value = holding_value * exchange_rate
+                        else:
+                            logger.warning(
+                                f"No exchange rate available for {holding_currency} -> {base_currency}, using original value"
                             )
-                            if exchange_rate:
-                                holding_value = holding_value * exchange_rate
-                                logger.debug(
-                                    f"Converted {holding.symbol} from {holding_currency} to {base_currency}: rate={exchange_rate}"
-                                )
-                            else:
-                                logger.warning(
-                                    f"No exchange rate available for {holding_currency} -> {base_currency}, using original value"
-                                )
-                        except Exception as e:
-                            logger.error(
-                                f"Error converting currency for {holding.symbol}: {e}"
-                            )
-                            # Continue with original value if conversion fails
+                    # The rate the purchase was made at: cost does not move with FX.
+                    purchase_rate = (
+                        await fx_rate(holding_currency, purchase_date)
+                        if holding_currency != base_currency
+                        else Decimal("1")
+                    )
 
                     daily_value += holding_value
 
@@ -457,17 +515,8 @@ async def get_daily_performance(
                         holding_cost = Decimal(str(holding.quantity)) * Decimal(
                             str(holding.average_cost)
                         )
-                        # Convert cost basis to base currency if needed
-                        if holding_currency != base_currency:
-                            try:
-                                cb_rate = await exchange_service.get_exchange_rate(
-                                    from_currency=holding_currency,
-                                    to_currency=base_currency,
-                                )
-                                if cb_rate:
-                                    holding_cost = holding_cost * cb_rate
-                            except Exception:
-                                pass  # Use unconverted cost if conversion fails
+                        if purchase_rate:
+                            holding_cost = holding_cost * purchase_rate
                         daily_cost_basis += holding_cost
 
                     # Track value of lots purchased TODAY (to exclude from change calculation)
@@ -484,21 +533,8 @@ async def get_daily_performance(
                             str(holding.average_cost)
                         )
 
-                        # Convert cost basis to base currency if needed
-                        if holding_currency != base_currency:
-                            try:
-                                exchange_rate = (
-                                    await exchange_service.get_exchange_rate(
-                                        from_currency=holding_currency,
-                                        to_currency=base_currency,
-                                    )
-                                )
-                                if exchange_rate:
-                                    cost_basis = cost_basis * exchange_rate
-                            except Exception as e:
-                                logger.error(
-                                    f"Error converting cost basis currency for {holding.symbol}: {e}"
-                                )
+                        if purchase_rate:
+                            cost_basis = cost_basis * purchase_rate
 
                         if holding.symbol in new_purchase_costs:
                             new_purchase_costs[holding.symbol] += cost_basis

@@ -13,6 +13,8 @@ import {
 } from '@heroicons/react/24/outline';
 import { cn } from '@/utils/cn';
 import { areRatesLive, formatCurrency, getUnconvertedCurrencies } from '@/utils/formatters';
+import { lastSessionWeekday } from '@/utils/marketStatus';
+import type { PortfolioHolding } from '@/shared/types';
 import { useSidebar } from '@/contexts/SidebarContext';
 import { Card } from '@/components/ui/Card';
 
@@ -26,6 +28,8 @@ interface PortfolioStatsProps {
     lastUpdated: Date;
     todayGainLoss?: number;
     todayGainLossPercentage?: number;
+    /** For the day-change label: "today" only when it is today's session. */
+    holdings?: PortfolioHolding[];
   };
   performance: {
     oneDay: number;
@@ -124,7 +128,9 @@ function useConversionNote(t: (key: string, opts?: Record<string, unknown>) => s
 export function PortfolioStats({ portfolio, performance, isValueVisible, apiStatus: _apiStatus = 'connected', showPerformancePeriods = false, onTodayChangeClick, onViewTrendClick, isLoading = false, riskMetrics, dividendIncome, realizedPnl }: PortfolioStatsProps) {
   // Get sidebar state to determine if we should show compact numbers
   const { sidebarCollapsed: _sidebarCollapsed } = useSidebar();
-  const { t } = useTranslation(['portfolio']);
+  const { t, i18n } = useTranslation(['portfolio']);
+  // On a Saturday the move shown is Friday's: say so instead of "today".
+  const lastSessionDay = lastSessionWeekday(portfolio.holdings ?? [], i18n?.language || 'en');
   const conversionNote = useConversionNote(t);
 
   const hasRiskMetrics = riskMetrics && (typeof riskMetrics.sharpeRatio === 'number' || typeof riskMetrics.beta === 'number');
@@ -382,7 +388,9 @@ export function PortfolioStats({ portfolio, performance, isValueVisible, apiStat
                       <p className={cn(
                         "text-xs md:text-sm font-semibold mb-1 uppercase tracking-wider",
                         todayChange >= 0 ? 'text-success-700 dark:text-success-300' : 'text-error-700 dark:text-error-300'
-                      )}>{ t('portfolio:stats.todayChange')}</p>
+                      )}>{lastSessionDay
+                        ? t('portfolio:stats.lastSessionChange', { day: lastSessionDay, defaultValue: 'Change · {{day}}' })
+                        : t('portfolio:stats.todayChange')}</p>
                       <div className="flex items-center gap-2 transition-all duration-200">
                         <p className={cn(
                           'text-xl sm:text-2xl md:text-2xl font-bold tabular-nums',

@@ -52,9 +52,14 @@ async def fetch_historical_prices(
         end_date = business_today()
         start_date = end_date - timedelta(days=days)
 
+        # The market is resolved from the symbol, not taken from the caller: the
+        # rows land in the shared history every user reads, and a TW code fetched
+        # as US replaced its series with the wrong provider's.
+        from ..market_data_service import resolve_symbol_market
+
         result = await historical_service.fetch_and_store_historical_data(
             symbol=symbol.upper(),
-            market=market.upper(),
+            market=resolve_symbol_market(symbol, {market.upper()}),
             start_date=start_date,
             end_date=end_date,
             force_refresh=force_refresh,

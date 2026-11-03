@@ -120,6 +120,7 @@ export function PortfolioStatsSection({
           lastUpdated: portfolioData?.lastPriceUpdateAt || new Date(),
           todayGainLoss: portfolioData?.todayGainLoss || 0,
           todayGainLossPercentage: portfolioData?.todayGainLossPercentage || 0,
+          holdings: portfolioData?.holdings,
         }}
         performance={analyticsData?.performance || {
           oneDay: 0,

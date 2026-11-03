@@ -261,3 +261,59 @@ async def test_a_weekend_series_ends_on_friday_and_claims_nothing_about_saturday
     # the flag, and the Saturday end_date points at is never emitted, so nothing in a
     # weekend series carries it.
     assert not any(p["provisional"] for p in points)
+
+
+# ── FinLab daily close as TW's "current" price ───────────────────────────────
+from datetime import date as _date, datetime as _dt
+from zoneinfo import ZoneInfo as _Zone
+
+import pytest as _pytest
+
+from app.modules.portfolio.market_data_service import finlab_close_is_current
+
+_TPE = _Zone("Asia/Taipei")
+
+
+@_pytest.mark.parametrize("now, bar, ok", [
+    # Mid-session the last daily bar is yesterday's: not a current price.
+    (_dt(2026, 5, 13, 11, 0, tzinfo=_TPE), _date(2026, 5, 12), False),
+    # After the bell + grace, yesterday's bar means today's is not published yet.
+    (_dt(2026, 5, 13, 14, 5, tzinfo=_TPE), _date(2026, 5, 12), False),
+    (_dt(2026, 5, 13, 14, 5, tzinfo=_TPE), _date(2026, 5, 13), True),
+    # Before the open, yesterday's close is the latest settled one.
+    (_dt(2026, 5, 13, 8, 0, tzinfo=_TPE), _date(2026, 5, 12), True),
+    # Weekend: Friday's close.
+    (_dt(2026, 5, 16, 12, 0, tzinfo=_TPE), _date(2026, 5, 15), True),
+    (_dt(2026, 5, 16, 12, 0, tzinfo=_TPE), _date(2026, 5, 14), False),
+    # A weekday holiday has no bar of its own: after 14:00 the latest bar is the
+    # day before, which is not "today's close", so the live quote is used.
+    (_dt(2026, 6, 19, 15, 0, tzinfo=_TPE), _date(2026, 6, 18), False),
+])
+def test_finlab_close_counts_only_for_the_latest_settled_session(now, bar, ok):
+    assert finlab_close_is_current(bar, now) is ok
+
+
+# ── What the portfolio page shows about a market and a price ─────────────────
+from app.utils.market_sessions import is_trading, price_session_date
+
+
+@_pytest.mark.parametrize("market, now, expected", [
+    ("TW", _dt(2026, 5, 13, 10, 0, tzinfo=_TPE), True),
+    ("TW", _dt(2026, 5, 13, 14, 0, tzinfo=_TPE), False),
+    ("TWSE", _dt(2026, 5, 16, 10, 0, tzinfo=_TPE), False),       # Saturday
+    ("NASDAQ", _dt(2026, 5, 13, 22, 0, tzinfo=_TPE), True),      # 10:00 New York
+    ("CRYPTO", _dt(2026, 5, 16, 3, 0, tzinfo=_TPE), True),
+    ("SG", _dt(2026, 5, 13, 10, 0, tzinfo=_TPE), None),          # not modelled
+])
+def test_is_trading(market, now, expected):
+    assert is_trading(market, now) is expected
+
+
+@_pytest.mark.parametrize("stamp, session", [
+    (_dt(2026, 5, 13, 14, 5, tzinfo=_TPE), _date(2026, 5, 13)),   # after the close
+    (_dt(2026, 5, 13, 8, 0, tzinfo=_TPE), _date(2026, 5, 12)),    # before the open
+    (_dt(2026, 5, 16, 12, 0, tzinfo=_TPE), _date(2026, 5, 15)),   # Saturday → Friday
+    (_dt(2026, 5, 18, 7, 0, tzinfo=_TPE), _date(2026, 5, 15)),    # Monday pre-open → Friday
+])
+def test_price_session_date_tw(stamp, session):
+    assert price_session_date("TW", stamp) == session

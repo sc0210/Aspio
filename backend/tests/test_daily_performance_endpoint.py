@@ -162,3 +162,32 @@ async def test_a_failure_is_an_error_not_an_invented_series(authenticated_client
     r = authenticated_client.get("/api/v1/portfolio/daily-performance", params={"days": DAYS})
     assert r.status_code == 500
     assert "data" not in r.json() or not r.json().get("data")
+
+
+async def test_foreign_holdings_use_each_days_fx_and_cost_keeps_the_purchase_rate(
+    authenticated_client, async_session, portfolio
+):
+    """Every day used to be converted at today's live rate, so FX moves never
+    showed and the chart disagreed with TWR. With a stored TWD=X series, AAPL
+    (2 × US$50) is worth 2 × 50 × that day's rate; its cost (2 × US$40) stays at
+    the rate on the day it was bought."""
+    bought = portfolio
+    today = business_today()
+    day = today - timedelta(days=75)
+    while day <= today:
+        rate = Decimal("32") if day.isoformat() >= bought else Decimal("30")
+        async_session.add(HistoricalPrice(symbol="TWD=X", market="FX", date=day, close=rate,
+                                          source="t", currency="TWD"))
+        day += timedelta(days=1)
+    await async_session.commit()
+    _hist_cache.clear()
+
+    today_str = today.isoformat()
+    for d, p in {p["date"]: p for p in _series(authenticated_client)}.items():
+        # Today is at the live rate (stubbed to 30), as the page's own total is:
+        # the stored series has no close for today yet.
+        rate = 30 if d == today_str else (32 if d >= bought else 30)
+        aapl = 2 * 50 * rate
+        assert p["value"] == pytest.approx(1000 + aapl + (600 if d >= bought else 0)), d
+        # 0050 cost 800 + AAPL 2 × 40 at the purchase-day rate (30) + 2330 once bought.
+        assert p["costBasis"] == pytest.approx(800 + 2400 + (500 if d >= bought else 0)), d

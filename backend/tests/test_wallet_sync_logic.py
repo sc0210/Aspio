@@ -860,8 +860,10 @@ class TestInvestmentFormFlow:
     @pytest.mark.parametrize("asset_type,symbol,qty,price,expected_total,currency", [
         ("stock",  "006208", Decimal("100"),  Decimal("208.95"),   Decimal("20895.00"), "TWD"),
         ("etf",    "0050",   Decimal("50"),   Decimal("155.00"),   Decimal("7750.00"),  "TWD"),
-        ("crypto", "BTC",    Decimal("0.5"),  Decimal("90000.00"), Decimal("45000.00"), "USD"),
-        ("bond",   "US10Y",  Decimal("10"),   Decimal("98.50"),    Decimal("985.00"),   "USD"),
+        # A USD buy is booked in TWD at the rate that values the holding (pinned
+        # to 32 below), not at the seeded `currencies` table nobody updates.
+        ("crypto", "BTC",    Decimal("0.5"),  Decimal("90000.00"), Decimal("45000.00") * 32, "USD"),
+        ("bond",   "US10Y",  Decimal("10"),   Decimal("98.50"),    Decimal("985.00") * 32,   "USD"),
     ])
     async def test_all_asset_types_create_life_wallet_expense(
         self, asset_type, symbol, qty, price, expected_total, currency
@@ -876,11 +878,14 @@ class TestInvestmentFormFlow:
         holding.currency = currency
 
         pr1, pr2 = _patch_repos(life_tx_repo_cls, cat_repo_cls)
+        fx = MagicMock()
+        fx.get_exchange_rate = AsyncMock(return_value=Decimal("32"))
         with (
             patch("app.modules.portfolio.services.PortfolioResponse.model_validate",
                   return_value=svc.portfolio_repo.get_default_portfolio.return_value),
             patch("app.modules.portfolio.services.HoldingResponse.model_validate", return_value=MagicMock()),
             patch("app.modules.portfolio.services.asyncio") as mock_asyncio,
+            patch("app.utils.exchange_rate_service.get_exchange_rate_service", return_value=fx),
             pr1, pr2,
         ):
             mock_asyncio.get_event_loop = MagicMock(return_value=MagicMock())
@@ -892,7 +897,8 @@ class TestInvestmentFormFlow:
         assert data["type"]        == TransactionType.EXPENSE,   f"{asset_type}: expected EXPENSE"
         assert data["wallet_type"] == TransactionWalletType.LIFE, f"{asset_type}: expected LIFE wallet"
         assert data["amount"]      == expected_total,             f"{asset_type}: amount mismatch"
-        assert data["currency"]    == currency
+        # Every leg is TWD: the ledger sums `amount` without converting.
+        assert data["currency"]    == "TWD"
 
     @pytest.mark.asyncio
     async def test_aggregate_true_still_fires_wallet_sync(self):

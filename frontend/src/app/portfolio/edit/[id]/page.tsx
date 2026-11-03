@@ -226,6 +226,9 @@ export default function EditHoldingPage() {
         currency: data.currency,
         exchange: data.exchange,
         sector: data.sector,
+        // The quantity this form loaded: if a sale or another edit changed the lot
+        // since, the API refuses (409) instead of writing this old quantity back.
+        ...(holding ? { expectedQuantity: holding.quantity } : {}),
         // Persist the edited purchase date so the buy-point markers on the holding
         // detail chart move to the new date — but only when the user actually
         // changed it, not merely because the form prefilled it.
@@ -300,6 +303,10 @@ export default function EditHoldingPage() {
     },
     onError: (error) => {
       log.error('Update holding error:', error);
+      if (error instanceof Error && /holding changed since the form was opened/i.test(error.message)) {
+        toast.error(t('portfolio:editStale', 'This holding changed since you opened it (a sale or another edit). Reload the page and try again.'));
+        return;
+      }
       toast.error(getErrorMessage('update holding'));
     },
   });

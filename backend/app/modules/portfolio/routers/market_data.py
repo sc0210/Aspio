@@ -273,6 +273,11 @@ async def refresh_portfolio_prices(
     try:
         price_service = get_price_update_service(session)
 
+        # Nothing has been written on this request yet (only the auth read), so
+        # end that read transaction here: the refresh then owns its own and
+        # releases the pooled connection before it waits on the price providers.
+        await session.commit()
+
         # Update prices with smart caching. This commits the price rows
         # internally, so they are durable before the recalc step below.
         stats = await price_service.update_portfolio_prices(

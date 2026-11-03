@@ -113,21 +113,64 @@ class TestSellCreditsLifeWallet:
         assert rows[0].type == TransactionType.INCOME
 
     async def test_foreign_proceeds_converted_to_twd(self, async_session, test_user):
+        """Booked at the rate that values the holding, not a seeded or static one."""
+        from unittest.mock import AsyncMock, MagicMock, patch
+        from app.modules.transactions.models import Currency
+
+        # A stale seed like prod's (31.25 TWD/USD) must not be read at all.
+        async_session.add_all([
+            Currency(code="USD", name="US Dollar", symbol="$", exchange_rate_usd=Decimal("1")),
+            Currency(code="TWD", name="New Taiwan Dollar", symbol="NT$", exchange_rate_usd=Decimal("0.032")),
+        ])
+        await async_session.commit()
+
+        fx = MagicMock()
+        fx.get_exchange_rate = AsyncMock(return_value=Decimal("32.5"))
         svc = get_portfolio_service(async_session)
-        # No Currency rows seeded → _to_twd falls back to the static USD rate (31.5).
-        await svc.credit_sale_proceeds_to_life(
-            user_id=test_user.id,
-            net_proceeds=Decimal("100"),
-            currency="USD",
-            symbol="AAPL",
-            transaction_date=datetime(2026, 6, 1),
-        )
+        with patch("app.utils.exchange_rate_service.get_exchange_rate_service", return_value=fx):
+            await svc.credit_sale_proceeds_to_life(
+                user_id=test_user.id,
+                net_proceeds=Decimal("100"),
+                currency="USD",
+                symbol="AAPL",
+                transaction_date=datetime(2026, 6, 1),
+            )
         await async_session.commit()
 
         rows = await _life_income(async_session, test_user.id)
         assert len(rows) == 1
         assert rows[0].currency == "TWD"
-        assert rows[0].amount == Decimal("3150.00")  # 100 * 31.5
+        assert rows[0].amount == Decimal("3250.00")  # 100 * 32.5, not 100 * 31.25
+
+    async def test_back_dated_proceeds_use_that_days_fx_close(self, async_session, test_user):
+        """A sale dated in the past is booked at that day's stored TWD=X close."""
+        from datetime import date
+        from unittest.mock import AsyncMock, MagicMock, patch
+        from app.modules.portfolio.models import HistoricalPrice
+
+        async_session.add(HistoricalPrice(
+            symbol="TWD=X", market="FX", date=date(2026, 5, 29), close=Decimal("30.8"),
+            source="yahoo", currency="TWD",
+        ))
+        await async_session.commit()
+
+        fx = MagicMock()
+        fx.get_exchange_rate = AsyncMock(return_value=Decimal("32.5"))
+        svc = get_portfolio_service(async_session)
+        with patch("app.utils.exchange_rate_service.get_exchange_rate_service", return_value=fx):
+            # A Monday: the latest close on or before it is Friday's.
+            await svc.credit_sale_proceeds_to_life(
+                user_id=test_user.id,
+                net_proceeds=Decimal("100"),
+                currency="USD",
+                symbol="AAPL",
+                transaction_date=datetime(2026, 6, 1),
+            )
+        await async_session.commit()
+
+        rows = await _life_income(async_session, test_user.id)
+        assert rows[0].amount == Decimal("3080.00")  # 100 * 30.8, that day's rate
+        fx.get_exchange_rate.assert_not_awaited()
 
     async def test_zero_proceeds_is_noop(self, async_session, test_user):
         svc = get_portfolio_service(async_session)

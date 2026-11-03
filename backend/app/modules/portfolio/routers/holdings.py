@@ -18,7 +18,13 @@ from sqlalchemy import select, and_, func
 from ..models import PortfolioHolding
 
 from app.core.exceptions import AspiroException
-from app.utils.datetime_helpers import business_day_of, utc_now
+from app.utils.datetime_helpers import business_day_of, to_utc, utc_now
+
+
+
+def _plain(value: Decimal) -> str:
+    """A Decimal as a person reads it in a log: 60000, not 60000.000000000000."""
+    return format(value.normalize(), "f")
 
 router = APIRouter()
 
@@ -332,12 +338,27 @@ async def update_holding(
 
         holding_service = get_holding_repository(session)
 
-        # Get the original holding first to track changes
-        original_holding = await holding_service.get_by_id(holding_id, current_user.id)
+        # Get the original holding first to track changes — read after taking the
+        # position lock, so a sale or another edit that committed meanwhile is the
+        # baseline, not a copy from before it.
+        original_holding = await holding_service.get_by_id_locked(holding_id, current_user.id)
         if not original_holding:
             raise HTTPException(
                 status_code=status.HTTP_404_NOT_FOUND,
                 detail="Holding not found or does not belong to user",
+            )
+
+        # The form was loaded before a sale or another edit changed the lot: saving
+        # it would put the old quantity back (sold shares reappear while their
+        # proceeds stay in the Life Wallet). Refuse; the page asks for a reload.
+        if (
+            holding_updates.expected_quantity is not None
+            and Decimal(str(holding_updates.expected_quantity))
+            != Decimal(str(original_holding.quantity))
+        ):
+            raise HTTPException(
+                status_code=status.HTTP_409_CONFLICT,
+                detail="This holding changed since the form was opened (a sale or another edit). Reload and try again.",
             )
 
         # A price can be set by hand only where no feed sets it: the next price
@@ -363,13 +384,19 @@ async def update_holding(
         # once, which is why editing a holding left its wallet transaction alone.
         previous_quantity = Decimal(str(original_holding.quantity))
         previous_cost = Decimal(str(original_holding.average_cost))
-        previous_purchase_day = business_day_of(original_holding.purchase_date)
+        # purchase_date is a timezone-aware column; a driver that hands it back
+        # naive (SQLite) means UTC, not the business zone.
+        previous_purchase_day = (
+            business_day_of(to_utc(original_holding.purchase_date))
+            if isinstance(original_holding.purchase_date, datetime)
+            else business_day_of(original_holding.purchase_date)
+        )
 
         # Update the holding
         holding = await holding_service.update_holding(
             holding_id=holding_id,
             user_id=current_user.id,
-            updates=holding_updates.model_dump(exclude_unset=True),
+            updates=holding_updates.model_dump(exclude_unset=True, exclude={"expected_quantity"}),
         )
 
         if not holding:
@@ -501,12 +528,16 @@ async def update_holding(
                     # rather than the one the purchase was booked at.
                     if len(legs) == 1 and not offsetting:
                         # _to_twd lives in here, not above: on a multi-leg lot its
-                        # result goes unused, and it is two Currency queries inside
-                        # the open transaction whose errors it swallows — enough to
-                        # abort the commit and 500 an edit that should only log.
+                        # result goes unused. Restated at the leg's own day's rate
+                        # (its stored FX close when there is one), so correcting a
+                        # quantity does not also re-price the purchase at today's FX.
                         twd_amount, display_currency = await PortfolioService(
                             session
-                        )._to_twd(new_total, holding.currency or "TWD")
+                        )._to_twd(
+                            new_total,
+                            holding.currency or "TWD",
+                            on_day=legs[0].transaction_date,
+                        )
 
                         linked = legs[0]
                         previous_amount = linked.amount
@@ -545,8 +576,8 @@ async def update_holding(
                             "shows the old total and no longer matches the cost "
                             "basis.",
                             holding.id,
-                            Decimal(str(old_qty)) * Decimal(str(old_cost)),
-                            new_total,
+                            _plain(Decimal(str(old_qty)) * Decimal(str(old_cost))),
+                            _plain(new_total),
                             (holding.currency or "TWD").upper(),
                             len(legs), len(offsetting),
                         )
@@ -954,8 +985,10 @@ async def remove_holding(
         # Get the holding first to verify it exists and get portfolio_id
         holding_repo = get_holding_repository(session)
 
-        # Verify holding exists and belongs to user
-        holding = await holding_repo.get_by_id(holding_id, current_user.id)
+        # Verify holding exists and belongs to user. Under the position lock: a
+        # delete racing a full sale would otherwise refund the purchase on top of
+        # the proceeds the sale had just credited.
+        holding = await holding_repo.get_by_id_locked(holding_id, current_user.id)
         if not holding:
             raise HTTPException(
                 status_code=status.HTTP_404_NOT_FOUND,
@@ -1083,8 +1116,9 @@ async def sell_holding(
         holding_repo = get_holding_repository(session)
 
         # The holding_id identifies the position; the sell draws down all active
-        # lots of that symbol (FIFO), not just this one lot.
-        holding = await holding_repo.get_by_id(holding_id, current_user.id)
+        # lots of that symbol (FIFO), not just this one lot. Position lock first,
+        # the same lock add, edit and delete take.
+        holding = await holding_repo.get_by_id_locked(holding_id, current_user.id)
         if not holding:
             raise HTTPException(
                 status_code=status.HTTP_404_NOT_FOUND,

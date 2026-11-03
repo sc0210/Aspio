@@ -15,6 +15,7 @@ from ._shared import (  # noqa: F401  explicit re-import for underscore-prefixed
 )
 from ..symbols import canonical_symbol
 from app.utils.datetime_helpers import business_today
+from app.utils.market_sessions import session_closed
 from app.core.exceptions import AspiroException
 
 router = APIRouter()
@@ -674,6 +675,12 @@ async def _store_benchmark_background(yahoo_symbol: str, market: str, raw_data: 
                 price_date = datetime.fromisoformat(d["date"].replace("Z", "+00:00")).date() if isinstance(d["date"], str) else d["date"]
                 close = d.get("close")
                 if not close:
+                    continue
+                # Shared history: a bar from a session still trading is a price so
+                # far, not a close. The nightly sync already holds this rule; this
+                # writer skipped it, so one user's mid-session request stored a
+                # provisional SPY close for everyone until the next sync.
+                if not session_closed(market, price_date):
                     continue
                 price_records.append({
                     "symbol": yahoo_symbol.upper(),

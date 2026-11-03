@@ -145,3 +145,24 @@ async def test_irr_runs_over_the_default_portfolio(authenticated_client):
     add(authenticated_client)
     r = ok(authenticated_client.post(f"{BASE}/portfolio/calculate-irr"))
     assert r["message"] == "IRR calculation completed" and r["summary"]
+
+
+async def test_a_stale_edit_form_is_refused_not_written_over_a_sale(authenticated_client):
+    """The form sends the quantity it loaded; a sale since then makes it stale,
+    and saving it would put the sold shares back."""
+    c = authenticated_client
+    h = add(c, qty="10")
+    stale = c.put(f"{BASE}/holdings/{h['id']}", json={"name": "Renamed", "expectedQuantity": "7"})
+    assert stale.status_code == 409, stale.text[:300]
+    fresh = c.put(f"{BASE}/holdings/{h['id']}", json={"name": "Renamed", "expectedQuantity": "10"})
+    assert fresh.status_code == 200, fresh.text[:300]
+
+
+async def test_a_holding_says_whether_its_market_is_trading(authenticated_client):
+    """The page labels the day's change and the market strip from these."""
+    h = add(authenticated_client)
+    got = ok(authenticated_client.get(f"{BASE}/holdings/{h['id']}"))
+    body = got.get("data", got)
+    assert body["marketState"] in {"open", "closed"}
+    # A new lot has no quote yet, so no session to name.
+    assert body["priceSession"] is None
