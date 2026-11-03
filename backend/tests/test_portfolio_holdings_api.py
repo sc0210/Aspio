@@ -166,3 +166,19 @@ async def test_a_holding_says_whether_its_market_is_trading(authenticated_client
     assert body["marketState"] in {"open", "closed"}
     # A new lot has no quote yet, so no session to name.
     assert body["priceSession"] is None
+
+
+async def test_a_new_lot_is_priced_from_the_shared_quote(authenticated_client, async_session):
+    """Another holder's quote prices the lot at once, not at what was paid."""
+    from datetime import datetime, timezone
+    from app.modules.portfolio.price_update_service import PriceUpdateService
+
+    await PriceUpdateService(async_session).store_quote(
+        "0050", Decimal("150"), Decimal("148"), datetime.now(timezone.utc), market="TW", currency="TWD",
+    )
+    await async_session.commit()
+    with patch("app.core.background_tasks.run_in_background", new=AsyncMock()) as background:
+        h = add(authenticated_client, qty="10", cost="100")
+    assert Decimal(str(h["currentPrice"] if "currentPrice" in h else h["current_price"])) == Decimal("150")
+    # A fresh quote needs no fetch of its own.
+    assert not any("fetch_price" in str(c) for c in background.call_args_list)

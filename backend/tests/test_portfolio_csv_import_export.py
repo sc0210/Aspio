@@ -82,6 +82,18 @@ def _parse_csv(csv_text: str):
 
 # ─── CSV headers ────────────────────────────────────────────────────────────
 
+
+
+@pytest.fixture(autouse=True)
+def _no_shared_quote():
+    """add_holding runs here on a mocked session, where no shared quote exists."""
+    from unittest.mock import AsyncMock, patch
+    with patch(
+        "app.modules.portfolio.price_update_service.PriceUpdateService.stored_quotes",
+        new=AsyncMock(return_value={}),
+    ):
+        yield
+
 @pytest.mark.asyncio
 async def test_export_csv_has_correct_headers():
     svc = make_portfolio_service()

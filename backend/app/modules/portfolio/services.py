@@ -308,6 +308,25 @@ class PortfolioService:
             holding_id=holding.id,
         )
 
+        # Price the new lot from the symbol's shared quote when there is one: it is
+        # what every other holder of the symbol shows, and a new lot otherwise sat
+        # at its purchase price until a fetch. Same transaction as the buy.
+        needs_fetch = True
+        if holding_data.type.lower() not in PortfolioSettings.SKIP_PRICE_FETCH_TYPES:
+            from app.modules.portfolio.price_update_service import PriceUpdateService
+
+            price_service = PriceUpdateService(self.session)
+            quote = (await price_service.stored_quotes([holding.symbol])).get(holding.symbol)
+            if quote is not None:
+                await price_service.apply_quote(
+                    holding.symbol, quote.price, quote.previous_close, quote.quote_time,
+                    user_id=user_id, store=False,
+                )
+                await self.session.refresh(holding)
+                needs_fetch = price_service.market_hours_manager.should_update_price(
+                    quote.market, quote.quote_time
+                )
+
         # Update portfolio totals
         await self._update_portfolio_totals(portfolio.id, user_id)
 
@@ -318,9 +337,10 @@ class PortfolioService:
             extra={"user_id": str(user_id), "symbol": holding_data.symbol},
         )
 
-        # Fetch real current price from market data service in background
+        # Fetch real current price from market data service in background, unless
+        # the shared quote just priced the lot and is still fresh.
         # Skip for crypto and cash - these are manually updated
-        if holding_data.type.lower() not in PortfolioSettings.SKIP_PRICE_FETCH_TYPES:
+        if needs_fetch and holding_data.type.lower() not in PortfolioSettings.SKIP_PRICE_FETCH_TYPES:
             # Use background task for external API call to avoid blocking the request
             from app.core.background_tasks import run_in_background
 
@@ -364,12 +384,14 @@ class PortfolioService:
                             previous_close = await market_data_service.get_previous_close(
                                 holding_data.symbol, holding_create_data["market"]
                             )
+                            # Stored as the shared quote too, for every holder.
                             await PriceUpdateService(bg_session).apply_quote(
                                 holding.symbol,
                                 current_price,
                                 previous_close,
                                 utc_now(),
-                                user_id=user_id,
+                                market=holding_create_data["market"],
+                                currency=holding_data.currency,
                             )
                             bg_holding = await HoldingRepository(bg_session).get_by_id(
                                 holding.id, user_id

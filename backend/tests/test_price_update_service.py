@@ -535,7 +535,9 @@ class TestUpdateAllSymbolsPrices:
         recent = datetime.now(ZoneInfo("UTC")) - timedelta(minutes=30)
         sample_result = MagicMock()
         sample_result.fetchall.return_value = [("0050", recent, 0)]
-        mock_session.execute.side_effect = [mock_result, sample_result]
+        no_shared_quotes = MagicMock()
+        no_shared_quotes.scalars.return_value.all.return_value = []
+        mock_session.execute.side_effect = [mock_result, sample_result, no_shared_quotes]
 
         service = PriceUpdateService(mock_session)
 
@@ -681,6 +683,7 @@ class TestSymbolBatchConcurrency:
             calls["n"] += 1
             res.fetchall.return_value = results[i] if i < len(results) else []
             res.all.return_value = []
+            res.scalars.return_value.all.return_value = []  # no shared quotes yet
             res.rowcount = 1
             return res
 
@@ -927,3 +930,99 @@ class TestScheduledMarketJob:
 
 # Run with: pytest tests/test_price_update_service.py -v
 # Run with coverage: pytest tests/test_price_update_service.py --cov=app.modules.portfolio.price_update_service
+
+
+class TestSharedQuotes:
+    """security_quotes: one live quote per symbol, shared by every holder."""
+
+    @pytest.mark.asyncio
+    async def test_the_shared_quote_only_moves_forward(self, async_session):
+        from app.modules.portfolio.models import SecurityQuote
+        service = PriceUpdateService(async_session)
+        t1 = datetime(2026, 5, 13, 6, 0, tzinfo=ZoneInfo("UTC"))
+        await service.store_quote("0050", Decimal("100"), None, t1, market="TW", currency="TWD")
+        await service.store_quote("0050", Decimal("90"), None, t1 - timedelta(hours=1), market="TW", currency="TWD")
+        await async_session.commit()
+        quote = await async_session.get(SecurityQuote, "0050")
+        await async_session.refresh(quote)
+        assert quote.price == Decimal("100")
+
+    @pytest.mark.asyncio
+    async def test_a_second_users_refresh_reuses_the_first_ones_fetch(self, async_session):
+        """One provider call serves every holder: B's refresh finds A's quote fresh."""
+        a_id, (a_lot,) = await _seed_lots(async_session, [dict(symbol="0050")])
+        b_id, (b_lot,) = await _seed_lots(async_session, [dict(symbol="0050")])
+        service = PriceUpdateService(async_session)
+
+        with patch.object(service, "_fetch_live_quote", new_callable=AsyncMock,
+                          return_value=(Decimal("150"), Decimal("140"))) as fetch:
+            await service.update_portfolio_prices(a_id, force=True)
+            stats_b = await service.update_portfolio_prices(b_id)
+
+        assert fetch.await_count == 1
+        await async_session.refresh(b_lot)
+        assert b_lot.current_price == Decimal("150") and b_lot.previous_close == Decimal("140")
+        assert stats_b["updated"] == 1 and stats_b["failed"] == 0
+
+    @pytest.mark.asyncio
+    async def test_the_scheduler_prices_a_new_lot_from_the_stored_quote_without_fetching(self, async_session):
+        user_id, (lot,) = await _seed_lots(async_session, [dict(symbol="0050", price="100")])
+        service = PriceUpdateService(async_session)
+        now = datetime.now(ZoneInfo("UTC"))
+        await service.store_quote("0050", Decimal("123"), Decimal("120"), now, market="TW", currency="TWD")
+        await async_session.commit()
+
+        with patch.object(service, "_get_price_with_fallback", new_callable=AsyncMock) as fetch, \
+             patch.object(service.market_hours_manager, "should_update_price", return_value=False):
+            stats = await service.update_all_symbols_prices()
+
+        assert fetch.await_count == 0
+        assert stats["cached"] == 1
+        await async_session.refresh(lot)
+        assert lot.current_price == Decimal("123")
+        assert lot.total_value == lot.quantity * Decimal("123")
+
+
+class TestFanOutWritesOnlyWhatIsMissing:
+    @pytest.mark.asyncio
+    async def test_a_lot_that_already_has_the_quote_is_not_rewritten(self, async_session):
+        now = datetime.now(ZoneInfo("UTC"))
+        _, (lot,) = await _seed_lots(async_session, [dict(symbol="0050", price="123", stamp=now)])
+        service = PriceUpdateService(async_session)
+        await service.store_quote("0050", Decimal("123"), None, now, market="TW", currency="TWD")
+        await async_session.commit()
+        written = await service.apply_quote("0050", Decimal("123"), None, now, store=False)
+        assert written == 0
+
+    @pytest.mark.asyncio
+    async def test_a_fan_out_only_run_still_syncs_portfolio_totals(self, async_session):
+        from app.modules.portfolio.services import PortfolioService
+        await _seed_lots(async_session, [dict(symbol="0050", price="100")])
+        service = PriceUpdateService(async_session)
+        await service.store_quote("0050", Decimal("123"), None, datetime.now(ZoneInfo("UTC")),
+                                  market="TW", currency="TWD")
+        await async_session.commit()
+
+        with patch.object(service.market_hours_manager, "should_update_price", return_value=False), \
+             patch.object(PortfolioService, "_update_portfolio_totals", new_callable=AsyncMock) as totals:
+            stats = await service.update_all_symbols_prices()
+
+        assert stats["updated"] == 0
+        assert totals.await_count == 1 and stats["portfolios_synced"] == 1
+
+    @pytest.mark.asyncio
+    async def test_a_run_where_every_lot_has_the_quote_writes_and_syncs_nothing(self, async_session):
+        now = datetime.now(ZoneInfo("UTC"))
+        from app.modules.portfolio.services import PortfolioService
+        await _seed_lots(async_session, [dict(symbol="0050", price="123", stamp=now)])
+        service = PriceUpdateService(async_session)
+        await service.store_quote("0050", Decimal("123"), None, now, market="TW", currency="TWD")
+        await async_session.commit()
+
+        with patch.object(service.market_hours_manager, "should_update_price", return_value=False), \
+             patch.object(service, "apply_quote", new_callable=AsyncMock) as apply, \
+             patch.object(PortfolioService, "_update_portfolio_totals", new_callable=AsyncMock) as totals:
+            await service.update_all_symbols_prices()
+
+        assert apply.await_count == 0
+        assert totals.await_count == 0

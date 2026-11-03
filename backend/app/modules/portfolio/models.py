@@ -505,6 +505,39 @@ class CurrencyRate(Base):
         return f"<CurrencyRate({self.from_currency}/{self.to_currency}={self.rate})>"
 
 
+class SecurityQuote(Base):
+    """The latest live quote of one security, shared by every user who holds it.
+
+    The source of truth for a live price. `portfolio_holdings` keeps copies
+    (current_price, previous_close, last_price_update_at) so its many readers stay
+    as they are; `PriceUpdateService.apply_quote` writes this row and those copies
+    together, and fans a stored quote out to lots that missed it. Freshness is
+    judged here, per symbol, so one user's refresh serves every user, and a new
+    lot is priced from it at once instead of at its purchase price.
+
+    `quote_time` only moves forward: an upsert carrying an older quote is ignored.
+    """
+
+    __tablename__ = "security_quotes"
+
+    symbol = Column(String(20), primary_key=True)
+    market = Column(String(10), nullable=False)
+    currency = Column(String(3), nullable=False, default="TWD", server_default="TWD")
+    price = Column(Numeric(20, 10), nullable=False)
+    previous_close = Column(Numeric(20, 10))
+    quote_time = Column(DateTime(timezone=True), nullable=False)
+    updated_at = Column(
+        DateTime(timezone=True),
+        nullable=False,
+        server_default=text("CURRENT_TIMESTAMP"),
+    )
+
+    __table_args__ = (Index("idx_security_quotes_quote_time", "quote_time"),)
+
+    def __repr__(self):
+        return f"<SecurityQuote(symbol={self.symbol}, price={self.price}, at={self.quote_time})>"
+
+
 class HistoricalPrice(Base):
     """Historical price data model for caching daily OHLCV data"""
 
