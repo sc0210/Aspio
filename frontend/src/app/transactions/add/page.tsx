@@ -506,8 +506,8 @@ function AddTransactionForm() {
                             </div>
                           </div>
 
-                          {/* Quantity × Price */}
-                          <div className={cn(ENTRY_SECTION, 'grid grid-cols-2 gap-x-4 sm:gap-x-5')}>
+                          {/* Quantity × Price: stacked on a phone, where the price shares its line with the currency */}
+                          <div className={cn(ENTRY_SECTION, 'grid grid-cols-1 gap-y-1 sm:grid-cols-2 sm:gap-x-5')}>
                             <div>
                               <label htmlFor="tx-invest-quantity" className={ENTRY_CAPTION}>
                                 {t('transactions:form.invest.quantity', 'Quantity')} {required}
