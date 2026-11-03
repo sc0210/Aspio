@@ -178,7 +178,14 @@ jest.mock('@/components/ui/Button', () => ({
 }));
 jest.mock('@heroicons/react/24/outline', () => ({
   ArrowLeftIcon: () => <svg data-testid="arrow-left" />,
+  // The type control's direction arrows and the notes' info mark.
+  ArrowDownLeftIcon: () => <svg data-testid="arrow-down-left" />,
+  ArrowUpRightIcon: () => <svg data-testid="arrow-up-right" />,
+  ArrowsRightLeftIcon: () => <svg data-testid="arrows-right-left" />,
+  ArrowTrendingUpIcon: () => <svg data-testid="arrow-trending-up" />,
+  InformationCircleIcon: () => <svg data-testid="info-icon" />,
   CheckIcon: () => <svg data-testid="check-icon" />,
+  ChevronDownIcon: () => <svg data-testid="chevron-down" />,
   ChevronRightIcon: () => <svg data-testid="chevron-right" />,
   DocumentDuplicateIcon: () => <svg data-testid="duplicate-icon" />,
   TrashIcon: () => <svg data-testid="trash-icon" />,

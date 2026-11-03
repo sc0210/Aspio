@@ -1,7 +1,7 @@
 'use client';
 
 import React, { Suspense, useState, useEffect, useRef } from 'react';
-import { CheckIcon, PlusIcon } from '@heroicons/react/24/outline';
+import { CheckIcon, InformationCircleIcon, PlusIcon } from '@heroicons/react/24/outline';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { RETURN_TO_PARAM, safeReturnTo } from '@/lib/transactions/returnTo';
 import { readPrefill } from '@/lib/transactions/prefill';
@@ -23,8 +23,10 @@ import { QUERY_KEYS, invalidateDashboardData } from '@/hooks/useDataSynchronizat
 import { formatCurrency, localDateString } from '@/utils/formatters';
 import { Card } from '@/components/ui/Card';
 import {
-  TRANSACTION_TYPES, CURRENCIES, CashFields, validateCashFields, StickySubmitBar, revealFirstError,
-  FIELD_LABEL, FIELD_INPUT, CHIP_ROW, CHIP, CHIP_ON, CHIP_OFF, SEGMENTED, SEGMENT, SEGMENT_ON, SEGMENT_OFF, revealSelected,
+  TRANSACTION_TYPES, TYPE_TONE, CURRENCIES, CashFields, TypeToggle, DateRow, validateCashFields, StickySubmitBar, revealFirstError,
+  FIELD_LABEL, CHIP_ROW, CHIP, CHIP_ON, CHIP_OFF, SEGMENT, SEGMENT_ON, SEGMENT_OFF, revealSelected,
+  ENTRY_PANEL, ENTRY_SECTION, ENTRY_CAPTION, ENTRY_INPUT, ENTRY_INPUT_INVALID, ERROR_TEXT, NOTE,
+  ROW, ROW_LIST, ROW_LABEL, ROW_SEGMENTED, ROW_SEGMENT,
 } from '@/components/transactions/TransactionFormFields';
 
 // useSearchParams needs a Suspense boundary on a statically rendered route.
@@ -373,15 +375,6 @@ function AddTransactionForm() {
     }
   };
 
-  // ─── type-button active colours ───────────────────────────────────────────
-  const activeClass: Record<string, string> = {
-    red:    'bg-expense-700 dark:bg-expense-500 text-white shadow-md',
-    green:  'bg-income-700 dark:bg-income-500 text-white shadow-md',
-    blue:   'bg-blue-700 dark:bg-blue-500 text-white shadow-md',
-    purple: 'bg-violet-600 text-white shadow-md',
-  };
-  const inactiveClass = 'bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-400 hover:bg-gray-200 dark:hover:bg-gray-600';
-
   // The sticky bar is the last thing read before saving, so it says what will be
   // saved: "Add expense · NT$120", "Transfer NT$5,000 → Emergency".
   const amountNum = parseFloat(formData.amount);
@@ -410,48 +403,31 @@ function AddTransactionForm() {
 
   return (
     <DashboardLayout>
-      <div className="max-w-4xl mx-auto py-2 sm:py-4">
+      {/* A form reads best at a form's width: 3xl keeps the settings rows' labels
+          and controls within one glance on a laptop. */}
+      <div className="max-w-3xl mx-auto py-2 sm:py-4">
         {/* Phone title + back; on desktop the top bar's title and breadcrumb cover both. */}
         <PageHeader
           title={t('transactions:add', 'Add Transaction')}
           backHref={returnTo}
           backLabel={t('transactions:form.backToList', 'Back to Transactions')}
-          className="mb-3"
+          className="mb-3 animate-none"
         />
 
         <Card padding="none" radius="xl" shadow="none" className="p-4 sm:p-6">
           <form onSubmit={handleSubmit} className="space-y-5 sm:space-y-6">
 
-            {/* ── Transaction Type ── */}
-            <div>
-              {/* Named for screen readers only: the four buttons say what they are. */}
-              <div id="tx-group-type" className="sr-only">{t('transactions:form.typeLabel', 'Transaction Type')}</div>
-              <div role="group" aria-labelledby="tx-group-type" className="grid grid-cols-4 gap-1.5 sm:gap-2">
-                {TRANSACTION_TYPES.map((type) => (
-                  <button
-                    aria-pressed={formData.type === type.value}
-                    key={type.value}
-                    type="button"
-                    onClick={() => {
-                      handleInputChange('type', type.value);
-                      handleInputChange('category', '');
-                      // A loan link is an expense's; it must not ride along to another type.
-                      if (type.value !== 'expense') handleInputChange('loanId', '');
-                    }}
-                    className={cn(
-                      'py-2.5 px-1 sm:px-3 min-h-11 lg:min-h-0 rounded-lg font-medium transition-all duration-200 motion-reduce:transition-none flex items-center justify-center text-xs sm:text-sm touch-manipulation',
-                      formData.type === type.value ? activeClass[type.color] : inactiveClass
-                    )}
-                  >
-                    {/* A phone has ~55-80px per button: too narrow for "Investment". */}
-                    {type.shortLabel && (
-                      <span className="truncate max-w-full sm:hidden">{t(`transactions:form.typesShort.${type.value}`, type.shortLabel)}</span>
-                    )}
-                    <span className={cn('truncate max-w-full', type.shortLabel && 'max-sm:hidden')}>{t(`transactions:form.types.${type.value}`, type.label)}</span>
-                  </button>
-                ))}
-              </div>
-            </div>
+            <TypeToggle
+              idPrefix="tx"
+              types={TRANSACTION_TYPES.map((type) => type.value)}
+              value={formData.type}
+              onPick={(type) => {
+                handleInputChange('type', type);
+                handleInputChange('category', '');
+                // A loan link is an expense's; it must not ride along to another type.
+                if (type !== 'expense') handleInputChange('loanId', '');
+              }}
+            />
 
             {/* ══════════════════════════════════════════════════════════════
                 INVESTMENT FORM
@@ -467,13 +443,14 @@ function AddTransactionForm() {
                 (h) => (h.walletType === 'portfolio' || !h.walletType) && Number(h.quantity) > 0
               );
               const selectedHolding = sellableHoldings.find((h) => h.id === investHoldingId);
+              const required = <span className="text-error-700 dark:text-error-400" aria-hidden="true">*</span>;
 
               return (
                 <>
-                  {/* Buy / Sell: a choice of two, so a segmented toggle */}
-                  <div className="flex flex-wrap items-center gap-x-3 gap-y-2">
-                    <span id="tx-group-invest-side" className="text-sm font-medium text-gray-700 dark:text-gray-300">{t('transactions:form.invest.action', 'Action')}</span>
-                    <div role="group" aria-labelledby="tx-group-invest-side" className={SEGMENTED}>
+                  {/* Buy / Sell: a choice of two, so a segmented control, laid out as a settings row */}
+                  <div className={cn(ROW, 'py-0')}>
+                    <span id="tx-group-invest-side" className={ROW_LABEL}>{t('transactions:form.invest.action', 'Action')}</span>
+                    <div role="group" aria-labelledby="tx-group-invest-side" className={ROW_SEGMENTED}>
                       {(['buy', 'sell'] as const).map((side) => (
                         <button
                           aria-pressed={investSide === side}
@@ -484,7 +461,7 @@ function AddTransactionForm() {
                             // The other side's messages would point at fields no longer shown.
                             setErrors(prev => Object.fromEntries(Object.entries(prev).filter(([k]) => !k.startsWith('invest'))));
                           }}
-                          className={cn(SEGMENT, 'px-4', investSide === side ? SEGMENT_ON : SEGMENT_OFF)}
+                          className={cn(SEGMENT, ROW_SEGMENT, 'px-4', investSide === side ? SEGMENT_ON : SEGMENT_OFF)}
                         >
                           {side === 'buy' ? t('transactions:form.invest.buyAsset', 'Buy Asset') : t('transactions:form.invest.sellAsset', 'Sell Asset')}
                         </button>
@@ -492,9 +469,117 @@ function AddTransactionForm() {
                     </div>
                   </div>
 
-                  {/* ── BUY fields ── */}
+                  {/* ── BUY fields: the same entry panel as a cash entry, its total the hero ── */}
                   {investSide === 'buy' && (
                     <>
+                      <div>
+                        <div className={cn(ENTRY_PANEL, (errors.investSymbol || errors.investQty || errors.investPrice) && 'border-error-300 dark:border-error-700')}>
+                          {/* Symbol + Name */}
+                          <div className={cn(ENTRY_SECTION, 'grid grid-cols-1 gap-x-5 sm:grid-cols-2')}>
+                            <div>
+                              <label htmlFor="tx-invest-symbol" className={ENTRY_CAPTION}>
+                                {t('transactions:form.invest.symbol', 'Symbol')} {required}
+                              </label>
+                              <input
+                                aria-invalid={!!errors.investSymbol}
+                                aria-describedby={errors.investSymbol ? "tx-invest-symbol-error" : undefined}
+                                id="tx-invest-symbol"
+                                type="text"
+                                value={investSymbol}
+                                onChange={(e) => setInvestSymbol(e.target.value.toUpperCase())}
+                                placeholder={t('transactions:form.invest.symbolPlaceholder', 'e.g. 006208, AAPL, BTC')}
+                                className={cn(ENTRY_INPUT, 'text-lg sm:text-lg font-mono font-semibold uppercase placeholder:normal-case placeholder:font-sans placeholder:font-normal placeholder:text-base', errors.investSymbol && ENTRY_INPUT_INVALID)}
+                              />
+                            </div>
+                            <div>
+                              <label htmlFor="tx-invest-name" className={ENTRY_CAPTION}>
+                                {t('transactions:form.invest.name', 'Name')} <span className="font-normal">{t('transactions:form.optional', '(optional)')}</span>
+                              </label>
+                              <input
+                                id="tx-invest-name"
+                                type="text"
+                                value={investName}
+                                onChange={(e) => setInvestName(e.target.value)}
+                                placeholder={t('transactions:form.invest.namePlaceholder', 'e.g. 富邦台灣50')}
+                                className={ENTRY_INPUT}
+                              />
+                            </div>
+                          </div>
+
+                          {/* Quantity × Price */}
+                          <div className={cn(ENTRY_SECTION, 'grid grid-cols-2 gap-x-4 sm:gap-x-5')}>
+                            <div>
+                              <label htmlFor="tx-invest-quantity" className={ENTRY_CAPTION}>
+                                {t('transactions:form.invest.quantity', 'Quantity')} {required}
+                              </label>
+                              <input
+                                aria-invalid={!!errors.investQty}
+                                aria-describedby={errors.investQty ? "tx-invest-quantity-error" : undefined}
+                                id="tx-invest-quantity"
+                                type="number"
+                                inputMode="decimal"
+                                onWheel={(e) => e.currentTarget.blur()}
+                                step="any"
+                                min="0"
+                                value={investQty}
+                                onChange={(e) => setInvestQty(e.target.value)}
+                                placeholder={t('transactions:form.invest.quantityPlaceholder', 'e.g. 100')}
+                                className={cn(ENTRY_INPUT, 'font-semibold tabular-nums', errors.investQty && ENTRY_INPUT_INVALID)}
+                              />
+                            </div>
+                            <div>
+                              <label htmlFor="tx-invest-priceperunit" className={ENTRY_CAPTION}>
+                                {t('transactions:form.invest.pricePerUnit', 'Price / Unit')} {required}
+                              </label>
+                              <div className="flex items-center gap-1.5">
+                                <select
+                                  aria-label={t('transactions:form.currency', 'Currency')}
+                                  value={investCurrency}
+                                  onChange={(e) => { hasUserSetInvestCurrencyRef.current = true; setInvestCurrency(e.target.value); }}
+                                  className="shrink-0 min-h-11 lg:min-h-0 rounded-lg border border-gray-200 dark:border-gray-600 bg-white dark:bg-gray-800 pl-2 pr-7 py-1 text-base sm:text-sm font-semibold text-gray-700 dark:text-gray-200 focus:outline-none focus-visible:ring-2 focus-visible:ring-primary-500"
+                                >
+                                  {CURRENCIES.map(c => (
+                                    <option key={c} value={c}>{c}</option>
+                                  ))}
+                                </select>
+                                <input
+                                  aria-invalid={!!errors.investPrice}
+                                  aria-describedby={errors.investPrice ? "tx-invest-priceperunit-error" : undefined}
+                                  id="tx-invest-priceperunit"
+                                  type="number"
+                                  inputMode="decimal"
+                                  onWheel={(e) => e.currentTarget.blur()}
+                                  step="any"
+                                  min="0"
+                                  value={investPrice}
+                                  onChange={(e) => setInvestPrice(e.target.value)}
+                                  placeholder="0.00"
+                                  className={cn(ENTRY_INPUT, 'flex-1 font-semibold tabular-nums', errors.investPrice && ENTRY_INPUT_INVALID)}
+                                />
+                              </div>
+                            </div>
+                          </div>
+
+                          {/* The total: worked out, not typed, so it reads as the result. */}
+                          <div className={cn(ENTRY_SECTION, 'flex flex-wrap items-end justify-between gap-x-4 gap-y-1 pb-3.5 sm:pb-4')}>
+                            <div className="min-w-0">
+                              <div className={ENTRY_CAPTION}>{t('transactions:form.invest.totalCost', 'Total Cost')}</div>
+                              <div className="mt-0.5 flex items-baseline gap-2">
+                                <span aria-hidden="true" className={cn('text-3xl font-semibold leading-none', TYPE_TONE.investment.text)}>{TYPE_TONE.investment.sign}</span>
+                                <span className="text-sm font-semibold text-gray-500 dark:text-gray-400">{investCurrency}</span>
+                                <span className="text-4xl font-bold tracking-tight tabular-nums text-gray-900 dark:text-white">{fmtTotal}</span>
+                              </div>
+                            </div>
+                            <p className="text-xs text-gray-500 dark:text-gray-400 sm:text-right">
+                              {qty > 0 && price > 0 ? `${qty} × ${price} · ` : ''}<strong className="font-semibold text-gray-700 dark:text-gray-300">{t('transactions:form.wallets.life', 'Life Wallet')}</strong> {t('transactions:form.invest.buyFlowSuffix', 'outflow → Portfolio')}
+                            </p>
+                          </div>
+                        </div>
+                        {errors.investSymbol && <p id="tx-invest-symbol-error" role="alert" className={ERROR_TEXT}>{errors.investSymbol}</p>}
+                        {errors.investQty && <p id="tx-invest-quantity-error" role="alert" className={ERROR_TEXT}>{errors.investQty}</p>}
+                        {errors.investPrice && <p id="tx-invest-priceperunit-error" role="alert" className={ERROR_TEXT}>{errors.investPrice}</p>}
+                      </div>
+
                       {/* Asset Type */}
                       <div>
                         <div id="tx-group-asset-type" className={FIELD_LABEL}>{t('transactions:form.invest.assetType', 'Asset Type')}</div>
@@ -512,124 +597,15 @@ function AddTransactionForm() {
                               onClick={() => setInvestAssetType(opt.value)}
                               className={cn(CHIP, investAssetType === opt.value ? CHIP_ON : CHIP_OFF)}
                             >
+                              {investAssetType === opt.value && <CheckIcon className="w-4 h-4 shrink-0" aria-hidden="true" />}
                               {t(`transactions:form.invest.types.${opt.value}`, opt.label)}
                             </button>
                           ))}
                         </div>
                       </div>
 
-                      {/* Symbol + Name row */}
-                      <div className="flex flex-col sm:flex-row gap-3">
-                        <div className="flex-1">
-                          <label htmlFor="tx-invest-symbol" className={FIELD_LABEL}>
-                            {t('transactions:form.invest.symbol', 'Symbol')} <span className="text-error-700 dark:text-error-500">*</span>
-                          </label>
-                          <input
-                            aria-invalid={!!errors.investSymbol}
-                            aria-describedby={errors.investSymbol ? "tx-invest-symbol-error" : undefined}
-                            id="tx-invest-symbol"
-                            type="text"
-                            value={investSymbol}
-                            onChange={(e) => setInvestSymbol(e.target.value.toUpperCase())}
-                            placeholder={t('transactions:form.invest.symbolPlaceholder', 'e.g. 006208, AAPL, BTC')}
-                            className={cn(FIELD_INPUT, 'font-mono font-semibold uppercase placeholder:normal-case placeholder:font-sans placeholder:font-normal', errors.investSymbol && 'border-error-400')}
-                          />
-                          {errors.investSymbol && <p id="tx-invest-symbol-error" role="alert" className="text-xs text-error-700 dark:text-error-500 mt-1">{errors.investSymbol}</p>}
-                        </div>
-                        <div className="flex-1">
-                          <label htmlFor="tx-invest-name" className={FIELD_LABEL}>
-                            {t('transactions:form.invest.name', 'Name')} <span className="text-xs font-normal text-gray-500 dark:text-gray-400">{t('transactions:form.optional', '(optional)')}</span>
-                          </label>
-                          <input
-                            id="tx-invest-name"
-                            type="text"
-                            value={investName}
-                            onChange={(e) => setInvestName(e.target.value)}
-                            placeholder={t('transactions:form.invest.namePlaceholder', 'e.g. 富邦台灣50')}
-                            className={FIELD_INPUT}
-                          />
-                        </div>
-                      </div>
-
-                      {/* Quantity + Price row */}
-                      <div className="flex flex-col sm:flex-row gap-3">
-                        <div className="flex-1">
-                          <label htmlFor="tx-invest-quantity" className={FIELD_LABEL}>
-                            {t('transactions:form.invest.quantity', 'Quantity')} <span className="text-error-700 dark:text-error-500">*</span>
-                          </label>
-                          <input
-                            aria-invalid={!!errors.investQty}
-                            aria-describedby={errors.investQty ? "tx-invest-quantity-error" : undefined}
-                            id="tx-invest-quantity"
-                            type="number"
-                            inputMode="decimal"
-                            onWheel={(e) => e.currentTarget.blur()}
-                            step="any"
-                            min="0"
-                            value={investQty}
-                            onChange={(e) => setInvestQty(e.target.value)}
-                            placeholder={t('transactions:form.invest.quantityPlaceholder', 'e.g. 100')}
-                            className={cn(FIELD_INPUT, 'font-semibold', errors.investQty && 'border-error-400')}
-                          />
-                          {errors.investQty && <p id="tx-invest-quantity-error" role="alert" className="text-xs text-error-700 dark:text-error-500 mt-1">{errors.investQty}</p>}
-                        </div>
-                        <div className="flex-1">
-                          <label htmlFor="tx-invest-priceperunit" className={FIELD_LABEL}>
-                            {t('transactions:form.invest.pricePerUnit', 'Price / Unit')} <span className="text-error-700 dark:text-error-500">*</span>
-                          </label>
-                          <div className="flex items-center gap-1.5">
-                            <select
-                              aria-label={t('transactions:form.currency', 'Currency')}
-                              value={investCurrency}
-                              onChange={(e) => { hasUserSetInvestCurrencyRef.current = true; setInvestCurrency(e.target.value); }}
-                              className={cn(FIELD_INPUT, 'w-auto px-2 font-semibold')}
-                            >
-                              {CURRENCIES.map(c => (
-                                <option key={c} value={c}>{c}</option>
-                              ))}
-                            </select>
-                            <input
-                              aria-invalid={!!errors.investPrice}
-                              aria-describedby={errors.investPrice ? "tx-invest-priceperunit-error" : undefined}
-                              id="tx-invest-priceperunit"
-                              type="number"
-                              inputMode="decimal"
-                              onWheel={(e) => e.currentTarget.blur()}
-                              step="any"
-                              min="0"
-                              value={investPrice}
-                              onChange={(e) => setInvestPrice(e.target.value)}
-                              placeholder="0.00"
-                              className={cn(FIELD_INPUT, 'flex-1 min-w-0 font-semibold', errors.investPrice && 'border-error-400')}
-                            />
-                          </div>
-                          {errors.investPrice && <p id="tx-invest-priceperunit-error" role="alert" className="text-xs text-error-700 dark:text-error-500 mt-1">{errors.investPrice}</p>}
-                        </div>
-                      </div>
-
-                      {/* Auto-calculated total + Date */}
-                      <div className="flex flex-col sm:flex-row gap-3 sm:items-end">
-                        <div className="flex-1">
-                          <div className={FIELD_LABEL}>{t('transactions:form.invest.totalCost', 'Total Cost')}</div>
-                          <div className="flex items-center gap-2 border-2 border-violet-300 dark:border-violet-700 bg-violet-50 dark:bg-violet-900/20 rounded-xl px-4 py-3">
-                            <span className="text-sm font-bold text-violet-600 dark:text-violet-400">{investCurrency}</span>
-                            <span className="flex-1 text-2xl font-black text-violet-700 dark:text-violet-300 tabular-nums">{fmtTotal}</span>
-                            <span className="text-xs font-semibold px-2 py-1 rounded-md bg-violet-100 dark:bg-violet-900/40 text-violet-600 dark:text-violet-400">{t('transactions:form.invest.expenseBadge', 'EXPENSE')}</span>
-                          </div>
-                          <p className="text-xs text-gray-500 dark:text-gray-400 mt-1.5">
-                            {qty > 0 && price > 0 ? `${qty} × ${price} = ` : ''}<strong>{t('transactions:form.wallets.life', 'Life Wallet')}</strong> {t('transactions:form.invest.buyFlowSuffix', 'outflow → Portfolio')}
-                          </p>
-                        </div>
-                        <div className="w-full sm:w-40">
-                          <label htmlFor="tx-invest-date" className={FIELD_LABEL}>{t('transactions:form.invest.date', 'Date')}</label>
-                          <input
-                            id="tx-invest-date"
-                            type="date"
-                            value={formData.date}
-                            onChange={(e) => handleInputChange('date', e.target.value)}
-                            className={cn(FIELD_INPUT, 'px-2 min-h-11 sm:min-h-0')}
-                          />
-                        </div>
+                      <div className={ROW_LIST}>
+                        <DateRow id="tx-invest-date" value={formData.date} onChange={(day) => handleInputChange('date', day)} />
                       </div>
                     </>
                   )}
@@ -637,14 +613,15 @@ function AddTransactionForm() {
                   {/* ── SELL fields ── */}
                   {investSide === 'sell' && (
                     <>
-                      <p className="rounded-lg bg-emerald-50 dark:bg-emerald-900/20 p-3 text-sm text-emerald-700 dark:text-emerald-300">
-                        {t('transactions:form.invest.sellHintPrefix', 'Sells units from your portfolio (oldest lots first), records the realized gain/loss, and returns the net proceeds to your')} <strong>{t('transactions:form.wallets.life', 'Life Wallet')}</strong>.
+                      <p className={NOTE}>
+                        <InformationCircleIcon className="w-5 h-5 shrink-0 text-gray-400 dark:text-gray-500" aria-hidden="true" />
+                        <span>{t('transactions:form.invest.sellHintPrefix', 'Sells units from your portfolio (oldest lots first), records the realized gain/loss, and returns the net proceeds to your')} <strong>{t('transactions:form.wallets.life', 'Life Wallet')}</strong>.</span>
                       </p>
 
                       {holdingsLoading ? (
                         <p className="text-xs text-gray-500 dark:text-gray-400 text-center py-2">{t('transactions:form.invest.loadingHoldings', 'Loading holdings…')}</p>
                       ) : holdingsError ? (
-                        <div role="alert" className="flex flex-wrap items-center justify-center gap-3 rounded-xl border-2 border-dashed border-gray-200 dark:border-gray-700 px-4 py-6 text-sm text-gray-600 dark:text-gray-300">
+                        <div role="alert" className="flex flex-wrap items-center justify-center gap-3 rounded-2xl border-2 border-dashed border-gray-200 dark:border-gray-700 px-4 py-6 text-sm text-gray-600 dark:text-gray-300">
                           {t('transactions:form.invest.holdingsLoadFailed', "Couldn't load your holdings.")}
                           <button
                             type="button"
@@ -655,7 +632,7 @@ function AddTransactionForm() {
                           </button>
                         </div>
                       ) : sellableHoldings.length === 0 ? (
-                        <div className="text-center text-sm text-gray-500 dark:text-gray-400 border-2 border-dashed border-gray-200 dark:border-gray-700 rounded-xl py-6 px-4">
+                        <div className="text-center text-sm text-gray-500 dark:text-gray-400 border-2 border-dashed border-gray-200 dark:border-gray-700 rounded-2xl py-6 px-4">
                           {t('transactions:form.invest.noHoldingsPrefix', 'No holdings to sell yet. Use')} <strong>{t('transactions:form.invest.buyAsset', 'Buy Asset')}</strong> {t('transactions:form.invest.noHoldingsSuffix', '(or the Portfolio page) to add one first.')}
                         </div>
                       ) : (
@@ -663,7 +640,7 @@ function AddTransactionForm() {
                           {/* Holding picker (required) */}
                           <div>
                             <div id="tx-group-holding" className={FIELD_LABEL}>
-                              {t('transactions:form.invest.selectHolding', 'Select Holding')} <span className="text-error-700 dark:text-error-500">*</span>
+                              {t('transactions:form.invest.selectHolding', 'Select Holding')} {required}
                             </div>
                             <div
                               role="group"
@@ -687,73 +664,70 @@ function AddTransactionForm() {
                                   }}
                                   className={cn(CHIP, investHoldingId === h.id ? CHIP_ON : CHIP_OFF)}
                                 >
+                                  {investHoldingId === h.id && <CheckIcon className="w-4 h-4 shrink-0" aria-hidden="true" />}
                                   <span className="font-mono font-bold">{h.symbol}</span>
                                   <span className="font-normal opacity-70">{h.quantity} {t('transactions:form.invest.units', 'units')}</span>
                                 </button>
                               ))}
                             </div>
-                            {errors.investHolding && <p id="tx-invest-holding-error" role="alert" className="text-xs text-error-700 dark:text-error-500 mt-1">{errors.investHolding}</p>}
+                            {errors.investHolding && <p id="tx-invest-holding-error" role="alert" className={ERROR_TEXT}>{errors.investHolding}</p>}
                           </div>
 
-                          {/* Quantity + optional price */}
-                          <div className="flex flex-col sm:flex-row gap-3">
-                            <div className="flex-1">
-                              <label htmlFor="tx-invest-quantitytosell" className={FIELD_LABEL}>
-                                {t('transactions:form.invest.quantityToSell', 'Quantity to Sell')} <span className="text-error-700 dark:text-error-500">*</span>
-                              </label>
-                              <input
-                                aria-invalid={!!errors.investSellQty}
-                                aria-describedby={errors.investSellQty ? 'tx-invest-sellqty-error' : undefined}
-                                id="tx-invest-quantitytosell"
-                                type="number"
-                                inputMode="decimal"
-                                onWheel={(e) => e.currentTarget.blur()}
-                                step="any"
-                                min="0"
-                                value={investSellQty}
-                                onChange={(e) => setInvestSellQty(e.target.value)}
-                                placeholder={t('transactions:form.invest.units', 'units')}
-                                className={cn(FIELD_INPUT, 'font-semibold', errors.investSellQty && 'border-error-400')}
-                              />
-                              {/* Both lines: the error used to replace "Available" and so never showed once a holding was picked. */}
-                              {errors.investSellQty && <p id="tx-invest-sellqty-error" role="alert" className="text-xs text-error-700 dark:text-error-500 mt-1">{errors.investSellQty}</p>}
-                              {selectedHolding && (
-                                <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">{t('transactions:form.invest.availablePrefix', 'Available:')} <strong>{selectedHolding.quantity}</strong> {t('transactions:form.invest.units', 'units')}</p>
-                              )}
-                            </div>
-                            <div className="flex-1">
-                              <label htmlFor="tx-invest-sell-price" className={FIELD_LABEL}>
-                                {t('transactions:form.invest.pricePerUnit', 'Price / Unit')} <span className="text-xs font-normal text-gray-500 dark:text-gray-400">{t('transactions:form.optional', '(optional)')}</span>
-                              </label>
-                              <div className="flex items-center gap-1.5">
-                                <span className="text-xs font-bold text-gray-600 dark:text-gray-300 px-1">{investCurrency}</span>
-                                <input
-                                  id="tx-invest-sell-price"
-                                  type="number"
-                                  inputMode="decimal"
-                                  onWheel={(e) => e.currentTarget.blur()}
-                                  step="any"
-                                  min="0"
-                                  value={investSellPrice}
-                                  onChange={(e) => setInvestSellPrice(e.target.value)}
-                                  placeholder={t('transactions:form.invest.marketPricePlaceholder', 'market price')}
-                                  className={cn(FIELD_INPUT, 'flex-1 min-w-0 font-semibold')}
-                                />
+                          {/* Quantity + optional price, in the entry panel */}
+                          <div>
+                            <div className={cn(ENTRY_PANEL, errors.investSellQty && 'border-error-300 dark:border-error-700')}>
+                              <div className={cn(ENTRY_SECTION, 'grid grid-cols-2 gap-x-4 sm:gap-x-5')}>
+                                <div>
+                                  <label htmlFor="tx-invest-quantitytosell" className={ENTRY_CAPTION}>
+                                    {t('transactions:form.invest.quantityToSell', 'Quantity to Sell')} {required}
+                                  </label>
+                                  <input
+                                    aria-invalid={!!errors.investSellQty}
+                                    aria-describedby={errors.investSellQty ? 'tx-invest-sellqty-error' : undefined}
+                                    id="tx-invest-quantitytosell"
+                                    type="number"
+                                    inputMode="decimal"
+                                    onWheel={(e) => e.currentTarget.blur()}
+                                    step="any"
+                                    min="0"
+                                    value={investSellQty}
+                                    onChange={(e) => setInvestSellQty(e.target.value)}
+                                    placeholder={t('transactions:form.invest.units', 'units')}
+                                    className={cn(ENTRY_INPUT, 'text-2xl sm:text-2xl font-bold tabular-nums', errors.investSellQty && ENTRY_INPUT_INVALID)}
+                                  />
+                                  {selectedHolding && (
+                                    <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">{t('transactions:form.invest.availablePrefix', 'Available:')} <strong>{selectedHolding.quantity}</strong> {t('transactions:form.invest.units', 'units')}</p>
+                                  )}
+                                </div>
+                                <div>
+                                  <label htmlFor="tx-invest-sell-price" className={ENTRY_CAPTION}>
+                                    {t('transactions:form.invest.pricePerUnit', 'Price / Unit')} <span className="font-normal">{t('transactions:form.optional', '(optional)')}</span>
+                                  </label>
+                                  <div className="flex items-center gap-1.5">
+                                    <span className="text-sm font-semibold text-gray-500 dark:text-gray-400">{investCurrency}</span>
+                                    <input
+                                      id="tx-invest-sell-price"
+                                      type="number"
+                                      inputMode="decimal"
+                                      onWheel={(e) => e.currentTarget.blur()}
+                                      step="any"
+                                      min="0"
+                                      value={investSellPrice}
+                                      onChange={(e) => setInvestSellPrice(e.target.value)}
+                                      placeholder={t('transactions:form.invest.marketPricePlaceholder', 'market price')}
+                                      className={cn(ENTRY_INPUT, 'flex-1 font-semibold tabular-nums')}
+                                    />
+                                  </div>
+                                  <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">{t('transactions:form.invest.leaveBlankMarket', 'Leave blank to use the current market price.')}</p>
+                                </div>
                               </div>
-                              <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">{t('transactions:form.invest.leaveBlankMarket', 'Leave blank to use the current market price.')}</p>
                             </div>
+                            {/* Both lines: the error used to replace "Available" and so never showed once a holding was picked. */}
+                            {errors.investSellQty && <p id="tx-invest-sellqty-error" role="alert" className={ERROR_TEXT}>{errors.investSellQty}</p>}
                           </div>
 
-                          {/* Date */}
-                          <div className="w-full sm:w-40">
-                            <label htmlFor="tx-invest-sell-date" className={FIELD_LABEL}>{t('transactions:form.invest.date', 'Date')}</label>
-                            <input
-                              id="tx-invest-sell-date"
-                              type="date"
-                              value={formData.date}
-                              onChange={(e) => handleInputChange('date', e.target.value)}
-                              className={cn(FIELD_INPUT, 'px-2 min-h-11 sm:min-h-0')}
-                            />
+                          <div className={ROW_LIST}>
+                            <DateRow id="tx-invest-sell-date" value={formData.date} onChange={(day) => handleInputChange('date', day)} />
                           </div>
                         </>
                       )}
@@ -782,8 +756,9 @@ function AddTransactionForm() {
             <StickySubmitBar>
               {/* The primary save comes first in the markup: Enter in a field submits
                   through the first submit button, and that must be a plain save. The
-                  row reverses so "+" still sits on the left. */}
-              <div className="flex flex-row-reverse gap-2">
+                  row reverses so "+" still sits on the left. From md the pair sits at
+                  the end of the form, the save no wider than its label needs. */}
+              <div className="flex flex-row-reverse gap-2 md:justify-start">
                 <Button
                   type="submit"
                   variant="primary"
@@ -791,22 +766,23 @@ function AddTransactionForm() {
                   fullWidth
                   isLoading={isSubmitting}
                   leftIcon={<CheckIcon className="w-5 h-5 max-sm:hidden" />}
-                  className="min-w-0 flex-1"
+                  className="min-w-0 flex-1 md:flex-none md:w-auto md:min-w-[16rem] lg:min-h-12"
                 >
                   <span className="truncate">{isSubmitting ? t('transactions:form.saving', 'Saving…') : submitLabel}</span>
                 </Button>
                 {/* Not for an investment: a buy or sale goes back to the list to show the holding's change.
-                    Just "+" on a phone (named for screen readers), so the save button keeps room to name the amount. */}
+                    Just "+" on a phone (named for screen readers), so the save button keeps room to name the amount.
+                    Outlined in the brand colour: a real second action, not a disabled-looking grey. */}
                 {formData.type !== 'investment' && (
                   <Button
                     type="submit"
                     data-add-another="true"
-                    variant="secondary"
+                    variant="outline"
                     size="lg"
                     disabled={isSubmitting}
                     aria-label={t('transactions:form.saveAndAddAnother', 'Save & add another')}
                     leftIcon={<PlusIcon className="w-5 h-5" aria-hidden="true" />}
-                    className="shrink-0 px-3 sm:px-4 max-sm:gap-0"
+                    className="shrink-0 px-3 sm:px-4 max-sm:gap-0 lg:min-h-12 border-primary-300 text-primary-700 hover:bg-primary-50 dark:border-primary-700 dark:text-primary-300 dark:hover:bg-primary-900/30"
                   >
                     <span className="max-sm:hidden">{t('transactions:form.saveAndAddAnother', 'Save & add another')}</span>
                   </Button>
