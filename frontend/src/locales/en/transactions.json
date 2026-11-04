@@ -150,7 +150,6 @@
       "errQty": "Enter quantity",
       "errSellQty": "Enter a quantity to sell",
       "errSymbol": "Enter a symbol",
-      "expenseBadge": "EXPENSE",
       "leaveBlankMarket": "Leave blank to use the current market price.",
       "loadingHoldings": "Loading holdings…",
       "marketPricePlaceholder": "market price",

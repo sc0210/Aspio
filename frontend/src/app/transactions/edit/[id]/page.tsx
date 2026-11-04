@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect, useMemo } from 'react';
 import Link from 'next/link';
-import { CheckIcon, DocumentDuplicateIcon, TrashIcon } from '@heroicons/react/24/outline';
+import { CheckIcon, DocumentDuplicateIcon, InformationCircleIcon, TrashIcon } from '@heroicons/react/24/outline';
 import { useRouter, useParams, useSearchParams } from 'next/navigation';
 import { RETURN_TO_PARAM, safeReturnTo } from '@/lib/transactions/returnTo';
 import { useQueryClient } from '@tanstack/react-query';
@@ -11,7 +11,10 @@ import { useTranslation } from 'react-i18next';
 import { Button } from '@/components/ui/Button';
 import { ConfirmDialog } from '@/components/ui/ConfirmDialog';
 import { LoadingSpinner } from '@/components/ui/LoadingSpinner';
-import { TRANSACTION_TYPES, CATEGORIES, CURRENCIES, PAYMENT_METHODS, CashFields, TagsField, validateCashFields, StickySubmitBar, revealFirstError, FIELD_LABEL, FIELD_INPUT } from '@/components/transactions/TransactionFormFields';
+import {
+  CATEGORIES, CURRENCIES, PAYMENT_METHODS, TYPE_TONE, CashFields, TagsField, TypeToggle, DateRow, validateCashFields, StickySubmitBar, revealFirstError,
+  ENTRY_PANEL, ENTRY_SECTION, ENTRY_CAPTION, ENTRY_INPUT, ENTRY_INPUT_INVALID, ERROR_TEXT, NOTE, ROW_LIST, SEGMENTED, SEGMENT, SEGMENT_ON,
+} from '@/components/transactions/TransactionFormFields';
 import { cn } from '@/utils/cn';
 import { transactionService } from '@/services/transactionService';
 import { Transaction } from '@/shared/types';
@@ -674,13 +677,34 @@ export default function EditTransactionPage() {
     return `/transactions/add?${q.toString()}`;
   })();
 
+  // The page's frame: the same as /transactions/add, and drawn while the row
+  // loads too, so the header is there from the first paint instead of fading in
+  // (half-transparent) after a bare spinner.
+  const frame = (body: React.ReactNode, after?: React.ReactNode) => (
+    <DashboardLayout>
+      <div className="max-w-3xl mx-auto py-2 sm:py-4">
+        {/* Phone title + back; on desktop the top bar's title and breadcrumb cover both. */}
+        <PageHeader
+          title={t('transactions:edit', 'Edit Transaction')}
+          backHref={returnTo}
+          backLabel={t('transactions:form.backToList', 'Back to Transactions')}
+          className="mb-3 animate-none"
+        />
+        <Card padding="none" radius="xl" shadow="none" className="p-4 sm:p-6">
+          {body}
+        </Card>
+      </div>
+      {/* After the Card, not in it: a Card can carry a transform, which would
+          anchor the dialog's fixed overlay to the card instead of the viewport. */}
+      {after}
+    </DashboardLayout>
+  );
+
   if (isLoading) {
-    return (
-      <DashboardLayout>
-        <div className="flex min-h-[50vh] items-center justify-center">
-          <LoadingSpinner size="lg" />
-        </div>
-      </DashboardLayout>
+    return frame(
+      <div className="flex min-h-[40vh] items-center justify-center">
+        <LoadingSpinner size="lg" />
+      </div>
     );
   }
 
@@ -696,28 +720,19 @@ export default function EditTransactionPage() {
     </button>
   );
 
-  return (
-    <DashboardLayout>
-      {/* Same frame as /transactions/add: the layout's own padding is the gutter. */}
-      <div className="max-w-4xl mx-auto py-2 sm:py-4">
-        {/* Phone title + back; on desktop the top bar's title and breadcrumb cover both. */}
-        <PageHeader
-          title={t('transactions:edit', 'Edit Transaction')}
-          backHref={returnTo}
-          backLabel={t('transactions:form.backToList', 'Back to Transactions')}
-          className="mb-3"
-        />
-
-        <Card padding="none" radius="xl" shadow="none" className="p-4 sm:p-6">
+  return frame(
           <form onSubmit={handleSubmit} className="space-y-5 sm:space-y-6">
             {/* Transaction type. A transfer's type is locked: saving one leg as an
                 expense or income would orphan its pair and throw both wallets off.
                 Nor can an expense or income become a transfer here: there is no pair
                 to edit, so it could only fail at submit. */}
             {!isInvestMode && !isSaleMode && formData.type === 'transfer' && (
-              <div className="flex flex-wrap items-center gap-2">
-                <span className="rounded-lg bg-blue-700 dark:bg-blue-500 px-3 py-1.5 text-sm font-medium text-white">
-                  {t('transactions:form.types.transfer', 'Transfer')}
+              <div className="flex flex-wrap items-center gap-x-3 gap-y-2">
+                {/* Shown as the add form's chosen segment, but not a control. */}
+                <span className={SEGMENTED}>
+                  <span className={cn(SEGMENT, SEGMENT_ON, TYPE_TONE.transfer.text, 'px-4')}>
+                    {t('transactions:form.types.transfer', 'Transfer')}
+                  </span>
                 </span>
                 <span className="text-xs text-gray-500 dark:text-gray-400">
                   {t('transactions:form.transferTypeLocked', 'A transfer stays a transfer. To change it, delete it and add a new one.')}
@@ -725,37 +740,17 @@ export default function EditTransactionPage() {
               </div>
             )}
             {!isInvestMode && !isSaleMode && formData.type !== 'transfer' && (
-              <div>
-                {/* Named for screen readers only: the buttons say what they are. */}
-                <div id="txe-group-type" className="sr-only">
-                  {t('transactions:form.typeLabel', 'Transaction Type')}
-                </div>
-                <div role="group" aria-labelledby="txe-group-type" className="flex gap-1.5 sm:gap-2">
-                  {TRANSACTION_TYPES.filter((type) => type.value === 'expense' || type.value === 'income').map((type) => (
-                    <button
-                      key={type.value}
-                      type="button"
-                      aria-pressed={formData.type === type.value}
-                      onClick={() => {
-                        handleInputChange('type', type.value);
-                        handleInputChange('category', '');
-                        // A loan link is an expense's; an income would keep it otherwise.
-                        if (type.value !== 'expense') handleInputChange('loanId', '');
-                      }}
-                      className={cn(
-                        'flex-1 min-w-0 py-2.5 px-1 sm:px-3 min-h-11 lg:min-h-0 rounded-lg font-medium transition-all duration-200 motion-reduce:transition-none flex items-center justify-center text-xs sm:text-sm touch-manipulation',
-                        formData.type === type.value
-                          ? type.color === 'red'
-                            ? 'bg-expense-700 dark:bg-expense-500 text-white shadow-md'
-                            : 'bg-income-700 dark:bg-income-500 text-white shadow-md'
-                          : 'bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-400 hover:bg-gray-200 dark:hover:bg-gray-600'
-                      )}
-                    >
-                      <span className="truncate max-w-full">{t(`transactions:form.types.${type.value}`, type.label)}</span>
-                    </button>
-                  ))}
-                </div>
-              </div>
+              <TypeToggle
+                idPrefix="txe"
+                types={['expense', 'income']}
+                value={formData.type}
+                onPick={(type) => {
+                  handleInputChange('type', type);
+                  handleInputChange('category', '');
+                  // A loan link is an expense's; an income would keep it otherwise.
+                  if (type !== 'expense') handleInputChange('loanId', '');
+                }}
+              />
             )}
 
             {transferUnlinked && (
@@ -766,55 +761,59 @@ export default function EditTransactionPage() {
               </div>
             )}
 
-            {/* Sale proceeds: shown, not edited — they follow the sale. */}
+            {/* Sale proceeds: shown, not edited — they follow the sale. The same
+                entry panel as a cash entry, its figures read-only. */}
             {isSaleMode && (
-              <div className="space-y-4 rounded-lg border border-emerald-200 dark:border-emerald-800 bg-emerald-50 dark:bg-emerald-900/20 p-4">
-                <div>
-                  <div className="text-sm font-semibold text-emerald-800 dark:text-emerald-300">
-                    {t('transactions:form.saleEdit.title', 'Sale proceeds')}
-                  </div>
-                  <p className="mt-1 text-xs text-emerald-800 dark:text-emerald-400">
+              <>
+                <p className={NOTE}>
+                  <InformationCircleIcon className="w-5 h-5 shrink-0 text-gray-400 dark:text-gray-500" aria-hidden="true" />
+                  <span>
+                    <strong className="font-semibold text-gray-900 dark:text-white">{t('transactions:form.saleEdit.title', 'Sale proceeds')}</strong>{' · '}
                     {t('transactions:form.saleEdit.note', 'The amount, date and wallet follow the sale. To change them, edit or reverse the sale on Portfolio.')}{' '}
-                    <Link href="/portfolio" className="font-medium underline underline-offset-2 focus-visible:ring-2 focus-visible:ring-primary-500 rounded">
+                    <Link href="/portfolio" className="font-medium text-primary-700 dark:text-primary-400 underline underline-offset-2 focus-visible:ring-2 focus-visible:ring-primary-500 rounded">
                       {t('transactions:form.goToPortfolio', 'Go to Portfolio')}
                     </Link>
-                  </p>
+                  </span>
+                </p>
+                <div className={ENTRY_PANEL}>
+                  <dl className={cn(ENTRY_SECTION, 'grid grid-cols-3 gap-3 py-3.5 sm:py-4')}>
+                    <div className="min-w-0">
+                      <dt className={ENTRY_CAPTION}>{t('transactions:fields.amount', 'Amount')}</dt>
+                      <dd className="mt-1 text-lg font-bold tabular-nums text-gray-900 dark:text-white">
+                        <span aria-hidden="true" className={TYPE_TONE.income.text}>{TYPE_TONE.income.sign}</span>{formatCurrency(Number(formData.amount), formData.currency)}
+                      </dd>
+                    </div>
+                    <div className="min-w-0">
+                      <dt className={ENTRY_CAPTION}>{t('transactions:fields.date', 'Date')}</dt>
+                      <dd className="mt-1 text-sm font-semibold text-gray-900 dark:text-white">{formData.date}</dd>
+                    </div>
+                    <div className="min-w-0">
+                      <dt className={ENTRY_CAPTION}>{t('transactions:form.walletTypeLabel', 'Wallet Type')}</dt>
+                      <dd className="mt-1 text-sm font-semibold text-gray-900 dark:text-white">{walletName(formData.walletType)}</dd>
+                    </div>
+                  </dl>
+                  <div className={cn(ENTRY_SECTION, 'pt-2.5 pb-1.5')}>
+                    <label htmlFor="txe-description" className={ENTRY_CAPTION}>{t('transactions:fields.description', 'Description')}</label>
+                    <input
+                      id="txe-description"
+                      type="text"
+                      value={formData.description}
+                      onChange={(e) => handleInputChange('description', e.target.value)}
+                      className={ENTRY_INPUT}
+                    />
+                  </div>
                 </div>
-                <dl className="grid grid-cols-3 gap-3 text-sm">
-                  <div>
-                    <dt className="text-xs text-gray-600 dark:text-gray-400">{t('transactions:fields.amount', 'Amount')}</dt>
-                    <dd className="font-semibold tabular-nums text-gray-900 dark:text-white">{formatCurrency(Number(formData.amount), formData.currency)}</dd>
-                  </div>
-                  <div>
-                    <dt className="text-xs text-gray-600 dark:text-gray-400">{t('transactions:fields.date', 'Date')}</dt>
-                    <dd className="font-semibold text-gray-900 dark:text-white">{formData.date}</dd>
-                  </div>
-                  <div>
-                    <dt className="text-xs text-gray-600 dark:text-gray-400">{t('transactions:form.walletTypeLabel', 'Wallet Type')}</dt>
-                    <dd className="font-semibold text-gray-900 dark:text-white">{walletName(formData.walletType)}</dd>
-                  </div>
-                </dl>
-                <div>
-                  <label htmlFor="txe-description" className={FIELD_LABEL}>{t('transactions:fields.description', 'Description')}</label>
-                  <input
-                    id="txe-description"
-                    type="text"
-                    value={formData.description}
-                    onChange={(e) => handleInputChange('description', e.target.value)}
-                    className={FIELD_INPUT}
-                  />
-                </div>
-              </div>
+              </>
             )}
 
-            {/* Investment Purchase Section */}
+            {/* Investment Purchase: the add form's buy panel, read-only where the
+                holding owns the figures. */}
             {isInvestMode && (
-              <div className="space-y-4 rounded-lg border border-purple-200 dark:border-purple-800 p-4 bg-purple-50 dark:bg-purple-900/20">
-                <div>
-                  <div className="text-sm font-semibold text-purple-700 dark:text-purple-300">
-                    {t('transactions:form.investEdit.title', 'Investment purchase')}
-                  </div>
-                  <p className="mt-1 text-xs text-purple-700 dark:text-purple-400">
+              <>
+                <p className={NOTE}>
+                  <InformationCircleIcon className="w-5 h-5 shrink-0 text-gray-400 dark:text-gray-500" aria-hidden="true" />
+                  <span>
+                    <strong className={cn('font-semibold', TYPE_TONE.investment.text)}>{t('transactions:form.investEdit.title', 'Investment purchase')}</strong>{' · '}
                     {investLink === 'holding'
                       ? t('transactions:form.investEdit.noteHolding', 'Saving updates the holding and this Life Wallet entry together.')
                       : investLink === 'lot'
@@ -823,125 +822,127 @@ export default function EditTransactionPage() {
                     {investLink !== 'holding' && (
                       <>
                         {' '}
-                        <Link href="/portfolio" className="font-medium underline underline-offset-2 focus-visible:ring-2 focus-visible:ring-primary-500 rounded">
+                        <Link href="/portfolio" className="font-medium text-primary-700 dark:text-primary-400 underline underline-offset-2 focus-visible:ring-2 focus-visible:ring-primary-500 rounded">
                           {t('transactions:form.goToPortfolio', 'Go to Portfolio')}
                         </Link>
                       </>
                     )}
-                  </p>
-                </div>
-
-                {/* Symbol + Currency row. Both belong to the holding once linked. */}
-                <div className="flex gap-3">
-                  <div className="flex-1 min-w-0">
-                    <label htmlFor="page-symbol" className={FIELD_LABEL}>
-                      {t('transactions:form.invest.symbol', 'Symbol')} <span className="text-error-700 dark:text-error-500">*</span>
-                    </label>
-                    <input
-                      aria-invalid={!!errors.investSymbol}
-                      aria-describedby={errors.investSymbol ? "page-symbol-error" : undefined}
-                      id="page-symbol"
-                      type="text"
-                      value={investSymbol}
-                      readOnly={investLink !== 'unlinked'}
-                      onChange={e => setInvestSymbol(e.target.value.toUpperCase())}
-                      placeholder={t('transactions:form.invest.symbolPlaceholder', 'e.g. 006208, AAPL, BTC')}
-                      className={cn(
-                        FIELD_INPUT, 'font-mono uppercase placeholder:normal-case placeholder:font-sans read-only:bg-gray-100 dark:read-only:bg-gray-800/60',
-                        errors.investSymbol && 'border-error-400'
-                      )}
-                    />
-                    {errors.investSymbol && <p id="page-symbol-error" role="alert" className="text-xs text-error-700 dark:text-error-500 mt-1">{errors.investSymbol}</p>}
-                  </div>
-                  <div className="w-28">
-                    <label htmlFor="page-currency" className={FIELD_LABEL}>{t('transactions:form.currency', 'Currency')}</label>
-                    <select
-                      id="page-currency"
-                      value={investCurrency}
-                      disabled={investLink !== 'unlinked'}
-                      onChange={e => setInvestCurrency(e.target.value)}
-                      className={cn(FIELD_INPUT, 'px-2 disabled:bg-gray-100 dark:disabled:bg-gray-800/60')}
-                    >
-                      {CURRENCIES.map(c => (
-                        <option key={c} value={c}>{c}</option>
-                      ))}
-                    </select>
-                  </div>
-                </div>
-
-                {/* Qty + Price row */}
-                <div className="grid grid-cols-2 gap-3">
-                  <div>
-                    <label htmlFor="page-quantity" className={FIELD_LABEL}>
-                      {t('transactions:form.invest.quantity', 'Quantity')} <span className="text-error-700 dark:text-error-500">*</span>
-                    </label>
-                    <input
-                      aria-invalid={!!errors.investQty}
-                      aria-describedby={errors.investQty ? "page-quantity-error" : undefined}
-                      id="page-quantity"
-                      type="number"
-                      inputMode="decimal"
-                      onWheel={(e) => e.currentTarget.blur()}
-                      min="0"
-                      step="any"
-                      value={investQty}
-                      readOnly={!investAmountEditable}
-                      onChange={e => setInvestQty(e.target.value)}
-                      placeholder="100"
-                      className={cn(
-                        FIELD_INPUT, 'read-only:bg-gray-100 dark:read-only:bg-gray-800/60',
-                        errors.investQty && 'border-error-400'
-                      )}
-                    />
-                    {errors.investQty && <p id="page-quantity-error" role="alert" className="text-xs text-error-700 dark:text-error-500 mt-1">{errors.investQty}</p>}
-                  </div>
-                  <div>
-                    <label htmlFor="page-price-unit" className={FIELD_LABEL}>
-                      {t('transactions:form.invest.pricePerUnit', 'Price / Unit')} <span className="text-error-700 dark:text-error-500">*</span>
-                    </label>
-                    <input
-                      aria-invalid={!!errors.investPrice}
-                      aria-describedby={errors.investPrice ? "page-price-unit-error" : undefined}
-                      id="page-price-unit"
-                      type="number"
-                      inputMode="decimal"
-                      onWheel={(e) => e.currentTarget.blur()}
-                      min="0"
-                      step="any"
-                      value={investPrice}
-                      readOnly={!investAmountEditable}
-                      onChange={e => setInvestPrice(e.target.value)}
-                      placeholder="100.00"
-                      className={cn(
-                        FIELD_INPUT, 'read-only:bg-gray-100 dark:read-only:bg-gray-800/60',
-                        errors.investPrice && 'border-error-400'
-                      )}
-                    />
-                    {errors.investPrice && <p id="page-price-unit-error" role="alert" className="text-xs text-error-700 dark:text-error-500 mt-1">{errors.investPrice}</p>}
-                  </div>
-                </div>
-
-                {/* Auto-calculated total */}
-                <div className="flex items-center justify-between rounded-lg bg-purple-100 dark:bg-purple-900/40 px-4 py-3">
-                  <span className="text-sm text-purple-700 dark:text-purple-300">{t('transactions:form.invest.totalCost', 'Total Cost')}</span>
-                  <span className="text-lg font-bold text-purple-900 dark:text-purple-100">
-                    {investCurrency} {investTotal.toLocaleString(undefined, { minimumFractionDigits: 0, maximumFractionDigits: 2 })}
                   </span>
+                </p>
+
+                <div>
+                  <div className={cn(ENTRY_PANEL, (errors.investSymbol || errors.investQty || errors.investPrice) && 'border-error-300 dark:border-error-700')}>
+                    {/* Symbol + Currency. Both belong to the holding once linked. */}
+                    <div className={cn(ENTRY_SECTION, 'flex gap-4')}>
+                      <div className="flex-1 min-w-0">
+                        <label htmlFor="page-symbol" className={ENTRY_CAPTION}>
+                          {t('transactions:form.invest.symbol', 'Symbol')} <span className="text-error-700 dark:text-error-400" aria-hidden="true">*</span>
+                        </label>
+                        <input
+                          aria-invalid={!!errors.investSymbol}
+                          aria-describedby={errors.investSymbol ? "page-symbol-error" : undefined}
+                          id="page-symbol"
+                          aria-required={investLink === 'unlinked'}
+                          type="text"
+                          value={investSymbol}
+                          readOnly={investLink !== 'unlinked'}
+                          onChange={e => setInvestSymbol(e.target.value.toUpperCase())}
+                          placeholder={t('transactions:form.invest.symbolPlaceholder', 'e.g. 006208, AAPL, BTC')}
+                          className={cn(
+                            ENTRY_INPUT, 'text-lg sm:text-lg font-mono font-semibold uppercase placeholder:normal-case placeholder:font-sans placeholder:text-base read-only:text-gray-600 dark:read-only:text-gray-300',
+                            errors.investSymbol && ENTRY_INPUT_INVALID
+                          )}
+                        />
+                      </div>
+                      <div className="w-28 shrink-0">
+                        <label htmlFor="page-currency" className={ENTRY_CAPTION}>{t('transactions:form.currency', 'Currency')}</label>
+                        <select
+                          id="page-currency"
+                          value={investCurrency}
+                          disabled={investLink !== 'unlinked'}
+                          onChange={e => setInvestCurrency(e.target.value)}
+                          className={cn(ENTRY_INPUT, 'font-semibold disabled:text-gray-600 dark:disabled:text-gray-300 disabled:opacity-100')}
+                        >
+                          {CURRENCIES.map(c => (
+                            <option key={c} value={c}>{c}</option>
+                          ))}
+                        </select>
+                      </div>
+                    </div>
+
+                    {/* Quantity × Price */}
+                    <div className={cn(ENTRY_SECTION, 'grid grid-cols-2 gap-x-4 sm:gap-x-5')}>
+                      <div>
+                        <label htmlFor="page-quantity" className={ENTRY_CAPTION}>
+                          {t('transactions:form.invest.quantity', 'Quantity')} <span className="text-error-700 dark:text-error-400" aria-hidden="true">*</span>
+                        </label>
+                        <input
+                          aria-invalid={!!errors.investQty}
+                          aria-describedby={errors.investQty ? "page-quantity-error" : undefined}
+                          id="page-quantity"
+                          aria-required={investAmountEditable}
+                          type="number"
+                          inputMode="decimal"
+                          onWheel={(e) => e.currentTarget.blur()}
+                          min="0"
+                          step="any"
+                          value={investQty}
+                          readOnly={!investAmountEditable}
+                          onChange={e => setInvestQty(e.target.value)}
+                          placeholder="100"
+                          className={cn(
+                            ENTRY_INPUT, 'font-semibold tabular-nums read-only:text-gray-600 dark:read-only:text-gray-300',
+                            errors.investQty && ENTRY_INPUT_INVALID
+                          )}
+                        />
+                      </div>
+                      <div>
+                        <label htmlFor="page-price-unit" className={ENTRY_CAPTION}>
+                          {t('transactions:form.invest.pricePerUnit', 'Price / Unit')} <span className="text-error-700 dark:text-error-400" aria-hidden="true">*</span>
+                        </label>
+                        <input
+                          aria-invalid={!!errors.investPrice}
+                          aria-describedby={errors.investPrice ? "page-price-unit-error" : undefined}
+                          id="page-price-unit"
+                          aria-required={investAmountEditable}
+                          type="number"
+                          inputMode="decimal"
+                          onWheel={(e) => e.currentTarget.blur()}
+                          min="0"
+                          step="any"
+                          value={investPrice}
+                          readOnly={!investAmountEditable}
+                          onChange={e => setInvestPrice(e.target.value)}
+                          placeholder="100.00"
+                          className={cn(
+                            ENTRY_INPUT, 'font-semibold tabular-nums read-only:text-gray-600 dark:read-only:text-gray-300',
+                            errors.investPrice && ENTRY_INPUT_INVALID
+                          )}
+                        />
+                      </div>
+                    </div>
+
+                    {/* The total: worked out, not typed. */}
+                    <div className={cn(ENTRY_SECTION, 'pb-3.5 sm:pb-4')}>
+                      <div className={ENTRY_CAPTION}>{t('transactions:form.invest.totalCost', 'Total Cost')}</div>
+                      <div className="mt-0.5 flex items-baseline gap-2">
+                        <span aria-hidden="true" className={cn('text-3xl font-semibold leading-none', TYPE_TONE.investment.text)}>{TYPE_TONE.investment.sign}</span>
+                        <span className="text-3xl font-bold tracking-tight tabular-nums text-gray-900 dark:text-white">
+                          {investCurrency} {investTotal.toLocaleString(undefined, { minimumFractionDigits: 0, maximumFractionDigits: 2 })}
+                        </span>
+                      </div>
+                    </div>
+                  </div>
+                  {errors.investSymbol && <p id="page-symbol-error" role="alert" className={ERROR_TEXT}>{errors.investSymbol}</p>}
+                  {errors.investQty && <p id="page-quantity-error" role="alert" className={ERROR_TEXT}>{errors.investQty}</p>}
+                  {errors.investPrice && <p id="page-price-unit-error" role="alert" className={ERROR_TEXT}>{errors.investPrice}</p>}
                 </div>
 
                 {/* Date: the holding's purchase day once linked to a lot of one buy. */}
-                <div className="w-full sm:w-40">
-                  <label htmlFor="page-date" className={FIELD_LABEL}>{t('transactions:form.invest.date', 'Date')}</label>
-                  <input
-                    id="page-date"
-                    type="date"
-                    value={formData.date}
-                    readOnly={!investAmountEditable}
-                    onChange={(e) => handleInputChange('date', e.target.value)}
-                    className={cn(FIELD_INPUT, 'px-2 min-h-12 lg:min-h-0 read-only:bg-gray-100 dark:read-only:bg-gray-800/60')}
-                  />
+                <div className={ROW_LIST}>
+                  <DateRow id="page-date" value={formData.date} readOnly={!investAmountEditable} onChange={(day) => handleInputChange('date', day)} />
                 </div>
-              </div>
+              </>
             )}
 
             {!isInvestMode && !isSaleMode && (
@@ -963,49 +964,48 @@ export default function EditTransactionPage() {
             {/* Quiet secondary actions at the end of the form, outside the sticky
                 bar, so a thumb reaching for Update cannot land on Delete. */}
             {(canDelete && !transferUnlinked) || duplicateHref ? (
-              <div className="flex flex-wrap items-center justify-between gap-2 border-t border-gray-100 dark:border-gray-700 pt-3">
+              <div className="flex flex-wrap items-center justify-between gap-2 -my-2">
                 {duplicateHref ? (
                   <Link
                     href={duplicateHref}
-                    className="inline-flex items-center gap-1.5 rounded-lg px-2 min-h-11 lg:min-h-0 lg:py-1.5 text-sm font-medium text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-500"
+                    className="-ml-2 inline-flex items-center gap-1.5 rounded-lg px-2 min-h-11 lg:min-h-0 lg:py-1.5 text-sm font-medium text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-500"
                   >
                     <DocumentDuplicateIcon className="w-4 h-4" aria-hidden="true" />
                     {t('transactions:form.duplicate', 'Duplicate')}
                   </Link>
                 ) : <span />}
-                {canDelete && !transferUnlinked && deleteButton()}
+                {canDelete && !transferUnlinked && deleteButton('-mr-2')}
               </div>
             ) : null}
 
             <StickySubmitBar>
-              <Button
-                type="submit"
-                variant="primary"
-                size="lg"
-                fullWidth
-                isLoading={isSubmitting}
-                disabled={transferUnlinked}
-                aria-describedby={transferUnlinked ? 'txe-transfer-unlinked' : undefined}
-                leftIcon={<CheckIcon className="w-5 h-5" />}
-              >
-                {isSubmitting
-                  ? t('transactions:form.updating', 'Updating…')
-                  : isInvestMode
-                    ? t('transactions:form.updateInvestment', 'Update Investment Transaction')
-                    : t('transactions:form.update', 'Update Transaction')}
-              </Button>
+              <div className="flex md:justify-end">
+                <Button
+                  type="submit"
+                  variant="primary"
+                  size="lg"
+                  fullWidth
+                  isLoading={isSubmitting}
+                  disabled={transferUnlinked}
+                  aria-describedby={transferUnlinked ? 'txe-transfer-unlinked' : undefined}
+                  leftIcon={<CheckIcon className="w-5 h-5" />}
+                  className="md:w-auto md:min-w-[16rem] lg:min-h-12"
+                >
+                  {isSubmitting
+                    ? t('transactions:form.updating', 'Updating…')
+                    : isInvestMode
+                      ? t('transactions:form.updateInvestment', 'Update Investment Transaction')
+                      : t('transactions:form.update', 'Update Transaction')}
+                </Button>
+              </div>
             </StickySubmitBar>
-          </form>
-        </Card>
-      </div>
-
-      <ConfirmDialog
-        isOpen={confirmingDelete}
-        onCancel={() => setConfirmingDelete(false)}
-        onConfirm={handleDelete}
-        title={t('transactions:list.confirmDeleteTitle', 'Delete transaction')}
-        message={deleteMessage}
-      />
-    </DashboardLayout>
+          </form>,
+    <ConfirmDialog
+      isOpen={confirmingDelete}
+      onCancel={() => setConfirmingDelete(false)}
+      onConfirm={handleDelete}
+      title={t('transactions:list.confirmDeleteTitle', 'Delete transaction')}
+      message={deleteMessage}
+    />,
   );
 }
