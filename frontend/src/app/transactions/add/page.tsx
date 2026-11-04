@@ -548,7 +548,7 @@ function AddTransactionForm() {
                                   aria-invalid={!!errors.investPrice}
                                   aria-describedby={errors.investPrice ? "tx-invest-priceperunit-error" : undefined}
                                   id="tx-invest-priceperunit"
-                                aria-required="true"
+                                  aria-required="true"
                                   type="number"
                                   inputMode="decimal"
                                   onWheel={(e) => e.currentTarget.blur()}
@@ -688,7 +688,7 @@ function AddTransactionForm() {
                                     aria-invalid={!!errors.investSellQty}
                                     aria-describedby={errors.investSellQty ? 'tx-invest-sellqty-error' : undefined}
                                     id="tx-invest-quantitytosell"
-                                aria-required="true"
+                                    aria-required="true"
                                     type="number"
                                     inputMode="decimal"
                                     onWheel={(e) => e.currentTarget.blur()}

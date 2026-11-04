@@ -680,7 +680,7 @@ export default function EditTransactionPage() {
   // The page's frame: the same as /transactions/add, and drawn while the row
   // loads too, so the header is there from the first paint instead of fading in
   // (half-transparent) after a bare spinner.
-  const frame = (body: React.ReactNode) => (
+  const frame = (body: React.ReactNode, after?: React.ReactNode) => (
     <DashboardLayout>
       <div className="max-w-3xl mx-auto py-2 sm:py-4">
         {/* Phone title + back; on desktop the top bar's title and breadcrumb cover both. */}
@@ -694,6 +694,9 @@ export default function EditTransactionPage() {
           {body}
         </Card>
       </div>
+      {/* After the Card, not in it: a Card can carry a transform, which would
+          anchor the dialog's fixed overlay to the card instead of the viewport. */}
+      {after}
     </DashboardLayout>
   );
 
@@ -718,7 +721,6 @@ export default function EditTransactionPage() {
   );
 
   return frame(
-        <>
           <form onSubmit={handleSubmit} className="space-y-5 sm:space-y-6">
             {/* Transaction type. A transfer's type is locked: saving one leg as an
                 expense or income would orphan its pair and throw both wallets off.
@@ -840,7 +842,7 @@ export default function EditTransactionPage() {
                           aria-invalid={!!errors.investSymbol}
                           aria-describedby={errors.investSymbol ? "page-symbol-error" : undefined}
                           id="page-symbol"
-                          aria-required="true"
+                          aria-required={investLink === 'unlinked'}
                           type="text"
                           value={investSymbol}
                           readOnly={investLink !== 'unlinked'}
@@ -878,7 +880,7 @@ export default function EditTransactionPage() {
                           aria-invalid={!!errors.investQty}
                           aria-describedby={errors.investQty ? "page-quantity-error" : undefined}
                           id="page-quantity"
-                          aria-required="true"
+                          aria-required={investAmountEditable}
                           type="number"
                           inputMode="decimal"
                           onWheel={(e) => e.currentTarget.blur()}
@@ -902,7 +904,7 @@ export default function EditTransactionPage() {
                           aria-invalid={!!errors.investPrice}
                           aria-describedby={errors.investPrice ? "page-price-unit-error" : undefined}
                           id="page-price-unit"
-                          aria-required="true"
+                          aria-required={investAmountEditable}
                           type="number"
                           inputMode="decimal"
                           onWheel={(e) => e.currentTarget.blur()}
@@ -997,14 +999,13 @@ export default function EditTransactionPage() {
                 </Button>
               </div>
             </StickySubmitBar>
-          </form>
-          <ConfirmDialog
-            isOpen={confirmingDelete}
-            onCancel={() => setConfirmingDelete(false)}
-            onConfirm={handleDelete}
-            title={t('transactions:list.confirmDeleteTitle', 'Delete transaction')}
-            message={deleteMessage}
-          />
-        </>
+          </form>,
+    <ConfirmDialog
+      isOpen={confirmingDelete}
+      onCancel={() => setConfirmingDelete(false)}
+      onConfirm={handleDelete}
+      title={t('transactions:list.confirmDeleteTitle', 'Delete transaction')}
+      message={deleteMessage}
+    />,
   );
 }
