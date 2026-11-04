@@ -403,9 +403,6 @@ export function CashFields({ idPrefix: p, formData, errors, onChange, onTagsChan
               {tone.sign && (
                 <span aria-hidden="true" className={cn('shrink-0 text-3xl sm:text-4xl font-semibold leading-none', tone.text)}>{tone.sign}</span>
               )}
-              {/* The hero figure. globals-hybrid.css pins every phone input at 16px
-                  (!important, against iOS zoom); that is a floor, not a size, so
-                  this one input outranks it: :not(#x) lends an id's specificity. */}
               <input
                 aria-invalid={!!errors.amount}
                 aria-describedby={errors.amount ? `${p}-amount-error` : undefined}
@@ -420,7 +417,7 @@ export function CashFields({ idPrefix: p, formData, errors, onChange, onTagsChan
                 placeholder="0"
                 className={cn(
                   ENTRY_INPUT,
-                  'min-h-14 py-1 text-4xl [&:not(#x)]:!text-4xl font-bold tracking-tight tabular-nums placeholder-gray-300 dark:placeholder-gray-600',
+                  'min-h-14 py-1 text-4xl sm:text-4xl font-bold tracking-tight tabular-nums placeholder-gray-300 dark:placeholder-gray-600',
                   errors.amount && cn(ENTRY_INPUT_INVALID, 'text-error-700 dark:text-error-400')
                 )}
                 autoFocus={autoFocusAmount}
