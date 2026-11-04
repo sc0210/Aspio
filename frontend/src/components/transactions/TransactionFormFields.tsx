@@ -174,6 +174,8 @@ export const CHIP_OFF = 'border-gray-200 dark:border-gray-700 bg-white dark:bg-g
 // other choice uses. Layered on CHIP: cn's tailwind-merge drops what they replace.
 const CATEGORY_GRID = 'grid gap-2 py-1 sm:flex sm:flex-wrap';
 const CATEGORY_TILE = 'flex-col justify-center gap-1 min-w-0 rounded-xl px-1 min-h-[4.25rem] text-xs sm:flex-row sm:justify-start sm:gap-1.5 sm:rounded-full sm:px-3.5 sm:min-h-11 sm:text-sm';
+// A two-word name may wrap to a second line; a word is never split.
+const CATEGORY_LABEL = 'max-w-full text-center leading-tight whitespace-normal line-clamp-2 sm:line-clamp-none sm:truncate sm:whitespace-nowrap';
 const CATEGORY_ICON_SLOT = 'flex h-6 w-6 items-center justify-center text-lg leading-none sm:h-auto sm:w-5 sm:text-base';
 
 // A choice of two to four is a segmented control: the chosen segment is raised.
@@ -458,7 +460,7 @@ export function CashFields({ idPrefix: p, formData, errors, onChange, onTagsChan
             role="group"
             aria-labelledby={`${p}-group-category`}
             aria-describedby={errors.category ? `${p}-category-error` : undefined}
-            className={cn(CATEGORY_GRID, categories.length <= 6 ? 'grid-cols-3' : 'grid-cols-4')}
+            className={cn(CATEGORY_GRID, categories.length <= 6 ? 'grid-cols-3' : 'grid-cols-3 min-[360px]:grid-cols-4')}
           >
             {/* Not a button: there is nothing to toggle, it only shows what the row
                 holds. Picking a listed chip replaces it. */}
@@ -469,7 +471,7 @@ export function CashFields({ idPrefix: p, formData, errors, onChange, onTagsChan
               >
                 <span className={CATEGORY_ICON_SLOT}><ChipCheck /></span>
                 <span className="sr-only">{t('transactions:form.currentCategory', 'Current category:')} </span>
-                <span className="max-w-full truncate">{t(`transactions:form.categories.${unknownCategory}`, unknownCategory)}</span>
+                <span className={CATEGORY_LABEL}>{t(`transactions:form.categories.${unknownCategory}`, unknownCategory)}</span>
               </span>
             )}
             {categories.map((category) => {
@@ -493,7 +495,7 @@ export function CashFields({ idPrefix: p, formData, errors, onChange, onTagsChan
                   {isSelected
                     ? <span className={CATEGORY_ICON_SLOT}><ChipCheck /></span>
                     : <span aria-hidden="true" className={CATEGORY_ICON_SLOT}>{category.icon}</span>}
-                  <span className="max-w-full truncate">{t(`transactions:form.categories.${category.value}`, category.label)}</span>
+                  <span className={CATEGORY_LABEL}>{t(`transactions:form.categories.${category.value}`, category.label)}</span>
                 </button>
               );
             })}
