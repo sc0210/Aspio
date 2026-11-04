@@ -17,12 +17,29 @@ body {
   font-variant-numeric: tabular-nums;
 }
 
-/* iOS zooms the page when a focused field's text is under 16px. Utilities such
-   as text-sm would otherwise win, hence !important — phones only. */
+/* iOS zooms the page when a focused field's text is under 16px, so on phones a
+   field is never smaller than that. It is a floor, not a fixed size: a field
+   sized larger (the amount's text-4xl) keeps its size. CSS cannot compare
+   sizes, so two rules:
+   - A field with no size class of its own gets 16px. :where() keeps this rule at
+     element weight, so it beats preflight's `font-size: 100%` (earlier in the
+     file, which would inherit a text-sm parent) and loses to any text-* class.
+   - A field whose own class is smaller is held at 16px. A small size behind a
+     phone variant other than max-sm: (say max-[359px]:text-xs) is not caught. */
 @media (max-width: 640px) {
-  input:not([type='checkbox']):not([type='radio']):not([type='range']):not([type='file']),
+  input:where(:not([type='checkbox'], [type='radio'], [type='range'], [type='file'])),
   select,
   textarea {
+    font-size: 16px;
+  }
+
+  :is(input:not([type='checkbox'], [type='radio'], [type='range'], [type='file']), select, textarea):is(
+      [class~='text-xs'],
+      [class~='text-sm'],
+      [class*='text-[1'],
+      [class*='max-sm:text-xs'],
+      [class*='max-sm:text-sm']
+    ) {
     font-size: 16px !important;
   }
 }
