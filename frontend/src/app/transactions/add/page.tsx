@@ -484,6 +484,7 @@ function AddTransactionForm() {
                                 aria-invalid={!!errors.investSymbol}
                                 aria-describedby={errors.investSymbol ? "tx-invest-symbol-error" : undefined}
                                 id="tx-invest-symbol"
+                                aria-required="true"
                                 type="text"
                                 value={investSymbol}
                                 onChange={(e) => setInvestSymbol(e.target.value.toUpperCase())}
@@ -516,6 +517,7 @@ function AddTransactionForm() {
                                 aria-invalid={!!errors.investQty}
                                 aria-describedby={errors.investQty ? "tx-invest-quantity-error" : undefined}
                                 id="tx-invest-quantity"
+                                aria-required="true"
                                 type="number"
                                 inputMode="decimal"
                                 onWheel={(e) => e.currentTarget.blur()}
@@ -546,6 +548,7 @@ function AddTransactionForm() {
                                   aria-invalid={!!errors.investPrice}
                                   aria-describedby={errors.investPrice ? "tx-invest-priceperunit-error" : undefined}
                                   id="tx-invest-priceperunit"
+                                aria-required="true"
                                   type="number"
                                   inputMode="decimal"
                                   onWheel={(e) => e.currentTarget.blur()}
@@ -685,6 +688,7 @@ function AddTransactionForm() {
                                     aria-invalid={!!errors.investSellQty}
                                     aria-describedby={errors.investSellQty ? 'tx-invest-sellqty-error' : undefined}
                                     id="tx-invest-quantitytosell"
+                                aria-required="true"
                                     type="number"
                                     inputMode="decimal"
                                     onWheel={(e) => e.currentTarget.blur()}

@@ -150,7 +150,6 @@
       "errQty": "請輸入數量",
       "errSellQty": "請輸入賣出數量",
       "errSymbol": "請輸入代號",
-      "expenseBadge": "支出",
       "leaveBlankMarket": "留空則使用目前市價。",
       "loadingHoldings": "載入持倉中…",
       "marketPricePlaceholder": "市價",

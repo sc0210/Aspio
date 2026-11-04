@@ -26,11 +26,11 @@ import { cn } from '@/utils/cn';
 import { formatCurrency, localDateString } from '@/utils/formatters';
 import { getCategoryColorGroup } from './categoryColorGroups';
 
-export const TRANSACTION_TYPES: { value: string; label: string; shortLabel?: string; color: string }[] = [
-  { value: 'expense',    label: 'Expense',    color: 'red'    },
-  { value: 'income',     label: 'Income',     color: 'green'  },
-  { value: 'transfer',   label: 'Transfer',   color: 'blue'   },
-  { value: 'investment', label: 'Investment', shortLabel: 'Invest', color: 'purple' },
+export const TRANSACTION_TYPES: { value: string; label: string; shortLabel?: string }[] = [
+  { value: 'expense',    label: 'Expense' },
+  { value: 'income',     label: 'Income' },
+  { value: 'transfer',   label: 'Transfer' },
+  { value: 'investment', label: 'Investment', shortLabel: 'Invest' },
 ];
 
 /**
@@ -261,7 +261,7 @@ export function TypeToggle({ idPrefix: p, types, value, onPick }: TypeToggleProp
               key={type.value}
               type="button"
               onClick={() => onPick(type.value)}
-              className={cn(SEGMENT, 'flex-1 min-w-0 px-1.5 sm:px-3', on ? cn(SEGMENT_ON, TYPE_TONE[type.value].text) : SEGMENT_OFF)}
+              className={cn(SEGMENT, 'flex-1 min-w-0 px-1.5 max-[359px]:px-1 max-[359px]:text-xs sm:px-3', on ? cn(SEGMENT_ON, TYPE_TONE[type.value].text) : SEGMENT_OFF)}
             >
               <Icon className="hidden sm:block w-4 h-4 shrink-0" aria-hidden="true" />
               {/* A phone has ~80px per segment: too narrow for "Investment". */}
@@ -688,7 +688,7 @@ export function DateRow({ id, value, onChange, readOnly = false }: DateRowProps)
   return (
     <div className={ROW}>
       <label htmlFor={id} className={ROW_LABEL}>{t('transactions:fields.date', 'Date')}</label>
-      <div className="flex w-full items-center gap-2 sm:w-auto">
+      <div className="flex w-full flex-wrap items-center gap-2 sm:w-auto sm:flex-nowrap">
         {!readOnly && (
           <div className={cn(SEGMENTED, 'flex flex-1 sm:flex-none')}>
             {days.map(({ offset, label }) => {
@@ -714,7 +714,7 @@ export function DateRow({ id, value, onChange, readOnly = false }: DateRowProps)
           value={value}
           readOnly={readOnly}
           onChange={(e) => onChange(e.target.value)}
-          className={cn(FIELD_INPUT, 'w-[9.5rem] shrink-0 px-2.5 min-h-12 lg:min-h-0 lg:h-10 py-0 read-only:bg-gray-100 dark:read-only:bg-gray-800/60')}
+          className={cn(FIELD_INPUT, 'min-w-[9.5rem] flex-1 sm:flex-none sm:w-[9.5rem] shrink-0 px-2.5 min-h-12 lg:min-h-0 lg:h-10 py-0 read-only:bg-gray-100 dark:read-only:bg-gray-800/60')}
         />
       </div>
     </div>
