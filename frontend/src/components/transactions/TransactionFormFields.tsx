@@ -168,6 +168,14 @@ export const CHIP = 'shrink-0 snap-start inline-flex items-center gap-1.5 rounde
 export const CHIP_ON = 'border-primary-500 dark:border-primary-400 bg-primary-50 dark:bg-primary-900/40 text-primary-700 dark:text-primary-300 font-semibold';
 export const CHIP_OFF = 'border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 text-gray-700 dark:text-gray-300 hover:border-gray-400 dark:hover:border-gray-500';
 
+// Category is the choice every entry makes, so on a phone it is a grid of tiles
+// (icon over label) with every option in sight, not a swiping row that hides most
+// of them past the edge. From sm the tiles turn back into the wrapping chips every
+// other choice uses. Layered on CHIP: cn's tailwind-merge drops what they replace.
+const CATEGORY_GRID = 'grid gap-2 py-1 sm:flex sm:flex-wrap';
+const CATEGORY_TILE = 'flex-col justify-center gap-1 min-w-0 rounded-xl px-1 min-h-[4.25rem] text-xs sm:flex-row sm:justify-start sm:gap-1.5 sm:rounded-full sm:px-3.5 sm:min-h-11 sm:text-sm';
+const CATEGORY_ICON_SLOT = 'flex h-6 w-6 items-center justify-center text-lg leading-none sm:h-auto sm:w-5 sm:text-base';
+
 // A choice of two to four is a segmented control: the chosen segment is raised.
 export const SEGMENTED = 'inline-flex rounded-xl bg-gray-100 dark:bg-gray-900/70 p-1 gap-1';
 export const SEGMENT = 'inline-flex items-center justify-center gap-1.5 rounded-lg px-3 py-2 lg:py-1.5 min-h-11 lg:min-h-0 text-sm font-medium whitespace-nowrap transition-colors motion-reduce:transition-none touch-manipulation focus:outline-none focus-visible:ring-2 focus-visible:ring-primary-500';
@@ -450,19 +458,18 @@ export function CashFields({ idPrefix: p, formData, errors, onChange, onTagsChan
             role="group"
             aria-labelledby={`${p}-group-category`}
             aria-describedby={errors.category ? `${p}-category-error` : undefined}
-            ref={revealSelected}
-            className={CHIP_ROW}
+            className={cn(CATEGORY_GRID, categories.length <= 6 ? 'grid-cols-3' : 'grid-cols-4')}
           >
             {/* Not a button: there is nothing to toggle, it only shows what the row
                 holds. Picking a listed chip replaces it. */}
             {unknownCategory && (
               <span
                 data-current-category
-                className={cn(CHIP, 'font-semibold', getCategoryColorGroup(unknownCategory).lightBg, getCategoryColorGroup(unknownCategory).lightText, getCategoryColorGroup(unknownCategory).borderOn)}
+                className={cn(CHIP, CATEGORY_TILE, 'font-semibold', getCategoryColorGroup(unknownCategory).lightBg, getCategoryColorGroup(unknownCategory).lightText, getCategoryColorGroup(unknownCategory).borderOn)}
               >
-                <ChipCheck />
+                <span className={CATEGORY_ICON_SLOT}><ChipCheck /></span>
                 <span className="sr-only">{t('transactions:form.currentCategory', 'Current category:')} </span>
-                {t(`transactions:form.categories.${unknownCategory}`, unknownCategory)}
+                <span className="max-w-full truncate">{t(`transactions:form.categories.${unknownCategory}`, unknownCategory)}</span>
               </span>
             )}
             {categories.map((category) => {
@@ -476,6 +483,7 @@ export function CashFields({ idPrefix: p, formData, errors, onChange, onTagsChan
                   onClick={() => pickCategory(category.value)}
                   className={cn(
                     CHIP,
+                    CATEGORY_TILE,
                     isSelected
                       ? cn('font-semibold', group.lightBg, group.lightText, group.borderOn)
                       : cn(CHIP_OFF, errors.category && 'border-error-200 dark:border-error-800')
@@ -483,9 +491,9 @@ export function CashFields({ idPrefix: p, formData, errors, onChange, onTagsChan
                 >
                   {/* A fixed slot: emoji glyphs render wider than their box and crowd the label. */}
                   {isSelected
-                    ? <span className="w-5 flex justify-center"><ChipCheck /></span>
-                    : <span aria-hidden="true" className="w-5 text-center leading-none">{category.icon}</span>}
-                  {t(`transactions:form.categories.${category.value}`, category.label)}
+                    ? <span className={CATEGORY_ICON_SLOT}><ChipCheck /></span>
+                    : <span aria-hidden="true" className={CATEGORY_ICON_SLOT}>{category.icon}</span>}
+                  <span className="max-w-full truncate">{t(`transactions:form.categories.${category.value}`, category.label)}</span>
                 </button>
               );
             })}
