@@ -47,7 +47,7 @@ structlog==26.1.0
 
 # Currency and localization
 babel==2.18.0
-pytz==2026.5
+pytz==2026.6
 
 # Market Data APIs
 yfinance==0.2.66
