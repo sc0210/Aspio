@@ -350,6 +350,18 @@ body {
   }
 }
 
+/* In the components layer, not with the rules below: unlayered, its padding
+   beat utilities, so pl-10 lost and an Input's left icon sat on its text. */
+@layer components {
+  @media (max-width: 640px) {
+    .input {
+      font-size: 1rem; /* Prevent zoom on iOS */
+      min-height: 48px;
+      padding: 0.75rem 1rem; /* Better touch area */
+    }
+  }
+}
+
 /* Enhanced Mobile optimizations for Asian markets */
 @media (max-width: 640px) {
   .card {
@@ -364,12 +376,6 @@ body {
     padding: 0.625rem 1rem; /* Increased padding for better thumb access */
     min-height: 48px;
     min-width: 48px;
-  }
-
-  .input {
-    font-size: 1rem; /* Prevent zoom on iOS */
-    min-height: 48px;
-    padding: 0.75rem 1rem; /* Better touch area */
   }
 
   .chart-container {
