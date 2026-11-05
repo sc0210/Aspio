@@ -26,27 +26,22 @@ const PERIOD_LABELS: Record<string, string> = {
   '6m': '6M', 'ytd': 'YTD', '1y': '1Y',
 };
 
-// Markets trade Mon–Fri only — five day columns + a weekly sum column.
-const MINI_CAL_WEEKDAYS = ['M', 'T', 'W', 'T', 'F'];
 
 function miniCellColor(change: number | null, maxAbs: number): string {
   if (change === null) return 'bg-gray-100 dark:bg-gray-700/50';
   if (change === 0)    return 'bg-gray-100 dark:bg-gray-700';
   const ratio = maxAbs > 0 ? Math.min(Math.abs(change) / maxAbs, 1) : 0;
+  // Strong days take the -700 shade: white on emerald-500 measured 2.54:1.
   if (change > 0) {
-    if (ratio > 0.66) return 'bg-emerald-500 text-white';
+    if (ratio > 0.66) return 'bg-emerald-700 text-white';
     if (ratio > 0.33) return 'bg-emerald-200 text-emerald-900 dark:bg-emerald-700/60 dark:text-emerald-100';
     return 'bg-emerald-100 text-emerald-800 dark:bg-emerald-900/40 dark:text-emerald-300';
   }
-  if (ratio > 0.66) return 'bg-red-500 text-white';
+  if (ratio > 0.66) return 'bg-red-700 text-white';
   if (ratio > 0.33) return 'bg-red-200 text-red-900 dark:bg-red-700/60 dark:text-red-100';
   return 'bg-red-100 text-red-800 dark:bg-red-900/40 dark:text-red-300';
 }
 
-
-// Said in the cell's own tooltip: the US session ends after midnight in Taipei, so
-// the newest day keeps moving until its close is published.
-const PROVISIONAL_NOTE = 'not final — the market has not closed for this day yet';
 
 function MiniCalendarSection({
   data,
@@ -57,6 +52,12 @@ function MiniCalendarSection({
   currency: string;
   isValueVisible: boolean;
 }) {
+  const { t, i18n } = useTranslation(['dashboard']);
+  // Markets trade Mon–Fri only — five day columns + a weekly sum column.
+  const weekdays = t('dashboard:portfolioOverview.weekdayInitials').split(',');
+  // Said in the cell's own tooltip: the US session ends after midnight in Taipei,
+  // so the newest day keeps moving until its close is published.
+  const provisionalNote = t('dashboard:portfolioOverview.provisionalNote');
   const { cells, monthSum, hasData, maxAbs, isPositive, todayStr, monthLabel } = useMemo(() => {
     const now = new Date();
     const year = now.getFullYear();
@@ -77,10 +78,11 @@ function MiniCalendarSection({
     const maxAbs     = monthData.size > 0 ? Math.max(...Array.from(monthData.values()).map(p => Math.abs(p.change))) : 0;
     const isPositive = monthSum >= 0;
     const todayStr   = `${monthPrefix}-${String(now.getDate()).padStart(2, '0')}`;
-    const monthLabel = now.toLocaleDateString(undefined, { month: 'long' });
+    // The app's language, not the browser's: an en-US browser on the zh UI said "NOVEMBER".
+    const monthLabel = now.toLocaleDateString(i18n.language, { month: 'long' });
 
     return { cells, monthSum, hasData, maxAbs, isPositive, todayStr, monthLabel };
-  }, [data]);
+  }, [data, i18n.language]);
 
   return (
     <div className="pt-3 border-t border-gray-100 dark:border-gray-700 lg:h-full lg:pt-0 lg:pl-5 lg:border-t-0 lg:border-l">
@@ -88,7 +90,7 @@ function MiniCalendarSection({
       <div className="flex items-center justify-between mb-2">
         <div className="flex items-center gap-2">
           <span className="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wide">
-            {monthLabel} P&L
+            {t('dashboard:portfolioOverview.monthPnl', { month: monthLabel })}
           </span>
           {hasData && (
             <span className={cn(
@@ -103,20 +105,20 @@ function MiniCalendarSection({
         </div>
         <Link
           href="/portfolio/trend?view=calendar"
-          className="text-[11px] font-medium text-primary-700 hover:text-primary-800 dark:text-primary-400 dark:hover:text-primary-300 transition-colors"
+          className="text-xs font-medium text-primary-700 hover:text-primary-800 dark:text-primary-400 dark:hover:text-primary-300 transition-colors"
         >
-          Full calendar →
+          {t('dashboard:portfolioOverview.fullCalendar')}
         </Link>
       </div>
 
       {/* Weekday headers (Mon–Fri) + weekly sum */}
       <div className="grid grid-cols-6 gap-0.5 mb-0.5">
-        {MINI_CAL_WEEKDAYS.map((d, i) => (
-          <div key={i} className="text-center text-[11px] font-semibold text-gray-500 dark:text-gray-500">
+        {weekdays.map((d, i) => (
+          <div key={i} className="text-center text-xs font-semibold text-gray-500 dark:text-gray-400">
             {d}
           </div>
         ))}
-        <div className="text-center text-[11px] font-semibold text-gray-500 dark:text-gray-500">Σ</div>
+        <div className="text-center text-xs font-semibold text-gray-500 dark:text-gray-400">Σ</div>
       </div>
 
       {/* Week rows: 5 weekday cells + 1 weekly sum (text only) */}
@@ -136,7 +138,7 @@ function MiniCalendarSection({
                     key={cell.dateStr}
                     title={
                       cell.change !== null
-                        ? `${cell.dateStr}: ${cell.change >= 0 ? '+' : ''}${formatCurrency(cell.change, currency)}${cell.changePercent !== null ? ` (${cell.changePercent >= 0 ? '+' : ''}${cell.changePercent.toFixed(2)}%)` : ''}${cell.provisional ? ` — ${PROVISIONAL_NOTE}` : ''}`
+                        ? `${cell.dateStr}: ${cell.change >= 0 ? '+' : ''}${formatCurrency(cell.change, currency)}${cell.changePercent !== null ? ` (${cell.changePercent >= 0 ? '+' : ''}${cell.changePercent.toFixed(2)}%)` : ''}${cell.provisional ? ` — ${provisionalNote}` : ''}`
                         : cell.dateStr
                     }
                     className={cn(
@@ -148,11 +150,11 @@ function MiniCalendarSection({
                       cell.provisional && 'border border-dashed border-gray-400 dark:border-gray-500',
                     )}
                   >
-                    <span className="text-[10px] leading-none font-semibold opacity-70">
+                    <span className="text-xs leading-none font-semibold opacity-80">
                       {cell.day}
                     </span>
                     {cell.change !== null && (
-                      <span className="text-[10px] leading-none font-bold tabular-nums">
+                      <span className="text-xs leading-none font-bold tabular-nums">
                         {isValueVisible ? formatCompactChange(cell.change) : '•'}
                       </span>
                     )}
@@ -161,12 +163,12 @@ function MiniCalendarSection({
               })}
               {/* Weekly sum — no fill, colored text only */}
               <div
-                title={hasWeekData ? `Week total: ${weekSum >= 0 ? '+' : ''}${formatCurrency(weekSum, currency)}` : undefined}
+                title={hasWeekData ? t('dashboard:portfolioOverview.weekTotal', { value: `${weekSum >= 0 ? '+' : ''}${formatCurrency(weekSum, currency)}` }) : undefined}
                 className="h-10 flex items-center justify-center"
               >
                 {hasWeekData && (
                   <span className={cn(
-                    'text-[10px] leading-none font-bold tabular-nums text-center px-0.5',
+                    'text-xs leading-none font-bold tabular-nums text-center px-0.5',
                     isWeekPositive ? 'text-emerald-700 dark:text-emerald-400' : 'text-red-700 dark:text-red-400',
                   )}>
                     {isValueVisible ? formatCompactChange(weekSum) : '•••'}
@@ -223,9 +225,9 @@ function MetricPill({
   };
   return (
     <div className="flex flex-col gap-0.5 min-w-0">
-      <p className="text-xs font-medium text-gray-500 dark:text-gray-500 uppercase tracking-wide truncate">{label}</p>
+      <p className="text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wide truncate">{label}</p>
       <p className={cn('text-sm font-bold tabular-nums', colorMap[color])}>{value}</p>
-      {subLabel && <p className="text-xs text-gray-500 dark:text-gray-500 truncate">{subLabel}</p>}
+      {subLabel && <p className="text-xs text-gray-500 dark:text-gray-400 truncate">{subLabel}</p>}
     </div>
   );
 }
@@ -328,12 +330,12 @@ export function PortfolioOverview({ portfolio, dateRange }: PortfolioOverviewPro
           <h3 className="text-sm font-semibold text-gray-700 dark:text-gray-300">
             {t('dashboard:portfolioOverview.title', 'Investments')}
           </h3>
-          <span className="text-xs font-medium text-gray-600 dark:text-gray-500 bg-gray-100 dark:bg-gray-700 px-2 py-0.5 rounded-full ml-2">{dateRange ? PERIOD_LABELS[dateRange] ?? dateRange : 'All'}</span>
+          <span className="text-xs font-medium text-gray-600 dark:text-gray-400 bg-gray-100 dark:bg-gray-700 px-2 py-0.5 rounded-full ml-2">{dateRange ? PERIOD_LABELS[dateRange] ?? dateRange : t('dashboard:portfolioOverview.allPeriods')}</span>
         </div>
         <div className="flex items-center gap-2">
           <button
             onClick={() => toggleValueVisibility()}
-            className="p-1.5 text-gray-500 hover:text-gray-600 dark:text-gray-500 dark:hover:text-gray-300 transition-colors rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700"
+            className="p-1.5 text-gray-500 hover:text-gray-600 dark:text-gray-400 dark:hover:text-gray-300 transition-colors rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700"
             aria-label={isValueVisible ? t('dashboard:portfolioOverview.hideValues') : t('dashboard:portfolioOverview.showValues')}
           >
             {isValueVisible ? <EyeSlashIcon className="w-4 h-4" /> : <EyeIcon className="w-4 h-4" />}
@@ -346,7 +348,7 @@ export function PortfolioOverview({ portfolio, dateRange }: PortfolioOverviewPro
           </Link>
           <Link
             href="/portfolio/trend?view=calendar"
-            title="Calendar view — daily P&L heatmap"
+            title={t('dashboard:portfolioOverview.calendarView')}
             className="p-1 rounded-lg text-gray-500 dark:text-gray-400 hover:text-primary-600 dark:hover:text-primary-400 hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors"
           >
             <CalendarDaysIcon className="w-4 h-4" />
@@ -380,33 +382,33 @@ export function PortfolioOverview({ portfolio, dateRange }: PortfolioOverviewPro
             <div className="grid grid-cols-2 sm:grid-cols-4 gap-x-4 gap-y-3 pb-3 border-b border-gray-100 dark:border-gray-700">
               {cagrPct !== null && (
                 <MetricPill
-                  label="CAGR"
+                  label={t('dashboard:portfolioOverview.cagr')}
                   value={`${cagrPct >= 0 ? '+' : ''}${cagrPct.toFixed(1)}%`}
-                  subLabel="Annualised return"
+                  subLabel={t('dashboard:portfolioOverview.annualisedReturn')}
                   color={cagrPct >= 0 ? 'emerald' : 'rose'}
                 />
               )}
               {sharpe !== null && (
                 <MetricPill
-                  label="Sharpe"
+                  label={t('dashboard:portfolioOverview.sharpe')}
                   value={sharpe.toFixed(2)}
-                  subLabel={sharpe > 1 ? 'Good' : sharpe > 0 ? 'Fair' : 'Poor'}
+                  subLabel={t(`dashboard:portfolioOverview.${sharpe > 1 ? 'sharpeGood' : sharpe > 0 ? 'sharpeFair' : 'sharpePoor'}`)}
                   color={sharpe > 1 ? 'emerald' : sharpe > 0 ? 'amber' : 'rose'}
                 />
               )}
               {maxDd !== null && (
                 <MetricPill
-                  label="Max Drawdown"
+                  label={t('dashboard:portfolioOverview.maxDrawdown')}
                   value={`${maxDd.toFixed(1)}%`}
-                  subLabel="Peak-to-trough"
+                  subLabel={t('dashboard:portfolioOverview.peakToTrough')}
                   color="rose"
                 />
               )}
               {projIncome !== null && projIncome > 0 && (
                 <MetricPill
-                  label="Annual Income"
+                  label={t('dashboard:portfolioOverview.annualIncome')}
                   value={isValueVisible ? formatCurrency(projIncome, currency, { precision: 0 }) : '•••••'}
-                  subLabel={yoc !== null ? `YoC ${yoc.toFixed(2)}%` : 'Projected'}
+                  subLabel={yoc !== null ? t('dashboard:portfolioOverview.yieldOnCost', { value: yoc.toFixed(2) }) : t('dashboard:portfolioOverview.projected')}
                   color="indigo"
                 />
               )}

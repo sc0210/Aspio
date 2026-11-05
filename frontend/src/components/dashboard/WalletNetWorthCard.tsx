@@ -21,6 +21,7 @@ import type { WalletTrendDataPoint } from '@/hooks/useWalletTrends';
 import { cn } from '@/utils/cn';
 import { netWorthOf } from '@/lib/dashboard/periodChange';
 import { Card } from '@/components/ui/Card';
+import { niceAxis } from '@/utils/niceAxis';
 
 interface WalletNetWorthCardProps {
     stats: {
@@ -220,8 +221,8 @@ export function WalletNetWorthCard({
         [chartData]
     );
 
-    const yDomain = useMemo((): [number, number] => {
-        if (!chartData.length) return [0, 1];
+    const yAxis = useMemo((): { domain: [number, number]; ticks?: number[] } => {
+        if (!chartData.length) return { domain: [0, 1] };
         const values = chartData.flatMap(p => [
             ...(lineVisibility.lifeWallet ? [Number(p.lifeWallet) || 0] : []),
             ...(lineVisibility.portfolioWallet ? [Number(p.portfolioWallet) || 0] : []),
@@ -230,12 +231,18 @@ export function WalletNetWorthCard({
             ...(lineVisibility.totalAsset ? [Number(p.totalAsset) || 0] : []),
             ...(lineVisibility.netWorth ? [Number(p.netWorth) || 0] : []),
         ]);
-        if (!values.length) return [0, 1];
+        if (!values.length) return { domain: [0, 1] };
         const min = Math.min(...values);
         const max = Math.max(...values);
-        const pad = (max - min) * 0.25 || max * 0.15 || 1;
-        return [Math.max(0, Math.round(min - pad)), Math.round(max + pad)];
+        // Round ticks: arbitrary padded bounds gave uneven labels. A flat series
+        // (min === max) keeps the old fixed-ratio pad.
+        if (max === min) {
+            const pad = max * 0.15 || 1;
+            return { domain: [Math.max(0, Math.round(min - pad)), Math.round(max + pad)], ticks: undefined };
+        }
+        return niceAxis(min, max, { padRatio: 0.25 });
     }, [chartData, hasDebtTrend, lineVisibility]);
+    const yDomain = yAxis.domain;
 
     // Animate y-axis domain with ease-out cubic via rAF
     const [animatedDomain, setAnimatedDomain] = useState<[number, number]>(yDomain);
@@ -353,14 +360,14 @@ export function WalletNetWorthCard({
                     {hasDebtBalance && (
                         <div className="flex items-center gap-4 text-xs -mt-1">
                             <div className="flex items-center gap-1">
-                                <span className="text-gray-500 dark:text-gray-500">{t('wallet.assets', 'Assets')}</span>
+                                <span className="text-gray-500 dark:text-gray-400">{t('wallet.assets', 'Assets')}</span>
                                 <span className="font-semibold text-prosperity-700 dark:text-prosperity-400 tabular-nums">
                                     {isValueVisible ? formatTWD(stats.total_asset) : '•••'}
                                 </span>
                             </div>
                             <span className="text-gray-500 dark:text-gray-600">−</span>
                             <div className="flex items-center gap-1">
-                                <span className="text-gray-500 dark:text-gray-500">{t('wallet.liabilities', 'Liabilities')}</span>
+                                <span className="text-gray-500 dark:text-gray-400">{t('wallet.liabilities', 'Liabilities')}</span>
                                 <Link href="/loans" className="font-semibold text-error-700 dark:text-error-400 tabular-nums hover:underline">
                                     {isValueVisible ? formatTWD(totalDebt) : '•••'}
                                 </Link>
@@ -371,7 +378,7 @@ export function WalletNetWorthCard({
                     {/* Sub-stats */}
                     <div className="flex flex-wrap gap-x-4 gap-y-1 text-xs">
                         <div className="flex items-center gap-1.5">
-                            <span className="text-gray-500 dark:text-gray-500 font-medium">{t('wallet.emergencyRunway', 'Emergency Runway')}</span>
+                            <span className="text-gray-500 dark:text-gray-400 font-medium">{t('wallet.emergencyRunway', 'Emergency Runway')}</span>
                             {emergencyRunway !== null ? (
                                 <span className={cn('font-semibold tabular-nums',
                                     emergencyRunway >= 6 ? 'text-prosperity-700 dark:text-prosperity-400' :
@@ -381,7 +388,7 @@ export function WalletNetWorthCard({
                                     {`${emergencyRunway.toFixed(1)} ${t('wallet.months', 'mo')}`}
                                 </span>
                             ) : (
-                                <span className="text-gray-500 dark:text-gray-500">—</span>
+                                <span className="text-gray-500 dark:text-gray-400">—</span>
                             )}
                         </div>
                     </div>
@@ -404,14 +411,6 @@ export function WalletNetWorthCard({
                                             <stop offset="5%" stopColor={CHART_COLORS.emergency} stopOpacity={0.25} />
                                             <stop offset="95%" stopColor={CHART_COLORS.emergency} stopOpacity={0.02} />
                                         </linearGradient>
-                                        <linearGradient id="nwc-debtGrad" x1="0" y1="0" x2="0" y2="1">
-                                            <stop offset="5%" stopColor={CHART_COLORS.debt} stopOpacity={0.20} />
-                                            <stop offset="95%" stopColor={CHART_COLORS.debt} stopOpacity={0.02} />
-                                        </linearGradient>
-                                        <linearGradient id="nwc-totalGrad" x1="0" y1="0" x2="0" y2="1">
-                                            <stop offset="5%" stopColor={CHART_COLORS.total} stopOpacity={0.3} />
-                                            <stop offset="95%" stopColor={CHART_COLORS.total} stopOpacity={0.04} />
-                                        </linearGradient>
                                         <linearGradient id="nwc-netWorthGrad" x1="0" y1="0" x2="0" y2="1">
                                             <stop offset="5%" stopColor={CHART_COLORS.netWorth} stopOpacity={0.3} />
                                             <stop offset="95%" stopColor={CHART_COLORS.netWorth} stopOpacity={0.04} />
@@ -419,10 +418,10 @@ export function WalletNetWorthCard({
                                     </defs>
                                     <CartesianGrid strokeDasharray="3 3" stroke="currentColor" className="text-gray-200 dark:text-gray-700 opacity-50" vertical={false} />
                                     <XAxis dataKey="displayDate" tick={{ fill: 'currentColor', fontSize: 12, fontWeight: 500 }} className="text-gray-500 dark:text-gray-400" tickLine={false} interval="preserveStartEnd" />
-                                    <YAxis tick={{ fill: 'currentColor', fontSize: 12, fontWeight: 500 }} className="text-gray-500 dark:text-gray-400" tickLine={false} tickFormatter={(v) => isValueVisible ? formatTWDCompact(v) : '•••'} width={84} tickMargin={4} domain={animatedDomain} />
+                                    <YAxis tick={{ fill: 'currentColor', fontSize: 12, fontWeight: 500 }} className="text-gray-500 dark:text-gray-400" tickLine={false} tickFormatter={(v) => isValueVisible ? formatTWDCompact(v) : '•••'} width={84} tickMargin={4} domain={animatedDomain} ticks={yAxis.ticks} allowDataOverflow />
                                     <Tooltip content={<CustomTooltip isValueVisible={isValueVisible} walletDefs={WALLET_DEFS} t={t} />} cursor={{ stroke: '#0ea5e9', strokeWidth: 1.5, strokeDasharray: '5 5' }} />
                                     {lineVisibility.totalAsset && (
-                                        <Area type="monotone" dataKey="totalAsset" stroke={CHART_COLORS.total} strokeWidth={2.5} fill="url(#nwc-totalGrad)" fillOpacity={1} dot={false} activeDot={{ r: 4, fill: '#6366f1', stroke: 'white', strokeWidth: 2 }} name="Total Assets" />
+                                        <Area type="monotone" dataKey="totalAsset" stroke={CHART_COLORS.total} strokeWidth={2.5} fill="none" fillOpacity={1} dot={false} activeDot={{ r: 4, fill: '#6366f1', stroke: 'white', strokeWidth: 2 }} name="Total Assets" />
                                     )}
                                     {lineVisibility.netWorth && (
                                         <Area type="monotone" dataKey="netWorth" stroke={CHART_COLORS.netWorth} strokeWidth={2.5} fill="url(#nwc-netWorthGrad)" fillOpacity={1} dot={false} activeDot={{ r: 4, fill: CHART_COLORS.netWorth, stroke: 'white', strokeWidth: 2 }} name={t('wallet.netWorth', 'Net Worth')} />
@@ -437,12 +436,12 @@ export function WalletNetWorthCard({
                                         <Area type="monotone" dataKey="lifeWallet" stroke={CHART_COLORS.life} strokeWidth={2} fill="url(#nwc-lifeGrad)" fillOpacity={1} dot={false} activeDot={{ r: 4, fill: '#0ea5e9', stroke: 'white', strokeWidth: 2 }} name={t('wallet.lifeWallet', 'Life Wallet')} />
                                     )}
                                     {hasDebtTrend && lineVisibility.debtBalance && (
-                                        <Area type="monotone" dataKey="debtBalance" stroke={CHART_COLORS.debt} strokeWidth={2} strokeDasharray="5 3" fill="url(#nwc-debtGrad)" fillOpacity={1} dot={false} activeDot={{ r: 4, fill: '#f43f5e', stroke: 'white', strokeWidth: 2 }} name={t('wallet.debtBalance', 'Debt Balance')} />
+                                        <Area type="monotone" dataKey="debtBalance" stroke={CHART_COLORS.debt} strokeWidth={2} strokeDasharray="5 3" fill="none" fillOpacity={1} dot={false} activeDot={{ r: 4, fill: '#f43f5e', stroke: 'white', strokeWidth: 2 }} name={t('wallet.debtBalance', 'Debt Balance')} />
                                     )}
                                 </AreaChart>
                             </ResponsiveContainer>
                         ) : (
-                            <div className="flex items-center justify-center h-full text-gray-500 dark:text-gray-500 text-sm">
+                            <div className="flex items-center justify-center h-full text-gray-500 dark:text-gray-400 text-sm">
                                 {t('wallet.noTrendData', 'No trend data')}
                             </div>
                         )}
@@ -476,7 +475,7 @@ export function WalletNetWorthCard({
                                             'font-medium transition-colors',
                                             visible
                                                 ? 'text-gray-600 dark:text-gray-300'
-                                                : 'text-gray-500 dark:text-gray-500 line-through decoration-gray-300 dark:decoration-gray-600'
+                                                : 'text-gray-500 dark:text-gray-400 line-through decoration-gray-300 dark:decoration-gray-600'
                                         )}>
                                             {t(labelKey, fallback)}
                                         </span>
@@ -497,7 +496,7 @@ export function WalletNetWorthCard({
                                         'font-medium transition-colors',
                                         lineVisibility.debtBalance
                                             ? 'text-rose-700 dark:text-rose-500'
-                                            : 'text-gray-500 dark:text-gray-500 line-through decoration-gray-300 dark:decoration-gray-600'
+                                            : 'text-gray-500 dark:text-gray-400 line-through decoration-gray-300 dark:decoration-gray-600'
                                     )}>
                                         {t('wallet.debtBalance', 'Debt Balance')}
                                     </span>
@@ -537,7 +536,7 @@ export function WalletNetWorthCard({
                                             {arrow(change)} {Math.abs(change).toFixed(1)}%
                                         </span>
                                     ) : (
-                                        <span className="mt-0.5 text-xs text-gray-500 dark:text-gray-500">—</span>
+                                        <span className="mt-0.5 text-xs text-gray-500 dark:text-gray-400">—</span>
                                     )}
                                 </div>
                             );
@@ -628,10 +627,11 @@ export function WalletNetWorthCard({
 
                             {/* Center label — only 2 lines to avoid clutter */}
                             <div className="absolute inset-0 flex flex-col items-center justify-center pointer-events-none">
-                                <p className="text-xs text-gray-500 dark:text-gray-500 font-medium tracking-wide uppercase">
+                                <p className="text-xs text-gray-500 dark:text-gray-400 font-medium tracking-wide uppercase">
                                     {hasDebtBalance ? t('wallet.netWorth', 'Net Worth') : t('wallet.totalAsset', 'Total Asset')}
                                 </p>
-                                <p className="text-base font-bold text-gray-900 dark:text-white tabular-nums mt-0.5">
+                                {/* text-sm: at text-base "NT$1,255,000" ran 114px across a 110px hole. */}
+                                <p className="text-sm font-bold text-gray-900 dark:text-white tabular-nums mt-0.5">
                                     {isValueVisible ? formatTWD(hasDebtBalance ? netWorthValue : stats.total_asset) : '•••'}
                                 </p>
                             </div>

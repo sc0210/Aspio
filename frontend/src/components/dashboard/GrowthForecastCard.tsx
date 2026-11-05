@@ -29,6 +29,7 @@ import { useExpenseBreakdown } from '@/hooks/useExpenseBreakdown';
 import { useGoalPlanning, type GoalPlan } from '@/hooks/useGoalPlanning';
 import { netWorthOf } from '@/lib/dashboard/periodChange';
 import { Card } from '@/components/ui/Card';
+import { niceAxis } from '@/utils/niceAxis';
 
 interface GrowthForecastCardProps {
     stats: {
@@ -66,26 +67,6 @@ function toMonthly(points: WalletTrendDataPoint[]): WalletTrendDataPoint[] {
     return Array.from(byMonth.values());
 }
 
-/**
- * Clean, round Y-axis: pads the data range a touch, then snaps the domain and
- * ticks to nice round steps (1 / 2 / 2.5 / 5 × 10ⁿ) so labels read $400萬 / $550萬
- * instead of $340.7萬 / $540.7萬.
- */
-function niceAxis(min: number, max: number, count = 4): { domain: [number, number]; ticks: number[] } {
-    if (!(max > min)) return { domain: [0, Math.max(1, max)], ticks: [] };
-    const pad = (max - min) * 0.08;
-    let lo = min - pad;
-    let hi = max + pad;
-    const rawStep = (hi - lo) / count;
-    const magnitude = Math.pow(10, Math.floor(Math.log10(rawStep)));
-    const norm = rawStep / magnitude;
-    const step = (norm >= 5 ? 5 : norm >= 2.5 ? 2.5 : norm >= 2 ? 2 : 1) * magnitude;
-    lo = Math.max(0, Math.floor(lo / step) * step);
-    hi = Math.ceil(hi / step) * step;
-    const ticks: number[] = [];
-    for (let v = lo; v <= hi + step * 0.001; v += step) ticks.push(Math.round(v));
-    return { domain: [Math.round(lo), Math.round(hi)], ticks };
-}
 
 interface ChartRow {
     label: string;
@@ -293,7 +274,7 @@ export function GrowthForecastCard({ stats, loading = false }: GrowthForecastCar
         if (!values.length) return { domain: [0, 1] as [number, number], ticks: [] as number[] };
         // Include visible goal lines so they always land inside the plot area.
         const withGoals = values.concat(chartGoals.map(g => g.targetAmount));
-        return niceAxis(Math.min(...withGoals), Math.max(...withGoals), 4);
+        return niceAxis(Math.min(...withGoals), Math.max(...withGoals));
     }, [chartData, chartGoals]);
 
     const horizonLabel = horizonMonths === 6
@@ -426,7 +407,7 @@ export function GrowthForecastCard({ stats, loading = false }: GrowthForecastCar
 
             {/* Headline projection */}
             <div className="flex flex-wrap items-end gap-x-3 gap-y-1 mb-1">
-                <span className="text-xs text-gray-500 dark:text-gray-500 font-medium">{horizonLabel}</span>
+                <span className="text-xs text-gray-500 dark:text-gray-400 font-medium">{horizonLabel}</span>
                 <span className="text-2xl font-bold text-gray-900 dark:text-white tabular-nums">
                     {isValueVisible ? formatTWD(projectedTotal) : '••••••'}
                 </span>
@@ -488,9 +469,9 @@ export function GrowthForecastCard({ stats, loading = false }: GrowthForecastCar
                         </defs>
                         <CartesianGrid strokeDasharray="3 3" stroke="currentColor" className="text-gray-200 dark:text-gray-700 opacity-50" vertical={false} />
                         <XAxis dataKey="label" tick={{ fill: 'currentColor', fontSize: 12, fontWeight: 500 }} className="text-gray-500 dark:text-gray-400" tickLine={false} interval="preserveStartEnd" />
-                        <YAxis tick={{ fill: 'currentColor', fontSize: 12, fontWeight: 500 }} className="text-gray-500 dark:text-gray-400" tickLine={false} tickFormatter={(v) => isValueVisible ? formatTWDCompact(v) : '•••'} width={80} tickMargin={4} domain={yAxis.domain} ticks={yAxis.ticks} />
+                        <YAxis tick={{ fill: 'currentColor', fontSize: 12, fontWeight: 500 }} className="text-gray-500 dark:text-gray-400" tickLine={false} tickFormatter={(v) => isValueVisible ? formatTWDCompact(v) : '•••'} width={84} tickMargin={4} domain={yAxis.domain} ticks={yAxis.ticks} />
                         {hasHistory && (
-                            <ReferenceLine x={nowLabel} stroke="currentColor" className="text-gray-500 dark:text-gray-500" strokeDasharray="3 3" label={{ value: t('growthForecast.now', 'Now'), position: 'insideTopRight', fontSize: 10, fill: 'currentColor' }} />
+                            <ReferenceLine x={nowLabel} stroke="currentColor" className="text-gray-500 dark:text-gray-400" strokeDasharray="3 3" label={{ value: t('growthForecast.now', 'Now'), position: 'insideTopRight', fontSize: 10, fill: 'currentColor' }} />
                         )}
                         {/* Goal target lines — where the projection crosses = when it's affordable */}
                         {chartGoals.map(g => (
@@ -606,7 +587,7 @@ export function GrowthForecastCard({ stats, loading = false }: GrowthForecastCar
                                 onChange={(e) => setReturnOverride(parseFloat(e.target.value))}
                                 className="w-full h-11 sm:h-6 cursor-pointer accent-indigo-600"
                             />
-                            <p className="mt-1 text-sm text-gray-500 dark:text-gray-500">
+                            <p className="mt-1 text-sm text-gray-500 dark:text-gray-400">
                                 {hasCagr && returnOverride === null
                                     ? t('growthForecast.fromCagr', 'from your portfolio (CAGR)')
                                     : t('growthForecast.returnHint', 'expected yearly growth')}
@@ -624,7 +605,7 @@ export function GrowthForecastCard({ stats, loading = false }: GrowthForecastCar
                                 onChange={(e) => setInvestedOverride(parseFloat(e.target.value))}
                                 className="w-full h-11 sm:h-6 cursor-pointer accent-indigo-600"
                             />
-                            <p className="mt-1 text-sm text-gray-500 dark:text-gray-500">
+                            <p className="mt-1 text-sm text-gray-500 dark:text-gray-400">
                                 {t('growthForecast.investedHint', 'rest stays as cash')}
                             </p>
                         </div>
@@ -640,7 +621,7 @@ export function GrowthForecastCard({ stats, loading = false }: GrowthForecastCar
                                     {isValueVisible ? formatTWD(monthlySavings) : '•••'}
                                 </span>
                             </div>
-                            <p className="mt-0.5 text-sm text-gray-500 dark:text-gray-500">
+                            <p className="mt-0.5 text-sm text-gray-500 dark:text-gray-400">
                                 {t('growthForecast.realSavings', 'your real income − expense')}
                             </p>
                         </div>
@@ -663,15 +644,15 @@ export function GrowthForecastCard({ stats, loading = false }: GrowthForecastCar
                                     className="w-28 text-right tabular-nums bg-transparent border-b border-gray-200 dark:border-gray-600 focus-visible:border-indigo-500 focus-visible:outline-none px-1 py-1"
                                 />
                             ) : (
-                                <span className="w-28 text-right tabular-nums text-gray-500 dark:text-gray-500">•••</span>
+                                <span className="w-28 text-right tabular-nums text-gray-500 dark:text-gray-400">•••</span>
                             )}
                         </div>
-                        <p className="text-sm text-gray-500 dark:text-gray-500 pt-1">
+                        <p className="text-sm text-gray-500 dark:text-gray-400 pt-1">
                             {incomeOverride !== null
                                 ? t('growthForecast.incomeManual', 'manually set')
                                 : t('growthForecast.incomeHint', 'recurring earned avg — salary, freelance')}
                         </p>
-                        <p className="text-sm text-gray-500 dark:text-gray-500 pt-2 pb-1">
+                        <p className="text-sm text-gray-500 dark:text-gray-400 pt-2 pb-1">
                             {t('growthForecast.expensesTitle', 'Monthly expenses — {{months}}-month average (tap to edit)', { months: breakdown.monthsAveraged })}
                         </p>
                         <div className="space-y-1.5 overflow-y-auto max-h-64 lg:max-h-80 pr-1 -mr-1">
@@ -701,14 +682,14 @@ export function GrowthForecastCard({ stats, loading = false }: GrowthForecastCar
                                                 className="w-24 text-right tabular-nums bg-transparent border-b border-gray-200 dark:border-gray-600 focus-visible:border-indigo-500 focus-visible:outline-none px-1 py-1 disabled:opacity-40"
                                             />
                                         ) : (
-                                            <span className="w-24 text-right tabular-nums text-gray-500 dark:text-gray-500">•••</span>
+                                            <span className="w-24 text-right tabular-nums text-gray-500 dark:text-gray-400">•••</span>
                                         )}
                                     </div>
                                 );
                             })}
                         </div>
                         <div className="mt-auto pt-2 space-y-1">
-                            <div className="flex items-center justify-between text-xs text-gray-500 dark:text-gray-500">
+                            <div className="flex items-center justify-between text-xs text-gray-500 dark:text-gray-400">
                                 <span>{t('growthForecast.expensesSubtotal', 'Total expenses / mo')}</span>
                                 <span className="tabular-nums">− {isValueVisible ? formatTWDCompact(includedExpense) : '•••'}</span>
                             </div>
@@ -732,7 +713,7 @@ export function GrowthForecastCard({ stats, loading = false }: GrowthForecastCar
                         ok: 'bg-prosperity-50 dark:bg-prosperity-900/20 border-prosperity-200 dark:border-prosperity-700 text-prosperity-700 dark:text-prosperity-300',
                         warn: 'bg-warning-50 dark:bg-warning-900/20 border-warning-200 dark:border-warning-700 text-warning-700 dark:text-warning-300',
                         todo: 'bg-error-50 dark:bg-error-900/20 border-error-200 dark:border-error-700 text-error-700 dark:text-error-300',
-                        none: 'bg-gray-50 dark:bg-gray-800 border-gray-200 dark:border-gray-700 text-gray-500 dark:text-gray-500',
+                        none: 'bg-gray-50 dark:bg-gray-800 border-gray-200 dark:border-gray-700 text-gray-500 dark:text-gray-400',
                     }[s.state];
                     const dot = { ok: '✅', warn: '⚠️', todo: '🔴', none: '○' }[s.state];
                     return (
@@ -749,7 +730,7 @@ export function GrowthForecastCard({ stats, loading = false }: GrowthForecastCar
             </div>
 
             {/* Disclaimer */}
-            <div className="mt-4 flex items-start gap-1.5 text-xs text-gray-500 dark:text-gray-500">
+            <div className="mt-4 flex items-start gap-1.5 text-xs text-gray-500 dark:text-gray-400">
                 <InformationCircleIcon className="w-3.5 h-3.5 flex-shrink-0 mt-px" />
                 <p>
                     {hasHistory

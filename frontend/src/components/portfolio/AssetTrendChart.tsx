@@ -24,6 +24,7 @@ import { useTranslation } from 'react-i18next';
 import { cn } from '@/utils/cn';
 import { formatCurrency } from '@/utils/formatters';
 import { getLocaleByLanguage } from '@/lib/i18n';
+import { niceAxis } from '@/utils/niceAxis';
 
 /**
  * Hover/tap/focus explanation for a summary card.
@@ -88,7 +89,7 @@ function InfoHint({ label, text }: { label: string; text: string }) {
                 onClick={() => setPinned(p => !p)}
                 onFocus={() => setFocused(true)}
                 onBlur={() => { setFocused(false); setPinned(false); }}
-                className="text-gray-500 hover:text-gray-600 dark:text-gray-500 dark:hover:text-gray-300 rounded-full focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-500"
+                className="text-gray-500 hover:text-gray-600 dark:text-gray-400 dark:hover:text-gray-300 rounded-full focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-500"
             >
                 <InformationCircleIcon className="w-3.5 h-3.5" />
             </button>
@@ -444,7 +445,7 @@ export const AssetTrendChart = memo(function AssetTrendChart({
                                     {(d.purchases as Array<{ symbol: string; name: string; cost: number }>).map((p, idx: number) => (
                                         <div key={idx} className="flex justify-between items-center gap-3">
                                             <span className="text-[11px] text-blue-500 dark:text-blue-300 truncate max-w-[160px]" title={p.name}>
-                                                {p.symbol} <span className="text-gray-500 dark:text-gray-500 font-normal">{p.name !== p.symbol ? p.name : ''}</span>
+                                                {p.symbol} <span className="text-gray-500 dark:text-gray-400 font-normal">{p.name !== p.symbol ? p.name : ''}</span>
                                             </span>
                                             <span className="text-[11px] font-semibold text-blue-500 dark:text-blue-300 tabular-nums flex-shrink-0">
                                                 {formatCurrency(p.cost, currency)}
@@ -539,11 +540,11 @@ export const AssetTrendChart = memo(function AssetTrendChart({
     const isPositivePeriod = (stats?.periodGain ?? 0) >= 0;
 
     // Pre-compute Y domain from trough/peak to avoid Recharts function-domain edge cases
-    const yDomain: [number | string, number | string] = viewMode === 'return'
-        ? ['auto', 'auto']
-        : stats
-            ? [Math.round(stats.troughValue * 0.97), Math.round(stats.peakValue * 1.02)]
-            : ['auto', 'auto'];
+    // Value mode keeps the trough×0.97 / peak×1.02 band (padding relative to the
+    // value, so a small move doesn't fill the chart) and rounds its ends: the raw
+    // band gave uneven labels (1.925M, 1.955M, 1.985M, 2.043M).
+    const valueAxis = viewMode !== 'return' && stats ? niceAxis(stats.troughValue * 0.97, stats.peakValue * 1.02, { padRatio: 0 }) : null;
+    const yDomain: [number | string, number | string] = valueAxis ? valueAxis.domain : ['auto', 'auto'];
 
     return (
         <div className={cn('flex flex-col', className)}>
@@ -614,7 +615,7 @@ export const AssetTrendChart = memo(function AssetTrendChart({
                         )}>
                             {isValueVisible ? `${isPositivePeriod ? '+' : ''}${formatCurrency(Math.round(stats.periodGain), currency)}` : '•••'}
                         </p>
-                        <p className="text-xs text-gray-500 dark:text-gray-500 mt-0.5">
+                        <p className="text-xs text-gray-500 dark:text-gray-400 mt-0.5">
                             {t('portfolio:trend.summaryAllTimeValue', {
                                 percent: isValueVisible ? `${allTimePercent >= 0 ? '+' : ''}${allTimePercent.toFixed(1)}%` : '•••',
                             })}
@@ -704,7 +705,7 @@ export const AssetTrendChart = memo(function AssetTrendChart({
                         </div>
                     )}
                     {externalStats && (
-                        <span className="text-gray-500 dark:text-gray-500 text-[10px] italic">
+                        <span className="text-gray-500 dark:text-gray-400 text-[10px] italic">
                             {t('portfolio:trend.tradableAssets')}
                         </span>
                     )}
@@ -762,10 +763,11 @@ export const AssetTrendChart = memo(function AssetTrendChart({
                             }}
                         />
                         <YAxis
-                            tick={{ fill: 'currentColor', fontSize: 11, fontWeight: 500 }}
+                            tick={{ fill: 'currentColor', fontSize: 12, fontWeight: 500 }}
                             className="text-gray-600 dark:text-gray-400"
-                            width={75}
-                            tickMargin={8}
+                            // 84, as on the dashboard net-worth chart: at 75 a label like "NT$204.3" + 10k unit lost its first 4px.
+                            width={84}
+                            tickMargin={4}
                             tickFormatter={(value) => {
                                 if (!isValueVisible) return '•••';
                                 if (viewMode === 'return') {
@@ -774,6 +776,7 @@ export const AssetTrendChart = memo(function AssetTrendChart({
                                 return formatCurrency(value, currency, { compact: true, showSymbol: false });
                             }}
                             domain={yDomain}
+                            ticks={valueAxis?.ticks}
                         />
                         <Tooltip
                             content={<CustomTooltip />}

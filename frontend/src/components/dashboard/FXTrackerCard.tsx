@@ -150,11 +150,11 @@ export function FXTrackerCard({
         </button>
       ) : (
         <div className="text-center p-4 bg-gray-50 dark:bg-gray-900/50 rounded-lg">
-          <ClockIcon className="w-8 h-8 mx-auto text-gray-500 dark:text-gray-500 mb-2" />
+          <ClockIcon className="w-8 h-8 mx-auto text-gray-500 dark:text-gray-400 mb-2" />
           <p className="text-sm text-gray-600 dark:text-gray-400">
             {t('fx.accumulating')}
           </p>
-          <p className="text-xs text-gray-500 dark:text-gray-500 mt-1">
+          <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
             {t('fx.convertWhenReady')}
           </p>
         </div>

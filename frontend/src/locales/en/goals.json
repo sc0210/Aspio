@@ -187,6 +187,7 @@
     "noGoalsDesc": "Start tracking your financial goals to stay motivated",
     "noGoalsTitle": "No Financial Goals Yet",
     "noRetirementGoal": "No retirement goal yet",
+    "ofTarget": "of {{amount}}",
     "overallProgress": "Overall Progress",
     "portfolioLinked": "Portfolio Linked",
     "retirement": "Financial Goal",

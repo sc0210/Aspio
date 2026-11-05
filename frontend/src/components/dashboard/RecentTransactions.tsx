@@ -182,7 +182,7 @@ export function RecentTransactions({ dateRange }: RecentTransactionsProps) {
                   )}
                 >
                   {transaction.type === 'income' ? '+' : '-'}
-                  {formatCurrency(transaction.amount, transaction.currency)}
+                  {formatCurrency(transaction.amount, transaction.currency, transaction.currency === 'TWD' ? { precision: 0 } : {})}
                 </div>
 
                 {transaction.type === 'income' ? (

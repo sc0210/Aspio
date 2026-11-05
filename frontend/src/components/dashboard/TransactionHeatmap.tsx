@@ -230,7 +230,7 @@ export function TransactionHeatmap() {
           {t('transactions.heatmapTitle', 'Cash Flow Heatmap')}
         </h2>
         <div className="flex items-center gap-2 shrink-0">
-          <div className="flex items-center gap-2 text-[11px] text-gray-500 dark:text-gray-400">
+          <div className="flex items-center gap-2 text-xs text-gray-500 dark:text-gray-400">
             <span className="inline-flex items-center gap-1">
               <span className="inline-block w-3 h-3 rounded-sm" style={{ backgroundColor: INCOME[2] }} />
               {t('transactions.heatmapIncome', 'Income')}
@@ -246,7 +246,7 @@ export function TransactionHeatmap() {
             onClick={toggleTransfer}
             aria-pressed={hideTransfer}
             title={t('transactions.heatmapTransferHint', 'Wallet transfers are recorded as income + expense and can dominate the map')}
-            className="shrink-0 text-[10px] font-semibold px-2 py-1 rounded-md border border-gray-200 dark:border-gray-600 text-gray-600 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700 focus-visible:ring-2 focus-visible:ring-primary-500 transition-colors"
+            className="shrink-0 text-xs font-semibold px-2 py-1 rounded-md border border-gray-200 dark:border-gray-600 text-gray-600 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700 focus-visible:ring-2 focus-visible:ring-primary-500 transition-colors"
           >
             {hideTransfer ? t('transactions.heatmapShowTransfer', 'Show transfers') : t('transactions.heatmapHideTransfer', 'Hide transfers')}
           </button>

@@ -1,6 +1,7 @@
 'use client';
 
 import { useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import { QuestionMarkCircleIcon, XMarkIcon } from '@heroicons/react/24/outline';
 import { useDialog } from '@/hooks/useDialog';
 
@@ -19,6 +20,7 @@ interface FinancialTermsHelpProps {
 }
 
 export function FinancialTermsHelp({ variant = 'modal', className = '' }: FinancialTermsHelpProps) {
+    const { t } = useTranslation('dashboard');
     const [isOpen, setIsOpen] = useState(false);
     const { panelRef, dialogProps } = useDialog({ isOpen, onClose: () => setIsOpen(false) });
 
@@ -87,10 +89,10 @@ export function FinancialTermsHelp({ variant = 'modal', className = '' }: Financ
             <button
                 onClick={() => setIsOpen(true)}
                 className={`flex items-center gap-2 px-3 py-1.5 text-sm text-gray-600 dark:text-gray-300 hover:text-primary-600 dark:hover:text-primary-400 hover:bg-gray-100 dark:hover:bg-gray-800 rounded-lg transition-colors ${className}`}
-                aria-label="View financial terms help"
+                aria-label={t('termsHelp.buttonLabel')}
             >
                 <QuestionMarkCircleIcon className="w-5 h-5" />
-                <span className="hidden sm:inline">Terms Help</span>
+                <span className="hidden sm:inline">{t('termsHelp.button')}</span>
             </button>
 
             {/* Modal */}

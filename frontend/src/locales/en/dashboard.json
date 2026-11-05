@@ -334,15 +334,30 @@
   "portfolioOverview": {
     "addFirst": "Start building your investment portfolio",
     "addInvestment": "Add Investment",
+    "allPeriods": "All",
     "allocation": "Allocation",
     "allocationTab": "Allocation",
+    "annualIncome": "Annual Income",
+    "annualisedReturn": "Annualised return",
     "bySector": "By Sector",
+    "cagr": "CAGR",
+    "calendarView": "Calendar view — daily P&L heatmap",
+    "fullCalendar": "Full calendar →",
     "hideValues": "Hide values",
+    "maxDrawdown": "Max Drawdown",
+    "monthPnl": "{{month}} P&L",
     "noInvestments": "No investments yet",
     "notEnoughForPeriod": "Not enough data for this range yet",
+    "peakToTrough": "Peak-to-trough",
     "performanceNotAvailable": "Portfolio performance data not available",
     "performanceTab": "Performance",
+    "projected": "Projected",
+    "provisionalNote": "not final — the market has not closed for this day yet",
     "return": "Return",
+    "sharpe": "Sharpe",
+    "sharpeFair": "Fair",
+    "sharpeGood": "Good",
+    "sharpePoor": "Poor",
     "showValues": "Show values",
     "title": "Investment Portfolio",
     "todaysChange": "Today's Change",
@@ -351,7 +366,10 @@
     "totalReturn": "Total Return",
     "totalValue": "Total Value",
     "tryLongerRange": "Pick a longer period above, or view the full trend.",
-    "viewDetails": "View details"
+    "viewDetails": "View details",
+    "weekTotal": "Week total: {{value}}",
+    "weekdayInitials": "M,T,W,T,F",
+    "yieldOnCost": "YoC {{value}}%"
   },
   "quickActions": {
     "addInvestment": {
@@ -492,6 +510,10 @@
     "savingsRate": "Savings Rate",
     "totalBalance": "Total Balance",
     "totalGoals": "Goals"
+  },
+  "termsHelp": {
+    "button": "Terms Help",
+    "buttonLabel": "View financial terms help"
   },
   "title": "Dashboard",
   "todayStrip": {

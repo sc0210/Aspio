@@ -7,6 +7,10 @@ import { usePrivacy } from '@/contexts/PrivacyContext';
 import { GOAL_CATEGORIES } from '@/utils/constants';
 import { Card } from '@/components/ui/Card';
 
+// Whole dollars for TWD, as the rest of the dashboard shows it; other currencies keep cents.
+const formatGoalAmount = (amount: number, currency: string) =>
+    formatCurrency(amount, currency, currency === 'TWD' ? { precision: 0 } : {});
+
 interface AssetGoalCardProps {
     title: string;
     currentAmount: number;
@@ -116,10 +120,10 @@ export function AssetGoalCard({
                 {/* Row 2: amount / target */}
                 <div className="flex items-baseline justify-between gap-2 mb-1.5">
                     <span className="text-lg font-bold text-gray-900 dark:text-white tabular-nums truncate">
-                        {isValueVisible ? formatCurrency(current, currency) : '•••••'}
+                        {isValueVisible ? formatGoalAmount(current, currency) : '•••••'}
                     </span>
                     <span className="text-xs text-gray-500 dark:text-gray-500 shrink-0">
-                        / {isValueVisible ? formatCurrency(target, currency) : '•••••'}
+                        / {isValueVisible ? formatGoalAmount(target, currency) : '•••••'}
                     </span>
                 </div>
 
@@ -228,10 +232,10 @@ export function AssetGoalCard({
             <div className="mb-3">
                 <div className="flex justify-between items-baseline mb-2 gap-2">
                     <span className="text-xl font-bold text-gray-900 dark:text-white truncate">
-                        {isValueVisible ? formatCurrency(current, currency) : '•••••'}
+                        {isValueVisible ? formatGoalAmount(current, currency) : '•••••'}
                     </span>
                     <span className="text-xs text-gray-500 dark:text-gray-400 shrink-0">
-                        / {isValueVisible ? formatCurrency(target, currency) : '•••••'}
+                        / {isValueVisible ? formatGoalAmount(target, currency) : '•••••'}
                     </span>
                 </div>
 
@@ -257,7 +261,7 @@ export function AssetGoalCard({
                     </span>
                     {!isCompleted && (
                         <span className="text-xs text-gray-500 dark:text-gray-400 truncate text-right">
-                            {t('goals:card.left', { amount: isValueVisible ? formatCurrency(remaining, currency) : '•••••' })}
+                            {t('goals:card.left', { amount: isValueVisible ? formatGoalAmount(remaining, currency) : '•••••' })}
                         </span>
                     )}
                 </div>
@@ -276,7 +280,7 @@ export function AssetGoalCard({
 
                 {monthlyNeeded !== undefined && monthlyNeeded > 0 && !isCompleted && isValueVisible && (
                     <span className="text-xs text-gray-500 dark:text-gray-400 text-right shrink-0">
-                        {t('goals:card.perMonth', { amount: formatCurrency(monthlyNeeded, currency) })}
+                        {t('goals:card.perMonth', { amount: formatGoalAmount(monthlyNeeded, currency) })}
                     </span>
                 )}
             </div>
