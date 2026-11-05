@@ -122,6 +122,11 @@ describe('formatCashAmount', () => {
     expect(formatCashAmount(25000, 'TWD')).toBe('NT$25,000');
   });
 
+  it('treats float noise and numeric strings as whole TWD', () => {
+    expect(formatCashAmount(0.1 * 3 * 10000, 'TWD')).toBe('NT$3,000');
+    expect(formatCashAmount('25000' as unknown as number, 'TWD')).toBe('NT$25,000');
+  });
+
   it('keeps cents on a TWD amount that has them', () => {
     expect(formatCashAmount(99.5, 'TWD')).toBe('NT$99.50');
   });

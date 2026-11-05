@@ -297,7 +297,9 @@ export function toTWD(amount: number, currency: string): number {
  * formatCurrency's 2-decimal default stays, since it also formats stock prices.
  */
 export function formatCashAmount(amount: number, currency: string = DEFAULT_CURRENCY): string {
-  const whole = currency === 'TWD' && Number.isInteger(Number(amount));
+  // Compared at cent precision, so float noise from summed legs (1000.0000000001) still counts as whole.
+  const n = Number(amount);
+  const whole = currency === 'TWD' && Math.abs(n - Math.round(n)) < 0.005;
   return formatCurrency(amount, currency, whole ? { precision: 0 } : {});
 }
 
