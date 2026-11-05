@@ -122,6 +122,10 @@ describe('formatCashAmount', () => {
     expect(formatCashAmount(25000, 'TWD')).toBe('NT$25,000');
   });
 
+  it('keeps cents on a TWD amount that has them', () => {
+    expect(formatCashAmount(99.5, 'TWD')).toBe('NT$99.50');
+  });
+
   it('keeps cents for other currencies', () => {
     expect(formatCashAmount(1234.5, 'USD')).toBe('$1,234.50');
   });
