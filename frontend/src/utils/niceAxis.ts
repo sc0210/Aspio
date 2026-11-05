@@ -26,6 +26,9 @@ export function niceAxis(
     if (min >= 0) lo = Math.max(0, lo);
     hi = Math.ceil(hi / step) * step;
     const ticks: number[] = [];
-    for (let v = lo; v <= hi + step * 0.001; v += step) ticks.push(Math.round(v));
-    return { domain: [Math.round(lo), Math.round(hi)], ticks };
+    // Whole numbers for money-sized steps; a sub-1 step keeps its decimals, or
+    // rounding would collapse the ticks into duplicates.
+    const tidy = (v: number) => (step >= 1 ? Math.round(v) : Number(v.toFixed(10)));
+    for (let v = lo; v <= hi + step * 0.001; v += step) ticks.push(tidy(v));
+    return { domain: [tidy(lo), tidy(hi)], ticks };
 }

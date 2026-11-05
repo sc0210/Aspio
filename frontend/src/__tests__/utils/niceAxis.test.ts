@@ -28,4 +28,10 @@ describe('niceAxis', () => {
         expect(domain[1]).toBeGreaterThan(2_000_000);
         expect(ticks.length).toBeGreaterThan(1);
     });
+
+    it('keeps ticks distinct for a small flat value', () => {
+        const { ticks } = niceAxis(10, 10);
+        expect(new Set(ticks).size).toBe(ticks.length);
+        expect(ticks.length).toBeGreaterThan(1);
+    });
 });

@@ -5,8 +5,7 @@ import {
   formatTWDCompact,
   toTWD,
   setExchangeRates,
-  __resetExchangeRates,
-} from '@/utils/formatters';
+  __resetExchangeRates, formatCashAmount } from '@/utils/formatters';
 
 // Fix #5: single source of truth for currency formatting — local wrappers removed
 
@@ -115,5 +114,15 @@ describe('isDayInRange', () => {
   it('reads a timestamp or a Date by its local day', () => {
     expect(isDayInRange('2026-10-31T16:30:00Z', thisMonth)).toBe(true); // 00:30 Nov 1 local
     expect(isDayInRange(new Date(2026, 10, 1, 23, 0), thisMonth)).toBe(true);
+  });
+});
+
+describe('formatCashAmount', () => {
+  it('shows TWD in whole dollars', () => {
+    expect(formatCashAmount(25000, 'TWD')).toBe('NT$25,000');
+  });
+
+  it('keeps cents for other currencies', () => {
+    expect(formatCashAmount(1234.5, 'USD')).toBe('$1,234.50');
   });
 });
