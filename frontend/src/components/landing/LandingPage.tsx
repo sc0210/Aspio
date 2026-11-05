@@ -1,7 +1,7 @@
 'use client';
 
 import Link from 'next/link';
-import Image from 'next/image';
+import { getImageProps } from 'next/image';
 import { useEffect, useRef } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useFeatures } from '@/hooks/useFeatures';
@@ -70,6 +70,16 @@ export function LandingPage() {
   // as a stock photo of someone else's product.
   const isZh = i18n.language?.toLowerCase().startsWith('zh');
   const heroShot = isZh ? '/screenshots/dashboard-zh.jpg' : '/screenshots/dashboard-en.jpg';
+  // Phones get the phone dashboard: the 1440px desktop shot shrunk to ~358px
+  // rendered its text about 3px tall. One <picture>, so only one is downloaded.
+  const heroShotMobile = isZh ? '/screenshots/dashboard-mobile-zh.jpg' : '/screenshots/dashboard-mobile-en.jpg';
+  const heroAlt = t('landing.hero.screenshotAlt');
+  const { props: { srcSet: heroDesktopSrcSet } } = getImageProps({
+    alt: heroAlt, src: heroShot, width: 1440, height: 900, sizes: '50vw',
+  });
+  const { props: heroImgProps } = getImageProps({
+    alt: heroAlt, src: heroShotMobile, width: 780, height: 1688, sizes: '280px', priority: true,
+  });
 
   // The three that describe the core loop: money in and out, what it's invested
   // in, and what you're aiming at. Everything else supports these.
@@ -128,7 +138,7 @@ export function LandingPage() {
               <ThemeToggle />
               <Link
                 href="/auth/signin"
-                className="text-sm font-medium text-gray-600 dark:text-gray-300 hover:text-gray-900 dark:hover:text-white transition-colors"
+                className="inline-flex items-center min-h-[44px] px-3 -mx-1 rounded-lg text-sm font-medium text-gray-600 dark:text-gray-300 hover:text-gray-900 dark:hover:text-white transition-colors"
               >
                 {t('landing.header.signIn')}
               </Link>
@@ -167,7 +177,7 @@ export function LandingPage() {
                 <span className="text-indigo-200">{t('landing.hero.titleHighlight')}</span>
               </h1>
 
-              <p className="text-lg text-primary-200 mb-8 max-w-xl mx-auto lg:mx-0 leading-relaxed animate-fade-in-up animation-delay-200">
+              <p className="text-lg text-white/90 mb-8 max-w-xl mx-auto lg:mx-0 leading-relaxed animate-fade-in-up animation-delay-200">
                 {t('landing.hero.subtitle')}
               </p>
 
@@ -188,29 +198,25 @@ export function LandingPage() {
                 </Link>
               </div>
 
-              <p className="mt-4 text-xs text-primary-200/80 animate-fade-in-up animation-delay-400">
+              <p className="mt-4 text-xs text-primary-50 animate-fade-in-up animation-delay-400">
                 {t('landing.hero.noAccountNeeded')}
               </p>
             </div>
 
             {/* Product shot */}
             <div className="relative animate-fade-in-up animation-delay-200">
-              <div className="rounded-2xl overflow-hidden border border-white/20 shadow-2xl shadow-black/40 bg-white">
+              <div className="mx-auto max-w-[280px] rounded-[2rem] border-[6px] border-gray-900 lg:mx-0 lg:max-w-none lg:rounded-2xl lg:border lg:border-white/20 overflow-hidden shadow-2xl shadow-black/40 bg-white">
                 {/* Browser chrome, so the shot reads as a real screen rather than art */}
-                <div className="flex items-center gap-1.5 px-3 py-2.5 bg-gray-100 border-b border-gray-200">
+                <div className="hidden lg:flex items-center gap-1.5 px-3 py-2.5 bg-gray-100 border-b border-gray-200">
                   <span className="w-2.5 h-2.5 rounded-full bg-red-400" />
                   <span className="w-2.5 h-2.5 rounded-full bg-amber-400" />
                   <span className="w-2.5 h-2.5 rounded-full bg-green-400" />
                 </div>
-                <Image
-                  src={heroShot}
-                  alt={t('landing.hero.screenshotAlt')}
-                  width={1440}
-                  height={900}
-                  className="w-full h-auto"
-                  priority
-                  sizes="(max-width: 1024px) 100vw, 50vw"
-                />
+                <picture>
+                  <source media="(min-width: 1024px)" srcSet={heroDesktopSrcSet} sizes="50vw" width={1440} height={900} />
+                  {/* next/image has no art direction; getImageProps feeds this <picture>. */}
+                  <img {...heroImgProps} alt={heroAlt} className="w-full h-auto" />
+                </picture>
               </div>
             </div>
 
@@ -263,15 +269,16 @@ export function LandingPage() {
           </div>
 
           {/* The rest, compact — present without competing for attention */}
-          <div className="reveal grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-3">
+          <div className="reveal grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3">
             {secondaryFeatures.map((feature) => {
               const Icon = feature.icon;
               return (
                 <div
                   key={feature.name}
-                  className="flex flex-col items-center text-center gap-2 p-4 rounded-xl border border-gray-200 dark:border-gray-700 bg-gray-50/60 dark:bg-gray-800/40"
+                  // An odd tile out on the 2-column phone grid spans the row instead of orphaning.
+                  className="odd:last:col-span-2 sm:odd:last:col-span-1 flex flex-col items-center text-center gap-2 p-4 rounded-xl border border-gray-200 dark:border-gray-700 bg-gray-50/60 dark:bg-gray-800/40"
                 >
-                  <Icon className="w-5 h-5 text-gray-500 dark:text-gray-500" />
+                  <Icon className="w-5 h-5 text-gray-500 dark:text-gray-400" />
                   <span className="text-xs font-medium text-gray-600 dark:text-gray-300 leading-snug">
                     {feature.name}
                   </span>
@@ -382,7 +389,7 @@ export function LandingPage() {
             <h2 className="text-3xl md:text-4xl font-bold text-white mb-4">
               {t('landing.cta.title')}
             </h2>
-            <p className="text-lg text-primary-200 mb-8 max-w-2xl mx-auto">
+            <p className="text-lg text-white/90 mb-8 max-w-2xl mx-auto">
               {t('landing.cta.subtitle')}
             </p>
             <div className="flex flex-col sm:flex-row gap-3 justify-center items-stretch sm:items-center">
@@ -416,20 +423,20 @@ export function LandingPage() {
               <span className="text-xl font-bold text-white">Aspiro</span>
             </Link>
 
-            <div className="flex flex-wrap justify-center gap-4 sm:gap-6">
-              <Link href="/privacy" className="text-gray-500 dark:text-gray-400 hover:text-white transition-colors text-sm">
+            <div className="flex flex-wrap justify-center gap-x-2 sm:gap-x-4">
+              <Link href="/privacy" className="inline-flex items-center min-h-[44px] px-2 rounded text-gray-400 hover:text-white transition-colors text-sm">
                 {t('landing.footer.privacy')}
               </Link>
-              <Link href="/terms" className="text-gray-500 dark:text-gray-400 hover:text-white transition-colors text-sm">
+              <Link href="/terms" className="inline-flex items-center min-h-[44px] px-2 rounded text-gray-400 hover:text-white transition-colors text-sm">
                 {t('landing.footer.terms')}
               </Link>
-              <Link href="/support" className="text-gray-500 dark:text-gray-400 hover:text-white transition-colors text-sm">
+              <Link href="/support" className="inline-flex items-center min-h-[44px] px-2 rounded text-gray-400 hover:text-white transition-colors text-sm">
                 {t('landing.footer.support')}
               </Link>
             </div>
           </div>
 
-          <div className="mt-8 pt-8 border-t border-gray-800 text-center text-gray-500 text-sm">
+          <div className="mt-8 pt-8 border-t border-gray-800 text-center text-gray-400 text-sm">
             <p>{t('landing.footer.copyright')}</p>
           </div>
         </div>
