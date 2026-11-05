@@ -27,7 +27,7 @@ jest.mock('react-i18next', () => ({
 }));
 
 jest.mock('@/contexts/DemoContext', () => ({
-  useDemo: () => ({ isDemoMode: false, disableDemo: jest.fn() }),
+  useDemo: () => ({ isDemoMode: false, exitDemo: jest.fn() }),
 }));
 jest.mock('@/contexts/PrivacyContext', () => ({
   usePrivacy: () => ({ isValueVisible: true, toggleValueVisibility: jest.fn() }),

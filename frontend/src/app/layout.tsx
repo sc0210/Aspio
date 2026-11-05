@@ -1,6 +1,5 @@
 import localFont from 'next/font/local';
 import { Providers } from './providers';
-import { DemoBanner } from '@/components/layout/DemoBanner';
 import { AnalyticsConsentBanner } from '@/components/analytics/AnalyticsConsentBanner';
 import { AnalyticsBootstrap } from '@/components/analytics/AnalyticsBootstrap';
 import { GlobalErrorBoundary } from '@/components/errors/GlobalErrorBoundary';
@@ -133,7 +132,6 @@ export default function RootLayout({
           <GlobalErrorBoundary>
             <AnalyticsBootstrap />
             <div className="min-h-full">
-              <DemoBanner />
               {/* Not a <main>: DashboardLayout owns the app's one main landmark
                   (and its scroll container); pages outside it render their own. */}
               <div>

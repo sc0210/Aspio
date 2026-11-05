@@ -508,6 +508,8 @@ interface DemoContextType {
   isDemoMode: boolean;
   enableDemo: () => void;
   disableDemo: () => void;
+  /** Leave demo and land on the landing page (full navigation). */
+  exitDemo: () => void;
   toggleDemo: () => void;
   demoUser: User;
   demoTransactions: Transaction[];
@@ -601,6 +603,15 @@ export function DemoProvider({ children }: { children: ReactNode }) {
     if (typeof document !== 'undefined') {
       document.cookie = 'demo-mode=false; path=/; expires=Thu, 01 Jan 1970 00:00:00 GMT';
     }
+  }, []);
+
+  // A full navigation, not router.push + disableDemo: flipping isDemoMode first
+  // re-renders the current page signed-out, and its no-access guard wins the race
+  // to /auth/signin. The reload starts fresh, so no state needs clearing.
+  const exitDemo = useCallback(() => {
+    document.cookie = 'demo-mode=false; path=/; expires=Thu, 01 Jan 1970 00:00:00 GMT';
+    // eslint-disable-next-line @next/next/no-location-assign-relative-destination -- a router.push loses the race described above
+    window.location.assign('/');
   }, []);
 
   const toggleDemo = useCallback(() => {
@@ -740,6 +751,7 @@ export function DemoProvider({ children }: { children: ReactNode }) {
       isDemoMode,
       enableDemo,
       disableDemo,
+      exitDemo,
       toggleDemo,
       demoUser: DEMO_USER,
       demoTransactions,

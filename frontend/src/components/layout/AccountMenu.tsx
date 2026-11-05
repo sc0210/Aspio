@@ -42,7 +42,7 @@ export function AccountMenu({ collapsed, onNavigate }: AccountMenuProps) {
   const { t, i18n } = useTranslation('common');
   const pathname = usePathname();
   const { session, isAuthenticated } = useAuthContext();
-  const { isDemoMode, disableDemo } = useDemo();
+  const { isDemoMode, exitDemo } = useDemo();
   const { isValueVisible, toggleValueVisibility } = usePrivacy();
   const { hasUnseen: hasWhatsNew } = useWhatsNew();
   // Fetch only when authenticated — gating on `!isDemoMode` alone races the
@@ -62,7 +62,7 @@ export function AccountMenu({ collapsed, onNavigate }: AccountMenuProps) {
   const handleSignOut = async () => {
     onNavigate();
     if (isDemoMode) {
-      disableDemo();
+      exitDemo();
       return;
     }
     await signOutCompletely('/');

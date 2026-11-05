@@ -5,11 +5,15 @@ import { useTranslation } from 'react-i18next';
 import { XMarkIcon } from '@heroicons/react/24/outline';
 
 const STORAGE_KEY = 'aspiro-bigscreen-hint-dismissed';
+// localStorage: set on the first-ever visit. sessionStorage: this session is that visit.
+const FIRST_SEEN_KEY = 'aspiro-bigscreen-hint-first-seen';
 
 /**
  * A one-time, dismissible nudge steering phone users to a tablet/desktop for the
  * full, control-heavy experience. Dismissal persists in localStorage so it never
- * nags. Renders nothing until we know it hasn't been dismissed (avoids a flash).
+ * nags. It waits for a later session: on a first visit it stacked on top of the
+ * demo banner and pushed the dashboard itself below the fold. Renders nothing
+ * until storage has been read (avoids a flash).
  */
 export function BiggerScreenHint() {
     const { t } = useTranslation('dashboard');
@@ -17,9 +21,15 @@ export function BiggerScreenHint() {
 
     useEffect(() => {
         try {
-            setShow(localStorage.getItem(STORAGE_KEY) !== '1');
+            if (localStorage.getItem(STORAGE_KEY) === '1') return;
+            if (!localStorage.getItem(FIRST_SEEN_KEY)) {
+                localStorage.setItem(FIRST_SEEN_KEY, '1');
+                sessionStorage.setItem(FIRST_SEEN_KEY, '1');
+                return;
+            }
+            setShow(sessionStorage.getItem(FIRST_SEEN_KEY) !== '1');
         } catch {
-            setShow(true);
+            /* storage unavailable — dismissal couldn't persist, so don't nag */
         }
     }, []);
 

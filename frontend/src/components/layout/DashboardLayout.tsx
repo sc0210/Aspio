@@ -12,6 +12,7 @@ import { CommandPalette } from './CommandPalette';
 import { PageTitle } from './PageTitle';
 import { cn } from '@/utils/cn';
 import { SidebarProvider } from '@/contexts/SidebarContext';
+import { DemoBanner } from './DemoBanner';
 
 interface DashboardLayoutProps {
   children: ReactNode;
@@ -84,6 +85,11 @@ export function DashboardLayout({ children, rightSidebar, topBarActions }: Dashb
             isMounted ? (sidebarCollapsed ? 'md:ml-14' : 'md:ml-64') : 'md:ml-14'
           )}
         >
+          {/* Inside the content column, not the root layout: there the fixed
+              sidebar covered its left edge, and it sat outside this 100dvh
+              shell, making every page a banner's height taller than the screen. */}
+          <DemoBanner />
+
           {/* Mobile Header Bar */}
           <div className="md:hidden bg-white dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700 flex items-center justify-between px-4 py-3">
             <button
@@ -128,7 +134,8 @@ export function DashboardLayout({ children, rightSidebar, topBarActions }: Dashb
               tabIndex={-1}
               className="flex-1 overflow-y-auto p-3 pb-[calc(5.5rem+env(safe-area-inset-bottom,0px))] sm:p-4 sm:pb-[calc(5.5rem+env(safe-area-inset-bottom,0px))] md:pb-4 lg:p-6 focus:outline-none"
             >
-              <div className="max-w-[1600px] mx-auto">
+              {/* Wider past 1920px: a 1600px cap left 352px blank either side at 2560. */}
+              <div className="max-w-[1600px] min-[1920px]:max-w-[2000px] mx-auto">
                 {children}
               </div>
             </main>

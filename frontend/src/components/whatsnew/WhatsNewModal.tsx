@@ -9,7 +9,7 @@ import { useWhatsNew } from '@/hooks/useWhatsNew';
 
 /**
  * Auto-opening "What's New" dialog — mounted once app-wide. It pops up the first
- * time a user loads the app after a new release, lists the highlights they
+ * time a returning user loads the app after a new release, lists the highlights they
  * haven't seen, and marks the version acknowledged on close. This is the
  * client-side "notify the user" mechanism (no backend notification needed).
  */
@@ -64,14 +64,14 @@ export function WhatsNewModal() {
                 <Link
                     href="/changelog"
                     onClick={close}
-                    className="text-xs font-medium text-primary-700 dark:text-primary-400 hover:underline rounded focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-400"
+                    className="inline-flex items-center min-h-[44px] text-sm font-medium text-primary-700 dark:text-primary-400 hover:underline rounded focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-400"
                 >
                     {t('whatsNew.viewAll', 'View all updates')}
                 </Link>
                 <button
                     type="button"
                     onClick={close}
-                    className="inline-flex items-center gap-1.5 rounded-lg bg-primary-700 hover:bg-primary-800 px-4 py-2 text-sm font-semibold text-white transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-400 focus-visible:ring-offset-2 dark:focus-visible:ring-offset-gray-800"
+                    className="inline-flex items-center gap-1.5 min-h-[44px] rounded-lg bg-primary-700 hover:bg-primary-800 px-4 py-2 text-sm font-semibold text-white transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-400 focus-visible:ring-offset-2 dark:focus-visible:ring-offset-gray-800"
                 >
                     <SparklesIcon className="w-4 h-4" />
                     {t('whatsNew.gotIt', 'Got it')}

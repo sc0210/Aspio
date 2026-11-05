@@ -20,7 +20,7 @@ jest.mock('react-i18next', () => ({
 }));
 
 jest.mock('@/contexts/DemoContext', () => ({
-  useDemo: () => ({ isDemoMode: false, disableDemo: jest.fn() }),
+  useDemo: () => ({ isDemoMode: false, exitDemo: jest.fn() }),
 }));
 jest.mock('@/contexts/AuthContext', () => ({ useAuthContext: () => ({ session: null }) }));
 jest.mock('@/lib/session-actions', () => ({ changeAppLanguage: jest.fn(), signOutCompletely: jest.fn() }));
