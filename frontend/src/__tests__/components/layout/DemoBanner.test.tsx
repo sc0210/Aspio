@@ -50,30 +50,27 @@ describe('DemoBanner', () => {
     expect(link).toHaveAttribute('href', '/auth/signup');
   });
 
-  beforeEach(() => sessionStorage.clear());
-
   it('"Exit Demo" leaves demo via exitDemo', () => {
     const exitDemo = jest.fn();
-    mockUseDemo.mockReturnValue({ isDemoMode: true, exitDemo });
+    mockUseDemo.mockReturnValue({ isDemoMode: true, exitDemo, hideDemoBanner: jest.fn() });
     render(<DemoBanner />);
     fireEvent.click(screen.getByRole('button', { name: /Exit Demo/i }));
     expect(exitDemo).toHaveBeenCalledTimes(1);
   });
 
   // A bare × reads as "dismiss"; it used to exit demo and land on /auth/signin.
-  it('the × only hides the banner and stays in demo', () => {
+  it('the × hides the banner and stays in demo', () => {
     const exitDemo = jest.fn();
-    mockUseDemo.mockReturnValue({ isDemoMode: true, exitDemo });
-    const { container } = render(<DemoBanner />);
+    const hideDemoBanner = jest.fn();
+    mockUseDemo.mockReturnValue({ isDemoMode: true, exitDemo, hideDemoBanner });
+    render(<DemoBanner />);
     fireEvent.click(screen.getByRole('button', { name: /Hide banner/i }));
+    expect(hideDemoBanner).toHaveBeenCalledTimes(1);
     expect(exitDemo).not.toHaveBeenCalled();
-    expect(container.firstChild).toBeNull();
-    expect(sessionStorage.getItem('aspiro-demo-banner-hidden')).toBe('1');
   });
 
-  it('stays hidden for the rest of the session', () => {
-    sessionStorage.setItem('aspiro-demo-banner-hidden', '1');
-    mockUseDemo.mockReturnValue({ isDemoMode: true, exitDemo: jest.fn() });
+  it('renders nothing once hidden', () => {
+    mockUseDemo.mockReturnValue({ isDemoMode: true, demoBannerHidden: true, exitDemo: jest.fn() });
     const { container } = render(<DemoBanner />);
     expect(container.firstChild).toBeNull();
   });

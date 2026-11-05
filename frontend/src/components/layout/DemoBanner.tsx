@@ -1,37 +1,16 @@
 'use client';
 
-import { useEffect, useState } from 'react';
 import { XMarkIcon } from '@heroicons/react/24/outline';
 import { useDemo } from '@/contexts/DemoContext';
 import { useTranslation } from 'react-i18next';
 
-const HIDDEN_KEY = 'aspiro-demo-banner-hidden';
-
 export function DemoBanner() {
-  const { isDemoMode, exitDemo } = useDemo();
+  const { isDemoMode, exitDemo, demoBannerHidden, hideDemoBanner } = useDemo();
   const { t } = useTranslation(['common', 'auth']);
-  const [hidden, setHidden] = useState(false);
-
-  useEffect(() => {
-    try {
-      setHidden(sessionStorage.getItem(HIDDEN_KEY) === '1');
-    } catch {
-      /* storage unavailable — keep showing */
-    }
-  }, []);
-
-  if (!isDemoMode || hidden) return null;
 
   // The × only hides the banner. It used to exit demo, which a bare × doesn't
   // say, so leaving demo is its own labelled button.
-  const hide = () => {
-    try {
-      sessionStorage.setItem(HIDDEN_KEY, '1');
-    } catch {
-      /* non-fatal */
-    }
-    setHidden(true);
-  };
+  if (!isDemoMode || demoBannerHidden) return null;
 
   return (
     <div
@@ -68,7 +47,7 @@ export function DemoBanner() {
         </button>
         <button
           type="button"
-          onClick={hide}
+          onClick={hideDemoBanner}
           className="flex-shrink-0 -mr-2 p-2 min-w-[44px] min-h-[44px] flex items-center justify-center text-primary-500 hover:text-primary-700 dark:text-primary-400 dark:hover:text-primary-200 transition-colors rounded-lg focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-500 focus-visible:ring-offset-1"
           aria-label={t('auth:demo.hideBanner')}
         >

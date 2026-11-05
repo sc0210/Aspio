@@ -2,12 +2,12 @@ import fs from 'fs';
 import path from 'path';
 
 /**
- * Dark-mode body text on the dashboard. gray-500 on a gray-800 card measures
+ * Dark-mode body text on the dashboard and goal cards. gray-500 on a gray-800 card measures
  * 3.04:1, under the 4.5:1 minimum, and it was the default label colour in 63
  * places across these components. gray-400 measures 5.78:1.
  */
 const SRC = path.join(__dirname, '..', '..');
-const DIRS = ['components/dashboard'];
+const DIRS = ['components/dashboard', 'components/goals'];
 
 const files = DIRS.flatMap((dir) =>
     fs.readdirSync(path.join(SRC, dir))

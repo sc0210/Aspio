@@ -8,27 +8,26 @@ jest.mock('react-i18next', () => ({
 const HINT = /Want full control/;
 
 describe('BiggerScreenHint', () => {
-    beforeEach(() => {
-        localStorage.clear();
-        sessionStorage.clear();
-    });
+    beforeEach(() => localStorage.clear());
+    afterEach(() => jest.useRealTimers());
 
     // On a first visit it stacked with the demo banner and pushed the dashboard below the fold.
-    it('stays hidden for the whole first session', () => {
-        render(<BiggerScreenHint />);
-        expect(screen.queryByText(HINT)).toBeNull();
-        // Navigating back to the dashboard in the same session remounts it.
+    it('stays hidden throughout the first visit, in any tab', () => {
+        jest.useFakeTimers({ now: new Date('2026-11-05T09:00:00Z') });
+        render(<BiggerScreenHint />).unmount();
+        jest.setSystemTime(new Date('2026-11-05T11:00:00Z')); // a second tab, two hours on
         render(<BiggerScreenHint />);
         expect(screen.queryByText(HINT)).toBeNull();
     });
 
-    it('appears in a later session and stays dismissed', () => {
+    it('appears on a later visit and stays dismissed', () => {
+        jest.useFakeTimers({ now: new Date('2026-11-05T09:00:00Z') });
         render(<BiggerScreenHint />).unmount();
-        sessionStorage.clear(); // a new session
-        render(<BiggerScreenHint />);
+        jest.setSystemTime(new Date('2026-11-06T09:00:00Z'));
+        const { unmount } = render(<BiggerScreenHint />);
         fireEvent.click(screen.getByRole('button', { name: 'Dismiss' }));
         expect(screen.queryByText(HINT)).toBeNull();
-        sessionStorage.clear();
+        unmount();
         render(<BiggerScreenHint />);
         expect(screen.queryByText(HINT)).toBeNull();
     });

@@ -126,7 +126,7 @@ export function MobileGoals() {
                                         <p className="mt-1.5 text-[12.5px] font-semibold text-gray-500 dark:text-gray-400 tabular-nums">
                                             {isValueVisible ? formatTWD(g.currentAmount || 0) : hidden} / {isValueVisible ? formatTWDCompact(g.targetAmount || 0) : '•••'}
                                         </p>
-                                        {eta && <p className="mt-0.5 text-xs font-medium text-gray-500 dark:text-gray-500">🗓 {eta}</p>}
+                                        {eta && <p className="mt-0.5 text-xs font-medium text-gray-500 dark:text-gray-400">🗓 {eta}</p>}
                                     </div>
                                 </section>
                             );
@@ -145,7 +145,7 @@ export function MobileGoals() {
                                                 <span className="grid place-items-center w-9 h-9 rounded-xl bg-gray-100 dark:bg-gray-700 text-lg flex-shrink-0" aria-hidden="true">{meta.icon}</span>
                                                 <div className="min-w-0 flex-1">
                                                     <p className="text-sm font-bold text-gray-900 dark:text-white truncate">{g.title}</p>
-                                                    <p className="text-xs font-medium text-gray-500 dark:text-gray-500 tabular-nums">
+                                                    <p className="text-xs font-medium text-gray-500 dark:text-gray-400 tabular-nums">
                                                         {isValueVisible ? formatTWDCompact(g.currentAmount || 0) : '•••'} / {isValueVisible ? formatTWDCompact(g.targetAmount || 0) : '•••'}
                                                     </p>
                                                 </div>
@@ -162,7 +162,7 @@ export function MobileGoals() {
                     </>
                 )}
 
-                <p className="text-center px-4 pt-1 text-xs font-semibold leading-relaxed text-gray-500 dark:text-gray-500">
+                <p className="text-center px-4 pt-1 text-xs font-semibold leading-relaxed text-gray-500 dark:text-gray-400">
                     {t('dashboard:mobile.fullGoals', 'Milestones, contributions & achievements')}
                     <br />
                     <span className="text-primary-700 dark:text-primary-400">→ {t('dashboard:mobile.onLargerScreen', 'on tablet / desktop')}</span>

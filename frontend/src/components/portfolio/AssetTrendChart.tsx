@@ -543,7 +543,12 @@ export const AssetTrendChart = memo(function AssetTrendChart({
     // Value mode keeps the trough×0.97 / peak×1.02 band (padding relative to the
     // value, so a small move doesn't fill the chart) and rounds its ends: the raw
     // band gave uneven labels (1.925M, 1.955M, 1.985M, 2.043M).
-    const valueAxis = viewMode !== 'return' && stats ? niceAxis(stats.troughValue * 0.97, stats.peakValue * 1.02, { padRatio: 0 }) : null;
+    // Cost basis is drawn too, so it bounds the axis alongside value.
+    // Not a hook: this runs after the component's early returns.
+    const costs = viewMode !== 'return' && stats ? chartData.map(p => p.costBasis).filter(c => c > 0) : [];
+    const valueAxis = viewMode !== 'return' && stats
+        ? niceAxis(Math.min(stats.troughValue, ...costs) * 0.97, Math.max(stats.peakValue, ...costs) * 1.02, { padRatio: 0 })
+        : null;
     const yDomain: [number | string, number | string] = valueAxis ? valueAxis.domain : ['auto', 'auto'];
 
     return (

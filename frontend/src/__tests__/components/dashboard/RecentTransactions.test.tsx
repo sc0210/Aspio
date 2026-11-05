@@ -34,7 +34,7 @@ jest.mock('@/hooks/useTransactions', () => ({
 }));
 
 jest.mock('@/utils/formatters', () => ({
-  formatCurrency: (amount: number) => `$${amount}`,
+  formatCashAmount: (amount: number) => `$${amount}`,
 }));
 
 jest.mock('@/components/ui/LoadingSpinner', () => ({

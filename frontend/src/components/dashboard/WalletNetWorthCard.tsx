@@ -234,18 +234,16 @@ export function WalletNetWorthCard({
         if (!values.length) return { domain: [0, 1] };
         const min = Math.min(...values);
         const max = Math.max(...values);
-        // Round ticks: arbitrary padded bounds gave uneven labels. A flat series
-        // (min === max) keeps the old fixed-ratio pad.
-        if (max === min) {
-            const pad = max * 0.15 || 1;
-            return { domain: [Math.max(0, Math.round(min - pad)), Math.round(max + pad)], ticks: undefined };
-        }
+        // Round ticks: arbitrary padded bounds gave uneven labels.
         return niceAxis(min, max, { padRatio: 0.25 });
     }, [chartData, hasDebtTrend, lineVisibility]);
     const yDomain = yAxis.domain;
 
     // Animate y-axis domain with ease-out cubic via rAF
     const [animatedDomain, setAnimatedDomain] = useState<[number, number]>(yDomain);
+    // The round ticks belong to the target domain; while the domain animates
+    // toward it, Recharts picks its own so labels track the moving axis.
+    const axisSettled = animatedDomain[0] === yDomain[0] && animatedDomain[1] === yDomain[1];
     const rafRef = useRef<number | null>(null);
     const fromDomainRef = useRef<[number, number]>(yDomain);
 
@@ -418,7 +416,7 @@ export function WalletNetWorthCard({
                                     </defs>
                                     <CartesianGrid strokeDasharray="3 3" stroke="currentColor" className="text-gray-200 dark:text-gray-700 opacity-50" vertical={false} />
                                     <XAxis dataKey="displayDate" tick={{ fill: 'currentColor', fontSize: 12, fontWeight: 500 }} className="text-gray-500 dark:text-gray-400" tickLine={false} interval="preserveStartEnd" />
-                                    <YAxis tick={{ fill: 'currentColor', fontSize: 12, fontWeight: 500 }} className="text-gray-500 dark:text-gray-400" tickLine={false} tickFormatter={(v) => isValueVisible ? formatTWDCompact(v) : '•••'} width={84} tickMargin={4} domain={animatedDomain} ticks={yAxis.ticks} allowDataOverflow />
+                                    <YAxis tick={{ fill: 'currentColor', fontSize: 12, fontWeight: 500 }} className="text-gray-500 dark:text-gray-400" tickLine={false} tickFormatter={(v) => isValueVisible ? formatTWDCompact(v) : '•••'} width={84} tickMargin={4} domain={animatedDomain} ticks={axisSettled ? yAxis.ticks : undefined} />
                                     <Tooltip content={<CustomTooltip isValueVisible={isValueVisible} walletDefs={WALLET_DEFS} t={t} />} cursor={{ stroke: '#0ea5e9', strokeWidth: 1.5, strokeDasharray: '5 5' }} />
                                     {lineVisibility.totalAsset && (
                                         <Area type="monotone" dataKey="totalAsset" stroke={CHART_COLORS.total} strokeWidth={2.5} fill="none" fillOpacity={1} dot={false} activeDot={{ r: 4, fill: '#6366f1', stroke: 'white', strokeWidth: 2 }} name="Total Assets" />

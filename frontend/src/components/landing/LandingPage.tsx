@@ -214,8 +214,9 @@ export function LandingPage() {
                 </div>
                 <picture>
                   <source media="(min-width: 1024px)" srcSet={heroDesktopSrcSet} sizes="50vw" width={1440} height={900} />
-                  {/* next/image has no art direction; getImageProps feeds this <picture>. */}
-                  <img {...heroImgProps} alt={heroAlt} className="w-full h-auto" />
+                  {/* next/image has no art direction; getImageProps feeds this <picture>. It drops
+                      priority's preload, so the LCP image asks for high priority itself. */}
+                  <img {...heroImgProps} alt={heroAlt} fetchPriority="high" className="w-full h-auto" />
                 </picture>
               </div>
             </div>
