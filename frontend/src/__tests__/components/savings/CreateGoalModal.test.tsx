@@ -44,3 +44,27 @@ describe('CreateGoalModal in edit mode', () => {
     expect(onSuccess).toHaveBeenCalled();
   });
 });
+
+describe('CreateGoalModal errors', () => {
+  it('drops a failed attempt’s error when reopened', async () => {
+    (apiClient.updateSharedGoal as jest.Mock).mockRejectedValue(new Error('server said no'));
+    const props = { onClose: jest.fn(), onSuccess: jest.fn(), connections, goal };
+    const { rerender } = render(<CreateGoalModal isOpen {...props} />);
+
+    fireEvent.click(screen.getByRole('button', { name: 'Save' }));
+    expect(await screen.findByText('server said no')).toBeInTheDocument();
+
+    rerender(<CreateGoalModal isOpen={false} {...props} />);
+    rerender(<CreateGoalModal isOpen {...props} />);
+    expect(screen.queryByText('server said no')).not.toBeInTheDocument();
+  });
+
+  it('keeps an edit in progress when handed an equal goal object', () => {
+    const props = { onClose: jest.fn(), onSuccess: jest.fn(), connections };
+    const { rerender } = render(<CreateGoalModal isOpen {...props} goal={goal} />);
+    fireEvent.change(screen.getByDisplayValue('Trip'), { target: { value: 'Typing…' } });
+
+    rerender(<CreateGoalModal isOpen {...props} goal={{ ...goal }} />);
+    expect(screen.getByDisplayValue('Typing…')).toBeInTheDocument();
+  });
+});

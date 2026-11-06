@@ -38,15 +38,20 @@ export default function CreateGoalModal({
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState('');
 
-  // Prefill when opened to edit; a stale error from an earlier attempt goes.
+  // Prefill when opened (or switched to another goal), and drop a stale error
+  // from an earlier attempt. Keyed on the goal's id, not the object: a refetch
+  // handing over an equal goal must not wipe an edit in progress.
+  const goalId = goal?.id;
   useEffect(() => {
-    if (isOpen) setError('');
-    if (isOpen && goal) {
+    if (!isOpen) return;
+    setError('');
+    if (goal) {
       setTitle(goal.title);
       setTargetAmount(String(goal.target_amount));
       setTargetDate(goal.target_date ?? '');
     }
-  }, [isOpen, goal]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- deliberately not on `goal`
+  }, [isOpen, goalId]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
