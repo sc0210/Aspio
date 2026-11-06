@@ -116,6 +116,7 @@ async def test_recurring_crud_and_isolation(authenticated_client, async_session,
         "description": "Gym", "frequency": "monthly", "start_date": (business_today() + timedelta(days=1)).isoformat(),
     }), 201)
     rule_id = created["id"]
+    assert created["category"]["id"] == str(category.id)  # was null before the re-read
 
     assert rule_id in str(_ok(client.get(f"{API}/transactions/recurring")))
     assert _ok(client.get(f"{API}/transactions/recurring/{rule_id}"))["description"] == "Gym"

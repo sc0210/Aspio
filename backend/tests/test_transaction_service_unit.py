@@ -1018,6 +1018,7 @@ class TestRecurringTransactionService:
         svc.recurring_repo.lock_rule = AsyncMock(side_effect=[
             _locked(business_today()), _locked(business_today() + timedelta(days=31), 1)])
         svc.recurring_repo.deactivate = AsyncMock()
+        svc.recurring_repo.db = MagicMock(rollback=AsyncMock(), commit=AsyncMock())
         svc.transaction_service.create_transaction = AsyncMock(return_value={"transaction": MagicMock()})
 
         result = await svc.process_due_transactions(business_today())
@@ -1033,6 +1034,7 @@ class TestRecurringTransactionService:
         svc.recurring_repo.has_posted = AsyncMock(return_value=False)
         svc.recurring_repo.update_next_occurrence = AsyncMock(return_value=advanced)
         svc.recurring_repo.deactivate = AsyncMock()
+        svc.recurring_repo.db = MagicMock(rollback=AsyncMock(), commit=AsyncMock())
         svc.transaction_service.create_transaction = AsyncMock()
         return svc
 

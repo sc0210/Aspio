@@ -1615,6 +1615,13 @@ class RecurringTransactionService:
             ):
                 break
 
+        # Every exit above but `finished` can leave the row lock held (nothing
+        # committed since lock_rule); release it so a concurrent run isn't
+        # skipped. Commit, not rollback: nothing is pending, and a rollback would
+        # expire every loaded row, the caller's included.
+        if not finished:
+            await self.recurring_repo.db.commit()
+
         # Only retire on what a locked read showed, never on the snapshot.
         if finished:
             try:
