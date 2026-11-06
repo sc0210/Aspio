@@ -1046,6 +1046,7 @@ class TestRecurringTransactionService:
         svc.transaction_service.create_transaction.assert_not_called()
         svc.recurring_repo.update_next_occurrence.assert_not_called()
         svc.recurring_repo.deactivate.assert_not_called()
+        svc.recurring_repo.db.commit.assert_awaited_once()  # releases any row lock
 
     @pytest.mark.asyncio
     async def test_the_locked_row_wins_over_the_snapshot(self):
@@ -1060,6 +1061,7 @@ class TestRecurringTransactionService:
         svc = self._svc(_locked(business_today(), paused=True))
         await svc.process_due_transactions(business_today())
         svc.transaction_service.create_transaction.assert_not_called()
+        svc.recurring_repo.db.commit.assert_awaited_once()
 
     @pytest.mark.asyncio
     async def test_the_advance_only_counts_if_the_rule_did_not_move(self):
@@ -1070,6 +1072,7 @@ class TestRecurringTransactionService:
         assert svc.recurring_repo.update_next_occurrence.await_count == 1
         _, _, kwargs = svc.recurring_repo.update_next_occurrence.mock_calls[0]
         assert kwargs["expected_current"] == business_today()
+        svc.recurring_repo.db.commit.assert_awaited_once()
 
     @pytest.mark.asyncio
     async def test_max_occurrences_from_the_locked_row_retires_the_rule(self):
@@ -1077,6 +1080,8 @@ class TestRecurringTransactionService:
         await svc.process_due_transactions(business_today())
         svc.transaction_service.create_transaction.assert_not_called()
         svc.recurring_repo.deactivate.assert_awaited_once()
+        svc.recurring_repo.db.commit.assert_not_awaited()  # deactivate commits itself
+        svc.recurring_repo.db.rollback.assert_not_awaited()
 
     @pytest.mark.asyncio
     async def test_a_failed_retire_still_reports_what_was_posted(self):
