@@ -75,7 +75,7 @@ async def test_a_blocked_account_is_refused_on_both_paths(client, test_user, asy
     invalidate_user_auth_cache(test_user.id)
 
     assert _get(client, STRICT, token).status_code == strict_code
-    assert _get(client, OPTIONAL, token).status_code in (401, 403)
+    assert _get(client, OPTIONAL, token).status_code == 403
 
 
 async def test_hard_deleting_a_user_drops_their_cached_auth(client, test_user, async_session):

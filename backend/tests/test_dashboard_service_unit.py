@@ -80,8 +80,6 @@ class TestGetRelativeTime:
         assert result == "2 years ago"
 
 
-# ─── DashboardService._period_to_months ──────────────────────────────────────
-
 # ─── DashboardService._get_date_range ────────────────────────────────────────
 
 class TestGetDateRange:
@@ -114,8 +112,6 @@ class TestGetDateRange:
         assert date_to == today
         assert (today - date_from).days >= 89
 
-
-# ─── DashboardService.get_spending_by_category ───────────────────────────────
 
 # ─── DashboardService.get_recent_activity ────────────────────────────────────
 
@@ -214,8 +210,6 @@ class TestGetMonthlyTrends:
         result = await svc.get_monthly_trends("user-id")
         assert result.trends == []
 
-
-# ─── DashboardService.invalidate_user_cache ──────────────────────────────────
 
 # ─── DashboardService._get_goals_summary ─────────────────────────────────────
 

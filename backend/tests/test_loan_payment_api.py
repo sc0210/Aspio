@@ -158,8 +158,10 @@ def test_another_users_loan_is_not_found(authenticated_client, other_user):
         {"sub": str(other_user.id), "email": other_user.email})
     try:
         assert client.get(f"{BASE}/{loan_id}").status_code == 404
-        assert _pay(client, loan_id, "100").status_code in (400, 404)
+        # record_payment reports a loan it can't find as a 400 ("Loan not found").
+        assert _pay(client, loan_id, "100").status_code == 400
         assert client.get(f"{BASE}/").json()["data"] == []
     finally:
         client.headers["Authorization"] = own
     assert _payments(client, loan_id) == []
+    assert Decimal(str(_loan(client, loan_id)["current_balance"])) == Decimal("1000")

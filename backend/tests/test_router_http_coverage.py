@@ -1,11 +1,12 @@
 """
 HTTP-level tests for routers whose services were tested but whose routes were
-not: goals, reports (behind /review), the gamification endpoints, recurring
-transaction CRUD and peers. Each checks the status, the ApiResponse envelope
+not: goals, reports (only /reports/goals: spending and monthly-trends group by
+Postgres to_char() and can't run on SQLite), the gamification endpoints,
+recurring transaction CRUD and peers. Each checks the status, the ApiResponse envelope
 and, where data is per-user, that another account can't reach it.
 """
 
-from datetime import date, timedelta
+from datetime import timedelta
 from uuid import uuid4
 
 import pytest
@@ -15,6 +16,7 @@ from sqlalchemy import select
 from app.modules.transactions.models import TransactionCategory, TransactionType
 from app.modules.users.models import User, UserRole, UserStatus
 from app.modules.users.security import jwt_manager
+from app.utils.datetime_helpers import business_today
 
 pytestmark = pytest.mark.asyncio
 API = "/api/v1"
@@ -55,8 +57,9 @@ async def test_goal_crud_and_isolation(authenticated_client, stranger):
     }), 201)
     goal_id = created["id"]
 
-    assert [g["id"] for g in _ok(client.get(f"{API}/goals/"))] == [goal_id] or goal_id in str(
-        _ok(client.get(f"{API}/goals/")))
+    listed = _ok(client.get(f"{API}/goals/"))
+    goals = listed["goals"] if isinstance(listed, dict) and "goals" in listed else listed
+    assert [g["id"] for g in goals] == [goal_id]
     _ok(client.get(f"{API}/goals/summary"))
     assert _ok(client.get(f"{API}/goals/{goal_id}"))["title"] == "Japan trip"
 
@@ -69,7 +72,7 @@ async def test_goal_crud_and_isolation(authenticated_client, stranger):
     assert client.put(f"{API}/goals/{goal_id}", json={"title": "x"}, headers=other).status_code == 404
     assert client.delete(f"{API}/goals/{goal_id}", headers=other).status_code == 404
 
-    assert client.delete(f"{API}/goals/{goal_id}").status_code in (200, 204)
+    assert client.delete(f"{API}/goals/{goal_id}").status_code == 200
     assert client.get(f"{API}/goals/{goal_id}").status_code == 404
 
 
@@ -110,7 +113,7 @@ async def test_recurring_crud_and_isolation(authenticated_client, async_session,
 
     created = _ok(client.post(f"{API}/transactions/recurring", json={
         "type": "expense", "amount": "1200", "currency": "TWD", "category_id": str(category.id),
-        "description": "Gym", "frequency": "monthly", "start_date": (date.today() + timedelta(days=1)).isoformat(),
+        "description": "Gym", "frequency": "monthly", "start_date": (business_today() + timedelta(days=1)).isoformat(),
     }), 201)
     rule_id = created["id"]
 
@@ -123,7 +126,7 @@ async def test_recurring_crud_and_isolation(authenticated_client, async_session,
     assert client.get(f"{API}/transactions/recurring/{rule_id}", headers=other).status_code == 404
     assert client.delete(f"{API}/transactions/recurring/{rule_id}", headers=other).status_code == 404
 
-    assert client.delete(f"{API}/transactions/recurring/{rule_id}").status_code in (200, 204)
+    assert client.delete(f"{API}/transactions/recurring/{rule_id}").status_code == 204
     assert client.get(f"{API}/transactions/recurring/{rule_id}").status_code == 404
 
 
@@ -155,17 +158,17 @@ async def test_peer_invite_accept_compare_and_shared_goal(authenticated_client, 
     assert _ok(client.get(f"{API}/peers/goals/{goal_id}", headers=other))["title"] == "Shared trip"
 
     record = _ok(client.post(f"{API}/peers/goals/{goal_id}/records", json={
-        "amount": "1000", "record_date": date.today().isoformat()}), 201)
+        "amount": "1000", "record_date": business_today().isoformat()}), 201)
     assert [r["id"] for r in _ok(client.get(f"{API}/peers/goals/{goal_id}/records"))] == [record["id"]]
     # Only the person who saved it can change a record.
     assert client.patch(f"{API}/peers/goals/{goal_id}/records/{record['id']}",
-                        json={"amount": "5"}, headers=other).status_code in (403, 404)
+                        json={"amount": "5"}, headers=other).status_code == 403
     _ok(client.patch(f"{API}/peers/goals/{goal_id}/records/{record['id']}", json={"amount": "1500"}))
-    assert client.delete(f"{API}/peers/goals/{goal_id}/records/{record['id']}").status_code in (200, 204)
+    assert client.delete(f"{API}/peers/goals/{goal_id}/records/{record['id']}").status_code == 204
 
-    assert client.delete(f"{API}/peers/goals/{goal_id}").status_code in (200, 204)
-    assert client.delete(f"{API}/peers/{connection_id}").status_code in (200, 204)
-    assert client.get(f"{API}/peers/goals/{goal_id}", headers=other).status_code in (403, 404)
+    assert client.delete(f"{API}/peers/goals/{goal_id}").status_code == 204
+    assert client.delete(f"{API}/peers/{connection_id}").status_code == 204
+    assert client.get(f"{API}/peers/goals/{goal_id}", headers=other).status_code == 404
 
 
 async def test_an_outsider_cannot_see_a_shared_goal(authenticated_client, async_session, test_user, stranger):
@@ -183,9 +186,9 @@ async def test_an_outsider_cannot_see_a_shared_goal(authenticated_client, async_
     goal_id = _ok(client.post(f"{API}/peers/goals", json={
         "connection_id": connection_id, "title": "Ours", "target_amount": "100"}), 201)["id"]
 
-    assert client.get(f"{API}/peers/goals/{goal_id}", headers=_headers(outsider)).status_code in (403, 404)
+    assert client.get(f"{API}/peers/goals/{goal_id}", headers=_headers(outsider)).status_code == 404
     assert client.post(f"{API}/peers/goals/{goal_id}/records", json={
-        "amount": "1", "record_date": date.today().isoformat()}, headers=_headers(outsider)).status_code in (403, 404)
+        "amount": "1", "record_date": business_today().isoformat()}, headers=_headers(outsider)).status_code == 404
 
 
 def test_goal_schema_accepts_enum_values_or_names_and_nothing_else():

@@ -421,8 +421,6 @@ class TestLogoutUser:
         assert result is False
 
 
-# ─── UserService.get_user_profile ────────────────────────────────────────────
-
 # ─── UserService.update_user_profile ─────────────────────────────────────────
 
 class TestUpdateUserProfile:
@@ -462,8 +460,6 @@ class TestUpdateUserProfile:
 
         assert exc.value.status_code == 404
 
-
-# ─── UserService.change_password ─────────────────────────────────────────────
 
 # ─── UserService.request_password_reset ──────────────────────────────────────
 

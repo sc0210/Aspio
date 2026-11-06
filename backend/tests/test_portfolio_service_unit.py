@@ -126,8 +126,6 @@ class TestCreatePortfolio:
                 await svc.create_portfolio(data, uuid4())
 
 
-# ─── PortfolioService.get_portfolio ──────────────────────────────────────────
-
 # ─── PortfolioService.get_user_portfolios ────────────────────────────────────
 
 class TestGetUserPortfolios:
@@ -156,10 +154,6 @@ class TestGetUserPortfolios:
         assert result == []
         assert total == 0
 
-
-# ─── PortfolioService.update_portfolio ───────────────────────────────────────
-
-# ─── PortfolioService.delete_portfolio ───────────────────────────────────────
 
 # ─── PortfolioService.get_default_portfolio ──────────────────────────────────
 
@@ -214,8 +208,6 @@ class TestGetUserHoldings:
         assert result == []
         assert total == 0
 
-
-# ─── portfolio TransactionService.get_transaction ────────────────────────────
 
 # ─── AnalyticsService.calculate_portfolio_performance ────────────────────────
 
