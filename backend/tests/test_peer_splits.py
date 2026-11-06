@@ -494,6 +494,8 @@ async def test_cancelling_after_removal_clears_the_balance_without_double_counti
     assert await _rows(async_session, c["bob"]) == [Decimal("500")]
     # A current partner is listed with nothing owed; a former one drops off.
     assert all(not b.balances for b in await svc.balances(alice_id))
+    if not reconnected:
+        assert await svc.balances(alice_id) == []
 
 
 
