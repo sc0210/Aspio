@@ -274,6 +274,39 @@ async def send_spending_alerts():
         return {"created": created}
 
 
+async def process_recurring_transactions():
+    """Materialise recurring transactions that are due today.
+
+    Nothing called this before: only the admin endpoint
+    POST /transactions/recurring/process-due ran it, so a user's recurring
+    rule never produced a transaction on its own. Idempotent within a day:
+    each processed rule's next_occurrence moves past today, so a second run
+    finds nothing. The service commits per transaction.
+    """
+    from app.modules.transactions.repositories import (
+        RecurringTransactionRepository,
+        TransactionCategoryRepository,
+        TransactionRepository,
+    )
+    from app.modules.transactions.services import RecurringTransactionService, TransactionService
+
+    logger.info("Starting scheduled recurring-transaction run")
+    async with async_session() as session:
+        recurring_repo = RecurringTransactionRepository(session)
+        service = RecurringTransactionService(
+            recurring_repo,
+            TransactionService(
+                TransactionRepository(session), TransactionCategoryRepository(session), recurring_repo
+            ),
+        )
+        result = await service.process_due_transactions()
+        logger.info(
+            "Recurring-transaction run complete: %d due, %d created, %d failed",
+            result["processed"], result["created"], result["failed"],
+        )
+        return result
+
+
 def init_scheduler():
     """Initialize the APScheduler with scheduled jobs"""
     global scheduler
@@ -381,6 +414,19 @@ def init_scheduler():
         name="Daily Spending Alerts",
     )
     logger.info("Scheduled: Daily spending alerts at 09:05 TST (01:05 UTC)")
+
+    # ==========================================
+    # Daily Recurring Transactions
+    # Run at 16:10 UTC (00:10 TST): due dates are business (Taipei) dates, so
+    # the day's rules materialise as that day starts.
+    # ==========================================
+    add_job(
+        process_recurring_transactions,
+        CronTrigger(hour=16, minute=10, timezone=ZoneInfo("UTC")),
+        id="daily_recurring_transactions",
+        name="Daily Recurring Transactions",
+    )
+    logger.info("Scheduled: Daily recurring transactions at 00:10 TST (16:10 UTC)")
 
     return scheduler
 

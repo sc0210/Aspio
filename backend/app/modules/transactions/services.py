@@ -1553,9 +1553,11 @@ class RecurringTransactionService:
                     currency=recurring.currency,
                     description=recurring.description,
                     transaction_date=recurring.next_occurrence,
-                    category_id=recurring.category_id,
+                    # TransactionCreate takes these ids as strings; the ORM
+                    # gives UUIDs, and every rule failed validation until str().
+                    category_id=str(recurring.category_id) if recurring.category_id else None,
                     payment_method=recurring.payment_method,
-                    recurring_transaction_id=recurring.id,
+                    recurring_transaction_id=str(recurring.id),
                     tags=recurring.tags,
                     notes=recurring.notes,
                 )
@@ -1563,7 +1565,7 @@ class RecurringTransactionService:
                 # Create the transaction
                 if recurring.auto_create:
                     await self.transaction_service.create_transaction(
-                        transaction_data, recurring.user_id
+                        transaction_data, str(recurring.user_id)
                     )
                     created_count += 1
 

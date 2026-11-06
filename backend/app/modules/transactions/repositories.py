@@ -102,6 +102,15 @@ class TransactionRepository:
             if transaction_data.get("loan_id") and isinstance(transaction_data["loan_id"], str):
                 transaction_data["loan_id"] = uuid_module.UUID(transaction_data["loan_id"])
 
+            # TransactionCreate carries it as a string too; unconverted, the
+            # recurring job's insert failed on the UUID column.
+            if transaction_data.get("recurring_transaction_id") and isinstance(
+                transaction_data["recurring_transaction_id"], str
+            ):
+                transaction_data["recurring_transaction_id"] = uuid_module.UUID(
+                    transaction_data["recurring_transaction_id"]
+                )
+
             # Calculate USD amount if not provided
             if not transaction_data.get("amount_usd"):
                 if transaction_data.get("currency") == "USD":
@@ -1651,32 +1660,6 @@ class TransactionCategoryRepository:
 
         await self.db.execute(stmt)
         await (self.db.commit() if commit else self.db.flush())
-
-    async def get_popular_categories(
-        self, user_id: str, category_type: Optional[str] = None, limit: int = 10
-    ) -> List[TransactionCategory]:
-        """Get popular categories based on user's transaction history"""
-        conditions = [Transaction.user_id == user_id, Transaction.is_deleted == False]
-
-        if category_type:
-            conditions.append(TransactionCategory.type == category_type)
-
-        stmt = (
-            select(TransactionCategory)
-            .options(selectinload(TransactionCategory.subcategories))
-            .select_from(TransactionCategory.__table__.join(Transaction.__table__))
-            .where(and_(*conditions))
-            .group_by(TransactionCategory.id)
-            .order_by(
-                func.count(Transaction.id).desc(),
-                TransactionCategory.usage_count.desc(),
-            )
-            .limit(limit)
-        )
-
-        result = await self.db.execute(stmt)
-        return list(result.scalars().all())
-
 
 class RecurringTransactionRepository:
     """Repository for recurring transaction database operations"""
