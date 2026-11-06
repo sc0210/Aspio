@@ -1734,19 +1734,27 @@ class RecurringTransactionRepository:
         result = await self.db.execute(stmt)
         return list(result.scalars().all())
 
-    async def lock_rule(self, recurring_id) -> bool:
-        """Row-lock the rule for this occurrence; False if another run holds it.
+    async def lock_rule(self, recurring_id):
+        """Row-lock the rule and return its current state, or None if another
+        run holds it (or it is gone).
 
         Postgres only (SQLite ignores FOR UPDATE). Held until the next commit,
         so the scheduler and the admin endpoint can't both pass has_posted for
-        the same occurrence and post it twice.
+        the same occurrence. The caller must work from the returned values, not
+        from a snapshot taken before the lock: another run may have advanced or
+        paused the rule in between.
         """
         stmt = (
-            select(RecurringTransaction.id)
+            select(
+                RecurringTransaction.next_occurrence,
+                RecurringTransaction.occurrence_count,
+                RecurringTransaction.is_active,
+                RecurringTransaction.is_paused,
+            )
             .where(RecurringTransaction.id == recurring_id)
             .with_for_update(skip_locked=True)
         )
-        return (await self.db.execute(stmt)).first() is not None
+        return (await self.db.execute(stmt)).first()
 
     async def deactivate(self, recurring_id) -> None:
         """Retire a rule that has reached its end_date or max_occurrences."""

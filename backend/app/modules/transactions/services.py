@@ -1596,10 +1596,14 @@ class RecurringTransactionService:
 
         posted = 0
         for _ in range(self.MAX_CATCH_UP):
+            row = await self.recurring_repo.lock_rule(rule_id)
+            if row is None or not row.is_active or row.is_paused:
+                break  # another run holds it, or the user paused/removed it
+            # Work from the locked row, not the snapshot: another run may have
+            # advanced it, and advancing again from a stale date would rewind it.
+            occurrence, count = row.next_occurrence, row.occurrence_count or 0
             if occurrence > max_date or finished():
                 break
-            if not await self.recurring_repo.lock_rule(rule_id):
-                break  # another run is posting this rule right now
 
             if not await self.recurring_repo.has_posted(rule_id, occurrence):
                 await self.transaction_service.create_transaction(
@@ -1613,7 +1617,11 @@ class RecurringTransactionService:
             await self.recurring_repo.update_next_occurrence(rule_id, occurrence)
 
         if finished():
-            await self.recurring_repo.deactivate(rule_id)
+            try:
+                await self.recurring_repo.deactivate(rule_id)
+            except Exception as e:  # posted rows are committed; retire it next run
+                await self.recurring_repo.db.rollback()
+                logger.error(f"Could not retire finished recurring rule {rule_id}: {e}")
         return posted
 
     def _calculate_next_occurrence(
