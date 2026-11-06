@@ -1685,8 +1685,9 @@ class RecurringTransactionRepository:
         recurring = RecurringTransaction(**recurring_data)
         self.db.add(recurring)
         await self.db.commit()
-        await self.db.refresh(recurring)
-        return recurring
+        # Re-read with the category loaded: the response serialises it, and a
+        # bare refresh left it unloaded (category came back null).
+        return await self.get_by_id(recurring.id, recurring_data["user_id"])
 
     async def get_by_id(
         self, recurring_id: str, user_id: str
@@ -1730,6 +1731,17 @@ class RecurringTransactionRepository:
         )
         result = await self.db.execute(stmt)
         return list(result.scalars().all())
+
+    async def has_posted(self, recurring_id, on_date: date) -> bool:
+        """Whether this rule already has a (non-deleted) transaction on on_date."""
+        stmt = select(Transaction.id).where(
+            and_(
+                Transaction.recurring_transaction_id == recurring_id,
+                Transaction.transaction_date == on_date,
+                Transaction.is_deleted == False,  # noqa: E712
+            )
+        ).limit(1)
+        return (await self.db.execute(stmt)).first() is not None
 
     async def update_next_occurrence(self, recurring_id: str, next_date: date):
         """Update next occurrence date"""
@@ -1806,10 +1818,10 @@ class RecurringTransactionRepository:
         await self.db.commit()
 
         updated_recurring = result.scalar_one_or_none()
-        if updated_recurring:
-            await self.db.refresh(updated_recurring)
-
-        return updated_recurring
+        if not updated_recurring:
+            return None
+        # Re-read so every column and the category are loaded for the response.
+        return await self.get_by_id(recurring_id_uuid, user_id_uuid)
 
     async def delete(self, recurring_id: str, user_id: str) -> bool:
         """Delete a recurring transaction"""

@@ -99,8 +99,89 @@ async def test_paused_future_and_manual_rules_create_nothing(monkeypatch, async_
 
     result = await scheduler_module.process_recurring_transactions()
     assert result["created"] == 0
-    assert (await async_session.execute(
-        select(Transaction).where(Transaction.user_id == test_user.id))).scalars().all() == []
-    # A manual rule still advances, so it doesn't come due again every day.
+    assert (await _posted(async_session, test_user)) == []
+    # A manual rule waits for the user: advancing it used up its occurrences
+    # with nothing ever posted.
     await async_session.refresh(manual)
-    assert manual.next_occurrence > business_today()
+    assert manual.next_occurrence == business_today()
+    assert manual.occurrence_count == 0
+
+
+async def _posted(async_session, user_or_id):
+    user_id = getattr(user_or_id, "id", user_or_id)
+    rows = (await async_session.execute(
+        select(Transaction).where(Transaction.user_id == user_id)
+        .order_by(Transaction.transaction_date))).scalars().all()
+    return [r.transaction_date for r in rows]
+
+
+async def test_a_rule_started_in_the_past_posts_its_missed_occurrences(
+        monkeypatch, async_session, test_user, seed_categories):
+    """Skipping past-due occurrences lost every rule's first one (it starts at
+    start_date, already past by the next run) and anything due while the host
+    was down."""
+    category = await _expense_category(async_session, seed_categories)
+    today = business_today()
+    start = today - timedelta(days=2)
+    await _rule(async_session, test_user, category, frequency=RecurringFrequency.DAILY,
+                start_date=start, next_occurrence=start)
+    _use_session(monkeypatch, async_session)
+
+    result = await scheduler_module.process_recurring_transactions()
+    assert result["created"] == 3
+    assert await _posted(async_session, test_user) == [start, start + timedelta(days=1), today]
+
+
+async def test_a_second_run_never_double_posts(monkeypatch, async_session, test_user, seed_categories):
+    """Even if the rule didn't advance (a crash between posting and advancing),
+    an occurrence that already has its transaction is not posted again."""
+    category = await _expense_category(async_session, seed_categories)
+    rule = await _rule(async_session, test_user, category)
+    _use_session(monkeypatch, async_session)
+
+    await scheduler_module.process_recurring_transactions()
+    rule.next_occurrence = business_today()  # as if the advance never committed
+    await async_session.commit()
+    again = await scheduler_module.process_recurring_transactions()
+
+    assert again["created"] == 0
+    assert await _posted(async_session, test_user) == [business_today()]
+
+
+async def test_one_failing_rule_does_not_stop_the_others(monkeypatch, async_session, test_user, seed_categories):
+    from app.modules.transactions.services import TransactionService
+
+    category = await _expense_category(async_session, seed_categories)
+    user_id = test_user.id  # the job's rollback expires the fixture's loaded rows
+    bad = await _rule(async_session, test_user, category, description="breaks")
+    await _rule(async_session, test_user, category, description="fine")
+    _use_session(monkeypatch, async_session)
+
+    real_create = TransactionService.create_transaction
+
+    async def create(self, data, user_id):
+        if data.description == "breaks":
+            raise RuntimeError("simulated failure")
+        return await real_create(self, data, user_id)
+
+    monkeypatch.setattr(TransactionService, "create_transaction", create)
+    result = await scheduler_module.process_recurring_transactions()
+
+    assert (result["created"], result["failed"]) == (1, 1)
+    assert await _posted(async_session, user_id) == [business_today()]
+    await async_session.refresh(bad)
+    assert bad.next_occurrence == business_today()  # retried on the next run
+
+
+async def test_end_date_and_max_occurrences_stop_the_catch_up(
+        monkeypatch, async_session, test_user, seed_categories):
+    category = await _expense_category(async_session, seed_categories)
+    start = business_today() - timedelta(days=5)
+    await _rule(async_session, test_user, category, frequency=RecurringFrequency.DAILY,
+                start_date=start, next_occurrence=start, end_date=start + timedelta(days=1))
+    await _rule(async_session, test_user, category, frequency=RecurringFrequency.DAILY,
+                start_date=start, next_occurrence=start, max_occurrences=2, description="capped")
+    _use_session(monkeypatch, async_session)
+
+    result = await scheduler_module.process_recurring_transactions()
+    assert result["created"] == 4

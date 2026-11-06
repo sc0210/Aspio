@@ -886,10 +886,10 @@ class UserManagementService:
         # columns store it on this dialect: Postgres compares the hyphenated
         # form, SQLite stores 32-char hex. A bare str() matched nothing on SQLite
         # and left every dependent row behind.
-        from sqlalchemy.dialects.postgresql import UUID as PG_UUID
-
+        user_id = user_id if isinstance(user_id, UUID) else UUID(str(user_id))
         dialect = (await self.session.connection()).dialect
-        to_db = PG_UUID(as_uuid=True).bind_processor(dialect)
+        id_type = User.__table__.c.id.type.dialect_impl(dialect)
+        to_db = id_type.bind_processor(dialect)
         uid = to_db(user_id) if to_db else str(user_id)
 
         user = await self.session.get(User, user_id)

@@ -107,7 +107,7 @@ class TestUserDatabaseOperations:
         await async_session.commit()
 
         user_id = test_user.id
-        await UserManagementService(async_session).hard_delete_user(user_id)
+        await UserManagementService(async_session).hard_delete_user(str(user_id))  # str ids are accepted too
 
         assert await async_session.get(User, user_id) is None
         remaining = (await async_session.execute(
