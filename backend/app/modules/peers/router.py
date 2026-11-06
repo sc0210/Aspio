@@ -28,6 +28,7 @@ Endpoints:
   GET    /peers/splits/{split_id}                         → one split
   POST   /peers/splits/{split_id}/respond                 → accept or decline (the partner)
   POST   /peers/splits/{split_id}/void                    → withdraw before an answer (the creator)
+  POST   /peers/splits/{split_id}/cancel                  → cancel an accepted split (the payer)
   GET    /peers/{id}/prefs, PATCH /peers/{id}/prefs       → your split policy for this partner
 """
 
@@ -408,6 +409,12 @@ async def respond_to_split(split_id: UUID, body: SplitRespond, current_user: Cur
              summary="Withdraw a split your partner hasn't answered")
 async def void_split(split_id: UUID, current_user: CurrentUser, session: AsyncSession = Depends(get_db)):
     return ApiResponse.success_response(data=await SplitService(session).void(current_user.id, split_id))
+
+
+@router.post("/splits/{split_id}/cancel", response_model=ApiResponse[SplitOut],
+             summary="Cancel an accepted split (the payer); they carry the whole bill again")
+async def cancel_split(split_id: UUID, current_user: CurrentUser, session: AsyncSession = Depends(get_db)):
+    return ApiResponse.success_response(data=await SplitService(session).cancel(current_user.id, split_id))
 
 
 @router.get("/{connection_id}/prefs", response_model=ApiResponse[PeerPrefsOut],

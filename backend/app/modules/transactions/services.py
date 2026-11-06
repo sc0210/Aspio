@@ -765,8 +765,8 @@ class TransactionService:
 
         if existing is not None and await self._split_is_open(existing):
             raise BusinessLogicException(
-                "This entry is your share of a bill split with your partner. "
-                "Withdraw the split on Savings instead.",
+                "This entry is your share of a bill split with your partner. On "
+                "Savings, withdraw the split (before they answer) or, if you paid, cancel it.",
             )
 
         # The delete, the loan balance it restores and a transfer's other leg are one

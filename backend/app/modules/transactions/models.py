@@ -19,6 +19,7 @@ from sqlalchemy import (
     CheckConstraint,
     JSON,
     Enum,
+    text,
 )
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 from sqlalchemy.sql import func
@@ -433,6 +434,12 @@ class Transaction(BaseModel):
         # Looked up on every holding edit/delete to find that holding's purchase entry.
         Index("idx_transactions_holding", "holding_id"),
         Index("idx_transactions_peer_split_share", "peer_split_share_id"),
+        # One live ledger row per split share, whatever races (a double Accept).
+        Index(
+            "uq_transactions_live_peer_split_share", "peer_split_share_id", unique=True,
+            postgresql_where=text("peer_split_share_id IS NOT NULL AND is_deleted = false"),
+            sqlite_where=text("peer_split_share_id IS NOT NULL AND is_deleted = 0"),
+        ),
         # Composite indexes for dashboard queries
         Index(
             "idx_transactions_user_status_deleted", "user_id", "status", "is_deleted"

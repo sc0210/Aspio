@@ -252,3 +252,71 @@ async def test_split_routes_resolve_over_http(authenticated_client):
         assert r.status_code == 200, (path, r.text[:200])
         assert r.json()["data"] == []
     assert authenticated_client.get(f"/api/v1/peers/splits/{uuid.uuid4()}").status_code == 404
+
+
+async def test_the_payer_can_cancel_an_accepted_split(async_session, couple):
+    c = couple
+    sid = uuid.UUID((await c["svc"].create_split(c["alice"].id, _bill(c))).id)
+    await c["svc"].respond(c["bob"].id, sid, "accept", None, "life")
+
+    with pytest.raises(HTTPException) as exc:  # bob didn't pay: he can't push his share back
+        await c["svc"].cancel(c["bob"].id, sid)
+    assert exc.value.status_code == 403
+
+    cancelled = await c["svc"].cancel(c["alice"].id, sid)
+    assert cancelled.status == "voided"
+    assert await _rows(async_session, c["alice"]) == [Decimal("1000")]
+    assert await _rows(async_session, c["bob"]) == []
+    [view] = await c["svc"].balances(c["alice"].id)
+    assert view.balances == []
+
+
+async def test_a_removed_partner_cant_answer_an_old_proposal(async_session, couple):
+    c = couple
+    sid = uuid.UUID((await c["svc"].create_split(c["alice"].id, _bill(c))).id)
+    c["conn"].status = PeerStatus.REMOVED
+    await async_session.commit()
+    with pytest.raises(HTTPException) as exc:
+        await c["svc"].respond(c["bob"].id, sid, "accept", None, "life")
+    assert exc.value.status_code == 404
+    assert await _rows(async_session, c["bob"]) == []
+
+
+async def test_open_proposals_are_capped(async_session, couple, monkeypatch):
+    from app.modules.peers import splits as splits_module
+
+    c = couple
+    monkeypatch.setattr(splits_module, "MAX_OPEN_PROPOSALS", 2)
+    await c["svc"].create_split(c["alice"].id, _bill(c))
+    await c["svc"].create_split(c["alice"].id, _bill(c))
+    with pytest.raises(HTTPException) as exc:
+        await c["svc"].create_split(c["alice"].id, _bill(c))
+    assert exc.value.status_code == 409
+
+
+async def test_a_share_can_never_have_two_live_rows(async_session, couple):
+    """The partial unique index backs the row lock: a second live row for the
+    same share is refused by the database."""
+    from sqlalchemy.exc import IntegrityError
+
+    c = couple
+    sid = uuid.UUID((await c["svc"].create_split(c["alice"].id, _bill(c))).id)
+    alice_row = (await async_session.execute(select(Transaction).where(
+        Transaction.user_id == c["alice"].id))).scalars().one()
+    clone = Transaction(id=uuid.uuid4(), user_id=c["alice"].id, type=alice_row.type,
+                        wallet_type=alice_row.wallet_type, amount=Decimal("1"), currency="TWD",
+                        description="dup", transaction_date=alice_row.transaction_date,
+                        category_id=alice_row.category_id,
+                        peer_split_share_id=alice_row.peer_split_share_id)
+    async_session.add(clone)
+    with pytest.raises(IntegrityError):
+        await async_session.flush()
+    await async_session.rollback()
+    assert sid  # the split itself is untouched
+
+
+def test_the_currency_must_be_a_three_letter_code(couple):
+    from pydantic import ValidationError
+
+    with pytest.raises(ValidationError):
+        _bill(couple, currency="NT$")

@@ -52,6 +52,10 @@ ALTER TABLE transactions
     ADD COLUMN IF NOT EXISTS peer_split_share_id UUID
     REFERENCES peer_split_shares(id) ON DELETE SET NULL;
 CREATE INDEX IF NOT EXISTS idx_transactions_peer_split_share ON transactions (peer_split_share_id);
+-- One live ledger row per split share, whatever races (a double Accept).
+CREATE UNIQUE INDEX IF NOT EXISTS uq_transactions_live_peer_split_share
+    ON transactions (peer_split_share_id)
+    WHERE peer_split_share_id IS NOT NULL AND is_deleted = false;
 
 ALTER TABLE public.peer_connection_prefs ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.peer_splits           ENABLE ROW LEVEL SECURITY;

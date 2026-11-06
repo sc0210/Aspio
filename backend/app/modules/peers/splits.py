@@ -23,7 +23,7 @@ from typing import Optional
 from uuid import UUID
 
 from fastapi import HTTPException, status
-from sqlalchemy import and_, or_, select
+from sqlalchemy import and_, func as sa_func, or_, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.modules.notifications.models import (
@@ -63,6 +63,9 @@ from app.modules.users.models import User
 
 CENT = Decimal("0.01")
 SPLITS_URL = "/savings?tab=splits"
+# Unanswered proposals one person may have open with one partner (each one notifies).
+MAX_OPEN_PROPOSALS = 20
+LIST_LIMIT = 200
 
 
 def split_amounts(total: Decimal, method: str, payer_is_me: bool,
@@ -95,6 +98,7 @@ class SplitService:
     def __init__(self, session: AsyncSession) -> None:
         self.session = session
         self._txns = TransactionRepository(session)
+        self._names: dict[UUID, str] = {}
 
     # ------------------------------------------------------------------
     # Lookups
@@ -119,13 +123,23 @@ class SplitService:
         return pref.split_policy if pref else SplitPolicy.APPROVE_EACH.value
 
     async def _name(self, user_id: UUID) -> str:
-        user = await self.session.get(User, user_id)
-        return (user.name if user else None) or "Your partner"
+        if user_id not in self._names:
+            user = await self.session.get(User, user_id)
+            self._names[user_id] = (user.name if user else None) or "Your partner"
+        return self._names[user_id]
 
-    async def _split_for(self, split_id: UUID, user_id: UUID) -> PeerSplit:
-        split = await self.session.get(PeerSplit, split_id)
+    async def _split_for(self, split_id: UUID, user_id: UUID, *, lock: bool = False) -> PeerSplit:
+        """The split, if the user is on it. lock=True row-locks it (Postgres) and
+        re-reads it, for every path that writes ledger rows: a double-clicked
+        Accept, or an Accept racing a withdraw, must see the other's result."""
+        stmt = select(PeerSplit).where(PeerSplit.id == split_id)
+        if lock:
+            stmt = stmt.with_for_update().execution_options(populate_existing=True)
+        split = (await self.session.execute(stmt)).scalars().first()
         if split is None or not any(s.user_id == user_id for s in split.shares):
             raise HTTPException(status.HTTP_404_NOT_FOUND, "Split not found")
+        if lock:
+            await self.session.refresh(split, ["shares"])
         return split
 
     async def _expense_category(self, category_id: UUID) -> TransactionCategory:
@@ -193,6 +207,16 @@ class SplitService:
         if partner_policy == SplitPolicy.OFF.value:
             raise HTTPException(status.HTTP_403_FORBIDDEN, "Your partner has turned off bill splitting with you")
         await self._expense_category(data.category_id)
+        open_count = (await self.session.execute(
+            select(sa_func.count()).select_from(PeerSplit).where(and_(
+                PeerSplit.connection_id == conn.id,
+                PeerSplit.created_by == user_id,
+                PeerSplit.status == SplitStatus.PROPOSED.value,
+            ))
+        )).scalar_one()
+        if open_count >= MAX_OPEN_PROPOSALS:
+            raise HTTPException(status.HTTP_409_CONFLICT,
+                                "Too many bills are waiting for your partner's answer")
 
         payer_is_me = data.payer == "me"
         mine, theirs = split_amounts(data.total_amount, data.method, payer_is_me, data.my_percent, data.my_amount)
@@ -244,7 +268,9 @@ class SplitService:
 
     async def respond(self, user_id: UUID, split_id: UUID, action: str,
                       category_id: Optional[UUID], wallet_type: str) -> SplitOut:
-        split = await self._split_for(split_id, user_id)
+        split = await self._split_for(split_id, user_id, lock=True)
+        # A removed partner can't answer an old proposal.
+        await self._connection(split.connection_id, user_id)
         share = next(s for s in split.shares if s.user_id == user_id)
         if split.status != SplitStatus.PROPOSED.value or share.status != ShareStatus.PROPOSED.value:
             raise HTTPException(status.HTTP_409_CONFLICT, "This split is not waiting for your answer")
@@ -269,7 +295,7 @@ class SplitService:
 
     async def void(self, user_id: UUID, split_id: UUID) -> SplitOut:
         """The creator withdraws a split the partner hasn't answered yet."""
-        split = await self._split_for(split_id, user_id)
+        split = await self._split_for(split_id, user_id, lock=True)
         if split.created_by != user_id:
             raise HTTPException(status.HTTP_403_FORBIDDEN, "Only the person who created the split can withdraw it")
         if split.status != SplitStatus.PROPOSED.value:
@@ -280,6 +306,31 @@ class SplitService:
         partner_id = next(s.user_id for s in split.shares if s.user_id != user_id)
         self._notify(partner_id, "Shared bill withdrawn",
                      f"{await self._name(user_id)} withdrew \"{split.description}\".", "peer_split_voided", split)
+        await self.session.commit()
+        return await self.get_split(user_id, split.id)
+
+    async def cancel(self, user_id: UUID, split_id: UUID) -> SplitOut:
+        """The payer takes an accepted split back: their row returns to the whole
+        bill and the partner's row goes. Only the payer, since it only ever moves
+        cost onto the person cancelling; the other way round would push their
+        share onto the payer without asking."""
+        split = await self._split_for(split_id, user_id, lock=True)
+        if split.status != SplitStatus.ACTIVE.value:
+            raise HTTPException(status.HTTP_409_CONFLICT, "Only an accepted split can be cancelled")
+        if split.payer_id != user_id:
+            raise HTTPException(status.HTTP_403_FORBIDDEN,
+                                "Only the person who paid can cancel the split; ask them to")
+        payer_share = next(s for s in split.shares if s.user_id == user_id)
+        other_share = next(s for s in split.shares if s.user_id != user_id)
+        if await self._row_for(payer_share) is None:
+            await self._write_row(split, payer_share, split.total_amount, split.category_id, "life")
+        else:
+            await self._set_row_amount(payer_share, split.total_amount)
+        await self._set_row_amount(other_share, Decimal("0"))
+        split.status = SplitStatus.VOIDED.value
+        self._notify(other_share.user_id, "Shared bill cancelled",
+                     f"{await self._name(user_id)} cancelled \"{split.description}\"; your share was removed.",
+                     "peer_split_cancelled", split)
         await self.session.commit()
         return await self.get_split(user_id, split.id)
 
@@ -314,6 +365,7 @@ class SplitService:
             .join(PeerSplitShare, PeerSplitShare.split_id == PeerSplit.id)
             .where(PeerSplitShare.user_id == user_id)
             .order_by(PeerSplit.split_date.desc(), PeerSplit.created_at.desc())
+            .limit(LIST_LIMIT)
         )
         if connection_id is not None:
             stmt = stmt.where(PeerSplit.connection_id == connection_id)

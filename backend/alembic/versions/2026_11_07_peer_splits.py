@@ -97,6 +97,14 @@ def upgrade() -> None:
     indexes = {i["name"] for i in sa.inspect(bind).get_indexes("transactions")}
     if "idx_transactions_peer_split_share" not in indexes:
         op.create_index("idx_transactions_peer_split_share", "transactions", ["peer_split_share_id"])
+    # One live ledger row per split share, whatever races (a double Accept).
+    if "uq_transactions_live_peer_split_share" not in indexes:
+        live = "peer_split_share_id IS NOT NULL AND is_deleted = false"
+        op.create_index(
+            "uq_transactions_live_peer_split_share", "transactions", ["peer_split_share_id"],
+            unique=True, postgresql_where=sa.text(live),
+            sqlite_where=sa.text(live.replace("false", "0")),
+        )
 
     if bind.dialect.name == "postgresql":
         for table in _TABLES:
@@ -104,6 +112,7 @@ def upgrade() -> None:
 
 
 def downgrade() -> None:
+    op.drop_index("uq_transactions_live_peer_split_share", table_name="transactions")
     op.drop_index("idx_transactions_peer_split_share", table_name="transactions")
     op.drop_column("transactions", "peer_split_share_id")
     op.drop_table("peer_split_shares")

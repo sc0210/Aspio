@@ -248,7 +248,7 @@ class SplitCreate(BaseModel):
     connection_id: UUID
     description: str = Field(..., min_length=1, max_length=200)
     total_amount: Decimal = Field(..., gt=0)
-    currency: str = Field("TWD", min_length=3, max_length=3)
+    currency: str = Field("TWD", pattern=r"^[A-Za-z]{3}$")
     split_date: date
     category_id: UUID
     payer: Literal["me", "partner"] = "me"
