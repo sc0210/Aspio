@@ -398,3 +398,21 @@ async def test_declined_splits_list_with_history_and_by_connection(async_session
     listed = await c["svc"].list_splits(c["alice"].id, c["conn"].id)
     assert [s.status for s in listed] == ["declined"]
     assert await c["svc"].list_splits(c["alice"].id, uuid.uuid4()) == []
+
+
+
+async def test_a_closed_splits_surviving_row_is_unlinked(async_session, couple):
+    """Declined (payer keeps the bill) and cancelled splits leave a plain expense."""
+    c = couple
+    declined = uuid.UUID((await c["svc"].create_split(c["alice"].id, _bill(c))).id)
+    await c["svc"].respond(c["bob"].id, declined, "decline", None, "life")
+    cancelled = uuid.UUID((await c["svc"].create_split(c["alice"].id, _bill(c))).id)
+    await c["svc"].respond(c["bob"].id, cancelled, "accept", None, "life")
+    await c["svc"].cancel(c["alice"].id, cancelled)
+
+    rows = (await async_session.execute(select(Transaction).where(
+        Transaction.user_id == c["alice"].id, Transaction.is_deleted == False))).scalars().all()  # noqa: E712
+    assert sorted(r.amount for r in rows) == [Decimal("1000"), Decimal("1000")]
+    assert {r.peer_split_share_id for r in rows} == {None}
+    # And the split no longer reports a row of its own.
+    assert (await c["svc"].get_split(c["alice"].id, declined)).my_transaction_id is None

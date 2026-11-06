@@ -5,16 +5,19 @@ import { apiClient } from '@/lib/api-client';
 import { transactionService } from '@/services/transactionService';
 import type { PeerConnectionOut } from '@/shared/types';
 
-jest.mock('react-i18next', () => ({
-  initReactI18next: { type: '3rdParty', init: () => {} },
-  useTranslation: () => ({
-    t: (_key: string, fallback?: string | Record<string, string>, vars?: Record<string, string>) => {
-      const text = typeof fallback === 'string' ? fallback : _key;
-      const values = (typeof fallback === 'object' ? fallback : vars) ?? {};
-      return text.replace(/\{\{(\w+)\}\}/g, (_, k) => values[k] ?? '');
-    },
-  }),
-}));
+jest.mock('react-i18next', () => {
+  // One t for every render, as react-i18next gives: a new one each render
+  // re-ran effects keyed on it.
+  const t = (_key: string, fallback?: string | Record<string, string>, vars?: Record<string, string>) => {
+    const text = typeof fallback === 'string' ? fallback : _key;
+    const values = (typeof fallback === 'object' ? fallback : vars) ?? {};
+    return text.replace(/\{\{(\w+)\}\}/g, (_: string, k: string) => values[k] ?? '');
+  };
+  return {
+    initReactI18next: { type: '3rdParty', init: () => {} },
+    useTranslation: () => ({ t }),
+  };
+});
 jest.mock('@/lib/api-client', () => ({ apiClient: { createSplit: jest.fn() } }));
 jest.mock('@/services/transactionService', () => ({ transactionService: { getCategories: jest.fn() } }));
 
@@ -44,7 +47,7 @@ it('sends a fixed split Bob paid, with only expense categories offered', async (
   fireEvent.click(screen.getByRole('button', { name: 'Bob paid' }));
   fireEvent.click(screen.getByRole('button', { name: 'Amount' }));
   fireEvent.change(screen.getByLabelText('My share'), { target: { value: '300' } });
-  expect(screen.getByText('You: 300.00 · Bob: 700.00')).toBeInTheDocument();
+  expect(screen.getByText('About — you: 300.00 · Bob: 700.00')).toBeInTheDocument();
 
   fireEvent.click(screen.getByRole('button', { name: 'Split the bill' }));
   await waitFor(() => expect(apiClient.createSplit).toHaveBeenCalledWith(expect.objectContaining({

@@ -39,16 +39,21 @@ export default function NewSplitModal({ isOpen, onClose, onSuccess, connections 
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState('');
 
+  // Once per open: clear a stale error, fetch the categories.
   useEffect(() => {
     if (!isOpen) return;
     setError('');
-    if (!connectionId && connections[0]) setConnectionId(connections[0].id);
     transactionService.getCategories().then((res) => {
       const expense = (res.data ?? []).filter((c) => c.type === 'expense');
       setCategories(expense);
       setCategoryId((current) => current || expense[0]?.id || '');
     }).catch(() => setCategories([]));
-  }, [isOpen, connectionId, connections]);
+  }, [isOpen]);
+
+  const firstConnectionId = connections[0]?.id;
+  useEffect(() => {
+    if (!connectionId && firstConnectionId) setConnectionId(firstConnectionId);
+  }, [connectionId, firstConnectionId]);
 
   const partnerName = connections.find((c) => c.id === connectionId)?.other_user.name ?? '';
   const totalNum = parseFloat(total) || 0;
@@ -180,7 +185,9 @@ export default function NewSplitModal({ isOpen, onClose, onSuccess, connections 
             <legend className={LABEL}>{t('savings.splits.how', 'How to split')}</legend>
             <div className="grid grid-cols-3 gap-2" role="group">
               {(['equal', 'percent', 'fixed'] as const).map((m) => (
-                <button key={m} type="button" aria-pressed={method === m} onClick={() => setMethod(m)}
+                <button key={m} type="button" aria-pressed={method === m}
+                  // A % typed under one method isn't an amount under another.
+                  onClick={() => { setMethod(m); setMyValue(''); }}
                   className={`min-h-[44px] rounded-lg border text-sm font-medium ${method === m
                     ? 'border-primary-600 bg-primary-50 text-primary-800 dark:bg-primary-900/30 dark:text-primary-200'
                     : 'border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300'}`}>
@@ -199,7 +206,7 @@ export default function NewSplitModal({ isOpen, onClose, onSuccess, connections 
             )}
             {totalNum > 0 && !invalidShare && (
               <p className="mt-2 text-xs text-gray-600 dark:text-gray-400">
-                {t('savings.splits.preview', 'You: {{mine}} · {{name}}: {{theirs}}', {
+                {t('savings.splits.preview', 'About — you: {{mine}} · {{name}}: {{theirs}}', {
                   mine: myShare.toFixed(2), theirs: (totalNum - myShare).toFixed(2), name: partnerName,
                 })}
               </p>

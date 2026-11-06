@@ -188,6 +188,16 @@ class SplitService:
             row.amount_usd = amount * (row.exchange_rate or Decimal("1"))
         await self.session.flush()
 
+    async def _detach_rows(self, split: PeerSplit) -> None:
+        """A closed split's surviving rows become ordinary expenses: unlinked, so
+        a linked row always means an open split (the row's lock and the list's
+        Split badge both rely on that)."""
+        for share in split.shares:
+            row = await self._row_for(share)
+            if row is not None:
+                row.peer_split_share_id = None
+        await self.session.flush()
+
     def _notify(self, user_id: UUID, title: str, message: str, action: str, split: PeerSplit) -> None:
         self.session.add(Notification(
             id=uuid.uuid4(), user_id=user_id, type=NotificationType.SYSTEM_UPDATE,
@@ -298,6 +308,7 @@ class SplitService:
             if split.payer_id != split.created_by:
                 creator_share = next(s for s in split.shares if s.user_id == split.created_by)
                 await self._set_row_amount(creator_share, Decimal("0"))
+            await self._detach_rows(split)
             self._notify(split.created_by, "Shared bill declined",
                          f"{name} declined \"{split.description}\".", "peer_split_declined", split)
         await self.session.commit()
@@ -337,6 +348,7 @@ class SplitService:
         else:
             await self._set_row_amount(payer_share, split.total_amount)
         await self._set_row_amount(other_share, Decimal("0"))
+        await self._detach_rows(split)
         split.status = SplitStatus.VOIDED.value
         self._notify(other_share.user_id, "Shared bill cancelled",
                      f"{await self._name(user_id)} cancelled \"{split.description}\"; your share was removed.",

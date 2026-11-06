@@ -31,7 +31,9 @@ export default function SharedSpendingTab({ connections }: { connections: PeerCo
   const queryClient = useQueryClient();
   const [splits, setSplits] = useState<SplitOut[]>([]);
   const [balances, setBalances] = useState<PeerBalanceOut[]>([]);
-  const [policies, setPolicies] = useState<Record<string, SplitPolicy>>({});
+  // undefined: not loaded (or failed to load): the select stays disabled rather
+  // than show a default the server may not hold.
+  const [policies, setPolicies] = useState<Record<string, SplitPolicy | undefined>>({});
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const [busyId, setBusyId] = useState<string | null>(null);
@@ -57,9 +59,9 @@ export default function SharedSpendingTab({ connections }: { connections: PeerCo
     void Promise.all(connections.map(async (c) => {
       try {
         const res = await apiClient.getPeerPrefs(c.id);
-        return [c.id, res.data?.split_policy ?? 'approve_each'] as const;
+        return [c.id, res.data?.split_policy] as const;
       } catch {
-        return [c.id, 'approve_each'] as const;
+        return [c.id, undefined] as const;
       }
     })).then((pairs) => setPolicies(Object.fromEntries(pairs)));
   }, [connections]);
@@ -83,10 +85,13 @@ export default function SharedSpendingTab({ connections }: { connections: PeerCo
   };
 
   const setPolicy = async (connectionId: string, policy: SplitPolicy) => {
+    const previous = policies[connectionId];
     setPolicies((p) => ({ ...p, [connectionId]: policy }));
     try {
       await apiClient.setPeerPrefs(connectionId, policy);
     } catch (err) {
+      // Show what the server still holds, not the choice that didn't save.
+      setPolicies((p) => ({ ...p, [connectionId]: previous }));
       setError(err instanceof Error ? err.message : t('savings.splits.errors.actionFailed', 'That didn’t work'));
     }
   };
@@ -117,11 +122,11 @@ export default function SharedSpendingTab({ connections }: { connections: PeerCo
         {balances.map((b) => (
           <div key={b.connection_id} className="bg-white dark:bg-gray-800 rounded-xl p-4 shadow-sm">
             <p className="text-xs font-medium text-gray-600 dark:text-gray-400">{b.partner_name}</p>
-            {b.balances.length === 0 ? (
+            {b.balances.every((x) => x.net === 0) ? (
               <p className="mt-1 text-sm font-semibold text-gray-900 dark:text-white">
                 {t('savings.splits.settled', 'All square')}
               </p>
-            ) : b.balances.map((x) => (
+            ) : b.balances.filter((x) => x.net !== 0).map((x) => (
               <p key={x.currency} className={`mt-1 text-sm font-semibold ${x.net > 0
                 ? 'text-prosperity-700 dark:text-prosperity-400' : 'text-error-700 dark:text-error-400'}`}>
                 {x.net > 0
@@ -132,10 +137,12 @@ export default function SharedSpendingTab({ connections }: { connections: PeerCo
             <label className="mt-3 block text-xs text-gray-600 dark:text-gray-400">
               {t('savings.splits.policyLabel', 'Bills from {{name}}', { name: b.partner_name })}
               <select
-                value={policies[b.connection_id] ?? 'approve_each'}
+                value={policies[b.connection_id] ?? ''}
+                disabled={policies[b.connection_id] === undefined}
                 onChange={(e) => void setPolicy(b.connection_id, e.target.value as SplitPolicy)}
                 className="mt-1 w-full px-2 py-2 border border-gray-300 dark:border-gray-600 rounded-lg text-sm bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
               >
+                {policies[b.connection_id] === undefined && <option value="">…</option>}
                 <option value="approve_each">{t('savings.splits.policy.approve_each', 'Ask me each time')}</option>
                 <option value="auto_accept">{t('savings.splits.policy.auto_accept', 'Add to my account automatically')}</option>
                 <option value="off">{t('savings.splits.policy.off', 'Don’t allow')}</option>

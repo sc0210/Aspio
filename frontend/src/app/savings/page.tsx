@@ -1,6 +1,6 @@
 'use client';
 
-import { Suspense, useCallback, useEffect, useRef, useState } from 'react';
+import { Suspense, useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { usePathname, useRouter, useSearchParams } from 'next/navigation';
 import dynamic from 'next/dynamic';
 import { useTranslation } from 'react-i18next';
@@ -280,7 +280,9 @@ function SavingsGroups() {
   const sentPending = connections.filter(
     (c) => c.direction === 'sent' && c.status === 'pending',
   );
-  const accepted = connections.filter((c) => c.status === 'accepted');
+  // Memoized: tabs and modals key effects on it, and a fresh array each render
+  // refetched every partner's settings and wiped a modal's error.
+  const accepted = useMemo(() => connections.filter((c) => c.status === 'accepted'), [connections]);
   const hasPeers = accepted.length > 0;
   // Phones (#344): the goals view only, combined progress first and the roster
   // after it — the compare chart and its stat cards stay on bigger screens.

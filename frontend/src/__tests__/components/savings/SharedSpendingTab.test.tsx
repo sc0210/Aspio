@@ -5,16 +5,19 @@ import SharedSpendingTab from '@/components/savings/SharedSpendingTab';
 import { apiClient } from '@/lib/api-client';
 import type { PeerConnectionOut, SplitOut } from '@/shared/types';
 
-jest.mock('react-i18next', () => ({
-  initReactI18next: { type: '3rdParty', init: () => {} },
-  useTranslation: () => ({
-    t: (_key: string, fallback?: string | Record<string, string>, vars?: Record<string, string>) => {
-      const text = typeof fallback === 'string' ? fallback : _key;
-      const values = (typeof fallback === 'object' ? fallback : vars) ?? {};
-      return text.replace(/\{\{(\w+)\}\}/g, (_, k) => values[k] ?? '');
-    },
-  }),
-}));
+jest.mock('react-i18next', () => {
+  // One t for every render, as react-i18next gives: a new one each render
+  // re-ran effects keyed on it.
+  const t = (_key: string, fallback?: string | Record<string, string>, vars?: Record<string, string>) => {
+    const text = typeof fallback === 'string' ? fallback : _key;
+    const values = (typeof fallback === 'object' ? fallback : vars) ?? {};
+    return text.replace(/\{\{(\w+)\}\}/g, (_: string, k: string) => values[k] ?? '');
+  };
+  return {
+    initReactI18next: { type: '3rdParty', init: () => {} },
+    useTranslation: () => ({ t }),
+  };
+});
 
 jest.mock('@/lib/api-client', () => ({
   apiClient: {
@@ -112,5 +115,36 @@ describe('SharedSpendingTab', () => {
     const select = await screen.findByRole('combobox');
     fireEvent.change(select, { target: { value: 'auto_accept' } });
     await waitFor(() => expect(api.setPeerPrefs).toHaveBeenCalledWith('conn-1', 'auto_accept'));
+  });
+});
+
+describe('SharedSpendingTab policy', () => {
+  it('rolls the setting back when saving it fails', async () => {
+    api.listSplits.mockResolvedValue({ data: [] });
+    api.setPeerPrefs.mockRejectedValue(new Error('nope'));
+    renderTab();
+    const select = await screen.findByRole('combobox');
+    await waitFor(() => expect(select).toHaveValue('approve_each'));
+    fireEvent.change(select, { target: { value: 'off' } });
+    await waitFor(() => expect(select).toHaveValue('approve_each'));
+    expect(await screen.findByRole('alert')).toHaveTextContent('nope');
+  });
+
+  it('disables the setting when it could not be loaded', async () => {
+    api.listSplits.mockResolvedValue({ data: [] });
+    api.getPeerPrefs.mockRejectedValue(new Error('down'));
+    renderTab();
+    const select = await screen.findByRole('combobox');
+    await waitFor(() => expect(select).toBeDisabled());
+  });
+
+  it('shows all square for zero balances', async () => {
+    api.listSplits.mockResolvedValue({ data: [] });
+    api.getSplitBalances.mockResolvedValue({ data: [
+      { connection_id: 'conn-1', partner_name: 'Bob', balances: [{ currency: 'TWD', net: 0 }] },
+    ] });
+    renderTab();
+    expect(await screen.findByText('All square')).toBeInTheDocument();
+    expect(screen.queryByText(/You owe/)).not.toBeInTheDocument();
   });
 });

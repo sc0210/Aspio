@@ -815,7 +815,7 @@
       "how": "分攤方式",
       "myPercent": "我的比例（%）",
       "myAmount": "我的金額",
-      "preview": "你：{{mine}} · {{name}}：{{theirs}}",
+      "preview": "約為 — 你：{{mine}} · {{name}}：{{theirs}}",
       "consentNote": "{{name}} 接受後才會記入對方的帳戶。",
       "submit": "送出分帳",
       "intro": "分攤帳單後，你們各自只記自己負擔的部分。",

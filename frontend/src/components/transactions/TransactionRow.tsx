@@ -199,8 +199,9 @@ function TransactionRowBase({
                               </Link>
                             )}
                           </MenuItem>
-                          {/* A holding's cash side goes with the holding (the API refuses it alone). */}
-                          {!transaction.holdingId && (
+                          {/* A holding's cash side goes with the holding, and a split share with
+                              its split (open while linked); the API refuses either alone. */}
+                          {!transaction.holdingId && !transaction.peerSplitShareId && (
                           <MenuItem>
                             {({ active }) => (
                               <button

@@ -815,7 +815,7 @@
       "how": "How to split",
       "myPercent": "My share (%)",
       "myAmount": "My share",
-      "preview": "You: {{mine}} · {{name}}: {{theirs}}",
+      "preview": "About — you: {{mine}} · {{name}}: {{theirs}}",
       "consentNote": "{{name}} accepts before anything is added to their account.",
       "submit": "Split the bill",
       "intro": "Split a bill and each of you records only your own share.",
