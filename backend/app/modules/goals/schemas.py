@@ -9,6 +9,22 @@ from decimal import Decimal
 from typing import List, Optional, Any
 from pydantic import BaseModel, Field, ConfigDict, field_validator, field_serializer
 from pydantic.types import UUID4
+
+from .models import GoalCategory, GoalPriority, GoalStatus
+
+
+def _enum_code(enum_cls, value):
+    """Accept an enum member, its value ('car_purchase') or its name
+    ('CAR_PURCHASE'), and return the value. Anything else is a 422: unvalidated,
+    an unknown category reached the DB enum and the API answered 500."""
+    if value is None or isinstance(value, enum_cls):
+        return value.value if isinstance(value, enum_cls) else value
+    if isinstance(value, str):
+        if value in enum_cls._value2member_map_:
+            return value
+        if value.upper() in enum_cls.__members__:
+            return enum_cls[value.upper()].value
+    raise ValueError(f"must be one of: {', '.join(m.value for m in enum_cls)}")
 from enum import Enum
 
 
@@ -56,6 +72,16 @@ class GoalBase(BaseModel):
     )
 
     model_config = ConfigDict(populate_by_name=True)
+
+    @field_validator("category", mode="before")
+    @classmethod
+    def known_category(cls, v):
+        return _enum_code(GoalCategory, v)
+
+    @field_validator("priority", mode="before")
+    @classmethod
+    def known_priority(cls, v):
+        return _enum_code(GoalPriority, v)
 
     @field_validator("target_date", mode="before")
     @classmethod
@@ -114,6 +140,21 @@ class GoalUpdate(BaseModel):
     )
 
     model_config = ConfigDict(populate_by_name=True)
+
+    @field_validator("category", mode="before")
+    @classmethod
+    def known_category(cls, v):
+        return _enum_code(GoalCategory, v)
+
+    @field_validator("priority", mode="before")
+    @classmethod
+    def known_priority(cls, v):
+        return _enum_code(GoalPriority, v)
+
+    @field_validator("status", mode="before")
+    @classmethod
+    def known_status(cls, v):
+        return _enum_code(GoalStatus, v)
 
     @field_validator("target_date", mode="before")
     @classmethod

@@ -32,6 +32,7 @@ class GoalCategory(str, enum.Enum):
     HOUSE_DOWN_PAYMENT = "house_down_payment"
     EDUCATION = "education"
     VACATION = "vacation"
+    CAR_PURCHASE = "car_purchase"
     DEBT_PAYOFF = "debt_payoff"
     INVESTMENT = "investment"
     SAVINGS = "savings"
