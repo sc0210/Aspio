@@ -46,7 +46,6 @@ async def notifications_health_check():
                 "email_notifications": True,
                 "push_notifications": True,
                 "sms_notifications": False,  # Not implemented yet
-                "notification_templates": True,
                 "user_preferences": True,
                 "bulk_operations": True,
             },
@@ -261,12 +260,9 @@ async def update_notification_preferences(
     return ApiResponse.success_response(data=pref, message="Preferences updated")
 
 
-# ===== Template Management (Admin) =====
-
-
 # ===== Single notification =====
 # Declared last: "/{notification_id}" would otherwise capture /preferences and
-# /templates and answer them with a 422 for not being a UUID.
+# answer it with a 422 for not being a UUID.
 
 
 @router.get("/{notification_id}", response_model=ApiResponse[NotificationResponse])

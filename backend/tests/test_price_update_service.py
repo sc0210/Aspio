@@ -597,23 +597,6 @@ class TestUpdateAllSymbolsPrices:
         assert stats["updated"] == 1
 
 
-class TestConcurrencyAndRaceConditions:
-    """Test concurrent access and race conditions"""
-
-    @pytest.mark.asyncio
-    async def test_concurrent_price_updates_same_holding(self):
-        """Multiple concurrent updates to same holding should be safe"""
-        # This test would require actual asyncio testing
-        # For now, document the expected behavior
-        pass
-
-    @pytest.mark.asyncio
-    async def test_concurrent_cache_initialization(self):
-        """Multiple concurrent cache initializations should not cause race condition"""
-        # This requires testing the finlab cache lock initialization
-        pass
-
-
 class TestHistoricalFallbackGuard:
     """A batch update must never trade a fresh price for an old close.
 

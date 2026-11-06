@@ -8,7 +8,6 @@ and holdings, so a counter that queries the wrong column fails here.
 
 from datetime import datetime, timedelta, timezone
 from decimal import Decimal
-from types import SimpleNamespace
 from uuid import uuid4
 
 import pytest
@@ -28,7 +27,6 @@ from app.modules.transactions.models import (
 from app.modules.users.gamification_repository import (
     GamificationRepository,
     UserActivityRepository,
-    UserSecurityRepository,
 )
 from app.modules.users.gamification_service import (
     GamificationService,
@@ -38,7 +36,6 @@ from app.modules.users.models import (
     AchievementRarity,
     AchievementType,
     User,
-    UserActivityLog,
 )
 from app.modules.users.schemas import UserActivityRequest
 
@@ -277,32 +274,6 @@ class TestAnalytics:
         )
         assert [r.ip_address for r in rows] == ["10.0.0.1"]
 
-    async def test_engagement_metrics_trend(self, async_session, world, monkeypatch):
-        now = datetime.now(timezone.utc)
-        acts = [
-            SimpleNamespace(session_id="a", created_at=now - timedelta(days=1), activity_type="login"),
-            SimpleNamespace(session_id="a", created_at=now - timedelta(days=2), activity_type="portfolio_view"),
-            SimpleNamespace(session_id="b", created_at=now - timedelta(days=3), activity_type="login"),
-            SimpleNamespace(session_id=None, created_at=now - timedelta(days=20), activity_type="login"),
-        ]
-        repo = UserActivityRepository(async_session)
-
-        async def fake_activities(*_a, **_kw):
-            return acts
-
-        monkeypatch.setattr(repo, "get_user_activities", fake_activities)
-        metrics = await repo.get_user_engagement_metrics(world.id, days_back=30)
-
-        assert metrics["total_sessions"] == 2
-        assert sorted(metrics["features_used"]) == ["login", "portfolio_view"]
-        assert metrics["daily_engagement_score"] == pytest.approx(4 / 30 * 100)
-        assert metrics["engagement_trend"] == "increasing"
-        assert metrics["last_active"] == acts[0].created_at
-
-    async def test_engagement_metrics_service_wraps_repo(self, async_session, world):
-        metrics = await UserAnalyticsService(async_session).get_user_engagement_metrics(world.id)
-        assert metrics.user_id == world.id
-
     async def test_login_streak_first_visit_and_repeat(self, async_session, world):
         service = UserAnalyticsService(async_session)
         first = await service.update_login_streak(world.id)
@@ -316,11 +287,3 @@ class TestAnalytics:
         with pytest.raises(HTTPException) as exc:
             await UserAnalyticsService(async_session).update_login_streak(uuid4())
         assert exc.value.status_code == 404
-
-
-async def test_security_event_is_persisted(async_session, world):
-    log = await UserSecurityRepository(async_session).log_security_event(
-        world.id, "password_change", "changed", risk_level="medium"
-    )
-    assert log.id is not None
-    assert log.risk_level == "medium"

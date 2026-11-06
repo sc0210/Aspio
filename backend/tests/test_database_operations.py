@@ -82,8 +82,16 @@ class TestUserDatabaseOperations:
 
     @pytest.mark.asyncio
     async def test_user_cascade_deletion(self, async_session: AsyncSession, test_user: User, test_category: TransactionCategory):
-        """Test that user deletion handles related records properly."""
-        # Create related transaction
+        """Deleting an account removes its transactions with it.
+
+        Many FKs have no ON DELETE CASCADE, so the deletion path is
+        UserManagementService.hard_delete_user, which clears dependents in
+        order. This used to delete the ORM row and assert nothing.
+        """
+        from sqlalchemy import func, select
+
+        from app.modules.admin.services import UserManagementService
+
         transaction = Transaction(
             id=uuid4(),
             user_id=test_user.id,
@@ -98,15 +106,14 @@ class TestUserDatabaseOperations:
         async_session.add(transaction)
         await async_session.commit()
 
-        # Store transaction ID before deleting user
-        transaction_id = transaction.id
+        user_id = test_user.id
+        await UserManagementService(async_session).hard_delete_user(user_id)
 
-        # Delete user (should handle related records)
-        await async_session.delete(test_user)
-        await async_session.commit()
-
-        # Verify transaction handling (depending on cascade configuration)
-        # This test will verify our deletion strategy is working correctly
+        assert await async_session.get(User, user_id) is None
+        remaining = (await async_session.execute(
+            select(func.count()).select_from(Transaction).where(Transaction.user_id == user_id)
+        )).scalar_one()
+        assert remaining == 0
 
 
 class TestTransactionDatabaseOperations:

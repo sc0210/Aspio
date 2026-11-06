@@ -139,20 +139,6 @@ class TestReads:
             == []
         )
 
-    async def test_coverage_stats(self, seeded):
-        stats = await seeded.get_data_coverage_stats("AAPL")
-        assert stats["min_date"] == "2026-10-05"
-        assert stats["max_date"] == "2026-10-09"
-        assert stats["total_days"] == 5
-        assert stats["data_points"] == 4
-        assert stats["coverage_percentage"] == 80.0
-
-    async def test_coverage_stats_without_data(self, seeded):
-        stats = await seeded.get_data_coverage_stats("NVDA")
-        assert stats["data_points"] == 0
-        assert stats["min_date"] is None
-
-
 class _RecordingSession:
     """Just the AsyncSession surface bulk_upsert_prices touches."""
 

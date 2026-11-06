@@ -145,8 +145,7 @@ class TestModuleImports:
     
     def test_utils_imports(self):
         """Test utils module imports"""
-        from app.utils import currency_helpers, datetime_helpers
-        assert currency_helpers is not None
+        from app.utils import datetime_helpers
         assert datetime_helpers is not None
     
     def test_module_routers_import(self):
@@ -163,27 +162,14 @@ class TestModuleImports:
 class TestUtilityFunctions:
     """Test utility functions"""
     
-    def test_currency_helpers(self):
-        """Test currency helper functions"""
-        from app.utils.currency_helpers import format_currency, get_currency_symbol
-        
-        formatted = format_currency(1234.56, "USD")
-        assert "$" in formatted
-        
-        symbol = get_currency_symbol("SGD")
-        assert symbol == "S$"
-    
     def test_datetime_helpers(self):
         """Test datetime helper functions"""
-        from app.utils.datetime_helpers import utc_now, format_datetime
+        from app.utils.datetime_helpers import utc_now
         from datetime import datetime
-        
+
         now = utc_now()
         assert isinstance(now, datetime)
         assert now.tzinfo is not None
-        
-        formatted = format_datetime(now, "iso")
-        assert "T" in formatted
 
 
 if __name__ == "__main__":

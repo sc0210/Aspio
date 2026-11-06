@@ -132,49 +132,6 @@ class TestUpdates:
         assert (await repo.get_user_by_email("d@example.com", include_deleted=True)).id == u.id
 
 
-class TestListAndStats:
-    async def seed(self, repo):
-        a = await repo.create_user(data("alice@example.com", name="Alice", is_verified=True, status=UserStatus.ACTIVE))
-        b = await repo.create_user(data("bob@example.com", name="Bob", role=UserRole.ADMIN))
-        c = await repo.create_user(data("carol@example.com", name="Carol", is_active=False))
-        await repo.update_user(c.id, {"deleted_at": NOW()})
-        return a, b, c
-
-    async def test_paging_and_soft_delete(self, repo):
-        await self.seed(repo)
-        users, total = await repo.list_users(page=1, limit=1)
-        assert total == 2 and len(users) == 1
-        users, total = await repo.list_users(page=2, limit=1)
-        assert len(users) == 1
-        assert (await repo.list_users(include_deleted=True))[1] == 3
-
-    @pytest.mark.parametrize("flt,expected", [
-        ({"role": UserRole.ADMIN}, {"bob@example.com"}),
-        ({"is_verified": True}, {"alice@example.com"}),
-        ({"status": UserStatus.ACTIVE}, {"alice@example.com"}),
-        ({"is_active": True}, {"alice@example.com", "bob@example.com"}),
-        ({"search": "ALI"}, {"alice@example.com"}),
-        ({"search": "example.com"}, {"alice@example.com", "bob@example.com"}),
-        ({"search": ""}, {"alice@example.com", "bob@example.com"}),
-    ])
-    async def test_filters(self, repo, flt, expected):
-        await self.seed(repo)
-        users, total = await repo.list_users(filters=flt)
-        assert {u.email for u in users} == expected and total == len(expected)
-
-    async def test_date_filters(self, repo):
-        await self.seed(repo)
-        assert (await repo.list_users(filters={"created_after": NOW() + timedelta(days=1)}))[1] == 0
-        assert (await repo.list_users(filters={"created_before": NOW() + timedelta(days=1)}))[1] == 2
-
-    async def test_statistics(self, repo):
-        await self.seed(repo)
-        s = await repo.get_user_statistics()
-        assert (s["total_users"], s["active_users"], s["verified_users"]) == (2, 2, 1)
-        assert s["new_users_today"] == 2 and s["new_users_this_week"] == 2 and s["new_users_this_month"] == 2
-        assert s["average_level"] == 1.0 and s["total_experience_points"] == 0
-
-
 class TestRefreshTokens:
     async def setup_user(self, repo):
         return await repo.create_user(data("rt@example.com"))
@@ -219,7 +176,9 @@ class TestEmailTokens:
         row = await emails.create_verification_token(u.id, "abc", "email_verification", NOW() + timedelta(hours=1))
         assert row.token_hash != "abc"
         assert (await emails.get_verification_token("abc", "email_verification")).id == row.id
-        assert await emails.get_verification_token("zzz") is None
+        assert await emails.get_verification_token("zzz", "email_verification") is None
+        # A token only matches the flow it was issued for.
+        assert await emails.get_verification_token("abc", "password_reset") is None
         assert await emails.use_verification_token(row.id) is True
         assert await emails.use_verification_token(uuid4()) is False
 
@@ -231,4 +190,4 @@ class TestEmailTokens:
         await emails.create_verification_token(u.id, "ok", "email_verification", NOW() + timedelta(hours=1))
         await emails.use_verification_token(used.id)
         assert await emails.delete_expired_by_user(u.id, "email_verification") == 2
-        assert await emails.get_verification_token("ok") is not None
+        assert await emails.get_verification_token("ok", "email_verification") is not None

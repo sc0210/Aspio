@@ -61,6 +61,13 @@ def mds():
 
 
 class TestTheWarmCacheReturnsAPrice:
+    # These pin cache reuse, not the session gate (test_market_sessions.py covers
+    # finlab_close_is_current). Unpinned, they read the wall clock: run during the
+    # TW session (09:00-13:30 Taipei) today's bar is not settled and both failed.
+    @pytest.fixture(autouse=True)
+    def _close_is_settled(self, mds, monkeypatch):
+        monkeypatch.setattr(mds, "finlab_close_is_current", lambda bar_date, now=None: True)
+
     @pytest.mark.asyncio
     async def test_a_fresh_cache_answers_without_an_api_call(self, mds):
         _warm_cache(mds, business_now().replace(tzinfo=None))

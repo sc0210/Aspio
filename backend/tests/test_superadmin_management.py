@@ -105,6 +105,13 @@ class TestAuthGuards:
         ("GET",    "/api/v1/admin/users"),
         ("POST",   "/api/v1/admin/bulk-approve"),
         ("POST",   "/api/v1/admin/bulk-delete"),
+        ("POST",   "/api/v1/admin/database/vacuum"),
+        ("GET",    "/api/v1/admin/database/cleanup-preview"),
+        ("POST",   "/api/v1/admin/database/cleanup"),
+        ("GET",    "/api/v1/admin/stats/system"),
+        ("GET",    "/api/v1/admin/stats/database"),
+        ("GET",    "/api/v1/admin/audit-logs"),
+        ("GET",    "/api/v1/admin/health/detailed"),
     ]
 
     @pytest.mark.parametrize("method,path", ENDPOINTS)
@@ -306,3 +313,40 @@ class TestBulkDelete:
         assert resp.status_code == 200
         data = resp.json().get("data", {})
         assert str(seeded["admin_user"].id) in data.get("failed", [])
+
+
+# ── 12. Destructive database routes need super_admin ──────────────────────────
+
+class TestDatabaseRoutesNeedSuperAdmin:
+    """Vacuum and cleanup delete or rewrite data for every user, so a limited
+    admin role (one that can view stats) still can't run them."""
+
+    @pytest_asyncio.fixture
+    async def analyst_headers(self, async_session):
+        analyst = _make_user("analyst@example.com")
+        async_session.add_all([analyst, _make_admin(analyst, AdminRole.ANALYST)])
+        await async_session.commit()
+        return _auth(analyst)
+
+    @pytest.mark.parametrize("method,path", [
+        ("POST", "/api/v1/admin/database/vacuum"),
+        ("GET",  "/api/v1/admin/database/cleanup-preview"),
+        ("POST", "/api/v1/admin/database/cleanup"),
+    ])
+    def test_limited_admin_is_refused(self, client, analyst_headers, method, path):
+        assert client.request(method, path, headers=analyst_headers).status_code == 403
+
+
+# ── 13. /admin/check reports the caller's role ───────────────────────────────
+
+class TestAdminCheck:
+    def test_super_admin(self, client, seeded):
+        body = client.get("/api/v1/admin/check", headers=seeded["admin_headers"]).json()
+        assert body == {"isAdmin": True, "isSuperAdmin": True, "role": "super_admin"}
+
+    def test_regular_user(self, client, seeded):
+        body = client.get("/api/v1/admin/check", headers=seeded["regular_headers"]).json()
+        assert body == {"isAdmin": False, "isSuperAdmin": False, "role": None}
+
+    def test_anonymous(self, client):
+        assert client.get("/api/v1/admin/check").json()["isAdmin"] is False

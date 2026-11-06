@@ -155,3 +155,74 @@ class TestDeleteTransferCascades:
         for leg_id in leg_ids:
             leg_resp = client.get(f"/api/v1/transactions/{leg_id}")
             assert leg_resp.status_code == 404
+
+
+def _rows(client: TestClient):
+    return client.get("/api/v1/transactions/").json()["transactions"]
+
+
+def _post_transfer(client: TestClient, **overrides):
+    body = {"from_wallet": "life", "to_wallet": "emergency", "amount": 500,
+            "currency": "TWD", "transaction_date": "2026-07-01"}
+    body.update(overrides)
+    return client.post("/api/v1/transactions/transfer", json=body)
+
+
+class TestTransferCreateGuards:
+    """Cash moves only between Life and Emergency, never to itself, never zero."""
+
+    @pytest.mark.parametrize(
+        "overrides",
+        [
+            {"to_wallet": "life"},          # same wallet on both sides
+            {"to_wallet": "portfolio"},     # Portfolio never holds cash
+            {"from_wallet": "investment"},  # the retired fourth wallet
+        ],
+        ids=["same-wallet", "portfolio-target", "unknown-wallet"],
+    )
+    def test_invalid_wallets_are_rejected_and_nothing_is_written(self, client, overrides):
+        response = _post_transfer(client, **overrides)
+        assert response.status_code == 400
+        assert _rows(client) == []
+
+    @pytest.mark.parametrize("amount", [0, -5])
+    def test_non_positive_amount_is_rejected(self, client, amount):
+        response = _post_transfer(client, amount=amount)
+        assert response.status_code == 422
+        assert _rows(client) == []
+
+    def test_a_failed_second_leg_leaves_no_half_transfer(self, client, monkeypatch):
+        """Both legs flush in one transaction; if the credit leg fails, the debit
+        leg must roll back with it or Life loses money that never arrived."""
+        from app.modules.transactions.repositories import TransactionRepository
+
+        real_create_flush = TransactionRepository.create_flush
+        calls = {"n": 0}
+
+        async def failing_second_leg(self, data, user_id):
+            calls["n"] += 1
+            if calls["n"] == 2:
+                raise RuntimeError("simulated failure writing the credit leg")
+            return await real_create_flush(self, data, user_id)
+
+        monkeypatch.setattr(TransactionRepository, "create_flush", failing_second_leg)
+        response = _post_transfer(client)
+        monkeypatch.undo()
+
+        assert response.status_code == 500
+        assert calls["n"] == 2
+        assert _rows(client) == []
+
+    def test_editing_to_the_portfolio_wallet_is_rejected_and_legs_unchanged(self, client):
+        data = _create_transfer(client, amount=300)
+        group_id = data["items"][0]["item"]["transfer_group_id"]
+
+        response = client.put(
+            f"/api/v1/transactions/transfer/{group_id}",
+            json={"from_wallet": "life", "to_wallet": "portfolio", "amount": 999,
+                  "currency": "TWD", "transaction_date": "2026-07-02"},
+        )
+        assert response.status_code == 400
+        legs = client.get(f"/api/v1/transactions/transfer/{group_id}").json()["data"]
+        assert float(legs["amount"]) == 300
+        assert legs["to_wallet"] == "emergency"
