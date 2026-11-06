@@ -7,7 +7,7 @@ from datetime import datetime, date
 from decimal import Decimal
 from typing import Optional, List, Dict, Any, Union
 import uuid
-from pydantic import BaseModel, Field, field_validator, ConfigDict
+from pydantic import BaseModel, Field, field_validator, model_validator, ConfigDict
 
 from .models import (
     TransactionType,
@@ -199,6 +199,36 @@ class RecurringTransactionResponse(RecurringTransactionBase, TimestampMixin):
     is_paused: bool
     category: Optional[TransactionCategoryResponse] = None
     model_config = ConfigDict(from_attributes=True)
+
+    @model_validator(mode="before")
+    @classmethod
+    def _loaded_columns_only(cls, obj):
+        """Read an ORM row from what is already loaded.
+
+        Reading attributes the usual way lazy-loaded category.subcategories
+        outside the async context (MissingGreenlet), so every recurring route
+        answered 500. The category comes along only when it is already loaded.
+        """
+        from sqlalchemy import inspect as sa_inspect
+
+        state = sa_inspect(obj, raiseerr=False)
+        if state is None or not hasattr(state, "mapper"):
+            return obj
+
+        def columns(row, row_state):
+            return {k: getattr(row, k) for k in row_state.mapper.column_attrs.keys()
+                    if k not in row_state.unloaded}
+
+        data = columns(obj, state)
+        category = state.dict.get("category")
+        if category is not None:
+            data["category"] = columns(category, sa_inspect(category))
+        return data
+
+    @field_validator("id", "user_id", "category_id", mode="before")
+    @classmethod
+    def _uuid_to_str(cls, v):
+        return str(v) if hasattr(v, "hex") else v
 
 
 # Transaction schemas
@@ -553,15 +583,6 @@ class CategorizationSuggestion(BaseModel):
     category_name: str
     confidence: Decimal = Field(..., ge=0, le=1)
     reasons: List[str]
-
-
-class AutoCategorizationRequest(BaseModel):
-    """Schema for auto-categorization requests"""
-
-    description: str = Field(..., min_length=1, max_length=500)
-    amount: Optional[Decimal] = Field(None, gt=0)
-    merchant_name: Optional[str] = Field(None, max_length=200)
-    payment_method: Optional[PaymentMethod] = None
 
 
 class AutoCategorizationResponse(BaseModel):

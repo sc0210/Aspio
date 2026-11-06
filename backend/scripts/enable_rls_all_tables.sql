@@ -58,7 +58,6 @@ ALTER TABLE public.user_sessions               ENABLE ROW LEVEL SECURITY;
 -- ── Admin / system tables ─────────────────────────────────────────────────────
 ALTER TABLE public.admin_users                 ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.admin_audit_logs            ENABLE ROW LEVEL SECURITY;
-ALTER TABLE public.system_alerts               ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.system_settings             ENABLE ROW LEVEL SECURITY;
 
 -- ── Reference / lookup tables ─────────────────────────────────────────────────

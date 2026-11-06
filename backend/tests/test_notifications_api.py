@@ -39,8 +39,7 @@ async def test_stats_never_count_another_users_notifications(client, async_sessi
     assert client.get(f"{BASE}/stats/summary").status_code == 401
 
 
-async def test_status_and_health_are_public(client):
-    assert data_of(client.get(f"{BASE}/status"))["status"] == "operational"
+async def test_health_is_public(client):
     assert data_of(client.get(f"{BASE}/health"))["features"]["sms_notifications"] is False
 
 
@@ -117,10 +116,3 @@ async def test_preferences_round_trip(authenticated_client):
     again = data_of(authenticated_client.get(f"{BASE}/preferences"))
     assert again["digest_frequency"] == "weekly" and again["email_enabled"] is False
     assert authenticated_client.patch(f"{BASE}/preferences", json={"quiet_hours_start": "25:00"}).status_code == 422
-
-
-async def test_templates_are_admin_only(authenticated_client):
-    assert authenticated_client.get(f"{BASE}/templates").status_code == 403
-    body = {"template_key": "k", "name": "n", "type": "system_update", "title_template": "t",
-            "message_template": "m"}
-    assert authenticated_client.post(f"{BASE}/templates", json=body).status_code == 403

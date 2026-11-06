@@ -80,8 +80,6 @@ class TestGetRelativeTime:
         assert result == "2 years ago"
 
 
-# ─── DashboardService._period_to_months ──────────────────────────────────────
-
 # ─── DashboardService._get_date_range ────────────────────────────────────────
 
 class TestGetDateRange:
@@ -113,88 +111,6 @@ class TestGetDateRange:
         today = business_today()
         assert date_to == today
         assert (today - date_from).days >= 89
-
-
-# ─── DashboardService.get_spending_by_category ───────────────────────────────
-
-class TestGetSpendingByCategory:
-
-    @pytest.mark.asyncio
-    async def test_fetches_from_repo_on_cache_miss(self):
-        svc = make_service()
-
-        breakdown = [
-            {
-                "category_name": "Food & Dining",
-                "amount": Decimal("300"),
-                "percentage": 60.0,
-                "transaction_count": 10,
-                "currency": "USD",
-            },
-            {
-                "category_name": "Transportation",
-                "amount": Decimal("200"),
-                "percentage": 40.0,
-                "transaction_count": 5,
-                "currency": "USD",
-            },
-        ]
-        svc.transaction_repo.get_category_breakdown = AsyncMock(return_value=breakdown)
-
-        result = await svc.get_spending_by_category("user-id", PeriodEnum.THIRTY_DAYS)
-
-        assert len(result.categories) == 2
-        assert result.total_amount == Decimal("500")
-
-    @pytest.mark.asyncio
-    async def test_returns_empty_on_repo_error(self):
-        svc = make_service()
-        svc.transaction_repo.get_category_breakdown = AsyncMock(
-            side_effect=Exception("DB error")
-        )
-
-        result = await svc.get_spending_by_category("user-id")
-
-        assert result.categories == []
-        assert result.total_amount == Decimal("0")
-
-    @pytest.mark.asyncio
-    async def test_uses_correct_color_for_known_category(self):
-        svc = make_service()
-
-        breakdown = [
-            {
-                "category_name": "Food & Dining",
-                "amount": Decimal("100"),
-                "percentage": 100.0,
-                "transaction_count": 3,
-                "currency": "USD",
-            }
-        ]
-        svc.transaction_repo.get_category_breakdown = AsyncMock(return_value=breakdown)
-
-        result = await svc.get_spending_by_category("user-id")
-
-        assert result.categories[0].color == "#FF6B6B"  # predefined color
-
-    @pytest.mark.asyncio
-    async def test_uses_default_color_for_unknown_category(self):
-        svc = make_service()
-
-        breakdown = [
-            {
-                "category_name": "Unknown Custom Category",
-                "amount": Decimal("50"),
-                "percentage": 100.0,
-                "transaction_count": 1,
-                "currency": "USD",
-            }
-        ]
-        svc.transaction_repo.get_category_breakdown = AsyncMock(return_value=breakdown)
-
-        result = await svc.get_spending_by_category("user-id")
-
-        assert result.categories[0].color == "#6B7280"  # default grey
 
 
 # ─── DashboardService.get_recent_activity ────────────────────────────────────
@@ -294,8 +210,6 @@ class TestGetMonthlyTrends:
         result = await svc.get_monthly_trends("user-id")
         assert result.trends == []
 
-
-# ─── DashboardService.invalidate_user_cache ──────────────────────────────────
 
 # ─── DashboardService._get_goals_summary ─────────────────────────────────────
 

@@ -1507,11 +1507,29 @@ class RecurringTransactionService:
 
         return recurring
 
+    # One run posts at most this many back-dated occurrences per rule, so a rule
+    # years behind can't flood the ledger in one go; the next run continues.
+    MAX_CATCH_UP = 31
+
     async def process_due_transactions(
         self, max_date: Optional[date] = None
     ) -> Dict[str, int]:
-        """Process recurring transactions that are due"""
+        """Post every occurrence of every auto-create rule that is due.
 
+        Runs daily from the scheduler (and on demand from the admin endpoint):
+        - Past-due occurrences are posted, not skipped. Skipping lost every
+          rule's first occurrence (next_occurrence starts at start_date, which
+          is usually already past by the next run) and everything due while the
+          host was down.
+        - Idempotent: an occurrence that already has its transaction is not
+          posted again, so a second run the same day, or a crash between posting
+          and advancing the rule, never double-posts.
+        - Rules without auto_create are reminders: get_due_transactions skips
+          them (advancing them here used up their occurrences with nothing
+          posted).
+        - A rule past its end_date or max_occurrences is deactivated.
+        - A failing rule is rolled back and counted, and the rest still run.
+        """
         if not max_date:
             max_date = business_today()
 
@@ -1520,67 +1538,16 @@ class RecurringTransactionService:
         created_count = 0
         failed_count = 0
 
-        for recurring in due_recurring:
+        # Snapshot first: a rollback after one failing rule expires every loaded
+        # row, and reading the next rule's attributes would then fail as well.
+        rules = [self._rule_snapshot(r) for r in due_recurring]
+
+        for rule in rules:
             try:
-                # Check if we should still create transactions
-                if (
-                    recurring.end_date
-                    and recurring.next_occurrence > recurring.end_date
-                ):
-                    continue
-
-                if recurring.next_occurrence < business_today():
-                    logger.warning(
-                        f"Recurring {recurring.id}: next_occurrence {recurring.next_occurrence} "
-                        f"is in the past — advancing without creating a transaction"
-                    )
-                    next_occurrence = self._calculate_next_occurrence(
-                        recurring.next_occurrence, recurring.frequency, recurring.interval
-                    )
-                    await self.recurring_repo.update_next_occurrence(recurring.id, next_occurrence)
-                    continue
-
-                if (
-                    recurring.max_occurrences
-                    and recurring.occurrence_count >= recurring.max_occurrences
-                ):
-                    continue
-
-                # Create transaction data
-                transaction_data = TransactionCreate(
-                    type=recurring.type,
-                    amount=recurring.amount,
-                    currency=recurring.currency,
-                    description=recurring.description,
-                    transaction_date=recurring.next_occurrence,
-                    category_id=recurring.category_id,
-                    payment_method=recurring.payment_method,
-                    recurring_transaction_id=recurring.id,
-                    tags=recurring.tags,
-                    notes=recurring.notes,
-                )
-
-                # Create the transaction
-                if recurring.auto_create:
-                    await self.transaction_service.create_transaction(
-                        transaction_data, recurring.user_id
-                    )
-                    created_count += 1
-
-                # Calculate next occurrence
-                next_occurrence = self._calculate_next_occurrence(
-                    recurring.next_occurrence, recurring.frequency, recurring.interval
-                )
-
-                # Update recurring transaction
-                await self.recurring_repo.update_next_occurrence(
-                    recurring.id, next_occurrence
-                )
-
+                created_count += await self._post_due_occurrences(rule, max_date)
             except Exception as e:
-                logger.error(
-                    f"Failed to process recurring transaction {recurring.id}: {str(e)}"
-                )
+                await self.recurring_repo.db.rollback()
+                logger.error(f"Failed to process recurring transaction {rule['id']}: {e}")
                 failed_count += 1
 
         return {
@@ -1588,6 +1555,81 @@ class RecurringTransactionService:
             "created": created_count,
             "failed": failed_count,
         }
+
+    @staticmethod
+    def _rule_snapshot(recurring) -> Dict[str, Any]:
+        """What posting needs from the ORM row, read once. Scheduling fields are
+        re-read under the lock on every iteration instead."""
+        return dict(
+            id=recurring.id,
+            user_id=str(recurring.user_id),
+            template=dict(
+                type=recurring.type,
+                amount=recurring.amount,
+                currency=recurring.currency,
+                description=recurring.description,
+                # TransactionCreate takes these ids as strings; the ORM gives UUIDs.
+                category_id=str(recurring.category_id) if recurring.category_id else None,
+                payment_method=recurring.payment_method,
+                recurring_transaction_id=str(recurring.id),
+                tags=recurring.tags,
+                notes=recurring.notes,
+            ),
+        )
+
+    async def _post_due_occurrences(self, rule: Dict[str, Any], max_date: date) -> int:
+        """Post this rule's occurrences up to max_date; returns how many were new.
+
+        Every iteration re-reads the rule under a row lock and works only from
+        those values: another run (the scheduler vs the admin endpoint) may
+        have posted, advanced or paused it, and the user may have edited it.
+        """
+        rule_id, user_id = rule["id"], rule["user_id"]
+        transaction_template = rule["template"]
+
+        posted = 0
+        finished = False
+        for _ in range(self.MAX_CATCH_UP):
+            row = await self.recurring_repo.lock_rule(rule_id)
+            if row is None or not row.is_active or row.is_paused:
+                break  # another run holds it, or the user paused/removed it
+            occurrence, count = row.next_occurrence, row.occurrence_count or 0
+            finished = bool((row.end_date and occurrence > row.end_date)
+                            or (row.max_occurrences and count >= row.max_occurrences))
+            if finished or occurrence > max_date:
+                break
+
+            if not await self.recurring_repo.has_posted(rule_id, occurrence):
+                await self.transaction_service.create_transaction(
+                    TransactionCreate(**transaction_template, transaction_date=occurrence),
+                    user_id,
+                )
+                posted += 1
+
+            # Posting committed and released the lock, so advance only if the
+            # rule still sits on this occurrence; otherwise another run already
+            # counted it and we stop rather than count it twice.
+            next_date = self._calculate_next_occurrence(occurrence, row.frequency, row.interval)
+            if not await self.recurring_repo.update_next_occurrence(
+                rule_id, next_date, expected_current=occurrence
+            ):
+                break
+
+        # Every exit above but `finished` can leave the row lock held (nothing
+        # committed since lock_rule); release it so a concurrent run isn't
+        # skipped. Commit, not rollback: nothing is pending, and a rollback would
+        # expire every loaded row, the caller's included.
+        if not finished:
+            await self.recurring_repo.db.commit()
+
+        # Only retire on what a locked read showed, never on the snapshot.
+        if finished:
+            try:
+                await self.recurring_repo.deactivate(rule_id)
+            except Exception as e:  # posted rows are committed; retire it next run
+                await self.recurring_repo.db.rollback()
+                logger.error(f"Could not retire finished recurring rule {rule_id}: {e}")
+        return posted
 
     def _calculate_next_occurrence(
         self, current_date: date, frequency: RecurringFrequency, interval: int

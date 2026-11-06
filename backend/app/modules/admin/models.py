@@ -6,7 +6,7 @@ Provides role-based access control, audit logging, and administrative functions.
 
 from datetime import datetime, timezone
 from enum import Enum
-from sqlalchemy import Column, String, Boolean, DateTime, Integer, Text, ForeignKey
+from sqlalchemy import Column, String, Boolean, DateTime, Text, ForeignKey
 from sqlalchemy.dialects.postgresql import UUID
 from sqlalchemy.orm import relationship
 import uuid
@@ -146,20 +146,6 @@ class AdminUser(Base):
 
         return False
 
-    def get_all_permissions(self) -> list[AdminPermission]:
-        """Get all permissions for this admin"""
-        permissions = set(ROLE_PERMISSIONS.get(AdminRole(self.role), []))
-
-        if self.custom_permissions:
-            for perm in self.custom_permissions:
-                try:
-                    permissions.add(AdminPermission(perm))
-                except ValueError:
-                    pass
-
-        return list(permissions)
-
-
 class AdminAuditLog(Base):
     """Audit log for admin actions"""
 
@@ -195,38 +181,6 @@ class AdminAuditLog(Base):
     # Relationships
     admin_user = relationship(
         "AdminUser", back_populates="audit_logs", foreign_keys=[admin_user_id]
-    )
-
-
-class SystemAlert(Base):
-    """System alerts and notifications for admins"""
-
-    __tablename__ = "system_alerts"
-
-    id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
-
-    # Alert details
-    severity = Column(String(20), nullable=False)  # critical, warning, info
-    category = Column(String(50), nullable=False)  # security, performance, error
-    title = Column(String(255), nullable=False)
-    message = Column(Text, nullable=False)
-
-    # Context
-    source = Column(String(100), nullable=True)  # Where alert originated
-    alert_metadata = Column(JSONType, nullable=True)
-
-    # Resolution
-    is_resolved = Column(Boolean, default=False)
-    resolved_by_admin_id = Column(
-        UUID(as_uuid=True), ForeignKey("admin_users.id"), nullable=True
-    )
-    resolved_at = Column(DateTime(timezone=True), nullable=True)
-    resolution_notes = Column(Text, nullable=True)
-
-    # Timestamps
-    created_at = Column(DateTime(timezone=True), default=lambda: datetime.now(timezone.utc))
-    updated_at = Column(
-        DateTime(timezone=True), default=lambda: datetime.now(timezone.utc), onupdate=lambda: datetime.now(timezone.utc)
     )
 
 

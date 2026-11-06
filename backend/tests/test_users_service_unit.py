@@ -421,32 +421,6 @@ class TestLogoutUser:
         assert result is False
 
 
-# ─── UserService.get_user_profile ────────────────────────────────────────────
-
-class TestGetUserProfile:
-
-    @pytest.mark.asyncio
-    async def test_get_profile_success(self):
-        mock_user = make_mock_user()
-        svc = make_service()
-        svc.user_repo.get_user_by_id = AsyncMock(return_value=mock_user)
-
-        with patch("app.modules.users.schemas.UserProfileResponse.model_validate", return_value=MagicMock()):
-            result = await svc.get_user_profile(mock_user.id)
-
-        assert result is not None
-
-    @pytest.mark.asyncio
-    async def test_get_profile_not_found_raises_404(self):
-        svc = make_service()
-        svc.user_repo.get_user_by_id = AsyncMock(return_value=None)
-
-        with pytest.raises(HTTPException) as exc:
-            await svc.get_user_profile(uuid4())
-
-        assert exc.value.status_code == 404
-
-
 # ─── UserService.update_user_profile ─────────────────────────────────────────
 
 class TestUpdateUserProfile:
@@ -486,8 +460,6 @@ class TestUpdateUserProfile:
 
         assert exc.value.status_code == 404
 
-
-# ─── UserService.change_password ─────────────────────────────────────────────
 
 # ─── UserService.request_password_reset ──────────────────────────────────────
 

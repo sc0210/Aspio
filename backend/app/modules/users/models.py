@@ -4,7 +4,7 @@ SQLAlchemy models for user functionality.
 
 import uuid
 from datetime import datetime, timezone
-from typing import Optional, List, Dict, Any
+from typing import Optional, Dict, Any
 import enum
 
 from sqlalchemy import (
@@ -260,18 +260,6 @@ class User(BaseModel):
     def full_name(self) -> str:
         """Get user's full name"""
         return self.name
-
-    def get_preference(self, key: str, default: Any = None) -> Any:
-        """Get a user preference value"""
-        if not self.preferences:
-            return default
-        return self.preferences.get(key, default)
-
-    def set_preference(self, key: str, value: Any) -> None:
-        """Set a user preference value"""
-        if not self.preferences:
-            self.preferences = {}
-        self.preferences[key] = value
 
     @property
     def default_preferences(self) -> Dict[str, Any]:

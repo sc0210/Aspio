@@ -6,10 +6,34 @@ Validation schemas for goals API endpoints.
 
 from datetime import datetime
 from decimal import Decimal
-from typing import List, Optional, Any
-from pydantic import BaseModel, Field, ConfigDict, field_validator, field_serializer
-from pydantic.types import UUID4
 from enum import Enum
+from functools import partial
+from typing import Annotated, Any, List, Optional
+
+from pydantic import BaseModel, BeforeValidator, ConfigDict, Field, field_serializer, field_validator
+from pydantic.types import UUID4
+
+from .models import GoalCategory, GoalPriority, GoalStatus
+
+
+def _enum_code(enum_cls, value):
+    """Accept an enum member, its value ('car_purchase') or its name
+    ('CAR_PURCHASE'), and return the value. Anything else is a 422: unvalidated,
+    an unknown category reached the DB enum and the API answered 500."""
+    if value is None or isinstance(value, enum_cls):
+        return value.value if isinstance(value, enum_cls) else value
+    if isinstance(value, str):
+        if value in enum_cls._value2member_map_:
+            return value
+        if value.upper() in enum_cls.__members__:
+            return enum_cls[value.upper()].value
+    raise ValueError(f"must be one of: {', '.join(m.value for m in enum_cls)}")
+
+
+# One definition per enum, shared by the create and update schemas.
+CategoryCode = Annotated[str, BeforeValidator(partial(_enum_code, GoalCategory))]
+PriorityCode = Annotated[str, BeforeValidator(partial(_enum_code, GoalPriority))]
+StatusCode = Annotated[str, BeforeValidator(partial(_enum_code, GoalStatus))]
 
 
 class GoalMilestoneBase(BaseModel):
@@ -45,8 +69,8 @@ class GoalBase(BaseModel):
 
     title: str = Field(..., min_length=1, max_length=200)
     description: Optional[str] = Field(None, max_length=1000)
-    category: str
-    priority: str = "medium"
+    category: CategoryCode
+    priority: PriorityCode = "medium"
     target_amount: Decimal = Field(
         ..., ge=0, validation_alias="targetAmount", serialization_alias="targetAmount"
     )
@@ -96,9 +120,9 @@ class GoalUpdate(BaseModel):
 
     title: Optional[str] = Field(None, min_length=1, max_length=200)
     description: Optional[str] = Field(None, max_length=1000)
-    category: Optional[str] = None
-    priority: Optional[str] = None
-    status: Optional[str] = None
+    category: Optional[CategoryCode] = None
+    priority: Optional[PriorityCode] = None
+    status: Optional[StatusCode] = None
     target_amount: Optional[Decimal] = Field(
         None, ge=0, validation_alias="targetAmount", serialization_alias="targetAmount"
     )

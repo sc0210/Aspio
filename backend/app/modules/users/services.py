@@ -19,8 +19,7 @@ from .schemas import (
     UserRegistration, UserUpdate, UserResponse, UserProfileResponse,
     LoginRequest, LoginResponse, TokenRefreshRequest, TokenRefreshResponse,
     ForgotPasswordRequest, ResetPasswordRequest,
-    GoogleOAuthRequest, GoogleOAuthResponse, GoogleCallbackRequest, GoogleCallbackResponse,
-    UserStatsResponse
+    GoogleCallbackRequest, GoogleCallbackResponse
 )
 from .repositories import (
     get_user_repository, get_refresh_token_repository, get_email_verification_repository
@@ -344,28 +343,6 @@ class UserService:
             logger.error(f"Error logging out user {user_id}: {str(e)}")
             return False
     
-    async def get_user_profile(self, user_id: UUID) -> UserProfileResponse:
-        """
-        Get detailed user profile information.
-        
-        Args:
-            user_id: User's UUID
-            
-        Returns:
-            Detailed user profile
-            
-        Raises:
-            HTTPException: If user not found
-        """
-        user = await self.user_repo.get_user_by_id(user_id)
-        if not user:
-            raise HTTPException(
-                status_code=status.HTTP_404_NOT_FOUND,
-                detail="User not found"
-            )
-        
-        return UserProfileResponse.model_validate(user)
-    
     async def update_user_profile(
         self, 
         user_id: UUID, 
@@ -574,130 +551,6 @@ class UserService:
                 detail="Failed to reset password"
             )
     
-    async def google_oauth_login(
-        self,
-        oauth_data: GoogleOAuthRequest,
-        ip_address: Optional[str] = None
-    ) -> GoogleOAuthResponse:
-        """
-        Authenticate or register user via Google OAuth.
-        
-        Args:
-            oauth_data: Google OAuth authorization data
-            ip_address: Optional IP address
-            
-        Returns:
-            OAuth login response with tokens and user data
-            
-        Raises:
-            HTTPException: If OAuth authentication fails
-        """
-        try:
-            if not settings.google_oauth_enabled:
-                raise HTTPException(
-                    status_code=status.HTTP_501_NOT_IMPLEMENTED,
-                    detail="Google OAuth is not configured"
-                )
-            
-            # Exchange authorization code for tokens
-            # The redirect URI is server configuration, never the caller's choice.
-            token_response = await google_oauth.exchange_code_for_tokens(
-                oauth_data.authorization_code
-            )
-            
-            if not token_response:
-                raise HTTPException(
-                    status_code=status.HTTP_400_BAD_REQUEST,
-                    detail="Failed to exchange authorization code"
-                )
-            
-            # Get user info from Google
-            user_info = await google_oauth.get_user_info(token_response["access_token"])
-            if not user_info:
-                raise HTTPException(
-                    status_code=status.HTTP_400_BAD_REQUEST,
-                    detail="Failed to get user information from Google"
-                )
-            
-            # An unverified Google email proves nothing about who owns the address,
-            # so it can neither sign in to the account using it nor register it.
-            if not user_info.get("verified_email"):
-                raise HTTPException(
-                    status_code=status.HTTP_403_FORBIDDEN,
-                    detail="Your Google account's email address is not verified"
-                )
-
-            # Check if user exists
-            user = await self.user_repo.get_user_by_email(user_info["email"])
-            is_new_user = False
-
-            if not user:
-                # Same policy as every other way in: self-signup waits for a
-                # super_admin, so this door must not hand out an active account.
-                user_data = {
-                    'email': user_info["email"],
-                    'name': user_info.get("name", user_info["email"].split('@')[0]),
-                    'is_verified': True,
-                    'email_verified_at': datetime.now(timezone.utc),
-                    'status': UserStatus.PENDING_APPROVAL,
-                    'is_active': False,
-                    'google_id': user_info.get("id"),
-                    'avatar_url': user_info.get("picture")
-                }
-
-                user = await self.user_repo.create_user(user_data)
-                logger.info(f"Created new Google OAuth user (pending approval): {user.email}")
-                raise HTTPException(
-                    status_code=status.HTTP_403_FORBIDDEN,
-                    detail="Your account has been registered and is pending admin approval. Please wait for an administrator to approve your account before logging in."
-                )
-
-            if user.status == UserStatus.PENDING_APPROVAL:
-                raise HTTPException(
-                    status_code=status.HTTP_403_FORBIDDEN,
-                    detail="Your account is pending admin approval. Please wait for an administrator to approve your registration."
-                )
-            if not user.is_active or user.status == UserStatus.SUSPENDED or user.deleted_at is not None:
-                raise HTTPException(
-                    status_code=status.HTTP_403_FORBIDDEN,
-                    detail="Account is suspended or deactivated."
-                )
-            # No failed-password lock here: anyone who knows the email can trip it,
-            # and Google proves the owner without a password. Signing in clears it.
-            await self.user_repo.update_login_info(user.id, ip_address or "", success=True)
-            await self._update_user_activity(user.id)
-
-            # Create JWT tokens
-            token_data = {"sub": str(user.id), "email": user.email}
-            access_token = jwt_manager.create_access_token(token_data)
-            refresh_token = jwt_manager.create_refresh_token(token_data)
-            
-            # Store refresh token
-            await self.refresh_token_repo.create_refresh_token(
-                user_id=user.id,
-                token=refresh_token,
-                expires_at=datetime.now(timezone.utc) + timedelta(days=settings.REFRESH_TOKEN_EXPIRE_DAYS),
-                ip_address=ip_address
-            )
-            
-            return GoogleOAuthResponse(
-                access_token=access_token,
-                refresh_token=refresh_token,
-                token_type="bearer",
-                expires_in=settings.ACCESS_TOKEN_EXPIRE_MINUTES * 60,
-                user=UserResponse.model_validate(user),
-                is_new_user=is_new_user
-            )
-            
-        except HTTPException:
-            raise
-        except Exception as e:
-            logger.error(f"Error with Google OAuth: {str(e)}")
-            raise HTTPException(
-                status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-                detail="OAuth authentication failed"
-            )
-    
     async def google_oauth_callback(
         self,
         callback_data: 'GoogleCallbackRequest',
@@ -865,16 +718,6 @@ class UserService:
                 status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
                 detail="Email verification failed"
             )
-    
-    async def get_user_statistics(self) -> UserStatsResponse:
-        """
-        Get comprehensive user statistics.
-        
-        Returns:
-            User statistics response
-        """
-        stats = await self.user_repo.get_user_statistics()
-        return UserStatsResponse(**stats)
     
     async def resend_verification_email(self, email: str) -> bool:
         """

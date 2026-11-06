@@ -102,6 +102,15 @@ class TransactionRepository:
             if transaction_data.get("loan_id") and isinstance(transaction_data["loan_id"], str):
                 transaction_data["loan_id"] = uuid_module.UUID(transaction_data["loan_id"])
 
+            # TransactionCreate carries it as a string too; unconverted, the
+            # recurring job's insert failed on the UUID column.
+            if transaction_data.get("recurring_transaction_id") and isinstance(
+                transaction_data["recurring_transaction_id"], str
+            ):
+                transaction_data["recurring_transaction_id"] = uuid_module.UUID(
+                    transaction_data["recurring_transaction_id"]
+                )
+
             # Calculate USD amount if not provided
             if not transaction_data.get("amount_usd"):
                 if transaction_data.get("currency") == "USD":
@@ -1652,32 +1661,6 @@ class TransactionCategoryRepository:
         await self.db.execute(stmt)
         await (self.db.commit() if commit else self.db.flush())
 
-    async def get_popular_categories(
-        self, user_id: str, category_type: Optional[str] = None, limit: int = 10
-    ) -> List[TransactionCategory]:
-        """Get popular categories based on user's transaction history"""
-        conditions = [Transaction.user_id == user_id, Transaction.is_deleted == False]
-
-        if category_type:
-            conditions.append(TransactionCategory.type == category_type)
-
-        stmt = (
-            select(TransactionCategory)
-            .options(selectinload(TransactionCategory.subcategories))
-            .select_from(TransactionCategory.__table__.join(Transaction.__table__))
-            .where(and_(*conditions))
-            .group_by(TransactionCategory.id)
-            .order_by(
-                func.count(Transaction.id).desc(),
-                TransactionCategory.usage_count.desc(),
-            )
-            .limit(limit)
-        )
-
-        result = await self.db.execute(stmt)
-        return list(result.scalars().all())
-
-
 class RecurringTransactionRepository:
     """Repository for recurring transaction database operations"""
 
@@ -1702,8 +1685,9 @@ class RecurringTransactionRepository:
         recurring = RecurringTransaction(**recurring_data)
         self.db.add(recurring)
         await self.db.commit()
-        await self.db.refresh(recurring)
-        return recurring
+        # Re-read with the category loaded: the response serialises it, and a
+        # bare refresh left it unloaded (category came back null).
+        return await self.get_by_id(recurring.id, recurring_data["user_id"])
 
     async def get_by_id(
         self, recurring_id: str, user_id: str
@@ -1741,6 +1725,8 @@ class RecurringTransactionRepository:
                 and_(
                     RecurringTransaction.is_active == True,
                     RecurringTransaction.is_paused == False,
+                    # Rules without auto_create are reminders; nothing posts them.
+                    RecurringTransaction.auto_create == True,
                     RecurringTransaction.next_occurrence <= max_date,
                 )
             )
@@ -1748,8 +1734,61 @@ class RecurringTransactionRepository:
         result = await self.db.execute(stmt)
         return list(result.scalars().all())
 
-    async def update_next_occurrence(self, recurring_id: str, next_date: date):
-        """Update next occurrence date"""
+    async def lock_rule(self, recurring_id):
+        """Row-lock the rule and return its current state, or None if another
+        run holds it (or it is gone).
+
+        Postgres only (SQLite ignores FOR UPDATE). Held until the next commit,
+        so the scheduler and the admin endpoint can't both pass has_posted for
+        the same occurrence. The caller must work from the returned values, not
+        from a snapshot taken before the lock: another run may have advanced or
+        paused the rule in between.
+        """
+        stmt = (
+            select(
+                RecurringTransaction.next_occurrence,
+                RecurringTransaction.occurrence_count,
+                RecurringTransaction.is_active,
+                RecurringTransaction.is_paused,
+                RecurringTransaction.frequency,
+                RecurringTransaction.interval,
+                RecurringTransaction.end_date,
+                RecurringTransaction.max_occurrences,
+            )
+            .where(RecurringTransaction.id == recurring_id)
+            .with_for_update(skip_locked=True)
+        )
+        return (await self.db.execute(stmt)).first()
+
+    async def deactivate(self, recurring_id) -> None:
+        """Retire a rule that has reached its end_date or max_occurrences."""
+        await self.db.execute(
+            update(RecurringTransaction)
+            .where(RecurringTransaction.id == recurring_id)
+            .values(is_active=False, updated_at=datetime.now(timezone.utc))
+        )
+        await self.db.commit()
+
+    async def has_posted(self, recurring_id, on_date: date) -> bool:
+        """Whether this rule already has a (non-deleted) transaction on on_date."""
+        stmt = select(Transaction.id).where(
+            and_(
+                Transaction.recurring_transaction_id == recurring_id,
+                Transaction.transaction_date == on_date,
+                Transaction.is_deleted == False,  # noqa: E712
+            )
+        ).limit(1)
+        return (await self.db.execute(stmt)).first() is not None
+
+    async def update_next_occurrence(
+        self, recurring_id: str, next_date: date, expected_current: Optional[date] = None
+    ) -> bool:
+        """Advance the rule to next_date (and count one occurrence).
+
+        With expected_current, only advances while the rule still sits on that
+        date, and returns False when another run already moved it, so a
+        concurrent run can't count the same occurrence twice.
+        """
         # Convert string UUID to UUID object
         recurring_id_uuid = (
             uuid_module.UUID(recurring_id)
@@ -1757,9 +1796,12 @@ class RecurringTransactionRepository:
             else recurring_id
         )
 
+        conditions = [RecurringTransaction.id == recurring_id_uuid]
+        if expected_current is not None:
+            conditions.append(RecurringTransaction.next_occurrence == expected_current)
         stmt = (
             update(RecurringTransaction)
-            .where(RecurringTransaction.id == recurring_id_uuid)
+            .where(and_(*conditions))
             .values(
                 next_occurrence=next_date,
                 occurrence_count=RecurringTransaction.occurrence_count + 1,
@@ -1767,8 +1809,9 @@ class RecurringTransactionRepository:
             )
         )
 
-        await self.db.execute(stmt)
+        result = await self.db.execute(stmt)
         await self.db.commit()
+        return result.rowcount != 0
 
     async def get_all_by_user(self, user_id: str) -> List[RecurringTransaction]:
         """Get all recurring transactions for a user"""
@@ -1823,10 +1866,10 @@ class RecurringTransactionRepository:
         await self.db.commit()
 
         updated_recurring = result.scalar_one_or_none()
-        if updated_recurring:
-            await self.db.refresh(updated_recurring)
-
-        return updated_recurring
+        if not updated_recurring:
+            return None
+        # Re-read so every column and the category are loaded for the response.
+        return await self.get_by_id(recurring_id_uuid, user_id_uuid)
 
     async def delete(self, recurring_id: str, user_id: str) -> bool:
         """Delete a recurring transaction"""

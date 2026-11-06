@@ -20,6 +20,13 @@ os.environ.setdefault("RATE_LIMIT_ENABLED", "false")
 # ASPIRO_TEST_DATABASE_URL opts a run into another database on purpose.
 os.environ["DATABASE_URL"] = os.environ.get("ASPIRO_TEST_DATABASE_URL", "sqlite+aiosqlite:///:memory:")
 
+# Same for the optional integrations: CI sets none of these, and a developer's
+# backend/.env does. With SMTP set, every register/reset test attempted a real
+# send (and with working credentials would have mailed test addresses); with
+# LINE set, /line-bot/* was mounted. Empty env vars win over .env values.
+for _var in ("SMTP_HOST", "SMTP_USER", "SMTP_PASSWORD", "LINE_CHANNEL_SECRET", "LINE_CHANNEL_ACCESS_TOKEN"):
+    os.environ[_var] = ""
+
 import asyncio
 import pytest
 import pytest_asyncio

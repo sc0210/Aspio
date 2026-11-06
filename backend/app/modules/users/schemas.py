@@ -195,12 +195,6 @@ class VerifyEmailRequest(BaseModel):
     token: str = Field(..., description="Verification token")
 
 
-class GoogleOAuthRequest(BaseModel):
-    """Schema for Google OAuth request"""
-    authorization_code: str = Field(..., description="Google authorization code")
-    redirect_uri: Optional[str] = Field(None, description="OAuth redirect URI")
-
-
 class GoogleCallbackRequest(BaseModel):
     """Schema for Google OAuth callback from NextAuth"""
     code: str = Field(..., description="Google access token from NextAuth")
@@ -214,17 +208,6 @@ class GoogleCallbackRequest(BaseModel):
 class GoogleCallbackResponse(BaseModel):
     """Schema for Google OAuth callback response"""
     success: bool = Field(True, description="Callback success status")
-    access_token: str = Field(..., description="JWT access token")
-    refresh_token: str = Field(..., description="JWT refresh token")
-    token_type: str = Field("bearer", description="Token type")
-    expires_in: int = Field(..., description="Token expiration time in seconds")
-    user: UserResponse = Field(..., description="User information")
-    is_new_user: bool = Field(..., description="Whether this is a new user registration")
-
-
-class GoogleOAuthResponse(BaseModel):
-    """Schema for Google OAuth response"""
-    success: bool = Field(True, description="OAuth success status")
     access_token: str = Field(..., description="JWT access token")
     refresh_token: str = Field(..., description="JWT refresh token")
     token_type: str = Field("bearer", description="Token type")
@@ -379,22 +362,6 @@ class DataExportRequest(BaseModel):
     )
 
 
-class DataExportResponse(BaseModel):
-    """Data export response"""
-    model_config = ConfigDict(from_attributes=True)
-    
-    id: uuid.UUID
-    user_id: uuid.UUID
-    request_type: str
-    status: str
-    file_path: Optional[str] = None
-    file_size: Optional[int] = None
-    expires_at: Optional[datetime] = None
-    download_count: int = 0
-    created_at: datetime
-    completed_at: Optional[datetime] = None
-
-
 # ===== Regional and Localization Schemas =====
 
 class RegionalPreferencesUpdate(BaseModel):
@@ -435,4 +402,3 @@ class RegionalPreferencesUpdate(BaseModel):
 
 
 # ===== Enhanced Security Schemas =====
-

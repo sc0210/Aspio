@@ -32,30 +32,6 @@ class DividendCreate(DividendBase):
     holding_id: Optional[UUID4] = None
 
 
-class DividendUpdate(BaseModel):
-    """Schema for updating a dividend"""
-
-    payment_date: Optional[date] = None
-    ex_dividend_date: Optional[date] = None
-    record_date: Optional[date] = None
-    amount_per_share: Optional[Decimal] = None
-    shares_owned: Optional[Decimal] = None
-    total_amount: Optional[Decimal] = None
-    tax_withheld: Optional[Decimal] = None
-    net_amount: Optional[Decimal] = None
-    status: Optional[str] = None
-    notes: Optional[str] = None
-    is_reinvested: Optional[bool] = None
-
-
-class DividendReinvest(BaseModel):
-    """Schema for marking dividend as reinvested"""
-
-    reinvestment_shares: Decimal = Field(..., gt=0)
-    reinvestment_price: Decimal = Field(..., gt=0)
-    reinvestment_holding_id: Optional[UUID4] = None
-
-
 class DividendResponse(DividendBase):
     """Schema for dividend response"""
 
@@ -69,28 +45,3 @@ class DividendResponse(DividendBase):
     created_at: datetime
     updated_at: datetime
     model_config = ConfigDict(from_attributes=True)
-
-
-class DividendSummary(BaseModel):
-    """Schema for dividend summary statistics"""
-
-    total_dividends: Decimal
-    total_tax_withheld: Decimal
-    net_dividends: Decimal
-    dividend_count: int
-    reinvested_count: int
-    reinvested_amount: Decimal
-    symbols: list[str]
-    currency: str = "USD"
-
-
-class DividendHistoryFilter(BaseModel):
-    """Schema for filtering dividend history"""
-
-    symbol: Optional[str] = None
-    start_date: Optional[date] = None
-    end_date: Optional[date] = None
-    status: Optional[str] = None
-    is_reinvested: Optional[bool] = None
-    limit: int = Field(default=100, le=1000)
-    offset: int = Field(default=0, ge=0)

@@ -9,7 +9,6 @@ import json
 import logging
 import logging.config
 from datetime import datetime
-from typing import Any, Dict, Optional
 
 from .config import get_settings
 
@@ -163,52 +162,6 @@ def setup_logging() -> None:
 def get_logger(name: str) -> logging.Logger:
     """Get logger instance with proper configuration."""
     return logging.getLogger(f"app.{name}")
-
-
-class LoggerAdapter(logging.LoggerAdapter):
-    """Logger adapter for adding context to all log messages."""
-
-    def __init__(self, logger: logging.Logger, extra: Optional[Dict[str, Any]] = None):
-        super().__init__(logger, extra or {})
-
-    def process(self, msg: str, kwargs: Dict[str, Any]) -> tuple[str, Dict[str, Any]]:
-        """Add extra context to log messages."""
-        # Add request_id and user_id if available in extra
-        if self.extra:
-            for key in ['request_id', 'user_id', 'extra_data']:
-                if key in self.extra and key not in kwargs:
-                    kwargs[key] = self.extra[key]
-
-        return msg, kwargs
-
-# Security and audit logging
-def log_security_event(logger: logging.Logger, event: str, severity: str = "info",
-                      user_id: Optional[str] = None, ip_address: Optional[str] = None,
-                      user_agent: Optional[str] = None, request_id: Optional[str] = None,
-                      extra_data: Optional[Dict[str, Any]] = None) -> None:
-    """Log security events for monitoring and analysis."""
-    level_map = {
-        "debug": logging.DEBUG,
-        "info": logging.INFO,
-        "warning": logging.WARNING,
-        "error": logging.ERROR,
-        "critical": logging.CRITICAL,
-    }
-
-    adapter = LoggerAdapter(logger, {
-        'request_id': request_id,
-        'user_id': user_id,
-        'extra_data': {
-            'event': event,
-            'severity': severity,
-            'ip_address': ip_address,
-            'user_agent': user_agent,
-            **(extra_data or {})
-        }
-    })
-
-    log_level = level_map.get(severity.lower(), logging.INFO)
-    adapter.log(log_level, f"Security Event: {event}")
 
 
 # Initialize logging when module is imported

@@ -5,12 +5,12 @@ This module provides async database operations for user management,
 including CRUD operations, authentication, and session management.
 """
 
-from datetime import datetime, timedelta, timezone
-from typing import Optional, List, Dict, Any, Tuple
+from datetime import datetime, timezone
+from typing import Optional, Dict, Any
 from uuid import UUID
 import logging
 
-from sqlalchemy import select, update, delete, func, and_, or_
+from sqlalchemy import select, update, delete, and_, or_
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.exc import IntegrityError
 
@@ -320,171 +320,6 @@ class UserRepository:
             logger.error(f"Error updating login info for user {user_id}: {str(e)}")
             return False
     
-    async def list_users(
-        self,
-        page: int = 1,
-        limit: int = 20,
-        filters: Optional[Dict[str, Any]] = None,
-        include_deleted: bool = False
-    ) -> Tuple[List[User], int]:
-        """
-        List users with pagination and filtering.
-        
-        Args:
-            page: Page number (1-based)
-            limit: Number of users per page
-            filters: Optional filters dictionary
-            include_deleted: Whether to include soft-deleted users
-            
-        Returns:
-            Tuple of (users list, total count)
-        """
-        try:
-            # Base query
-            query = select(User)
-            count_query = select(func.count(User.id))
-            
-            # Apply filters
-            conditions = []
-            
-            if not include_deleted:
-                conditions.append(User.deleted_at.is_(None))
-            
-            if filters:
-                if 'status' in filters:
-                    conditions.append(User.status == filters['status'])
-                
-                if 'role' in filters:
-                    conditions.append(User.role == filters['role'])
-                
-                if 'is_verified' in filters:
-                    conditions.append(User.is_verified == filters['is_verified'])
-                
-                if 'is_active' in filters:
-                    conditions.append(User.is_active == filters['is_active'])
-                
-                # Add other filters as needed based on User model fields
-                
-                if 'created_after' in filters:
-                    conditions.append(User.created_at >= filters['created_after'])
-                
-                if 'created_before' in filters:
-                    conditions.append(User.created_at <= filters['created_before'])
-                
-                if 'search' in filters and filters['search']:
-                    search_term = f"%{filters['search']}%"
-                    conditions.append(
-                        or_(
-                            User.email.ilike(search_term),
-                            User.name.ilike(search_term)
-                        )
-                    )
-            
-            # Apply conditions
-            if conditions:
-                query = query.where(and_(*conditions))
-                count_query = count_query.where(and_(*conditions))
-            
-            # Get total count
-            count_result = await self.session.execute(count_query)
-            total = count_result.scalar()
-            
-            # Apply pagination and ordering
-            offset = (page - 1) * limit
-            query = query.order_by(User.created_at.desc()).offset(offset).limit(limit)
-            
-            # Execute query
-            result = await self.session.execute(query)
-            users = result.scalars().all()
-            
-            return list(users), total
-            
-        except Exception as e:
-            logger.error(f"Error listing users: {str(e)}")
-            return [], 0
-    
-    async def get_user_statistics(self) -> Dict[str, Any]:
-        """
-        Get user statistics for analytics.
-        
-        Returns:
-            Dictionary containing user statistics
-        """
-        try:
-            # Base counts
-            total_users_query = select(func.count(User.id)).where(User.deleted_at.is_(None))
-            active_users_query = select(func.count(User.id)).where(
-                and_(User.deleted_at.is_(None), User.is_active == True)
-            )
-            verified_users_query = select(func.count(User.id)).where(
-                and_(User.deleted_at.is_(None), User.is_verified == True)
-            )
-            
-            # Time-based counts
-            today = datetime.now(timezone.utc).date()
-            week_ago = today - timedelta(days=7)
-            month_ago = today - timedelta(days=30)
-            
-            new_today_query = select(func.count(User.id)).where(
-                and_(
-                    User.deleted_at.is_(None),
-                    func.date(User.created_at) == today
-                )
-            )
-            
-            new_week_query = select(func.count(User.id)).where(
-                and_(
-                    User.deleted_at.is_(None),
-                    func.date(User.created_at) >= week_ago
-                )
-            )
-            
-            new_month_query = select(func.count(User.id)).where(
-                and_(
-                    User.deleted_at.is_(None),
-                    func.date(User.created_at) >= month_ago
-                )
-            )
-            
-            # Execute count queries
-            total_users = (await self.session.execute(total_users_query)).scalar()
-            active_users = (await self.session.execute(active_users_query)).scalar()
-            verified_users = (await self.session.execute(verified_users_query)).scalar()
-            new_today = (await self.session.execute(new_today_query)).scalar()
-            new_week = (await self.session.execute(new_week_query)).scalar()
-            new_month = (await self.session.execute(new_month_query)).scalar()
-            
-            # Skip advanced statistics for now - can be added based on actual User model fields
-            users_by_country = {}
-            users_by_currency = {}
-            
-            # Level and experience statistics
-            level_query = select(
-                func.avg(User.level).label('avg_level'),
-                func.sum(User.experience_points).label('total_exp')
-            ).where(User.deleted_at.is_(None))
-            
-            level_result = await self.session.execute(level_query)
-            level_stats = level_result.first()
-            
-            return {
-                'total_users': total_users,
-                'active_users': active_users,
-                'verified_users': verified_users,
-                'new_users_today': new_today,
-                'new_users_this_week': new_week,
-                'new_users_this_month': new_month,
-                'users_by_country': users_by_country,
-                'users_by_currency': users_by_currency,
-                'average_level': float(level_stats.avg_level or 0),
-                'total_experience_points': int(level_stats.total_exp or 0)
-            }
-            
-        except Exception as e:
-            logger.error(f"Error getting user statistics: {str(e)}")
-            return {}
-
-
 class RefreshTokenRepository:
     """Repository for refresh token operations"""
     
@@ -629,6 +464,20 @@ class RefreshTokenRepository:
             logger.error(f"Error revoking user tokens: {str(e)}")
             return False
     
+def _typed_token_hash(token: str, token_type: str) -> str:
+    """Hash an emailed token together with its purpose.
+
+    Email-verification and password-reset tokens share one table with no type
+    column, and the lookup matched on the hash alone, so a 24-hour verification
+    token also reset the password (the reset path is meant to take only its own
+    1-hour token). Folding the type into the hash makes a token match only the
+    flow it was issued for, with no schema change.
+    """
+    if not token_type:
+        raise ValueError("token_type is required")
+    return security_utils.hash_token(f"{token_type}:{token}")
+
+
 class EmailVerificationRepository:
     """Repository for email verification tokens"""
     
@@ -656,8 +505,8 @@ class EmailVerificationRepository:
             Created email verification token
         """
         try:
-            token_hash = security_utils.hash_token(token)
-            
+            token_hash = _typed_token_hash(token, token_type)
+
             verification_token = EmailVerificationToken(
                 user_id=user_id,
                 token_hash=token_hash,
@@ -676,9 +525,9 @@ class EmailVerificationRepository:
             raise
     
     async def get_verification_token(
-        self, 
-        token: str, 
-        token_type: str = None
+        self,
+        token: str,
+        token_type: str,
     ) -> Optional[EmailVerificationToken]:
         """
         Get verification token by token string and type.
@@ -691,8 +540,8 @@ class EmailVerificationRepository:
             EmailVerificationToken or None if not found
         """
         try:
-            token_hash = security_utils.hash_token(token)
-            
+            token_hash = _typed_token_hash(token, token_type)
+
             query = select(EmailVerificationToken).where(
                 EmailVerificationToken.token_hash == token_hash
             )

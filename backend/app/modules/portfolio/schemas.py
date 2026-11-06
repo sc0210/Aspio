@@ -66,23 +66,6 @@ class PortfolioCreate(BasePortfolioSchema):
     pass
 
 
-class PortfolioUpdate(BaseModel):
-    """Schema for updating portfolio information"""
-
-    name: Optional[str] = Field(None, min_length=1, max_length=100)
-    description: Optional[str] = Field(None, max_length=1000)
-    currency: Optional[str] = Field(None, min_length=3, max_length=3)
-    is_default: Optional[bool] = None
-    auto_update: Optional[bool] = None
-
-    @field_validator("currency")
-    @classmethod
-    def currency_must_be_uppercase(cls, v):
-        if v:
-            return v.upper()
-        return v
-
-
 # Holding schemas
 class BaseHoldingSchema(BaseModel):
     """Base schema for portfolio holding data"""
@@ -646,16 +629,6 @@ class PerformanceMetrics(BaseModel):
     benchmark: Optional[str] = None  # e.g. "TAIEX/VT 62/38", or "SPY" as the fallback
 
 
-class PortfolioPerformance(BaseModel):
-    """Schema for portfolio performance over time"""
-
-    portfolio_id: UUID4
-    metrics: PerformanceMetrics
-    asset_allocation: List[AssetAllocation]
-    top_holdings: List[HoldingResponse]
-    recent_transactions: List[TransactionResponse]
-
-
 class HoldingFilters(BaseModel):
     """Schema for holding filtering"""
 
@@ -668,42 +641,10 @@ class HoldingFilters(BaseModel):
     max_value: Optional[Decimal] = None
 
 
-class TransactionFilters(BaseModel):
-    """Schema for transaction filtering"""
-
-    type: Optional[str] = None
-    symbol: Optional[str] = None
-    start_date: Optional[datetime] = None
-    end_date: Optional[datetime] = None
-    min_amount: Optional[Decimal] = None
-    max_amount: Optional[Decimal] = None
-
-
-# Pagination schemas
-class PaginatedPortfoliosResponse(BaseModel):
-    """Schema for paginated portfolio responses"""
-
-    items: List[PortfolioSummary]
-    total: int
-    page: int
-    size: int
-    pages: int
-
-
 class PaginatedHoldingsResponse(BaseModel):
     """Schema for paginated holdings responses"""
 
     items: List[HoldingResponse]
-    total: int
-    page: int
-    size: int
-    pages: int
-
-
-class PaginatedTransactionsResponse(BaseModel):
-    """Schema for paginated transaction responses"""
-
-    items: List[TransactionResponse]
     total: int
     page: int
     size: int

@@ -21,8 +21,6 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.utils.date_utils import DateRangeCalculator
 from .schemas import (
     PeriodEnum,
-    SpendingByCategoryResponse,
-    SpendingCategoryResponse,
     DashboardStatsResponse,
     RecentActivityResponse,
     MonthlyTrendResponse,
@@ -117,76 +115,6 @@ class DashboardService:
             "Savings": "#81ECEC",
             "Other": "#54A0FF",
         }
-
-    async def get_spending_by_category(
-        self,
-        user_id: str,
-        period: PeriodEnum = PeriodEnum.THIRTY_DAYS,
-        force_refresh: bool = False,
-    ) -> SpendingByCategoryResponse:
-        """Get spending breakdown by category with caching"""
-
-        logger.info(
-            f"Fetching spending by category for user {user_id}, period {period.value}"
-        )
-
-        # Calculate date range
-        date_from, date_to = self._get_date_range(period)
-
-        try:
-            # Get category breakdown from repository
-            breakdown = await self.transaction_repo.get_category_breakdown(
-                user_id=user_id,
-                date_from=date_from,
-                date_to=date_to,
-                transaction_type=TransactionType.EXPENSE,
-            )
-
-            # Calculate total amount
-            total_amount = sum(item["amount"] for item in breakdown)
-
-            # Transform to response format with colors
-            categories = []
-            for item in breakdown:
-                category_name = item["category_name"]
-                color = self.category_colors.get(category_name, "#6B7280")
-
-                categories.append(
-                    SpendingCategoryResponse(
-                        name=category_name,
-                        amount=item["amount"],
-                        percentage=round(item["percentage"], 2),
-                        color=color,
-                        transaction_count=item["transaction_count"],
-                        currency=item["currency"],
-                    )
-                )
-
-            response = SpendingByCategoryResponse(
-                categories=categories,
-                total_amount=total_amount,
-                period=period.value,
-                currency="USD",
-                last_updated=datetime.now(timezone.utc),
-            )
-
-            logger.info(
-                f"Successfully fetched {len(categories)} spending categories for user {user_id}"
-            )
-            return response
-
-        except Exception as e:
-            logger.error(
-                f"Error fetching spending by category for user {user_id}: {str(e)}"
-            )
-            # Return empty response on error
-            return SpendingByCategoryResponse(
-                categories=[],
-                total_amount=Decimal("0"),
-                period=period.value,
-                currency="USD",
-                last_updated=datetime.now(timezone.utc),
-            )
 
     async def _calculate_all_wallets(
         self, user_id: str, holdings: Optional[list] = None

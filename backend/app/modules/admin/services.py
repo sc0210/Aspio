@@ -882,7 +882,15 @@ class UserManagementService:
 
         Returns the email of the deleted user.
         """
-        uid = str(user_id)
+        # The raw SQL below binds the id by hand, so it has to match how the UUID
+        # columns store it on this dialect: Postgres compares the hyphenated
+        # form, SQLite stores 32-char hex. A bare str() matched nothing on SQLite
+        # and left every dependent row behind.
+        user_id = user_id if isinstance(user_id, UUID) else UUID(str(user_id))
+        dialect = (await self.session.connection()).dialect
+        id_type = User.__table__.c.id.type.dialect_impl(dialect)
+        to_db = id_type.bind_processor(dialect)
+        uid = to_db(user_id) if to_db else str(user_id)
 
         user = await self.session.get(User, user_id)
         if not user:
@@ -1020,6 +1028,11 @@ class UserManagementService:
         await self.session.commit()
         # Expunge identity map so subsequent session.get() hits the DB
         self.session.expunge_all()
+
+        # The optional-auth cache would otherwise keep serving the deleted
+        # account's fields for up to its 30s TTL.
+        from ..users.dependencies import invalidate_user_auth_cache
+        invalidate_user_auth_cache(user_id)
 
         return user_email
 

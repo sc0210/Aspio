@@ -191,12 +191,6 @@ class TestCategories:
         assert cats
         assert {c["type"] for c in cats} == {"expense"}
 
-    async def test_popular_ranks_by_use(self, authenticated_client, ledger):
-        cats = authenticated_client.get(f"{BASE}/categories/popular", params={"type": "expense"}).json()
-        # Transfer has two rows; the Dining categories one each.
-        assert cats[0]["name"] == "Transfer"
-        assert {c["name"] for c in cats} == {"Transfer", "Dining"}
-
     async def test_get_one_and_missing(self, authenticated_client, ledger):
         cat_id = str(ledger["dining"].id)
         assert authenticated_client.get(f"{BASE}/categories/{cat_id}").json()["name"] == "Dining"

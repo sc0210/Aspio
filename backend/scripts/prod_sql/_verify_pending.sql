@@ -118,7 +118,16 @@ WITH checks(sort, object, source_file, present) AS (
         to_regclass('public.security_quotes') IS NOT NULL),
     (19, 'RLS on security_quotes', '2026_11_03_security_quotes.sql',
         COALESCE((SELECT relrowsecurity FROM pg_class
-                   WHERE oid = to_regclass('public.security_quotes')), false))
+                   WHERE oid = to_regclass('public.security_quotes')), false)),
+
+    -- 2026_11_06_goal_category_car_purchase.sql
+    (20, 'enum value goalcategory.car_purchase', '2026_11_06_goal_category_car_purchase.sql',
+        EXISTS (SELECT 1 FROM pg_enum e JOIN pg_type t ON t.oid = e.enumtypid
+                 WHERE t.typname = 'goalcategory' AND e.enumlabel = 'car_purchase')),
+
+    -- 2026_11_06_drop_system_alerts.sql
+    (21, 'table system_alerts dropped', '2026_11_06_drop_system_alerts.sql',
+        to_regclass('public.system_alerts') IS NULL)
 )
 SELECT
     CASE WHEN present THEN 'OK     ' ELSE 'MISSING' END AS status,

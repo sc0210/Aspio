@@ -922,6 +922,21 @@ class TestGetDaysInMonth:
 
 # ─── RecurringTransactionService CRUD ────────────────────────────────────────
 
+def _locked(next_occurrence, count=0, *, active=True, paused=False, end_date=None, max_occurrences=None):
+    """What RecurringTransactionRepository.lock_rule returns for a rule."""
+    return MagicMock(next_occurrence=next_occurrence, occurrence_count=count, is_active=active,
+                     is_paused=paused, frequency=RecurringFrequency.MONTHLY, interval=1,
+                     end_date=end_date, max_occurrences=max_occurrences)
+
+
+def _due_rule():
+    return MagicMock(
+        id=uuid4(), user_id=uuid4(), next_occurrence=business_today(), occurrence_count=0,
+        type=TransactionType.EXPENSE, amount=Decimal("100"), currency="TWD",
+        description="Rent", category_id=uuid4(), payment_method=None, tags=None, notes=None,
+    )
+
+
 class TestRecurringTransactionService:
 
     def make_service(self):
@@ -997,7 +1012,13 @@ class TestRecurringTransactionService:
 
         svc = self.make_service()
         svc.recurring_repo.get_due_transactions = AsyncMock(return_value=[mock_recurring])
-        svc.recurring_repo.update_next_occurrence = AsyncMock()
+        svc.recurring_repo.update_next_occurrence = AsyncMock(return_value=True)
+        svc.recurring_repo.has_posted = AsyncMock(return_value=False)
+        # The locked row advances like the database would after the post.
+        svc.recurring_repo.lock_rule = AsyncMock(side_effect=[
+            _locked(business_today()), _locked(business_today() + timedelta(days=31), 1)])
+        svc.recurring_repo.deactivate = AsyncMock()
+        svc.recurring_repo.db = MagicMock(rollback=AsyncMock(), commit=AsyncMock())
         svc.transaction_service.create_transaction = AsyncMock(return_value={"transaction": MagicMock()})
 
         result = await svc.process_due_transactions(business_today())
@@ -1005,6 +1026,72 @@ class TestRecurringTransactionService:
         assert result["processed"] == 1
         assert result["created"] == 1
         assert result["failed"] == 0
+
+    def _svc(self, *locked_rows, advanced=True):
+        svc = self.make_service()
+        svc.recurring_repo.get_due_transactions = AsyncMock(return_value=[_due_rule()])
+        svc.recurring_repo.lock_rule = AsyncMock(side_effect=list(locked_rows))
+        svc.recurring_repo.has_posted = AsyncMock(return_value=False)
+        svc.recurring_repo.update_next_occurrence = AsyncMock(return_value=advanced)
+        svc.recurring_repo.deactivate = AsyncMock()
+        svc.recurring_repo.db = MagicMock(rollback=AsyncMock(), commit=AsyncMock())
+        svc.transaction_service.create_transaction = AsyncMock()
+        return svc
+
+    @pytest.mark.asyncio
+    async def test_a_rule_locked_by_another_run_is_left_alone(self):
+        svc = self._svc(None)
+        result = await svc.process_due_transactions(business_today())
+        assert (result["created"], result["failed"]) == (0, 0)
+        svc.transaction_service.create_transaction.assert_not_called()
+        svc.recurring_repo.update_next_occurrence.assert_not_called()
+        svc.recurring_repo.deactivate.assert_not_called()
+        svc.recurring_repo.db.commit.assert_awaited_once()  # releases any row lock
+
+    @pytest.mark.asyncio
+    async def test_the_locked_row_wins_over_the_snapshot(self):
+        """Another run already posted and advanced it: nothing posted or rewound."""
+        svc = self._svc(_locked(business_today() + timedelta(days=30), 1))
+        await svc.process_due_transactions(business_today())
+        svc.transaction_service.create_transaction.assert_not_called()
+        svc.recurring_repo.update_next_occurrence.assert_not_called()
+
+    @pytest.mark.asyncio
+    async def test_a_rule_paused_mid_run_stops(self):
+        svc = self._svc(_locked(business_today(), paused=True))
+        await svc.process_due_transactions(business_today())
+        svc.transaction_service.create_transaction.assert_not_called()
+        svc.recurring_repo.db.commit.assert_awaited_once()
+
+    @pytest.mark.asyncio
+    async def test_the_advance_only_counts_if_the_rule_did_not_move(self):
+        """Posting released the lock; if another run advanced the rule meanwhile,
+        the conditional advance matches nothing and this run stops."""
+        svc = self._svc(_locked(business_today()), _locked(business_today()), advanced=False)
+        await svc.process_due_transactions(business_today())
+        assert svc.recurring_repo.update_next_occurrence.await_count == 1
+        _, _, kwargs = svc.recurring_repo.update_next_occurrence.mock_calls[0]
+        assert kwargs["expected_current"] == business_today()
+        svc.recurring_repo.db.commit.assert_awaited_once()
+
+    @pytest.mark.asyncio
+    async def test_max_occurrences_from_the_locked_row_retires_the_rule(self):
+        svc = self._svc(_locked(business_today(), 12, max_occurrences=12))
+        await svc.process_due_transactions(business_today())
+        svc.transaction_service.create_transaction.assert_not_called()
+        svc.recurring_repo.deactivate.assert_awaited_once()
+        svc.recurring_repo.db.commit.assert_not_awaited()  # deactivate commits itself
+        svc.recurring_repo.db.rollback.assert_not_awaited()
+
+    @pytest.mark.asyncio
+    async def test_a_failed_retire_still_reports_what_was_posted(self):
+        svc = self._svc(_locked(business_today(), 0, max_occurrences=1),
+                        _locked(business_today() + timedelta(days=30), 1, max_occurrences=1))
+        svc.recurring_repo.deactivate = AsyncMock(side_effect=RuntimeError("db hiccup"))
+        svc.recurring_repo.db = MagicMock(rollback=AsyncMock())
+        result = await svc.process_due_transactions(business_today())
+        assert (result["created"], result["failed"]) == (1, 0)
+        svc.recurring_repo.db.rollback.assert_awaited_once()
 
 
 # ─── update_transaction: loan balance re-sync ─────────────────────────────────

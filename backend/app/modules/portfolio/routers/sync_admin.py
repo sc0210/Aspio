@@ -238,99 +238,6 @@ async def export_portfolio(
         )
 
 
-# Regional Investment Endpoints
-@router.get("/status")
-async def portfolio_status():
-    """Get portfolio service status"""
-    return ApiResponse.success_response(
-        data={
-            "service": "portfolio",
-            "status": "available",
-            "features": [
-                "portfolio_management",
-                "holdings_tracking",
-                "market_data",
-                "performance_analytics",
-                "regional_investments",
-                "export_functionality",
-            ],
-        },
-        message="Portfolio service is fully operational",
-    )
-
-
-@router.get("/api-health")
-async def get_api_health_status():
-    """
-    Get health status of external market data APIs
-
-    Returns operational status for:
-    - FinLab API (Taiwan stock market data)
-    - TradingView API (US/Global stock market data)
-    """
-    try:
-        health_checker = get_api_health_checker()
-        health_status = await health_checker.check_all_apis()
-
-        return ApiResponse.success_response(
-            data=health_status,
-            message=f"API health check completed - {health_status['overall_status']}",
-        )
-
-    except Exception as e:
-        logger.error(f"Failed to check API health: {str(e)}")
-        return ApiResponse.success_response(
-            data={
-                "overall_status": "unknown",
-                "apis": {},
-                "summary": {
-                    "total_apis": 0,
-                    "operational": 0,
-                    "degraded": 0,
-                    "down": 0,
-                },
-                "error": str(e),
-            },
-            message="Failed to check API health",
-        )
-
-
-@router.get("/api-cache-status")
-async def get_api_cache_status(current_user: CurrentUser):
-    """
-    Get the current status of the FinLab market data cache.
-
-    This endpoint helps monitor API usage optimization:
-    - Shows if market-level cache is active
-    - Reports cache age and available symbols
-    - Provides recommendations for API usage
-
-    Use this to verify the cache is working before triggering sync operations.
-    """
-    try:
-        from app.modules.portfolio.market_data_service import (
-            get_finlab_cache_status,
-            get_api_optimization_stats,
-        )
-
-        cache_status = get_finlab_cache_status()
-        optimization_stats = get_api_optimization_stats()
-
-        return ApiResponse.success_response(
-            data={
-                "cache_status": cache_status,
-                "optimization": optimization_stats,
-            },
-            message=cache_status.get("message", "Cache status retrieved"),
-        )
-
-    except Exception as e:
-        logger.error(f"Failed to get cache status: {str(e)}")
-        return ApiResponse.error_response(
-            message=f"Failed to get cache status: {str(e)}"
-        )
-
-
 @router.post("/clear-market-cache")
 async def clear_market_data_cache(
     # Process-wide cache shared by every user: an operator action, not a user one.
@@ -366,5 +273,3 @@ async def clear_market_data_cache(
     except Exception as e:
         logger.error(f"Failed to clear cache: {str(e)}")
         return ApiResponse.error_response(message=f"Failed to clear cache: {str(e)}")
-
-

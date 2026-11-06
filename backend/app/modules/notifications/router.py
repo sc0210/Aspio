@@ -7,11 +7,10 @@ preferences, and delivery channels.
 
 from typing import List, Optional
 from uuid import UUID
-from fastapi import APIRouter, Depends, HTTPException, Query, status
+from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from .schemas import (
-    NotificationCreateRequest,
     NotificationUpdateRequest,
     NotificationResponse,
     NotificationListResponse,
@@ -21,30 +20,18 @@ from .schemas import (
     BulkNotificationActionRequest,
     NotificationPreferencesUpdateRequest,
     NotificationPreferencesResponse,
-    NotificationTemplateCreateRequest,
-    NotificationTemplateResponse,
 )
 from .models import NotificationStatus
 from sqlalchemy import select
 from ...core.database import get_db
 from ...common.schemas import ApiResponse, PaginationMeta, PaginationParams
 from ..users.dependencies import get_optional_current_user
-from ..admin.models import AdminUser
 from .services import get_notifications_service
 from typing import Optional
 
 router = APIRouter()
 
 # ===== Health Check Endpoints =====
-
-
-@router.get("/status", response_model=ApiResponse[dict])
-async def notifications_status():
-    """Get notifications service status"""
-    return ApiResponse.success_response(
-        data={"service": "notifications", "status": "operational"},
-        message="Notifications service is ready",
-    )
 
 
 @router.get("/health", response_model=ApiResponse[dict])
@@ -59,7 +46,6 @@ async def notifications_health_check():
                 "email_notifications": True,
                 "push_notifications": True,
                 "sms_notifications": False,  # Not implemented yet
-                "notification_templates": True,
                 "user_preferences": True,
                 "bulk_operations": True,
             },
@@ -137,8 +123,8 @@ async def get_notification_stats(
     current_user: Optional[object] = Depends(get_optional_current_user),
 ):
     """Get notification statistics and summary"""
-    from sqlalchemy import func, case
-    from .models import Notification, NotificationStatus, NotificationType, NotificationPriority
+    from sqlalchemy import func
+    from .models import Notification, NotificationStatus
     from datetime import datetime, timezone
 
     # Without this an anonymous caller got every user's counts and recent notifications.
@@ -274,61 +260,9 @@ async def update_notification_preferences(
     return ApiResponse.success_response(data=pref, message="Preferences updated")
 
 
-# ===== Template Management (Admin) =====
-
-
-@router.get(
-    "/templates", response_model=ApiResponse[List[NotificationTemplateResponse]]
-)
-async def get_notification_templates(
-    pagination: PaginationParams = Depends(),
-    db: AsyncSession = Depends(get_db),
-    current_user: Optional[object] = Depends(get_optional_current_user),
-):
-    """Get notification templates (admin endpoint)"""
-    # Verify admin role by querying AdminUser table
-    if not current_user:
-        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Admin privileges required")
-    admin_record = (await db.execute(
-        select(AdminUser).where(AdminUser.user_id == current_user.id, AdminUser.is_active == True)
-    )).scalar_one_or_none()
-    if not admin_record:
-        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Admin privileges required")
-
-    svc = get_notifications_service(db)
-    templates = await svc.list_templates(page=pagination.page, limit=pagination.limit)
-    return ApiResponse.success_response(data=templates, message="Templates retrieved")
-
-
-@router.post(
-    "/templates",
-    response_model=ApiResponse[NotificationTemplateResponse],
-    status_code=status.HTTP_201_CREATED,
-)
-async def create_notification_template(
-    template_data: NotificationTemplateCreateRequest,
-    db: AsyncSession = Depends(get_db),
-    current_user: Optional[object] = Depends(get_optional_current_user),
-):
-    """Create notification template (admin endpoint)"""
-    if not current_user or getattr(current_user, "role", None) != "admin":
-        raise HTTPException(
-            status_code=status.HTTP_403_FORBIDDEN, detail="Admin privileges required"
-        )
-
-    svc = get_notifications_service(db)
-    data = (
-        template_data.model_dump()
-        if hasattr(template_data, "model_dump")
-        else template_data.dict()
-    )
-    tpl = await svc.create_template(data)
-    return ApiResponse.success_response(data=tpl, message="Template created")
-
-
 # ===== Single notification =====
 # Declared last: "/{notification_id}" would otherwise capture /preferences and
-# /templates and answer them with a 422 for not being a UUID.
+# answer it with a 422 for not being a UUID.
 
 
 @router.get("/{notification_id}", response_model=ApiResponse[NotificationResponse])

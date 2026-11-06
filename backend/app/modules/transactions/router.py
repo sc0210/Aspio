@@ -37,14 +37,7 @@ from app.modules.admin.models import AdminPermission, AdminUser
 # any admin row: analyst, support and moderator are read-only or limited roles.
 require_manage_settings = RequirePermission(AdminPermission.MANAGE_SETTINGS)
 from .dependencies import (
-    get_transaction_service,
-    get_categorization_service,
-    get_recurring_service,
-    get_category_repository,
-    get_attachment_service,
-    get_import_export_service,
     TransactionServiceDepends,
-    CategorizationServiceDepends,
     RecurringServiceDepends,
     CategoryRepoDepends,
     AttachmentServiceDepends,
@@ -67,8 +60,6 @@ from .schemas import (
     RecurringTransactionCreate,
     RecurringTransactionUpdate,
     RecurringTransactionResponse,
-    AutoCategorizationRequest,
-    AutoCategorizationResponse,
     QRPaymentTransaction,
     TransactionAttachmentResponse,
     DayOrderRequest,
@@ -78,7 +69,6 @@ from .models import TransactionType, TransactionWalletType
 from app.common.schemas import ApiResponse
 import re as _re
 from app.utils.datetime_helpers import business_today
-from app.utils.datetime_helpers import utc_now
 
 router = APIRouter(tags=["transactions"])
 
@@ -767,7 +757,6 @@ async def get_monthly_summary(
 ):
     """Monthly spending split into housing / eat / investment / debt / transfer / others."""
     try:
-        from datetime import datetime
         from sqlalchemy import and_, extract
         from sqlalchemy.future import select
         if year is None:
@@ -960,27 +949,6 @@ async def create_qr_payment_transaction(
         )
 
 
-# Auto-categorization endpoints
-@router.post("/auto-categorize", response_model=AutoCategorizationResponse)
-async def auto_categorize_transaction(
-    request: AutoCategorizationRequest,
-    categorization_service: CategorizationServiceDepends,
-    current_user: User = Depends(get_current_user),
-):
-    """Get auto-categorization suggestions for a transaction"""
-    try:
-        result = await categorization_service.auto_categorize(
-            description=request.description,
-            amount=request.amount,
-            merchant_name=request.merchant_name,
-            payment_method=request.payment_method,
-            user_id=current_user.id,
-        )
-        return result
-    except Exception as e:
-        raise HTTPException(status_code=500, detail="Failed to categorize transaction")
-
-
 # Transaction Categories endpoints
 @router.post(
     "/categories",
@@ -1029,25 +997,6 @@ async def get_categories(
             return categories
     except Exception as e:
         raise HTTPException(status_code=500, detail="Failed to retrieve categories")
-
-
-@router.get("/categories/popular", response_model=List[TransactionCategoryResponse])
-async def get_popular_categories(
-    category_repo: CategoryRepoDepends,
-    current_user: User = Depends(get_current_user),
-    type: Optional[str] = Query(None, description="Category type filter"),
-    limit: int = Query(10, ge=1, le=50, description="Number of categories to return"),
-):
-    """Get popular categories based on user's transaction history"""
-    try:
-        categories = await category_repo.get_popular_categories(
-            user_id=current_user.id, category_type=type, limit=limit
-        )
-        return categories
-    except Exception as e:
-        raise HTTPException(
-            status_code=500, detail="Failed to retrieve popular categories"
-        )
 
 
 @router.get("/categories/{category_id}", response_model=TransactionCategoryResponse)

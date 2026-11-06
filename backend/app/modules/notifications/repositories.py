@@ -15,7 +15,6 @@ from .models import (
     Notification,
     NotificationPreference,
     NotificationStatus,
-    NotificationTemplate,
 )
 
 
@@ -137,8 +136,3 @@ class NotificationPreferenceRepository(BaseRepository[NotificationPreference]):
         )
         res = await self.db.execute(stmt)
         return res.scalar_one_or_none()
-
-
-class NotificationTemplateRepository(BaseRepository[NotificationTemplate]):
-    def __init__(self, db: AsyncSession):
-        super().__init__(db, NotificationTemplate)

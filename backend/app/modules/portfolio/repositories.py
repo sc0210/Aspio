@@ -22,7 +22,6 @@ from .models import (
     Portfolio,
     PortfolioHolding,
     PortfolioTransaction,
-    MarketData,
     CurrencyRate,
 )
 
@@ -235,90 +234,6 @@ class PortfolioRepository:
         # Return updated portfolio
         return await self.get_by_id(portfolio_id, user_id)
 
-    async def delete(self, portfolio_id: UUID, user_id: UUID) -> bool:
-        """
-        Soft delete portfolio (mark as inactive).
-
-        Args:
-            portfolio_id: Portfolio ID
-            user_id: Owner user ID
-
-        Returns:
-            bool: True if deleted successfully
-        """
-        # Check if this is the default portfolio
-        portfolio = await self.get_by_id(portfolio_id, user_id)
-        if not portfolio:
-            return False
-
-        # If deleting default portfolio, set another as default
-        if portfolio.is_default:
-            other_portfolios = await self.get_user_portfolios(
-                user_id=user_id, limit=2, is_active=True
-            )
-            other_active = [p for p in other_portfolios[0] if p.id != portfolio_id]
-            if other_active:
-                await self._set_default_portfolio(other_active[0].id, user_id)
-
-        # Soft delete
-        stmt = (
-            update(Portfolio)
-            .where(and_(Portfolio.id == portfolio_id, Portfolio.user_id == user_id))
-            .values(is_active=False, updated_at=datetime.now(timezone.utc))
-        )
-
-        await self.session.execute(stmt)
-        logger.info(f"Soft deleted portfolio {portfolio_id} for user {user_id}")
-        return True
-
-    async def update_portfolio_values(self, portfolio_id: UUID) -> Portfolio:
-        """
-        Recalculate and update portfolio total values.
-
-        Args:
-            portfolio_id: Portfolio ID
-
-        Returns:
-            Portfolio: Updated portfolio
-        """
-        # Get portfolio with holdings
-        stmt = (
-            select(Portfolio)
-            .options(selectinload(Portfolio.holdings))
-            .where(Portfolio.id == portfolio_id)
-        )
-
-        result = await self.session.execute(stmt)
-        portfolio = result.scalar_one()
-
-        if not portfolio:
-            raise NotFoundException("Portfolio", str(portfolio_id))
-
-        # Calculate totals
-        total_cost = Decimal("0.00")
-        total_value = Decimal("0.00")
-
-        for holding in portfolio.holdings:
-            if holding.is_active:
-                total_cost += holding.total_cost or Decimal("0.00")
-                total_value += holding.total_value or Decimal("0.00")
-
-        total_gain_loss = total_value - total_cost
-        total_gain_loss_percentage = Decimal("0.00")
-
-        if total_cost > 0:
-            total_gain_loss_percentage = (total_gain_loss / total_cost) * Decimal("100")
-
-        # Update portfolio
-        portfolio.total_cost = total_cost
-        portfolio.total_value = total_value
-        portfolio.total_gain_loss = total_gain_loss
-        portfolio.total_gain_loss_percentage = total_gain_loss_percentage
-        portfolio.updated_at = datetime.now(timezone.utc)
-
-        await self.session.flush()
-        return portfolio
-
     async def _unset_default_portfolios(self, user_id: UUID) -> None:
         """Unset all default portfolios for a user"""
         stmt = (
@@ -328,19 +243,6 @@ class PortfolioRepository:
         )
 
         await self.session.execute(stmt)
-
-    async def _set_default_portfolio(self, portfolio_id: UUID, user_id: UUID) -> None:
-        """Set a specific portfolio as default"""
-        await self._unset_default_portfolios(user_id)
-
-        stmt = (
-            update(Portfolio)
-            .where(and_(Portfolio.id == portfolio_id, Portfolio.user_id == user_id))
-            .values(is_default=True, updated_at=datetime.now(timezone.utc))
-        )
-
-        await self.session.execute(stmt)
-
 
 class HoldingRepository:
     """Repository for portfolio holding operations"""
@@ -905,20 +807,6 @@ class TransactionRepository:
         total, count = result.one()
         return Decimal(str(total)), int(count)
 
-    async def get_by_id(
-        self, transaction_id: UUID, user_id: UUID
-    ) -> Optional[PortfolioTransaction]:
-        """Get transaction by ID for a specific user"""
-        stmt = select(PortfolioTransaction).where(
-            and_(
-                PortfolioTransaction.id == transaction_id,
-                PortfolioTransaction.user_id == user_id,
-            )
-        )
-
-        result = await self.session.execute(stmt)
-        return result.scalar_one_or_none()
-
     async def get_trades(self, portfolio_id: UUID, user_id: UUID) -> List[PortfolioTransaction]:
         """All buys and sells of a portfolio, oldest first, unpaginated."""
         stmt = (
@@ -988,89 +876,11 @@ class TransactionRepository:
 
         return transactions, total_count
 
-    async def update(
-        self, transaction_id: UUID, user_id: UUID, update_data: Dict[str, Any]
-    ) -> Optional[PortfolioTransaction]:
-        """Update transaction"""
-        stmt = (
-            update(PortfolioTransaction)
-            .where(
-                and_(
-                    PortfolioTransaction.id == transaction_id,
-                    PortfolioTransaction.user_id == user_id,
-                )
-            )
-            .values(**update_data, updated_at=datetime.now(timezone.utc))
-        )
-
-        await self.session.execute(stmt)
-        return await self.get_by_id(transaction_id, user_id)
-
-    async def delete(self, transaction_id: UUID, user_id: UUID) -> bool:
-        """Delete transaction (hard delete as it affects calculations)"""
-        stmt = select(PortfolioTransaction).where(
-            and_(
-                PortfolioTransaction.id == transaction_id,
-                PortfolioTransaction.user_id == user_id,
-            )
-        )
-
-        result = await self.session.execute(stmt)
-        transaction = result.scalar_one_or_none()
-
-        if transaction:
-            await self.session.delete(transaction)
-            logger.info(f"Deleted transaction {transaction_id}")
-            return True
-
-        return False
-
-
 class MarketDataRepository:
     """Repository for market data operations"""
 
     def __init__(self, session: AsyncSession):
         self.session = session
-
-    async def get_latest_price(
-        self, symbol: str, exchange: str
-    ) -> Optional[MarketData]:
-        """Get latest market data for a symbol"""
-        stmt = (
-            select(MarketData)
-            .where(
-                and_(
-                    MarketData.symbol == symbol.upper(),
-                    MarketData.exchange == exchange.upper(),
-                )
-            )
-            .order_by(desc(MarketData.data_timestamp))
-            .limit(1)
-        )
-
-        result = await self.session.execute(stmt)
-        return result.scalar_one_or_none()
-
-    async def get_historical_prices(
-        self, symbol: str, exchange: str, start_date: datetime, end_date: datetime
-    ) -> List[MarketData]:
-        """Get historical price data for a symbol"""
-        stmt = (
-            select(MarketData)
-            .where(
-                and_(
-                    MarketData.symbol == symbol.upper(),
-                    MarketData.exchange == exchange.upper(),
-                    MarketData.data_timestamp >= start_date,
-                    MarketData.data_timestamp <= end_date,
-                )
-            )
-            .order_by(MarketData.data_timestamp)
-        )
-
-        result = await self.session.execute(stmt)
-        return result.scalars().all()
-
 
 class CurrencyRepository:
     """Repository for currency rate operations"""
@@ -1141,5 +951,3 @@ def get_holding_repository(session: AsyncSession) -> HoldingRepository:
 def get_transaction_repository(session: AsyncSession) -> TransactionRepository:
     """Get Transaction repository instance"""
     return TransactionRepository(session)
-
-

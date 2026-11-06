@@ -6,13 +6,12 @@ behavior required by router endpoints. Keeps queries efficient.
 """
 
 import uuid
-from typing import Optional, Tuple, List
+from typing import Optional
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from .repositories import (
     NotificationRepository,
     NotificationPreferenceRepository,
-    NotificationTemplateRepository,
 )
 from .schemas import NotificationFilterParams
 from .models import (
@@ -29,7 +28,6 @@ class NotificationService:
         self.db = db
         self.repo = NotificationRepository(db)
         self.pref_repo = NotificationPreferenceRepository(db)
-        self.template_repo = NotificationTemplateRepository(db)
 
     async def list_notifications_for_user(
         self,
@@ -70,14 +68,6 @@ class NotificationService:
 
         await self.db.flush()
         return pref
-
-    async def list_templates(self, page: int = 1, limit: int = 20):
-        skip = (page - 1) * limit
-        return await self.template_repo.get_all(skip=skip, limit=limit)
-
-    async def create_template(self, data: dict):
-        return await self.template_repo.create(**data)
-
 
 def get_notifications_service(db: AsyncSession) -> NotificationService:
     return NotificationService(db)

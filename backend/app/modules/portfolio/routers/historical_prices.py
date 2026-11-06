@@ -275,38 +275,6 @@ async def get_sparkline_data(
         )
 
 
-@router.get("/historical-prices/{symbol}/stats")
-async def get_historical_price_stats(
-    symbol: str = Path(..., description="Stock symbol"),
-    session: AsyncSession = Depends(get_db),
-    current_user: Optional[CurrentUser] = Depends(get_optional_current_user),
-):
-    """
-    Get statistics about historical price data coverage for a symbol.
-
-    Returns information about date range, number of data points, and coverage percentage.
-
-    Note: This endpoint works without authentication for demo/debug purposes.
-    """
-    # Allow anonymous access for debug purposes
-    try:
-        from ..historical_price_repository import HistoricalPriceRepository
-
-        repo = HistoricalPriceRepository(session)
-        stats = await repo.get_data_coverage_stats(symbol.upper())
-
-        return ApiResponse.success_response(
-            data=stats, message=f"Coverage stats for {symbol}"
-        )
-
-    except Exception as e:
-        logger.error(f"Failed to get stats for {symbol}: {str(e)}", exc_info=True)
-        raise HTTPException(
-            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail="An internal error occurred",
-        )
-
-
 # ========================================
 # BENCHMARK COMPARISON ENDPOINT
 # ========================================

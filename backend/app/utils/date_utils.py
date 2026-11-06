@@ -7,23 +7,7 @@ dashboard stats and transaction filters use the same date logic.
 
 from datetime import date, timedelta
 from typing import Tuple
-from enum import Enum
 from app.utils.datetime_helpers import business_today
-
-
-class DateRangePeriod(str, Enum):
-    """Standardized date range periods"""
-    TODAY = "today"
-    YESTERDAY = "yesterday"
-    THIS_WEEK = "this_week"
-    THIS_MONTH = "this_month"
-    LAST_7_DAYS = "7d"
-    LAST_30_DAYS = "30d"
-    LAST_90_DAYS = "90d"
-    LAST_6_MONTHS = "6m"
-    LAST_YEAR = "1y"
-    THIS_YEAR = "this_year"
-    CUSTOM = "custom"
 
 
 class DateRangeCalculator:
@@ -70,21 +54,6 @@ class DateRangeCalculator:
         return start_date, today
 
     @staticmethod
-    def get_current_week() -> Tuple[date, date]:
-        """
-        Get the start and end date of the current week (Monday-Sunday).
-
-        Returns:
-            Tuple of (start_date, end_date) for current week
-        """
-        today = business_today()
-        # Monday is 0, Sunday is 6
-        days_since_monday = today.weekday()
-        start_date = today - timedelta(days=days_since_monday)
-        end_date = start_date + timedelta(days=6)
-        return start_date, end_date
-
-    @staticmethod
     def get_current_year() -> Tuple[date, date]:
         """
         Get the year-to-date range: Jan 1 of the current year through today.
@@ -95,18 +64,6 @@ class DateRangeCalculator:
         today = business_today()
         start_date = date(today.year, 1, 1)
         return start_date, today
-
-    @staticmethod
-    def get_today() -> Tuple[date, date]:
-        """Get today's date as both start and end"""
-        today = business_today()
-        return today, today
-
-    @staticmethod
-    def get_yesterday() -> Tuple[date, date]:
-        """Get yesterday's date as both start and end"""
-        yesterday = business_today() - timedelta(days=1)
-        return yesterday, yesterday
 
     @staticmethod
     def get_last_6_months() -> Tuple[date, date]:
@@ -158,43 +115,3 @@ class DateRangeCalculator:
             return DateRangeCalculator.get_current_year()
         else:
             return DateRangeCalculator.get_last_n_days(30)
-
-    @staticmethod
-    def get_date_range(period: DateRangePeriod) -> Tuple[date, date]:
-        """
-        Get date range for a standardized period.
-
-        Args:
-            period: DateRangePeriod enum value
-
-        Returns:
-            Tuple of (start_date, end_date)
-
-        Example:
-            get_date_range(DateRangePeriod.THIS_MONTH) returns current month range
-            get_date_range(DateRangePeriod.LAST_30_DAYS) returns last 30 days
-        """
-        if period == DateRangePeriod.TODAY:
-            return DateRangeCalculator.get_today()
-        elif period == DateRangePeriod.YESTERDAY:
-            return DateRangeCalculator.get_yesterday()
-        elif period == DateRangePeriod.THIS_WEEK:
-            return DateRangeCalculator.get_current_week()
-        elif period == DateRangePeriod.THIS_MONTH:
-            return DateRangeCalculator.get_current_month()
-        elif period == DateRangePeriod.LAST_7_DAYS:
-            return DateRangeCalculator.get_last_n_days(7)
-        elif period == DateRangePeriod.LAST_30_DAYS:
-            return DateRangeCalculator.get_last_n_days(30)
-        elif period == DateRangePeriod.LAST_90_DAYS:
-            return DateRangeCalculator.get_last_n_days(90)
-        elif period == DateRangePeriod.LAST_6_MONTHS:
-            return DateRangeCalculator.get_last_6_months()
-        elif period == DateRangePeriod.LAST_YEAR:
-            return DateRangeCalculator.get_last_n_days(365)
-        elif period == DateRangePeriod.THIS_YEAR:
-            return DateRangeCalculator.get_current_year()
-        else:
-            # Default to current month
-            return DateRangeCalculator.get_current_month()
-

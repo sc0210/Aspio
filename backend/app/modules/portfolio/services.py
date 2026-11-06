@@ -7,12 +7,12 @@ including transaction processing, performance calculations, and analytics.
 
 import asyncio
 import logging
-from datetime import date, datetime, timedelta, timezone
+from datetime import date, datetime, timedelta
 from decimal import Decimal
-from typing import Any, Dict, List, Optional, Tuple
+from typing import List, Optional, Tuple
 from uuid import UUID
 
-from sqlalchemy import and_, select
+from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from ...core.config import get_settings
@@ -35,10 +35,8 @@ from .schemas import (
     PortfolioCreate,
     PortfolioResponse,
     HoldingResponse,
-    TransactionResponse,
     PerformanceMetrics,
 )
-from .market_data_service import get_market_data_service
 from .manual_pricing import is_manually_priced
 from .return_calculator import lot_irr
 from .symbols import canonical_symbol, looks_like_stripped_tw_code
@@ -150,16 +148,6 @@ class PortfolioService:
         await self.session.commit()
 
         logger.info(f"Created portfolio {portfolio.id} for user {user_id}")
-        return PortfolioResponse.model_validate(portfolio)
-
-    async def get_portfolio(
-        self, portfolio_id: UUID, user_id: UUID
-    ) -> PortfolioResponse:
-        """Get portfolio by ID"""
-        portfolio = await self.portfolio_repo.get_by_id(portfolio_id, user_id)
-        if not portfolio:
-            raise NotFoundException("Portfolio", str(portfolio_id))
-
         return PortfolioResponse.model_validate(portfolio)
 
     async def get_user_portfolios(
@@ -1054,125 +1042,6 @@ class PortfolioService:
         return output.getvalue()
 
 
-class TransactionService:
-    """Service for portfolio transaction operations"""
-
-    def __init__(self, session: AsyncSession):
-        self.session = session
-        self.portfolio_repo = PortfolioRepository(session)
-        self.holding_repo = HoldingRepository(session)
-        self.transaction_repo = TransactionRepository(session)
-        self.market_data_repo = MarketDataRepository(session)
-        self.currency_repo = CurrencyRepository(session)
-
-    async def get_transaction(
-        self, transaction_id: UUID, user_id: UUID
-    ) -> TransactionResponse:
-        """Get transaction by ID"""
-        transaction = await self.transaction_repo.get_by_id(transaction_id, user_id)
-        if not transaction:
-            raise NotFoundException("Transaction", str(transaction_id))
-
-        return TransactionResponse.model_validate(transaction)
-
-    async def get_portfolio_transactions(
-        self,
-        portfolio_id: UUID,
-        user_id: UUID,
-        skip: int = 0,
-        limit: int = 50,
-        transaction_type: Optional[str] = None,
-        symbol: Optional[str] = None,
-        start_date: Optional[datetime] = None,
-        end_date: Optional[datetime] = None,
-    ) -> Tuple[List[TransactionResponse], int]:
-        """Get paginated transactions for a portfolio"""
-        # Verify portfolio ownership
-        portfolio = await self.portfolio_repo.get_by_id(portfolio_id, user_id)
-        if not portfolio:
-            raise NotFoundException("Portfolio", str(portfolio_id))
-
-        transactions, total = await self.transaction_repo.get_portfolio_transactions(
-            portfolio_id=portfolio_id,
-            user_id=user_id,
-            skip=skip,
-            limit=limit,
-            transaction_type=transaction_type,
-            symbol=symbol,
-            start_date=start_date,
-            end_date=end_date,
-        )
-
-        transaction_responses = [TransactionResponse.model_validate(t) for t in transactions]
-        return transaction_responses, total
-
-class MarketDataService:
-    """Service for market data operations"""
-
-    def __init__(self, session: AsyncSession):
-        self.session = session
-        self.market_data_repo = MarketDataRepository(session)
-        self.currency_repo = CurrencyRepository(session)
-        self.holding_repo = HoldingRepository(session)
-        self.portfolio_repo = PortfolioRepository(session)
-
-    async def update_portfolio_prices(
-        self, portfolio_id: UUID, user_id: UUID
-    ) -> Dict[str, Any]:
-        """Update all prices for a portfolio"""
-        # Verify portfolio ownership
-        portfolio = await self.portfolio_repo.get_by_id(portfolio_id, user_id)
-        if not portfolio:
-            raise NotFoundException("Portfolio", str(portfolio_id))
-
-        holdings, _ = await self.holding_repo.get_portfolio_holdings(
-            portfolio_id, user_id, limit=100
-        )
-
-        update_results = {"updated_holdings": 0, "failed_holdings": 0, "errors": []}
-
-        for holding in holdings:
-            try:
-                # Get latest market data (in real implementation, this would call external APIs)
-                market_data = await self.market_data_repo.get_latest_price(
-                    holding.symbol, holding.exchange
-                )
-
-                if market_data:
-                    await self.holding_repo.update_holding_prices(
-                        holding.id, market_data.price
-                    )
-                    update_results["updated_holdings"] += 1
-                else:
-                    # In real implementation, fetch from external API
-                    update_results["failed_holdings"] += 1
-                    update_results["errors"].append(
-                        f"No market data available for {holding.symbol}"
-                    )
-
-            except Exception as e:
-                logger.error(f"Failed to update prices for {holding.symbol}: {e}")
-                update_results["failed_holdings"] += 1
-                update_results["errors"].append(
-                    f"Failed to update {holding.symbol}: {str(e)}"
-                )
-
-        # Update portfolio totals
-        await self.portfolio_repo.update_portfolio_values(portfolio_id)
-
-        # Update last price update timestamp
-        portfolio.last_price_update_at = datetime.now(timezone.utc)
-
-        await self.session.commit()
-
-        logger.info(
-            f"Updated prices for portfolio {portfolio_id}: "
-            f"{update_results['updated_holdings']} success, "
-            f"{update_results['failed_holdings']} failed"
-        )
-
-        return update_results
-
 class AnalyticsService:
     """Service for portfolio analytics and performance calculations"""
 
@@ -1925,15 +1794,3 @@ def build_import_template_xlsx() -> bytes:
 def get_portfolio_service(session: AsyncSession) -> PortfolioService:
     """Get Portfolio service instance"""
     return PortfolioService(session)
-
-
-def get_transaction_service(session: AsyncSession) -> TransactionService:
-    """Get Transaction service instance"""
-    return TransactionService(session)
-
-
-def get_market_data_service(session: AsyncSession) -> MarketDataService:
-    """Get MarketData service instance"""
-    return MarketDataService(session)
-
-
