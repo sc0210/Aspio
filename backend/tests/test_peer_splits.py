@@ -345,3 +345,43 @@ async def test_open_splits_are_listed_even_past_the_history_cap(async_session, c
     listed = await c["svc"].list_splits(c["alice"].id)
     assert [s.status for s in listed] == ["proposed", "voided"]
     assert listed[0].id == open_.id
+
+
+async def test_a_lost_accept_race_is_a_409_and_leaves_nothing(async_session, couple, monkeypatch):
+    from sqlalchemy.exc import IntegrityError
+
+    c = couple
+    sid = uuid.UUID((await c["svc"].create_split(c["alice"].id, _bill(c))).id)
+
+    async def collide(*args, **kwargs):
+        raise IntegrityError("INSERT", {}, Exception(
+            "UNIQUE constraint failed: uq_transactions_live_peer_split_share"))
+
+    monkeypatch.setattr(c["svc"], "_accept", collide)
+    with pytest.raises(HTTPException) as exc:
+        await c["svc"].respond(c["bob"].id, sid, "accept", None, "life")
+    assert exc.value.status_code == 409
+    assert await _rows(async_session, c["bob"]) == []
+
+
+async def test_other_integrity_errors_are_not_mistaken_for_the_race(async_session, couple, monkeypatch):
+    from sqlalchemy.exc import IntegrityError
+
+    c = couple
+    sid = uuid.UUID((await c["svc"].create_split(c["alice"].id, _bill(c))).id)
+
+    async def broken(*args, **kwargs):
+        raise IntegrityError("INSERT", {}, Exception("FOREIGN KEY constraint failed"))
+
+    monkeypatch.setattr(c["svc"], "_accept", broken)
+    with pytest.raises(IntegrityError):
+        await c["svc"].respond(c["bob"].id, sid, "accept", None, "life")
+
+
+async def test_declined_splits_list_with_history_and_by_connection(async_session, couple):
+    c = couple
+    sid = uuid.UUID((await c["svc"].create_split(c["alice"].id, _bill(c))).id)
+    await c["svc"].respond(c["bob"].id, sid, "decline", None, "life")
+    listed = await c["svc"].list_splits(c["alice"].id, c["conn"].id)
+    assert [s.status for s in listed] == ["declined"]
+    assert await c["svc"].list_splits(c["alice"].id, uuid.uuid4()) == []

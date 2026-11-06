@@ -280,9 +280,12 @@ class SplitService:
         if action == "accept":
             try:
                 await self._accept(split, share, category_id, wallet_type)
-            except IntegrityError:
-                # Lost a race with another Accept for this share (the unique
-                # index on live split rows); that one wrote the row.
+            except IntegrityError as e:
+                # Backstop for the row lock (SQLite has none): only a collision on
+                # the one-live-row-per-share index means another Accept won.
+                # Anything else is a real failure and must surface.
+                if "peer_split_share" not in str(e.orig):
+                    raise
                 await self.session.rollback()
                 raise HTTPException(status.HTTP_409_CONFLICT, "This split was already answered")
             self._notify(split.created_by, "Shared bill accepted",
