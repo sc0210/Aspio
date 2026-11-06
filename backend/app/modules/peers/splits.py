@@ -7,7 +7,8 @@ any aggregation: across the two ledgers the shares add up to exactly the cash
 that left. Nothing is ever written into a partner's ledger without their
 consent: their row is created only when they accept (or under a standing
 auto-accept they chose). What one owes the other is derived from accepted
-splits, never stored.
+splits, never stored. Recording that a balance was paid back (settling up) is
+not built yet; until then the balance only falls when the payer cancels.
 
 Until the partner answers, the payer's own row carries the whole bill; on accept
 it shrinks to the payer's share, and on decline it stays whole (they carry it).
@@ -356,14 +357,39 @@ class SplitService:
         await self.session.commit()
         return await self.get_split(user_id, split.id)
 
+    async def close_for_removed_connection(self, connection_id: UUID) -> None:
+        """When a partner is removed: an unanswered proposal ends as if declined
+        (the payer keeps the whole bill; a non-payer creator's share goes), and an
+        accepted split keeps its numbers but its rows unlock, so neither person is
+        left with entries they can't edit. Flushes; the caller commits."""
+        splits = (await self.session.execute(select(PeerSplit).where(and_(
+            PeerSplit.connection_id == connection_id,
+            PeerSplit.status.in_((SplitStatus.PROPOSED.value, SplitStatus.ACTIVE.value)),
+        )))).scalars().all()
+        for split in splits:
+            if split.status == SplitStatus.PROPOSED.value:
+                for share in split.shares:
+                    if share.status == ShareStatus.PROPOSED.value:
+                        share.status = ShareStatus.DECLINED.value
+                if split.payer_id != split.created_by:
+                    creator_share = next(s for s in split.shares if s.user_id == split.created_by)
+                    await self._set_row_amount(creator_share, Decimal("0"))
+                split.status = SplitStatus.DECLINED.value
+            await self._detach_rows(split)
+
     # ------------------------------------------------------------------
     # Reads
     # ------------------------------------------------------------------
 
-    async def _out(self, split: PeerSplit, user_id: UUID) -> SplitOut:
+    async def _out(self, split: PeerSplit, user_id: UUID,
+                   rows: Optional[dict[UUID, UUID]] = None) -> SplitOut:
         mine = next(s for s in split.shares if s.user_id == user_id)
         theirs = next(s for s in split.shares if s.user_id != user_id)
-        row = await self._row_for(mine)
+        if rows is None:
+            row = await self._row_for(mine)
+            row_id = row.id if row else None
+        else:
+            row_id = rows.get(mine.id)
         return SplitOut(
             id=str(split.id), connection_id=str(split.connection_id), description=split.description,
             total_amount=float(split.total_amount), currency=split.currency,
@@ -373,7 +399,7 @@ class SplitService:
             created_by_me=split.created_by == user_id, partner_name=await self._name(theirs.user_id),
             my_share=float(mine.share_amount), partner_share=float(theirs.share_amount),
             my_share_status=mine.status, partner_share_status=theirs.status,
-            my_transaction_id=str(row.id) if row else None,
+            my_transaction_id=str(row_id) if row_id else None,
         )
 
     async def get_split(self, user_id: UUID, split_id: UUID) -> SplitOut:
@@ -402,31 +428,50 @@ class SplitService:
             *(await self.session.execute(query(True))).scalars().unique().all(),
             *(await self.session.execute(query(False))).scalars().unique().all(),
         ]
-        return [await self._out(s, user_id) for s in splits]
+        # One query for every split's ledger row, not one per split.
+        my_share_ids = [s.id for split in splits for s in split.shares if s.user_id == user_id]
+        rows = dict((await self.session.execute(
+            select(Transaction.peer_split_share_id, Transaction.id).where(and_(
+                Transaction.peer_split_share_id.in_(my_share_ids),
+                Transaction.is_deleted == False,  # noqa: E712
+            ))
+        )).all()) if my_share_ids else {}
+        return [await self._out(s, user_id, rows) for s in splits]
 
     async def balances(self, user_id: UUID) -> list[PeerBalanceOut]:
-        """Per accepted partner and currency: > 0 they owe you, < 0 you owe them."""
-        conns = (await self.session.execute(select(PeerConnection).where(and_(
+        """Per partner and currency: > 0 they owe you, < 0 you owe them.
+
+        Every accepted partner is listed (even at zero), plus any former partner
+        an accepted split still leaves a balance with: removing someone mustn't
+        make what's owed disappear.
+        """
+        conns = (await self.session.execute(select(PeerConnection).where(
             or_(PeerConnection.requester_id == user_id, PeerConnection.receiver_id == user_id),
-            PeerConnection.status == PeerStatus.ACCEPTED,
-        )))).scalars().all()
+        ))).scalars().all()
+        active = (await self.session.execute(
+            select(PeerSplit)
+            .join(PeerSplitShare, PeerSplitShare.split_id == PeerSplit.id)
+            .where(and_(PeerSplitShare.user_id == user_id, PeerSplit.status == SplitStatus.ACTIVE.value))
+        )).scalars().unique().all()
+
+        net: dict[UUID, dict[str, Decimal]] = defaultdict(lambda: defaultdict(Decimal))
+        for split in active:
+            mine = next(s for s in split.shares if s.user_id == user_id)
+            theirs = next(s for s in split.shares if s.user_id != user_id)
+            if split.payer_id == user_id:
+                net[split.connection_id][split.currency] += theirs.share_amount
+            else:
+                net[split.connection_id][split.currency] -= mine.share_amount
+
         out = []
         for conn in conns:
-            net: dict[str, Decimal] = defaultdict(Decimal)
-            splits = (await self.session.execute(select(PeerSplit).where(and_(
-                PeerSplit.connection_id == conn.id,
-                PeerSplit.status == SplitStatus.ACTIVE.value,
-            )))).scalars().all()
-            for split in splits:
-                if split.payer_id == user_id:
-                    owed = next(s for s in split.shares if s.user_id != user_id).share_amount
-                    net[split.currency] += owed
-                else:
-                    net[split.currency] -= next(s for s in split.shares if s.user_id == user_id).share_amount
+            owed = {c: v for c, v in net.get(conn.id, {}).items() if v != 0}
+            if conn.status != PeerStatus.ACCEPTED and not owed:
+                continue
             out.append(PeerBalanceOut(
                 connection_id=str(conn.id),
                 partner_name=await self._name(self._partner(conn, user_id)),
-                balances=[CurrencyBalance(currency=c, net=float(v)) for c, v in sorted(net.items()) if v != 0],
+                balances=[CurrencyBalance(currency=c, net=float(v)) for c, v in sorted(owed.items())],
             ))
         return out
 
@@ -443,10 +488,19 @@ class SplitService:
         await self._connection(connection_id, user_id)
         pref = await self.session.get(PeerConnectionPref, (connection_id, user_id))
         if pref is None:
-            pref = PeerConnectionPref(connection_id=connection_id, user_id=user_id)
+            pref = PeerConnectionPref(connection_id=connection_id, user_id=user_id, split_policy=split_policy)
             self.session.add(pref)
-        pref.split_policy = split_policy
-        await self.session.commit()
+            try:
+                await self.session.commit()
+            except IntegrityError:
+                # Two quick saves both found no row; the other inserted it.
+                await self.session.rollback()
+                pref = await self.session.get(PeerConnectionPref, (connection_id, user_id))
+                pref.split_policy = split_policy
+                await self.session.commit()
+        else:
+            pref.split_policy = split_policy
+            await self.session.commit()
         return PeerPrefsOut(connection_id=str(connection_id), split_policy=split_policy)
 
 

@@ -134,6 +134,8 @@ export default function SharedSpendingTab({ connections }: { connections: PeerCo
                   : t('savings.splits.youOwe', 'You owe {{name}} {{amount}}', { name: b.partner_name, amount: money(x.net, x.currency) })}
               </p>
             ))}
+            {/* A former partner keeps their balance card, but has no setting left. */}
+            {connections.some((c) => c.id === b.connection_id) && (
             <label className="mt-3 block text-xs text-gray-600 dark:text-gray-400">
               {t('savings.splits.policyLabel', 'Bills from {{name}}', { name: b.partner_name })}
               <select
@@ -148,6 +150,7 @@ export default function SharedSpendingTab({ connections }: { connections: PeerCo
                 <option value="off">{t('savings.splits.policy.off', 'Don’t allow')}</option>
               </select>
             </label>
+            )}
           </div>
         ))}
       </section>

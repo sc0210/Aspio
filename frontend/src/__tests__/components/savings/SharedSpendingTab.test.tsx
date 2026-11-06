@@ -148,3 +148,13 @@ describe('SharedSpendingTab policy', () => {
     expect(screen.queryByText(/You owe/)).not.toBeInTheDocument();
   });
 });
+
+it('shows a former partner’s balance without a setting', async () => {
+  api.listSplits.mockResolvedValue({ data: [] });
+  api.getSplitBalances.mockResolvedValue({ data: [
+    { connection_id: 'old-conn', partner_name: 'Carol', balances: [{ currency: 'TWD', net: -200 }] },
+  ] });
+  renderTab();
+  expect(await screen.findByText(/You owe Carol/)).toBeInTheDocument();
+  expect(screen.queryByRole('combobox')).not.toBeInTheDocument();
+});

@@ -316,6 +316,11 @@ class PeerService:
                 detail="Connection not found",
             )
         conn.status = PeerStatus.REMOVED
+        # Removing never waits on money: open proposals close and accepted
+        # splits' rows unlock (the balance stays readable afterwards).
+        from app.modules.peers.splits import SplitService
+
+        await SplitService(self.session).close_for_removed_connection(conn.id)
         await self.session.commit()
 
     # ------------------------------------------------------------------

@@ -146,7 +146,9 @@ WITH checks(sort, object, source_file, present) AS (
                    WHERE oid = to_regclass('public.peer_split_shares')), false)),
     (26, 'column transactions.peer_split_share_id', '2026_11_07_peer_splits.sql',
         EXISTS (SELECT 1 FROM information_schema.columns
-                 WHERE table_name = 'transactions' AND column_name = 'peer_split_share_id'))
+                 WHERE table_name = 'transactions' AND column_name = 'peer_split_share_id')),
+    (27, 'index uq_transactions_live_peer_split_share', '2026_11_07_peer_splits.sql',
+        to_regclass('public.uq_transactions_live_peer_split_share') IS NOT NULL)
 )
 SELECT
     CASE WHEN present THEN 'OK     ' ELSE 'MISSING' END AS status,

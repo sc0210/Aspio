@@ -416,3 +416,56 @@ async def test_a_closed_splits_surviving_row_is_unlinked(async_session, couple):
     assert {r.peer_split_share_id for r in rows} == {None}
     # And the split no longer reports a row of its own.
     assert (await c["svc"].get_split(c["alice"].id, declined)).my_transaction_id is None
+
+
+async def test_removing_a_partner_keeps_the_balance_and_unlocks_rows(async_session, couple):
+    from app.modules.peers.service import PeerService
+    from app.modules.transactions.repositories import (
+        RecurringTransactionRepository, TransactionCategoryRepository, TransactionRepository,
+    )
+    from app.modules.transactions.services import TransactionService
+
+    c = couple
+    alice_id, bob_id = c["alice"].id, c["bob"].id
+    active = uuid.UUID((await c["svc"].create_split(alice_id, _bill(c))).id)
+    await c["svc"].respond(bob_id, active, "accept", None, "life")
+    pending = uuid.UUID((await c["svc"].create_split(alice_id, _bill(c, payer="partner"))).id)
+
+    await PeerService(async_session).remove_connection(c["conn"].id, alice_id)
+
+    # The unanswered proposal closed like a decline: alice's (non-payer) share went.
+    assert (await c["svc"].get_split(alice_id, pending)).status == "declined"
+    # What bob owes alice is still there to see.
+    [view] = await SplitService(async_session).balances(alice_id)
+    assert [(b.currency, b.net) for b in view.balances] == [("TWD", 500)]
+    # And bob's entry is his to edit or delete now.
+    bob_row = (await async_session.execute(select(Transaction).where(
+        Transaction.user_id == bob_id, Transaction.is_deleted == False))).scalars().one()  # noqa: E712
+    assert bob_row.peer_split_share_id is None
+    txs = TransactionService(TransactionRepository(async_session), TransactionCategoryRepository(async_session),
+                             RecurringTransactionRepository(async_session))
+    assert await txs.delete_transaction(str(bob_row.id), str(bob_id))
+
+
+async def test_a_removed_partner_with_nothing_owed_drops_off_the_balances(async_session, couple):
+    from app.modules.peers.service import PeerService
+
+    c = couple
+    await PeerService(async_session).remove_connection(c["conn"].id, c["alice"].id)
+    assert await SplitService(async_session).balances(c["alice"].id) == []
+
+
+async def test_saving_prefs_twice_on_a_fresh_connection(async_session, couple):
+    c = couple
+    await c["svc"].set_prefs(c["bob"].id, c["conn"].id, "auto_accept")
+    await c["svc"].set_prefs(c["bob"].id, c["conn"].id, "off")
+    assert (await c["svc"].get_prefs(c["bob"].id, c["conn"].id)).split_policy == "off"
+
+
+async def test_the_list_reports_each_rows_id(async_session, couple):
+    c = couple
+    first = await c["svc"].create_split(c["alice"].id, _bill(c))
+    second = await c["svc"].create_split(c["alice"].id, _bill(c))
+    listed = {s.id: s.my_transaction_id for s in await c["svc"].list_splits(c["alice"].id)}
+    assert listed[first.id] == first.my_transaction_id and listed[first.id] is not None
+    assert listed[second.id] == second.my_transaction_id and listed[second.id] != listed[first.id]
