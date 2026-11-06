@@ -320,3 +320,28 @@ def test_the_currency_must_be_a_three_letter_code(couple):
 
     with pytest.raises(ValidationError):
         _bill(couple, currency="NT$")
+
+
+async def test_a_payer_who_didnt_create_the_split_can_cancel_it(async_session, couple):
+    c = couple
+    sid = uuid.UUID((await c["svc"].create_split(c["alice"].id, _bill(c, payer="partner"))).id)
+    await c["svc"].respond(c["bob"].id, sid, "accept", None, "life")  # bob paid, 500 each
+
+    await c["svc"].cancel(c["bob"].id, sid)
+    assert await _rows(async_session, c["bob"]) == [Decimal("1000")]
+    assert await _rows(async_session, c["alice"]) == []
+
+
+async def test_open_splits_are_listed_even_past_the_history_cap(async_session, couple, monkeypatch):
+    from app.modules.peers import splits as splits_module
+
+    c = couple
+    monkeypatch.setattr(splits_module, "LIST_LIMIT", 1)
+    open_ = await c["svc"].create_split(c["alice"].id, _bill(c))
+    for _ in range(2):
+        closed = await c["svc"].create_split(c["alice"].id, _bill(c))
+        await c["svc"].void(c["alice"].id, uuid.UUID(closed.id))
+
+    listed = await c["svc"].list_splits(c["alice"].id)
+    assert [s.status for s in listed] == ["proposed", "voided"]
+    assert listed[0].id == open_.id

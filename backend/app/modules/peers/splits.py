@@ -24,6 +24,7 @@ from uuid import UUID
 
 from fastapi import HTTPException, status
 from sqlalchemy import and_, func as sa_func, or_, select
+from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.modules.notifications.models import (
@@ -277,7 +278,13 @@ class SplitService:
 
         name = await self._name(user_id)
         if action == "accept":
-            await self._accept(split, share, category_id, wallet_type)
+            try:
+                await self._accept(split, share, category_id, wallet_type)
+            except IntegrityError:
+                # Lost a race with another Accept for this share (the unique
+                # index on live split rows); that one wrote the row.
+                await self.session.rollback()
+                raise HTTPException(status.HTTP_409_CONFLICT, "This split was already answered")
             self._notify(split.created_by, "Shared bill accepted",
                          f"{name} accepted \"{split.description}\".", "peer_split_accepted", split)
         else:
@@ -360,16 +367,26 @@ class SplitService:
         return await self._out(split, user_id)
 
     async def list_splits(self, user_id: UUID, connection_id: Optional[UUID] = None) -> list[SplitOut]:
-        stmt = (
-            select(PeerSplit)
-            .join(PeerSplitShare, PeerSplitShare.split_id == PeerSplit.id)
-            .where(PeerSplitShare.user_id == user_id)
-            .order_by(PeerSplit.split_date.desc(), PeerSplit.created_at.desc())
-            .limit(LIST_LIMIT)
-        )
-        if connection_id is not None:
-            stmt = stmt.where(PeerSplit.connection_id == connection_id)
-        splits = (await self.session.execute(stmt)).scalars().unique().all()
+        """Every open split (they make up the balance, so none may be cut off),
+        then the most recent LIST_LIMIT closed ones."""
+        open_states = (SplitStatus.PROPOSED.value, SplitStatus.ACTIVE.value)
+
+        def query(open_: bool):
+            stmt = (
+                select(PeerSplit)
+                .join(PeerSplitShare, PeerSplitShare.split_id == PeerSplit.id)
+                .where(PeerSplitShare.user_id == user_id)
+                .where(PeerSplit.status.in_(open_states) if open_ else PeerSplit.status.notin_(open_states))
+                .order_by(PeerSplit.split_date.desc(), PeerSplit.created_at.desc())
+            )
+            if connection_id is not None:
+                stmt = stmt.where(PeerSplit.connection_id == connection_id)
+            return stmt if open_ else stmt.limit(LIST_LIMIT)
+
+        splits = [
+            *(await self.session.execute(query(True))).scalars().unique().all(),
+            *(await self.session.execute(query(False))).scalars().unique().all(),
+        ]
         return [await self._out(s, user_id) for s in splits]
 
     async def balances(self, user_id: UUID) -> list[PeerBalanceOut]:
