@@ -225,7 +225,7 @@ export function PortfolioHeatmap() {
           </h2>
           <div className="flex items-center gap-2 shrink-0">
           {/* Diverging colour legend — compact joined strip (reorders with mode) */}
-          <div className="flex items-center gap-1 text-[10px] text-gray-500 dark:text-gray-400">
+          <div className="flex items-center gap-1 text-xs text-gray-500 dark:text-gray-400">
             <span>{t('portfolio.heatmapLoss', 'Loss')}</span>
             <span className="flex rounded-sm overflow-hidden">
               {legendColors(twMode).map((c, i) => (
@@ -240,7 +240,7 @@ export function PortfolioHeatmap() {
             onClick={toggleTw}
             aria-pressed={twMode}
             title={t('portfolio.heatmapColorToggleHint', 'Switch gain/loss colours (TW markets use red for gains)')}
-            className="shrink-0 text-[10px] font-semibold px-2 py-1 rounded-md border border-gray-200 dark:border-gray-600 text-gray-600 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700 focus-visible:ring-2 focus-visible:ring-primary-500 transition-colors"
+            className="shrink-0 text-xs font-semibold px-2 py-1 rounded-md border border-gray-200 dark:border-gray-600 text-gray-600 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700 focus-visible:ring-2 focus-visible:ring-primary-500 transition-colors"
           >
             {twMode ? t('portfolio.heatmapColorTwShort', '漲紅跌綠') : t('portfolio.heatmapColorUsShort', '漲綠跌紅')}
           </button>

@@ -268,7 +268,7 @@ export function ComprehensiveDashboard() {
                 <h2 className="text-lg sm:text-xl font-bold text-gray-900 dark:text-white truncate">
                   {greeting}, {greetingName(isDemo, user, t('common:user'))}
                 </h2>
-                <p className="text-xs text-gray-500 dark:text-gray-500 flex items-center gap-1 mt-0.5">
+                <p className="text-xs text-gray-500 dark:text-gray-400 flex items-center gap-1 mt-0.5">
                   <CalendarIcon className="w-3 h-3" />
                   {todayFormatted}
                 </p>
@@ -285,7 +285,7 @@ export function ComprehensiveDashboard() {
                         'px-2 py-1.5 text-xs font-semibold rounded-lg transition-all duration-200 whitespace-nowrap',
                         dateRange === opt.value
                           ? 'bg-gray-900 text-white dark:bg-white dark:text-gray-900 shadow-sm'
-                          : 'text-gray-600 dark:text-gray-500 hover:text-gray-800 dark:hover:text-gray-300'
+                          : 'text-gray-600 dark:text-gray-400 hover:text-gray-800 dark:hover:text-gray-300'
                       )}
                     >
                       {opt.label}
@@ -402,12 +402,11 @@ export function ComprehensiveDashboard() {
           </section>
 
           {/* Goals · Cash Flow · Recent Activity — compact horizontal row.
-              items-stretch (grid's default) so all three columns match the
-              tallest card's height; each card fills its cell with h-full and
-              lets its own content sit at the top, leaving blank space below
-              on the shorter cards instead of stretching their content. */}
-          <div className="grid grid-cols-1 lg:grid-cols-3 gap-5 sm:gap-6 lg:gap-8 items-stretch animate-fade-in-up animation-delay-300">
-            <section aria-label="Financial Goals" className="h-full">
+              items-start: each card is as tall as its own content. Stretching
+              them to the Goals card left 300-470px of empty card on the other
+              two at 2560px. */}
+          <div className="grid grid-cols-1 lg:grid-cols-3 gap-5 sm:gap-6 lg:gap-8 items-start animate-fade-in-up animation-delay-300">
+            <section aria-label="Financial Goals">
               <GoalsOverview
                 goals={goalsData}
                 isLoading={goalsLoading}
@@ -418,7 +417,7 @@ export function ComprehensiveDashboard() {
               />
             </section>
 
-            <section aria-label="Cash Flow" className="h-full">
+            <section aria-label="Cash Flow">
               <MonthlyInsightCard
                 stats={memoizedDashboardData.stats}
                 dateRange={dateRange}
@@ -426,7 +425,7 @@ export function ComprehensiveDashboard() {
               />
             </section>
 
-            <section aria-label="Recent Activity" className="h-full">
+            <section aria-label="Recent Activity">
               <MemoizedRecentTransactions
                 dateRange={dateRange}
               />
@@ -444,7 +443,7 @@ export function ComprehensiveDashboard() {
             <summary className="flex items-center justify-between gap-3 px-4 sm:px-5 py-3 rounded-xl border border-dashed border-gray-300 dark:border-gray-600 cursor-pointer list-none [&::-webkit-details-marker]:hidden hover:border-primary-300 dark:hover:border-primary-600 hover:bg-gray-50 dark:hover:bg-gray-800/50 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-400">
               <div className="min-w-0">
                 <p className="text-sm font-semibold text-gray-800 dark:text-gray-100">{t('dashboard:explore.title')}</p>
-                <p className="text-xs text-gray-500 dark:text-gray-500 truncate">{t('dashboard:explore.subtitle')}</p>
+                <p className="text-xs text-gray-500 dark:text-gray-400 truncate">{t('dashboard:explore.subtitle')}</p>
               </div>
               <ChevronDownIcon className="w-5 h-5 flex-shrink-0 text-gray-500 dark:text-gray-400 transition-transform duration-200 group-open:rotate-180" />
             </summary>

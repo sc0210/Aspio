@@ -72,10 +72,10 @@ interface MoreSheetProps {
   open: boolean;
   onClose: () => void;
   isDemoMode: boolean;
-  onDisableDemo: () => void;
+  onExitDemo: () => void;
 }
 
-function MoreSheet({ open, onClose, isDemoMode, onDisableDemo }: MoreSheetProps) {
+function MoreSheet({ open, onClose, isDemoMode, onExitDemo }: MoreSheetProps) {
   const { panelRef, dialogProps } = useDialog({ isOpen: open, onClose });
   const { t, i18n } = useTranslation('common');
   const pathname = usePathname();
@@ -197,7 +197,7 @@ function MoreSheet({ open, onClose, isDemoMode, onDisableDemo }: MoreSheetProps)
         <div className="px-2 pb-2">
           {isDemoMode ? (
             <button
-              onClick={() => { onClose(); onDisableDemo(); }}
+              onClick={() => { onClose(); onExitDemo(); }}
               className="flex items-center w-full px-4 py-3 rounded-xl text-sm font-medium text-error-700 dark:text-error-400 hover:bg-error-50 dark:hover:bg-error-900/20 transition-colors min-h-[52px] touch-manipulation"
             >
               <ArrowLeftOnRectangleIcon className="w-5 h-5 mr-3 flex-shrink-0" />
@@ -228,7 +228,7 @@ export function MobileBottomNav() {
   const pathname = usePathname();
   const activeHref = useActiveTab(pathname);
   const [sheetOpen, setSheetOpen] = useState(false);
-  const { isDemoMode, disableDemo } = useDemo();
+  const { isDemoMode, exitDemo } = useDemo();
   const { t } = useTranslation('common');
   // session available for future use (e.g., showing user avatar in "More")
   useAuthContext();
@@ -308,7 +308,7 @@ export function MobileBottomNav() {
         open={sheetOpen}
         onClose={() => setSheetOpen(false)}
         isDemoMode={isDemoMode}
-        onDisableDemo={disableDemo}
+        onExitDemo={exitDemo}
       />
     </>
   );

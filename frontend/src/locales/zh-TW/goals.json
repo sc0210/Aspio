@@ -187,6 +187,7 @@
     "noGoalsDesc": "開始追蹤您的財務目標，保持前進的動力",
     "noGoalsTitle": "尚未設定財務目標",
     "noRetirementGoal": "尚未設定退休目標",
+    "ofTarget": "／ {{amount}}",
     "overallProgress": "整體進度",
     "portfolioLinked": "投資組合連結",
     "retirement": "財務目標",

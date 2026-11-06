@@ -101,7 +101,7 @@ function StripGrid({
       {/* Column 1 — Total Assets, only where nothing else states it */}
       {totalAssets !== undefined && (
       <div className="px-2.5 sm:px-5 py-3 sm:py-4 flex flex-col gap-1">
-        <p className="text-xs uppercase tracking-wide text-gray-500 dark:text-gray-500 font-medium">
+        <p className="text-xs uppercase tracking-wide text-gray-500 dark:text-gray-400 font-medium">
           {t('dashboard:todayStrip.totalAssets')}
         </p>
         <p
@@ -119,7 +119,7 @@ function StripGrid({
 
       {/* Column 2 — Net Saved */}
       <div className="px-2.5 sm:px-5 py-3 sm:py-4 flex flex-col gap-1">
-        <p className="text-xs uppercase tracking-wide text-gray-500 dark:text-gray-500 font-medium truncate">
+        <p className="text-xs uppercase tracking-wide text-gray-500 dark:text-gray-400 font-medium truncate">
           {t('dashboard:todayStrip.saved')} &middot; {periodLabel}
         </p>
         <p
@@ -128,7 +128,7 @@ function StripGrid({
         >
           {fmt(netSaved)}
         </p>
-        <p className="text-xs text-gray-500 dark:text-gray-500">
+        <p className="text-xs text-gray-500 dark:text-gray-400">
           {t('dashboard:todayStrip.savingsRate', { rate: savingsRate.toFixed(1) })}
         </p>
       </div>
@@ -141,7 +141,7 @@ function StripGrid({
           return and disagrees with the ROI on the portfolio page. */}
       <div className="px-2.5 sm:px-5 py-3 sm:py-4 flex flex-col gap-1">
         <p
-          className="text-xs uppercase tracking-wide text-gray-500 dark:text-gray-500 font-medium truncate"
+          className="text-xs uppercase tracking-wide text-gray-500 dark:text-gray-400 font-medium truncate"
           title={t('dashboard:todayStrip.portfolioChangeHint')}
         >
           {t('dashboard:todayStrip.portfolio')} &middot; {periodLabel}

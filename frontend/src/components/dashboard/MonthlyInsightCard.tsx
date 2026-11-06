@@ -53,7 +53,7 @@ export function MonthlyInsightCard({ stats, dateRange, trendData }: MonthlyInsig
       <div className="flex items-center justify-between mb-4">
         <div className="flex items-center gap-2">
           <h3 className="text-sm font-semibold text-gray-700 dark:text-gray-300">{t('dashboard:sections.cashFlow', 'Cash Flow')}</h3>
-          <span className="text-xs font-medium text-gray-600 dark:text-gray-500 bg-gray-100 dark:bg-gray-700 px-2 py-0.5 rounded-full">
+          <span className="text-xs font-medium text-gray-600 dark:text-gray-400 bg-gray-100 dark:bg-gray-700 px-2 py-0.5 rounded-full">
             {periodLabel}
           </span>
         </div>
@@ -136,7 +136,7 @@ export function MonthlyInsightCard({ stats, dateRange, trendData }: MonthlyInsig
               'flex-1 rounded-xl px-3 py-2.5',
               net >= 0 ? 'bg-prosperity-50 dark:bg-prosperity-900/20' : 'bg-error-50 dark:bg-error-900/20'
             )}>
-              <p className="text-xs font-semibold uppercase tracking-wider text-gray-500 dark:text-gray-500 mb-0.5">
+              <p className="text-xs font-semibold uppercase tracking-wider text-gray-500 dark:text-gray-400 mb-0.5">
                 {t('dashboard:cashFlow.netSaved', 'Net Saved')}
               </p>
               <p className={`text-lg font-bold leading-tight ${net >= 0 ? 'text-prosperity-700 dark:text-prosperity-400' : 'text-error-700 dark:text-error-400'}`}>
@@ -151,7 +151,7 @@ export function MonthlyInsightCard({ stats, dateRange, trendData }: MonthlyInsig
                   ? 'bg-amber-50 dark:bg-amber-900/20'
                   : 'bg-error-50 dark:bg-error-900/20'
             )}>
-              <p className="text-xs font-semibold uppercase tracking-wider text-gray-500 dark:text-gray-500 mb-0.5">
+              <p className="text-xs font-semibold uppercase tracking-wider text-gray-500 dark:text-gray-400 mb-0.5">
                 {t('dashboard:cashFlow.savingsRate', 'Rate')}
               </p>
               <p className={`text-xl font-bold leading-tight ${savingsRateColor}`}>
@@ -178,7 +178,7 @@ export function MonthlyInsightCard({ stats, dateRange, trendData }: MonthlyInsig
                   </span>
                 </li>
               )) : (
-                <li className="text-xs text-gray-500 dark:text-gray-500">—</li>
+                <li className="text-xs text-gray-500 dark:text-gray-400">—</li>
               )}
             </ul>
           </div>
@@ -195,7 +195,7 @@ export function MonthlyInsightCard({ stats, dateRange, trendData }: MonthlyInsig
                   </span>
                 </li>
               )) : (
-                <li className="text-xs text-gray-500 dark:text-gray-500">—</li>
+                <li className="text-xs text-gray-500 dark:text-gray-400">—</li>
               )}
             </ul>
           </div>
@@ -217,7 +217,7 @@ export function MonthlyInsightCard({ stats, dateRange, trendData }: MonthlyInsig
         if (!incomeHasSpark && !expenseHasSpark) return null;
         return (
           <div className="-mx-5 mt-3 border-t border-gray-100 dark:border-gray-700/50 pt-2 px-5">
-            <p className="text-xs font-semibold uppercase tracking-wider text-gray-500 dark:text-gray-500 mb-1">{t('dashboard:chart.trend', 'Trend')}</p>
+            <p className="text-xs font-semibold uppercase tracking-wider text-gray-500 dark:text-gray-400 mb-1">{t('dashboard:chart.trend', 'Trend')}</p>
             <div className="grid grid-cols-2 gap-2">
               {incomeHasSpark && (
                 <div>

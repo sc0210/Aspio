@@ -508,6 +508,11 @@ interface DemoContextType {
   isDemoMode: boolean;
   enableDemo: () => void;
   disableDemo: () => void;
+  /** Leave demo and land on the landing page (full navigation). */
+  exitDemo: () => void;
+  /** The demo banner was hidden for this browser session. */
+  demoBannerHidden: boolean;
+  hideDemoBanner: () => void;
   toggleDemo: () => void;
   demoUser: User;
   demoTransactions: Transaction[];
@@ -536,12 +541,34 @@ function readDemoCookie(): boolean {
   return typeof document !== 'undefined' && document.cookie.split('; ').includes('demo-mode=true');
 }
 
+const DEMO_BANNER_HIDDEN_KEY = 'aspiro-demo-banner-hidden';
+
 export function DemoProvider({ children }: { children: ReactNode }) {
   const [demoModeState, setIsDemoMode] = useState(false);
   const [demoTransactions, setDemoTransactions] = useState(DEMO_TRANSACTIONS);
   const [demoGoals, setDemoGoals] = useState(DEMO_GOALS);
   const [demoRevision, setDemoRevision] = useState(0);
   const bumpRevision = useCallback(() => setDemoRevision(r => r + 1), []);
+  // Held here, not in the banner: each page mounts its own DashboardLayout, so
+  // banner-local state reset to "shown" on every navigation and flashed back.
+  const [demoBannerHidden, setDemoBannerHidden] = useState(false);
+
+  useEffect(() => {
+    try {
+      setDemoBannerHidden(sessionStorage.getItem(DEMO_BANNER_HIDDEN_KEY) === '1');
+    } catch {
+      /* storage unavailable — keep showing */
+    }
+  }, []);
+
+  const hideDemoBanner = useCallback(() => {
+    try {
+      sessionStorage.setItem(DEMO_BANNER_HIDDEN_KEY, '1');
+    } catch {
+      /* non-fatal */
+    }
+    setDemoBannerHidden(true);
+  }, []);
 
   // Sync with NextAuth session to disable demo mode when authenticated
   const { data: session, status } = useSession();
@@ -590,6 +617,13 @@ export function DemoProvider({ children }: { children: ReactNode }) {
   const isDemoMode = demoModeState || (status === 'unauthenticated' && readDemoCookie());
 
   const enableDemo = useCallback(() => {
+    // Entering demo again shows the banner again: it's the only in-page sign of demo.
+    try {
+      sessionStorage.removeItem(DEMO_BANNER_HIDDEN_KEY);
+    } catch {
+      /* non-fatal */
+    }
+    setDemoBannerHidden(false);
     setIsDemoMode(true);
     if (typeof document !== 'undefined') {
       document.cookie = 'demo-mode=true; path=/; max-age=86400; SameSite=Strict'; // 24 hours
@@ -601,6 +635,20 @@ export function DemoProvider({ children }: { children: ReactNode }) {
     if (typeof document !== 'undefined') {
       document.cookie = 'demo-mode=false; path=/; expires=Thu, 01 Jan 1970 00:00:00 GMT';
     }
+  }, []);
+
+  // A full navigation, not router.push + disableDemo: flipping isDemoMode first
+  // re-renders the current page signed-out, and its no-access guard wins the race
+  // to /auth/signin. The reload starts fresh, so no state needs clearing.
+  const exitDemo = useCallback(() => {
+    try {
+      sessionStorage.removeItem(DEMO_BANNER_HIDDEN_KEY);
+    } catch {
+      /* non-fatal */
+    }
+    document.cookie = 'demo-mode=false; path=/; expires=Thu, 01 Jan 1970 00:00:00 GMT';
+    // eslint-disable-next-line @next/next/no-location-assign-relative-destination -- a router.push loses the race described above
+    window.location.assign('/');
   }, []);
 
   const toggleDemo = useCallback(() => {
@@ -740,6 +788,9 @@ export function DemoProvider({ children }: { children: ReactNode }) {
       isDemoMode,
       enableDemo,
       disableDemo,
+      exitDemo,
+      demoBannerHidden,
+      hideDemoBanner,
       toggleDemo,
       demoUser: DEMO_USER,
       demoTransactions,

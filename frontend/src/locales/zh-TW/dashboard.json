@@ -334,15 +334,30 @@
   "portfolioOverview": {
     "addFirst": "開始建立您的投資組合",
     "addInvestment": "新增投資",
+    "allPeriods": "全部",
     "allocation": "配置",
     "allocationTab": "配置",
+    "annualIncome": "預估年收入",
+    "annualisedReturn": "CAGR",
     "bySector": "依產業",
+    "cagr": "年化報酬",
+    "calendarView": "月曆檢視 — 每日損益熱圖",
+    "fullCalendar": "完整月曆 →",
     "hideValues": "隱藏金額",
+    "maxDrawdown": "最大回撤",
+    "monthPnl": "{{month}}損益",
     "noInvestments": "尚未投資",
     "notEnoughForPeriod": "此區間資料尚不足",
+    "peakToTrough": "高點至低點",
     "performanceNotAvailable": "投資組合績效資料暫無",
     "performanceTab": "績效",
+    "projected": "預估",
+    "provisionalNote": "尚未定案 — 當日市場尚未收盤",
     "return": "報酬率",
+    "sharpe": "夏普值",
+    "sharpeFair": "普通",
+    "sharpeGood": "佳",
+    "sharpePoor": "偏低",
     "showValues": "顯示金額",
     "title": "投資組合",
     "todaysChange": "今日變動",
@@ -351,7 +366,10 @@
     "totalReturn": "總報酬",
     "totalValue": "總價值",
     "tryLongerRange": "請於上方選擇較長區間，或查看完整走勢。",
-    "viewDetails": "查看詳情"
+    "viewDetails": "查看詳情",
+    "weekTotal": "本週合計：{{value}}",
+    "weekdayInitials": "一,二,三,四,五",
+    "yieldOnCost": "成本殖利率 {{value}}%"
   },
   "quickActions": {
     "addInvestment": {
@@ -492,6 +510,10 @@
     "savingsRate": "儲蓄率",
     "totalBalance": "總餘額",
     "totalGoals": "理財目標"
+  },
+  "termsHelp": {
+    "button": "名詞說明",
+    "buttonLabel": "查看財務名詞說明"
   },
   "title": "儀表板",
   "todayStrip": {

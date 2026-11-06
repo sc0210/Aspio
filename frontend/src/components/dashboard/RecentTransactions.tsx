@@ -8,7 +8,7 @@ import {
 } from '@heroicons/react/24/outline';
 import { useTranslation } from 'react-i18next';
 import { cn } from '@/utils/cn';
-import { formatCurrency } from '@/utils/formatters';
+import { formatCashAmount } from '@/utils/formatters';
 import { Transaction } from '@/shared/types';
 import { useTransactions } from '@/hooks/useTransactions';
 import { getCategoryIcon } from '@/utils/categoryIcon';
@@ -182,7 +182,7 @@ export function RecentTransactions({ dateRange }: RecentTransactionsProps) {
                   )}
                 >
                   {transaction.type === 'income' ? '+' : '-'}
-                  {formatCurrency(transaction.amount, transaction.currency)}
+                  {formatCashAmount(transaction.amount, transaction.currency)}
                 </div>
 
                 {transaction.type === 'income' ? (

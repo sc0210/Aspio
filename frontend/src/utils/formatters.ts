@@ -290,6 +290,19 @@ export function toTWD(amount: number, currency: string): number {
 }
 
 // Taiwan-specific currency formatting
+/**
+ * A cash amount in its own currency: a whole TWD amount drops the ".00" (as
+ * formatTWD and the rest of the dashboard show it); a TWD amount with cents, and
+ * every other currency, keeps two decimals so nothing is silently rounded.
+ * formatCurrency's 2-decimal default stays, since it also formats stock prices.
+ */
+export function formatCashAmount(amount: number, currency: string = DEFAULT_CURRENCY): string {
+  // Compared at cent precision, so float noise from summed legs (1000.0000000001) still counts as whole.
+  const n = Number(amount);
+  const whole = currency === 'TWD' && Math.abs(n - Math.round(n)) < 0.005;
+  return formatCurrency(amount, currency, whole ? { precision: 0 } : {});
+}
+
 export function formatTWD(amount: number, options: {
   showSymbol?: boolean;
   precision?: number;

@@ -64,7 +64,7 @@ export function CommandPalette() {
   const { isAdmin } = useIsAdmin();
   // Destructured so the memo below keys on a boolean, not a fresh object.
   const { lineBot } = useFeatures();
-  const { isDemoMode, disableDemo } = useDemo();
+  const { isDemoMode, exitDemo } = useDemo();
   const { isValueVisible, toggleValueVisibility } = usePrivacy();
 
   const close = useCallback(() => {
@@ -149,14 +149,14 @@ export function CommandPalette() {
         keywords: ['logout', 'exit', '登出', '退出'],
         run: () => {
           if (isDemoMode) {
-            disableDemo();
+            exitDemo();
             return;
           }
           void signOutCompletely('/');
         },
       },
     ];
-  }, [disableDemo, i18n, isDemoMode, isValueVisible, router, t, toggleValueVisibility]);
+  }, [exitDemo, i18n, isDemoMode, isValueVisible, router, t, toggleValueVisibility]);
 
   const matches = useCallback(
     (command: Command) => {

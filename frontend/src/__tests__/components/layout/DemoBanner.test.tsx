@@ -22,14 +22,6 @@ i18n.use(initReactI18next).init({
   react: { useSuspense: false },
 });
 
-const mockPush = jest.fn();
-
-jest.mock('next/navigation', () => ({
-  useRouter: () => ({ push: mockPush, replace: jest.fn() }),
-  usePathname: () => '/',
-  useSearchParams: () => new URLSearchParams(),
-}));
-
 jest.mock('@/contexts/DemoContext', () => ({
   useDemo: jest.fn(),
 }));
@@ -40,42 +32,46 @@ describe('DemoBanner', () => {
   beforeEach(() => jest.clearAllMocks());
 
   it('renders nothing when not in demo mode', () => {
-    mockUseDemo.mockReturnValue({ isDemoMode: false, disableDemo: jest.fn() });
+    mockUseDemo.mockReturnValue({ isDemoMode: false, exitDemo: jest.fn() });
     const { container } = render(<DemoBanner />);
     expect(container.firstChild).toBeNull();
   });
 
   it('renders the banner when in demo mode', () => {
-    mockUseDemo.mockReturnValue({ isDemoMode: true, disableDemo: jest.fn() });
+    mockUseDemo.mockReturnValue({ isDemoMode: true, exitDemo: jest.fn() });
     render(<DemoBanner />);
     expect(screen.getByText(/Demo Mode/)).toBeInTheDocument();
   });
 
   it('shows a link to create a real account', () => {
-    mockUseDemo.mockReturnValue({ isDemoMode: true, disableDemo: jest.fn() });
+    mockUseDemo.mockReturnValue({ isDemoMode: true, exitDemo: jest.fn() });
     render(<DemoBanner />);
     const link = screen.getByRole('link', { name: /Create Account/i });
     expect(link).toHaveAttribute('href', '/auth/signup');
   });
 
-  it('clicking X calls disableDemo', () => {
-    const disableDemo = jest.fn();
-    mockUseDemo.mockReturnValue({ isDemoMode: true, disableDemo });
+  it('"Exit Demo" leaves demo via exitDemo', () => {
+    const exitDemo = jest.fn();
+    mockUseDemo.mockReturnValue({ isDemoMode: true, exitDemo, hideDemoBanner: jest.fn() });
     render(<DemoBanner />);
     fireEvent.click(screen.getByRole('button', { name: /Exit Demo/i }));
-    expect(disableDemo).toHaveBeenCalledTimes(1);
+    expect(exitDemo).toHaveBeenCalledTimes(1);
   });
 
-  it('clicking X navigates to "/"', () => {
-    mockUseDemo.mockReturnValue({ isDemoMode: true, disableDemo: jest.fn() });
+  // A bare × reads as "dismiss"; it used to exit demo and land on /auth/signin.
+  it('the × hides the banner and stays in demo', () => {
+    const exitDemo = jest.fn();
+    const hideDemoBanner = jest.fn();
+    mockUseDemo.mockReturnValue({ isDemoMode: true, exitDemo, hideDemoBanner });
     render(<DemoBanner />);
-    fireEvent.click(screen.getByRole('button', { name: /Exit Demo/i }));
-    expect(mockPush).toHaveBeenCalledWith('/');
+    fireEvent.click(screen.getByRole('button', { name: /Hide banner/i }));
+    expect(hideDemoBanner).toHaveBeenCalledTimes(1);
+    expect(exitDemo).not.toHaveBeenCalled();
   });
 
-  it('dismiss button has aria-label', () => {
-    mockUseDemo.mockReturnValue({ isDemoMode: true, disableDemo: jest.fn() });
-    render(<DemoBanner />);
-    expect(screen.getByRole('button', { name: /Exit Demo/i })).toBeInTheDocument();
+  it('renders nothing once hidden', () => {
+    mockUseDemo.mockReturnValue({ isDemoMode: true, demoBannerHidden: true, exitDemo: jest.fn() });
+    const { container } = render(<DemoBanner />);
+    expect(container.firstChild).toBeNull();
   });
 });

@@ -2,7 +2,7 @@
 
 import React, { useMemo } from 'react';
 import Link from 'next/link';
-import { formatCurrency } from '@/utils/formatters';
+import { formatCashAmount } from '@/utils/formatters';
 import { DEFAULT_CURRENCY } from '@/utils/constants';
 import { AssetGoalCard } from './AssetGoalCard';
 import { usePrivacy } from '@/contexts/PrivacyContext';
@@ -177,7 +177,7 @@ export function GoalsOverview({ goals = [], isLoading = false, onEdit, onContrib
     if (goals.length === 0) {
         return (
             <div className="rounded-xl p-6 border border-gray-100 dark:border-gray-700/50 text-center">
-                <div className="text-gray-500 dark:text-gray-500 mb-4">
+                <div className="text-gray-500 dark:text-gray-400 mb-4">
                     <svg className="w-16 h-16 mx-auto mb-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
                     </svg>
@@ -210,7 +210,7 @@ export function GoalsOverview({ goals = [], isLoading = false, onEdit, onContrib
                 <div className="flex items-center justify-between px-5 py-3 border-b border-gray-100 dark:border-gray-700">
                     <div className="flex items-center gap-3">
                         <h3 className="text-sm font-semibold text-gray-700 dark:text-gray-300">{t('goals:overview.title', 'Goals')}</h3>
-                        <div className="flex items-center gap-1.5 text-xs text-gray-500 dark:text-gray-500">
+                        <div className="flex items-center gap-1.5 text-xs text-gray-500 dark:text-gray-400">
                             <span className="font-semibold text-gray-600 dark:text-gray-400">{activeGoals.length}</span> {t('goals:overview.active')}
                             <span aria-hidden="true" className="text-gray-300 dark:text-gray-600">·</span>
                             <span className="font-semibold text-gray-600 dark:text-gray-400">{completedGoals.length}</span> {t('goals:overview.completed')}
@@ -235,8 +235,8 @@ export function GoalsOverview({ goals = [], isLoading = false, onEdit, onContrib
                                 label={t('goals:overview.overallProgress')}
                             />
                             <div className="flex justify-between text-xs text-gray-500 dark:text-gray-400 -mt-1">
-                                <span>{isValueVisible ? formatCurrency(totalCurrent, goals[0]?.currency || DEFAULT_CURRENCY) : '•••'}</span>
-                                <span>{isValueVisible ? formatCurrency(totalTarget, goals[0]?.currency || DEFAULT_CURRENCY) : '•••'}</span>
+                                <span>{isValueVisible ? formatCashAmount(totalCurrent, goals[0]?.currency || DEFAULT_CURRENCY) : '•••'}</span>
+                                <span>{isValueVisible ? formatCashAmount(totalTarget, goals[0]?.currency || DEFAULT_CURRENCY) : '•••'}</span>
                             </div>
                         </div>
 
@@ -265,8 +265,8 @@ export function GoalsOverview({ goals = [], isLoading = false, onEdit, onContrib
                                     />
                                 </div>
                                 <div className="flex justify-between text-xs text-gray-500 dark:text-gray-400">
-                                    <span className="truncate mr-1">{isValueVisible ? formatCurrency(firstRetirement.currentAmount, firstRetirement.currency || DEFAULT_CURRENCY) : '•••'}</span>
-                                    <span className="shrink-0">{isValueVisible ? formatCurrency(firstRetirement.targetAmount, firstRetirement.currency || DEFAULT_CURRENCY) : '•••'}</span>
+                                    <span className="truncate mr-1">{isValueVisible ? formatCashAmount(firstRetirement.currentAmount, firstRetirement.currency || DEFAULT_CURRENCY) : '•••'}</span>
+                                    <span className="shrink-0">{isValueVisible ? formatCashAmount(firstRetirement.targetAmount, firstRetirement.currency || DEFAULT_CURRENCY) : '•••'}</span>
                                 </div>
                             </div>
                         )}
@@ -334,10 +334,10 @@ export function GoalsOverview({ goals = [], isLoading = false, onEdit, onContrib
                     />
                     <div className="flex justify-between text-sm">
                         <span className="text-gray-600 dark:text-gray-400">
-                            {isValueVisible ? formatCurrency(totalCurrent, goals[0]?.currency || DEFAULT_CURRENCY) : '•••••'}
+                            {isValueVisible ? formatCashAmount(totalCurrent, goals[0]?.currency || DEFAULT_CURRENCY) : '•••••'}
                         </span>
                         <span className="text-gray-600 dark:text-gray-400">
-                            {isValueVisible ? formatCurrency(totalTarget, goals[0]?.currency || DEFAULT_CURRENCY) : '•••••'}
+                            {isValueVisible ? formatCashAmount(totalTarget, goals[0]?.currency || DEFAULT_CURRENCY) : '•••••'}
                         </span>
                     </div>
                 </div>
@@ -372,8 +372,8 @@ export function GoalsOverview({ goals = [], isLoading = false, onEdit, onContrib
                             />
                         </div>
                         <div className="flex justify-between text-xs sm:text-sm text-gray-600 dark:text-gray-400">
-                            <span className="truncate mr-2">{isValueVisible ? formatCurrency(goal.currentAmount, goal.currency || DEFAULT_CURRENCY) : '•••••'}</span>
-                            <span className="shrink-0">{isValueVisible ? `of ${formatCurrency(goal.targetAmount, goal.currency || DEFAULT_CURRENCY)}` : '•••••'}</span>
+                            <span className="truncate mr-2">{isValueVisible ? formatCashAmount(goal.currentAmount, goal.currency || DEFAULT_CURRENCY) : '•••••'}</span>
+                            <span className="shrink-0">{isValueVisible ? t('goals:overview.ofTarget', { amount: formatCashAmount(goal.targetAmount, goal.currency || DEFAULT_CURRENCY) }) : '•••••'}</span>
                         </div>
                     </div>
                 );
