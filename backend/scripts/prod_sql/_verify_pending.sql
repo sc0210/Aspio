@@ -127,7 +127,12 @@ WITH checks(sort, object, source_file, present) AS (
 
     -- 2026_11_06_drop_system_alerts.sql
     (21, 'table system_alerts dropped', '2026_11_06_drop_system_alerts.sql',
-        to_regclass('public.system_alerts') IS NULL)
+        to_regclass('public.system_alerts') IS NULL),
+
+    -- 2026_11_06_saving_records_rls.sql
+    (22, 'RLS on saving_records', '2026_11_06_saving_records_rls.sql',
+        COALESCE((SELECT relrowsecurity FROM pg_class
+                   WHERE oid = to_regclass('public.saving_records')), false))
 )
 SELECT
     CASE WHEN present THEN 'OK     ' ELSE 'MISSING' END AS status,
