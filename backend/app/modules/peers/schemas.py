@@ -2,7 +2,7 @@
 Pydantic v2 schemas for the peers module.
 
 Request schemas:  PeerInviteRequest, PeerRespondRequest,
-                  SharedGoalCreate, SharedGoalContributionUpdate
+                  SharedGoalCreate, SharedGoalUpdate
 Response schemas: UserSearchResult, PeerConnectionOut,
                   WalletTotals, PeerStatCard,
                   CompareChartPoint, CompareDataResponse,
@@ -14,7 +14,7 @@ from decimal import Decimal
 from typing import Literal, Optional
 from uuid import UUID
 
-from pydantic import BaseModel, ConfigDict, Field
+from pydantic import BaseModel, ConfigDict, Field, field_validator
 
 
 # ---------------------------------------------------------------------------
@@ -149,10 +149,21 @@ class SharedGoalCreate(BaseModel):
     target_date: Optional[date] = None
 
 
-class SharedGoalContributionUpdate(BaseModel):
-    """Body for PATCH /peers/goals/{goal_id}/contribution"""
+class SharedGoalUpdate(BaseModel):
+    """Body for PATCH /peers/goals/{goal_id}. Either participant may edit."""
 
-    amount: Decimal = Field(..., ge=0, description="New absolute contribution amount (>= 0)")
+    title: Optional[str] = Field(None, min_length=1, max_length=100)
+    target_amount: Optional[Decimal] = Field(None, gt=0)
+    target_date: Optional[date] = None
+
+    @field_validator("title", "target_amount")
+    @classmethod
+    def _no_explicit_null(cls, v):
+        # Leaving a field out keeps it; sending null for these would write NULL
+        # into a NOT NULL column (a 500). target_date may be cleared with null.
+        if v is None:
+            raise ValueError("may be omitted but not null")
+        return v
 
 
 class SharedGoalOut(BaseModel):

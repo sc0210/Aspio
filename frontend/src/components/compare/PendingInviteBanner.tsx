@@ -50,6 +50,9 @@ export default function PendingInviteBanner({ invites, onRespond }: PendingInvit
               )}{' '}
               {t('savings.inviteRequestSuffix', 'wants to save together with you.')}
             </p>
+            <p className="text-xs text-amber-800 dark:text-amber-300 mt-1">
+              {t('savings.inviteSharesFinances', 'Accepting lets you both see each other’s wallet totals, debt and net worth.')}
+            </p>
             {errors[invite.id] && (
               <p className="text-xs text-error-700 dark:text-error-400 mt-1">{errors[invite.id]}</p>
             )}

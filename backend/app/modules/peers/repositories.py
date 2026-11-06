@@ -113,6 +113,16 @@ class PeerConnectionRepository:
         )
         return (await self.session.execute(stmt)).scalar_one()
 
+    async def count_pending_sent(self, user_id: UUID) -> int:
+        """Count invites this user has sent that are still pending."""
+        stmt = select(func.count()).where(
+            and_(
+                PeerConnection.requester_id == user_id,
+                PeerConnection.status == PeerStatus.PENDING,
+            )
+        )
+        return (await self.session.execute(stmt)).scalar_one()
+
     async def get_accepted_peer_ids(self, user_id: UUID) -> list[UUID]:
         """Return peer UUIDs connected via accepted connections."""
         stmt = select(
@@ -153,10 +163,18 @@ class SharedGoalRepository:
         )
         return (await self.session.execute(stmt)).scalar_one()
 
-    async def list_active_for_participant(
+    async def list_for_connection(self, connection_id: UUID) -> list[SharedGoal]:
+        stmt = select(SharedGoal).where(SharedGoal.connection_id == connection_id)
+        return list((await self.session.execute(stmt)).scalars().all())
+
+    async def list_for_participant(
         self, user_id: UUID
     ) -> list[tuple[SharedGoal, PeerConnection]]:
-        """Return (goal, connection) pairs where the user is a participant."""
+        """Return (goal, connection) pairs where the user is a participant.
+
+        Active and completed goals: listing active ones only made a goal vanish
+        the moment it reached its target.
+        """
         stmt = (
             select(SharedGoal, PeerConnection)
             .join(PeerConnection, SharedGoal.connection_id == PeerConnection.id)
@@ -166,7 +184,7 @@ class SharedGoalRepository:
                         PeerConnection.requester_id == user_id,
                         PeerConnection.receiver_id == user_id,
                     ),
-                    SharedGoal.status == GoalStatus.active,
+                    SharedGoal.status.in_([GoalStatus.active, GoalStatus.completed]),
                     PeerConnection.status == PeerStatus.ACCEPTED,
                 )
             )

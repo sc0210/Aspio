@@ -86,14 +86,20 @@ jest.mock('@/components/compare/CompareStatCards', () => function CompareStatsSt
 jest.mock('@/components/savings/SharedGoalCard', () => function GoalCardStub({
   goal,
   onViewRecords,
+  onDelete,
+  onEdit,
 }: {
   goal: { id: string; your_amount: number; peer_amount: number; total_amount: number };
   onViewRecords: (goal: unknown) => void;
+  onDelete: (id: string) => void;
+  onEdit?: (goal: unknown) => void;
 }) {
   return (
     <div data-testid="goal-card">
       <span>{`${goal.id}:${goal.your_amount}+${goal.peer_amount}/${goal.total_amount}`}</span>
       <button type="button" onClick={() => onViewRecords(goal)}>{`records ${goal.id}`}</button>
+      <button type="button" onClick={() => onDelete(goal.id)}>{`delete ${goal.id}`}</button>
+      {onEdit && <button type="button" onClick={() => onEdit(goal)}>{`edit ${goal.id}`}</button>}
     </div>
   );
 });
@@ -225,10 +231,31 @@ describe('/savings — goals and compare as tabs over one roster', () => {
 
     for (const button of await screen.findAllByRole('button', { name: 'Remove {{name}}' })) {
       await user.click(button);
+      // Removing asks first: it ends the sharing for the partner too.
+      await user.click(await screen.findByRole('button', { name: 'Remove' }));
     }
 
     expect(await screen.findByText('Invite a peer to get started.')).toBeInTheDocument();
     expect(screen.queryByRole('tablist')).not.toBeInTheDocument();
+  });
+
+  it('asks before removing a peer, and Cancel keeps them', async () => {
+    const user = userEvent.setup();
+    render(<SavingsPage />);
+
+    const [first] = await screen.findAllByRole('button', { name: 'Remove {{name}}' });
+    const before = (await screen.findAllByRole('button', { name: 'Remove {{name}}' })).length;
+    await user.click(first);
+    expect(await screen.findByText('Remove this peer?')).toBeInTheDocument();
+    await user.click(screen.getByRole('button', { name: /cancel/i }));
+
+    expect(screen.getAllByRole('button', { name: 'Remove {{name}}' })).toHaveLength(before);
+  });
+
+  it('offers no goal editing in demo mode', async () => {
+    render(<SavingsPage />);
+    await screen.findAllByRole('button', { name: /^delete / });
+    expect(screen.queryByRole('button', { name: /^edit / })).not.toBeInTheDocument();
   });
 
   it('calls no API in demo mode, on either tab', async () => {
@@ -305,6 +332,29 @@ describe('/savings — goals and compare as tabs over one roster', () => {
       await waitFor(() => expect(api.listSharedGoals).toHaveBeenCalledTimes(2));
       expect(api.getPeerConnections).toHaveBeenCalledTimes(1);
       expect(screen.getByRole('tablist')).toBeInTheDocument();
+    });
+
+    it('asks before deleting a goal; Cancel deletes nothing, confirming deletes once', async () => {
+      const user = userEvent.setup();
+      api.listSharedGoals.mockResolvedValue({ data: [demoSharedGoals[0]] });
+      api.deleteSharedGoal.mockResolvedValue({ data: null });
+      render(<SavingsPage />);
+      const del = await screen.findByRole('button', { name: `delete ${demoSharedGoals[0].id}` });
+
+      await user.click(del);
+      expect(await screen.findByText('Delete this goal?')).toBeInTheDocument();
+      await user.click(screen.getByRole('button', { name: /cancel/i }));
+      expect(api.deleteSharedGoal).not.toHaveBeenCalled();
+
+      await user.click(del);
+      await user.click(await screen.findByRole('button', { name: 'Delete goal' }));
+      await waitFor(() => expect(api.deleteSharedGoal).toHaveBeenCalledTimes(1));
+    });
+
+    it('offers editing to a signed-in user', async () => {
+      api.listSharedGoals.mockResolvedValue({ data: [demoSharedGoals[0]] });
+      render(<SavingsPage />);
+      expect(await screen.findByRole('button', { name: `edit ${demoSharedGoals[0].id}` })).toBeInTheDocument();
     });
 
     it('fetches the comparison once when its tab is shown', async () => {

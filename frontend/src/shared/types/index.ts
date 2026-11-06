@@ -522,6 +522,12 @@ export interface SharedGoalCreate {
   target_date?: string | null;
 }
 
+export interface SharedGoalUpdate {
+  title?: string;
+  target_amount?: number;
+  target_date?: string | null;
+}
+
 export interface SavingRecord {
   id: string;
   goal_id: string;

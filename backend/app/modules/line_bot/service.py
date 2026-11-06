@@ -4693,6 +4693,7 @@ async def web_update_expense(
         raise _http_error(404, "Expense not found")
 
     # Apply scalar field changes.
+    original_payer = expense.payer_id
     new_amount = body.amount if body.amount is not None else expense.amount
     if body.description is not None:
         expense.description = body.description
@@ -4709,6 +4710,19 @@ async def web_update_expense(
     recompute = body.splits is not None or body.amount is not None
 
     if recompute:
+        # Recomputing replaces the split rows, which used to reset every
+        # settled flag: debts already paid came back. Remember who had settled
+        # which amount, and keep it settled when their share is unchanged.
+        from .models import ExpenseSplit
+
+        prior = (await db.execute(
+            select(ExpenseSplit).where(ExpenseSplit.expense_id == expense.id)
+        )).scalars().all()
+        # Only while the payer is unchanged: a settled share was paid to that
+        # payer, and the same amount now owed to someone else is a new debt.
+        settled_before = {
+            (s.user_id, s.amount): s.settled_at for s in prior if s.settled
+        } if expense.payer_id == original_payer else {}
         await expense_repo.delete_splits_for_expense(expense.id)
         await db.flush()
         if body.splits is not None:
@@ -4724,6 +4738,29 @@ async def web_update_expense(
                     amount=split_amount,
                 )
             await db.flush()
+
+        if settled_before:
+            for split in (await db.execute(
+                select(ExpenseSplit).where(ExpenseSplit.expense_id == expense.id)
+            )).scalars().all():
+                key = (split.user_id, split.amount)
+                if key in settled_before:
+                    split.settled = True
+                    split.settled_at = settled_before.pop(key) or datetime.now(timezone.utc)
+            await db.flush()
+
+    if not recompute and expense.payer_id != original_payer:
+        # A payer-only edit keeps the split rows, but every settled flag on them
+        # recorded a payment to the old payer; against the new payer nothing is
+        # paid yet.
+        from .models import ExpenseSplit
+
+        for split in (await db.execute(
+            select(ExpenseSplit).where(ExpenseSplit.expense_id == expense.id)
+        )).scalars().all():
+            split.settled = False
+            split.settled_at = None
+        await db.flush()
 
     await _log_activity(
         db,
@@ -4781,6 +4818,10 @@ async def web_settle(
         raise _http_error(422, "Both parties must be members of this group")
     if body.owed_by == body.owed_to:
         raise _http_error(422, "Cannot settle a debt with yourself")
+    # Only the two people the debt is between may settle it; any member could
+    # before, so a third person could clear a debt neither party agreed to.
+    if user_id not in (body.owed_by, body.owed_to):
+        raise _http_error(403, "Only the two members involved can settle this debt")
 
     total = await _settle_debt(
         db,

@@ -1507,3 +1507,88 @@ class TestLiffSessionAccountState:
 
         assert result.linked is True
         assert result.access_token
+
+
+class TestWebEditKeepsSettledDebts:
+    """Editing an expense recreated its splits and reset every settled flag, so a
+    debt already paid came back; and any member could settle anyone's debt."""
+
+    @pytest.mark.asyncio
+    async def test_editing_the_note_does_not_unsettle(self, async_session, two_member_group, link, link2):
+        from app.modules.line_bot.schemas import ExpenseUpdateRequest, SettleRequest
+
+        out = await svc.web_add_expense(async_session, two_member_group.id, link.user_id,
+                                        ExpenseCreateRequest(amount=Decimal("100"), description="dinner"))
+        await svc.web_settle(async_session, two_member_group.id, link2.user_id,
+                             SettleRequest(owed_by=link2.user_id, owed_to=link.user_id))
+
+        edited = await svc.web_update_expense(
+            async_session, two_member_group.id, out.id, link.user_id,
+            ExpenseUpdateRequest(amount=Decimal("100"), description="dinner (edited)"))
+        debtor_split = next(s for s in edited.splits if s.user_id == link2.user_id)
+        assert debtor_split.settled is True
+
+    @pytest.mark.asyncio
+    async def test_a_changed_share_is_owed_again(self, async_session, two_member_group, link, link2):
+        from app.modules.line_bot.schemas import ExpenseUpdateRequest, SettleRequest
+
+        out = await svc.web_add_expense(async_session, two_member_group.id, link.user_id,
+                                        ExpenseCreateRequest(amount=Decimal("100"), description="dinner"))
+        await svc.web_settle(async_session, two_member_group.id, link2.user_id,
+                             SettleRequest(owed_by=link2.user_id, owed_to=link.user_id))
+
+        edited = await svc.web_update_expense(
+            async_session, two_member_group.id, out.id, link.user_id,
+            ExpenseUpdateRequest(amount=Decimal("300")))
+        debtor_split = next(s for s in edited.splits if s.user_id == link2.user_id)
+        assert (debtor_split.amount, debtor_split.settled) == (Decimal("150"), False)
+
+    @pytest.mark.asyncio
+    async def test_a_third_member_cannot_settle_others_debt(self, async_session, two_member_group, link, link2):
+        from app.modules.line_bot.schemas import SettleRequest
+
+        outsider = _make_user()
+        async_session.add(outsider)
+        await async_session.flush()
+        async_session.add(LineGroupMember(group_id=two_member_group.id, user_id=outsider.id,
+                                          line_user_id="Uthird789"))
+        await async_session.flush()
+        await svc.web_add_expense(async_session, two_member_group.id, link.user_id,
+                                  ExpenseCreateRequest(amount=Decimal("90"), description="taxi"))
+
+        with pytest.raises(HTTPException) as exc:
+            await svc.web_settle(async_session, two_member_group.id, outsider.id,
+                                 SettleRequest(owed_by=link2.user_id, owed_to=link.user_id))
+        assert exc.value.status_code == 403
+
+
+    @pytest.mark.asyncio
+    async def test_a_new_payer_means_a_new_debt(self, async_session, two_member_group, link, link2):
+        """B settled 50 owed to A; re-assigning the payer to B means A now owes B
+        50, which nobody has paid."""
+        from app.modules.line_bot.schemas import ExpenseUpdateRequest, SettleRequest
+
+        out = await svc.web_add_expense(async_session, two_member_group.id, link.user_id,
+                                        ExpenseCreateRequest(amount=Decimal("100"), description="dinner"))
+        await svc.web_settle(async_session, two_member_group.id, link2.user_id,
+                             SettleRequest(owed_by=link2.user_id, owed_to=link.user_id))
+
+        edited = await svc.web_update_expense(
+            async_session, two_member_group.id, out.id, link.user_id,
+            ExpenseUpdateRequest(amount=Decimal("100"), payer_id=link2.user_id))
+        assert not any(s.settled for s in edited.splits)
+
+
+    @pytest.mark.asyncio
+    async def test_a_payer_only_edit_unsettles_too(self, async_session, two_member_group, link, link2):
+        from app.modules.line_bot.schemas import ExpenseUpdateRequest, SettleRequest
+
+        out = await svc.web_add_expense(async_session, two_member_group.id, link.user_id,
+                                        ExpenseCreateRequest(amount=Decimal("100"), description="dinner"))
+        await svc.web_settle(async_session, two_member_group.id, link2.user_id,
+                             SettleRequest(owed_by=link2.user_id, owed_to=link.user_id))
+
+        edited = await svc.web_update_expense(
+            async_session, two_member_group.id, out.id, link.user_id,
+            ExpenseUpdateRequest(payer_id=link2.user_id))
+        assert not any(s.settled for s in edited.splits)

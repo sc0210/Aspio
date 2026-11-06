@@ -17,6 +17,7 @@ import { PeerRoster } from '@/components/savings/PeerRoster';
 import SharedGoalCard from '@/components/savings/SharedGoalCard';
 import CreateGoalModal from '@/components/savings/CreateGoalModal';
 import SavingRecordsModal from '@/components/savings/SavingRecordsModal';
+import { ConfirmDialog } from '@/components/ui/ConfirmDialog';
 import { withRecordTotals } from '@/components/savings/recordOwnership';
 import { demoCompareData, demoPeerConnections, demoSavingRecords, demoSharedGoals } from '@/data/demoData';
 import type { CompareDataResponse, PeerConnectionOut, SharedGoalOut } from '@/shared/types';
@@ -83,6 +84,10 @@ function SavingsGroups() {
   const [recordsGoal, setRecordsGoal] = useState<SharedGoalOut | null>(null);
   const [removingId, setRemovingId] = useState<string | null>(null);
   const [deletingGoalId, setDeletingGoalId] = useState<string | null>(null);
+  // Both delete things for the partner too, so each asks first.
+  const [confirmRemoveId, setConfirmRemoveId] = useState<string | null>(null);
+  const [confirmDeleteGoalId, setConfirmDeleteGoalId] = useState<string | null>(null);
+  const [editingGoal, setEditingGoal] = useState<SharedGoalOut | null>(null);
 
   // The comparison is fetched the first time its tab is shown, and again after
   // the roster changes — not with the page, since most visits are for goals.
@@ -283,7 +288,7 @@ function SavingsGroups() {
       accepted={accepted}
       sentPending={sentPending}
       removingId={removingId}
-      onRemove={handleRemovePeer}
+      onRemove={setConfirmRemoveId}
     />
   );
 
@@ -421,7 +426,8 @@ function SavingsGroups() {
                               key={goal.id}
                               goal={goal}
                               onViewRecords={setRecordsGoal}
-                              onDelete={handleDeleteGoal}
+                              onDelete={setConfirmDeleteGoalId}
+                              onEdit={isDemo ? undefined : setEditingGoal}
                               deleting={deletingGoalId === goal.id}
                             />
                           ))}
@@ -463,8 +469,38 @@ function SavingsGroups() {
             onSuccess={refreshGoals}
             connections={accepted}
           />
+          <CreateGoalModal
+            isOpen={editingGoal !== null}
+            onClose={() => setEditingGoal(null)}
+            onSuccess={refreshGoals}
+            connections={accepted}
+            goal={editingGoal}
+          />
         </>
       )}
+
+      <ConfirmDialog
+        isOpen={confirmRemoveId !== null}
+        title={t('savings.confirmRemoveTitle', 'Remove this peer?')}
+        message={t('savings.confirmRemoveMessage', 'You will both stop seeing each other’s finances and your shared goals. Reconnecting later brings the goals back.')}
+        confirmLabel={t('savings.confirmRemove', 'Remove')}
+        onCancel={() => setConfirmRemoveId(null)}
+        onConfirm={() => {
+          if (confirmRemoveId) void handleRemovePeer(confirmRemoveId);
+          setConfirmRemoveId(null);
+        }}
+      />
+      <ConfirmDialog
+        isOpen={confirmDeleteGoalId !== null}
+        title={t('savings.confirmDeleteGoalTitle', 'Delete this goal?')}
+        message={t('savings.confirmDeleteGoalMessage', 'This deletes the goal and every saving record in it, including your partner’s. It can’t be undone.')}
+        confirmLabel={t('savings.confirmDeleteGoal', 'Delete goal')}
+        onCancel={() => setConfirmDeleteGoalId(null)}
+        onConfirm={() => {
+          if (confirmDeleteGoalId) void handleDeleteGoal(confirmDeleteGoalId);
+          setConfirmDeleteGoalId(null);
+        }}
+      />
 
       <SavingRecordsModal
         goal={recordsGoal}

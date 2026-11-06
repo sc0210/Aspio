@@ -21,8 +21,8 @@ Covered behaviours
 11. remove_connection — sets status=REMOVED and commits
 12. create_goal  — raises 404 when connection not found
 13. create_goal  — raises 400 when goal cap (10) reached
-14. update_contribution — auto-sets status to completed when total >= target
-15. update_contribution — does NOT complete goal when total < target
+14-15. (update_contribution removed with the /contribution shim; completion is
+        covered against real rows in test_peer_hardening.py)
 16. delete_goal  — raises 404 when goal not found
 17. delete_goal  — raises 403 when caller is not the creator
 18. delete_goal  — happy path calls session.delete() and commit
@@ -228,10 +228,15 @@ class TestSendInvite:
         session = _make_session()
         # Call order:
         #   execute[0]: find receiver → receiver object
-        #   execute[1]: _count_accepted → 2  (via scalar_one)
+        #   execute[1]: existing pair → None;  execute[2]: requester → None
+        #   execute[3]: count_accepted(requester) → 2
+        #   execute[4]: count_pending_sent(requester) → 0
         session.execute.side_effect = [
             _scalars_first(receiver),
+            _scalars_first(None),
+            _scalars_first(None),
             _scalar_one(2),
+            _scalar_one(0),
         ]
 
         with pytest.raises(HTTPException) as exc_info:
@@ -249,13 +254,13 @@ class TestSendInvite:
         session = _make_session()
         # Call order:
         #   execute[0]: find receiver → receiver object
-        #   execute[1]: _count_accepted → 0
-        #   execute[2]: check existing pair → existing connection
+        #   execute[1]: check existing pair → existing connection
+        #   execute[2]: requester lookup (runs before the 409 check)
+        # The 409 answers before any cap count runs.
         session.execute.side_effect = [
             _scalars_first(receiver),
-            _scalar_one(0),
             _scalars_first(existing_conn),
-            _scalars_first(None),  # requester lookup (runs before the 409 check)
+            _scalars_first(None),
         ]
 
         with pytest.raises(HTTPException) as exc_info:
@@ -272,14 +277,14 @@ class TestSendInvite:
         session = _make_session()
         # Call order:
         #   execute[0]: find receiver → receiver
-        #   execute[1]: _count_accepted → 0
-        #   execute[2]: check existing pair → None
-        #   execute[3]: find requester → requester
+        #   execute[1]: check existing pair → None
+        #   execute[2]: find requester → requester
+        #   execute[3-5]: accepted(requester), pending_sent(requester), accepted(receiver) → 0
         session.execute.side_effect = [
             _scalars_first(receiver),
-            _scalar_one(0),
             _scalars_first(None),
             _scalars_first(requester),
+            _scalar_one(0), _scalar_one(0), _scalar_one(0),
         ]
 
         from app.modules.peers.models import PeerConnection
@@ -326,10 +331,12 @@ class TestRespondToInvite:
 
         session = _make_session()
         # execute[0]: find pending connection → conn
-        # execute[1]: _count_accepted → 0  (receiver check)
+        # execute[1-2]: count_accepted for the receiver, then the requester → 0
+        # execute[3]: responder's profile, for the requester's notification
         session.execute.side_effect = [
             _scalars_first(conn),
-            _scalar_one(0),
+            _scalar_one(0), _scalar_one(0),
+            _mappings_first({"id": user_id, "name": "Bob"}),
         ]
 
         await PeerService(session).respond_to_invite(conn.id, user_id, "accept")
@@ -437,91 +444,6 @@ class TestCreateGoal:
 
         assert exc_info.value.status_code == 400
         assert "maximum" in exc_info.value.detail.lower()
-
-
-# ===========================================================================
-# 14–15. update_contribution
-# ===========================================================================
-
-class TestUpdateContribution:
-
-    @pytest.mark.asyncio
-    async def test_auto_completes_goal_when_total_meets_target(self):
-        user_id = uuid.uuid4()
-        conn_id = uuid.uuid4()
-        goal_id = uuid.uuid4()
-
-        conn = _make_connection(
-            conn_id=conn_id,
-            requester_id=user_id,
-            status=PeerStatus.ACCEPTED,
-        )
-        goal = _make_goal(
-            goal_id=goal_id,
-            connection_id=conn_id,
-            target_amount=Decimal("10000"),
-            requester_amount=Decimal("0"),
-            receiver_amount=Decimal("5000"),
-            status=GoalStatus.active,
-        )
-
-        session = _make_session()
-        # _get_goal_and_connection: execute[0] returns (goal, conn) row
-        row = MagicMock()
-        row.__getitem__ = lambda self, i: (goal, conn)[i]
-        first_result = MagicMock()
-        first_result.first.return_value = row
-
-        # _fetch_users_by_id: execute[1] returns empty mapping
-        users_result = _mappings_all([])
-
-        session.execute.side_effect = [first_result, users_result]
-
-        # Requester contributes 5000 — total becomes 10000 >= 10000
-        await PeerService(session).update_contribution(
-            user_id, goal_id, Decimal("5000")
-        )
-
-        assert goal.status == GoalStatus.completed
-        session.commit.assert_called_once()
-
-    @pytest.mark.asyncio
-    async def test_does_not_complete_goal_when_total_below_target(self):
-        user_id = uuid.uuid4()
-        conn_id = uuid.uuid4()
-        goal_id = uuid.uuid4()
-
-        conn = _make_connection(
-            conn_id=conn_id,
-            requester_id=user_id,
-            status=PeerStatus.ACCEPTED,
-        )
-        goal = _make_goal(
-            goal_id=goal_id,
-            connection_id=conn_id,
-            target_amount=Decimal("10000"),
-            requester_amount=Decimal("0"),
-            receiver_amount=Decimal("1000"),
-            status=GoalStatus.active,
-        )
-
-        session = _make_session()
-        row = MagicMock()
-        row.__getitem__ = lambda self, i: (goal, conn)[i]
-        first_result = MagicMock()
-        first_result.first.return_value = row
-
-        users_result = _mappings_all([])
-
-        session.execute.side_effect = [first_result, users_result]
-
-        # Requester contributes 2000 — total becomes 3000 < 10000
-        await PeerService(session).update_contribution(
-            user_id, goal_id, Decimal("2000")
-        )
-
-        assert goal.status == GoalStatus.active
-        session.commit.assert_called_once()
 
 
 # ===========================================================================
