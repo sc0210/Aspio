@@ -21,8 +21,8 @@ Covered behaviours
 11. remove_connection — sets status=REMOVED and commits
 12. create_goal  — raises 404 when connection not found
 13. create_goal  — raises 400 when goal cap (10) reached
-14. update_contribution — auto-sets status to completed when total >= target
-15. update_contribution — does NOT complete goal when total < target
+14-15. (update_contribution removed with the /contribution shim; completion is
+        covered against real rows in test_peer_hardening.py)
 16. delete_goal  — raises 404 when goal not found
 17. delete_goal  — raises 403 when caller is not the creator
 18. delete_goal  — happy path calls session.delete() and commit
@@ -228,10 +228,13 @@ class TestSendInvite:
         session = _make_session()
         # Call order:
         #   execute[0]: find receiver → receiver object
-        #   execute[1]: count_accepted(requester) → 2
-        #   execute[2]: count_pending_sent(requester) → 0
+        #   execute[1]: existing pair → None;  execute[2]: requester → None
+        #   execute[3]: count_accepted(requester) → 2
+        #   execute[4]: count_pending_sent(requester) → 0
         session.execute.side_effect = [
             _scalars_first(receiver),
+            _scalars_first(None),
+            _scalars_first(None),
             _scalar_one(2),
             _scalar_one(0),
         ]
@@ -251,13 +254,13 @@ class TestSendInvite:
         session = _make_session()
         # Call order:
         #   execute[0]: find receiver → receiver object
-        #   execute[1-3]: accepted(requester), pending_sent(requester), accepted(receiver) → 0
-        #   execute[4]: check existing pair → existing connection
+        #   execute[1]: check existing pair → existing connection
+        #   execute[2]: requester lookup (runs before the 409 check)
+        # The 409 answers before any cap count runs.
         session.execute.side_effect = [
             _scalars_first(receiver),
-            _scalar_one(0), _scalar_one(0), _scalar_one(0),
             _scalars_first(existing_conn),
-            _scalars_first(None),  # requester lookup (runs before the 409 check)
+            _scalars_first(None),
         ]
 
         with pytest.raises(HTTPException) as exc_info:
@@ -274,14 +277,14 @@ class TestSendInvite:
         session = _make_session()
         # Call order:
         #   execute[0]: find receiver → receiver
-        #   execute[1-3]: accepted(requester), pending_sent(requester), accepted(receiver) → 0
-        #   execute[4]: check existing pair → None
-        #   execute[5]: find requester → requester
+        #   execute[1]: check existing pair → None
+        #   execute[2]: find requester → requester
+        #   execute[3-5]: accepted(requester), pending_sent(requester), accepted(receiver) → 0
         session.execute.side_effect = [
             _scalars_first(receiver),
-            _scalar_one(0), _scalar_one(0), _scalar_one(0),
             _scalars_first(None),
             _scalars_first(requester),
+            _scalar_one(0), _scalar_one(0), _scalar_one(0),
         ]
 
         from app.modules.peers.models import PeerConnection
@@ -442,10 +445,6 @@ class TestCreateGoal:
         assert exc_info.value.status_code == 400
         assert "maximum" in exc_info.value.detail.lower()
 
-
-# ===========================================================================
-# 14–15. update_contribution
-# ===========================================================================
 
 # ===========================================================================
 # 16–18. delete_goal

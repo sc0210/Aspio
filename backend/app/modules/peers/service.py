@@ -135,7 +135,36 @@ class PeerService:
                 detail="The demo account cannot have peer connections",
             )
 
-        # 2. The cap counts outstanding invites too: checking accepted ones only
+        # 3. Check for any existing connection row (either direction)
+        any_existing = await self._connections.find_any_between(requester_id, receiver.id)
+
+        # 4. Fetch requester for notification payload
+        requester = await self._users.get_by_id(requester_id)
+        if requester is not None and requester.email == DEMO_EMAIL:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="The demo account cannot have peer connections",
+            )
+
+        # An existing pair answers first (409 / cooldown), so re-sending to the
+        # same person says "already exists" rather than a cap message.
+        if any_existing is not None:
+            if any_existing.status in (PeerStatus.PENDING, PeerStatus.ACCEPTED):
+                raise HTTPException(
+                    status_code=status.HTTP_409_CONFLICT,
+                    detail="A pending or accepted connection already exists with this user",
+                )
+            if (
+                any_existing.status == PeerStatus.DECLINED
+                and any_existing.requester_id == requester_id
+                and _is_recent(any_existing.updated_at, REINVITE_COOLDOWN)
+            ):
+                raise HTTPException(
+                    status_code=status.HTTP_429_TOO_MANY_REQUESTS,
+                    detail="This user declined your invite recently; try again later",
+                )
+
+        # 5. The cap counts outstanding invites too: checking accepted ones only
         #    let a user send unlimited invites and end up over the limit.
         accepted_count = await self._connections.count_accepted(requester_id)
         pending_count = await self._connections.count_pending_sent(requester_id)
@@ -153,32 +182,7 @@ class PeerService:
                 detail="This user already has the maximum number of peer connections",
             )
 
-        # 3. Check for any existing connection row (either direction)
-        any_existing = await self._connections.find_any_between(requester_id, receiver.id)
-
-        # 4. Fetch requester for notification payload
-        requester = await self._users.get_by_id(requester_id)
-        if requester is not None and requester.email == DEMO_EMAIL:
-            raise HTTPException(
-                status_code=status.HTTP_400_BAD_REQUEST,
-                detail="The demo account cannot have peer connections",
-            )
-
         if any_existing is not None:
-            if any_existing.status in (PeerStatus.PENDING, PeerStatus.ACCEPTED):
-                raise HTTPException(
-                    status_code=status.HTTP_409_CONFLICT,
-                    detail="A pending or accepted connection already exists with this user",
-                )
-            if (
-                any_existing.status == PeerStatus.DECLINED
-                and any_existing.requester_id == requester_id
-                and _is_recent(any_existing.updated_at, REINVITE_COOLDOWN)
-            ):
-                raise HTTPException(
-                    status_code=status.HTTP_429_TOO_MANY_REQUESTS,
-                    detail="This user declined your invite recently; try again later",
-                )
             # REMOVED or DECLINED — reuse the row so the unique constraint on
             # (requester_id, receiver_id) is not violated by a second INSERT.
             sides_swapped = any_existing.requester_id != requester_id

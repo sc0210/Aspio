@@ -1560,3 +1560,20 @@ class TestWebEditKeepsSettledDebts:
             await svc.web_settle(async_session, two_member_group.id, outsider.id,
                                  SettleRequest(owed_by=link2.user_id, owed_to=link.user_id))
         assert exc.value.status_code == 403
+
+
+    @pytest.mark.asyncio
+    async def test_a_new_payer_means_a_new_debt(self, async_session, two_member_group, link, link2):
+        """B settled 50 owed to A; re-assigning the payer to B means A now owes B
+        50, which nobody has paid."""
+        from app.modules.line_bot.schemas import ExpenseUpdateRequest, SettleRequest
+
+        out = await svc.web_add_expense(async_session, two_member_group.id, link.user_id,
+                                        ExpenseCreateRequest(amount=Decimal("100"), description="dinner"))
+        await svc.web_settle(async_session, two_member_group.id, link2.user_id,
+                             SettleRequest(owed_by=link2.user_id, owed_to=link.user_id))
+
+        edited = await svc.web_update_expense(
+            async_session, two_member_group.id, out.id, link.user_id,
+            ExpenseUpdateRequest(amount=Decimal("100"), payer_id=link2.user_id))
+        assert not any(s.settled for s in edited.splits)

@@ -4693,6 +4693,7 @@ async def web_update_expense(
         raise _http_error(404, "Expense not found")
 
     # Apply scalar field changes.
+    original_payer = expense.payer_id
     new_amount = body.amount if body.amount is not None else expense.amount
     if body.description is not None:
         expense.description = body.description
@@ -4717,9 +4718,11 @@ async def web_update_expense(
         prior = (await db.execute(
             select(ExpenseSplit).where(ExpenseSplit.expense_id == expense.id)
         )).scalars().all()
+        # Only while the payer is unchanged: a settled share was paid to that
+        # payer, and the same amount now owed to someone else is a new debt.
         settled_before = {
             (s.user_id, s.amount): s.settled_at for s in prior if s.settled
-        }
+        } if expense.payer_id == original_payer else {}
         await expense_repo.delete_splits_for_expense(expense.id)
         await db.flush()
         if body.splits is not None:

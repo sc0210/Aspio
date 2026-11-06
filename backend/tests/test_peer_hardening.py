@@ -182,3 +182,24 @@ async def test_partners_are_notified_with_a_link_to_savings(async_session, peopl
     every = invite + accepted + deposit + completed
     assert {(n.action_url, n.is_actionable) for n in every} == {("/savings", True)}
     assert "net worth" in invite[0].message
+
+
+@pytest.mark.parametrize("field", ["title", "target_amount"])
+async def test_an_explicit_null_is_rejected_not_written(field):
+    """Omitted keeps the value; null for these would hit a NOT NULL column (500)."""
+    from pydantic import ValidationError
+
+    with pytest.raises(ValidationError):
+        SharedGoalUpdate(**{field: None})
+    assert SharedGoalUpdate(target_date=None).model_dump(exclude_unset=True) == {"target_date": None}
+
+
+async def test_a_duplicate_invite_is_409_even_at_the_cap(async_session, people):
+    svc = PeerService(async_session)
+    alice = people["alice"]
+    await svc.send_invite(alice.id, "bob")
+    await svc.send_invite(alice.id, "carol")  # now at the cap
+
+    with pytest.raises(HTTPException) as exc:
+        await svc.send_invite(alice.id, "bob")
+    assert exc.value.status_code == 409
