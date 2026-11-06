@@ -361,6 +361,13 @@ class Transaction(BaseModel):
         UUID(as_uuid=True), ForeignKey("portfolio_holdings.id", ondelete="SET NULL"), nullable=True
     )
 
+    # This person's row for their share of a bill split with a peer
+    # (peers.PeerSplitShare). Amount, date, currency and type follow the split;
+    # SET NULL so the expense survives if the split row ever goes.
+    peer_split_share_id: Mapped[Optional[uuid.UUID]] = mapped_column(
+        UUID(as_uuid=True), ForeignKey("peer_split_shares.id", ondelete="SET NULL"), nullable=True
+    )
+
     # Loan repayment tracking (optional — only set when this transaction is a loan payment)
     loan_id: Mapped[Optional[uuid.UUID]] = mapped_column(
         UUID(as_uuid=True), ForeignKey("debt_accounts.id", ondelete="SET NULL"), nullable=True
@@ -425,6 +432,7 @@ class Transaction(BaseModel):
         Index("idx_transactions_transfer_group", "transfer_group_id"),
         # Looked up on every holding edit/delete to find that holding's purchase entry.
         Index("idx_transactions_holding", "holding_id"),
+        Index("idx_transactions_peer_split_share", "peer_split_share_id"),
         # Composite indexes for dashboard queries
         Index(
             "idx_transactions_user_status_deleted", "user_id", "status", "is_deleted"

@@ -132,7 +132,21 @@ WITH checks(sort, object, source_file, present) AS (
     -- 2026_11_06_saving_records_rls.sql
     (22, 'RLS on saving_records', '2026_11_06_saving_records_rls.sql',
         COALESCE((SELECT relrowsecurity FROM pg_class
-                   WHERE oid = to_regclass('public.saving_records')), false))
+                   WHERE oid = to_regclass('public.saving_records')), false)),
+
+    -- 2026_11_07_peer_splits.sql
+    (23, 'table peer_connection_prefs (RLS on)', '2026_11_07_peer_splits.sql',
+        COALESCE((SELECT relrowsecurity FROM pg_class
+                   WHERE oid = to_regclass('public.peer_connection_prefs')), false)),
+    (24, 'table peer_splits (RLS on)', '2026_11_07_peer_splits.sql',
+        COALESCE((SELECT relrowsecurity FROM pg_class
+                   WHERE oid = to_regclass('public.peer_splits')), false)),
+    (25, 'table peer_split_shares (RLS on)', '2026_11_07_peer_splits.sql',
+        COALESCE((SELECT relrowsecurity FROM pg_class
+                   WHERE oid = to_regclass('public.peer_split_shares')), false)),
+    (26, 'column transactions.peer_split_share_id', '2026_11_07_peer_splits.sql',
+        EXISTS (SELECT 1 FROM information_schema.columns
+                 WHERE table_name = 'transactions' AND column_name = 'peer_split_share_id'))
 )
 SELECT
     CASE WHEN present THEN 'OK     ' ELSE 'MISSING' END AS status,

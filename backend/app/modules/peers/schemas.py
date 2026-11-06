@@ -11,7 +11,7 @@ Response schemas: UserSearchResult, PeerConnectionOut,
 
 from datetime import date, datetime
 from decimal import Decimal
-from typing import Literal, Optional
+from typing import List, Literal, Optional
 from uuid import UUID
 
 from pydantic import BaseModel, ConfigDict, Field, field_validator
@@ -235,3 +235,76 @@ class SavingRecordOut(BaseModel):
     record_date: str    # ISO date "YYYY-MM-DD"
     note: Optional[str]
     created_at: str     # ISO datetime string
+
+
+# ---------------------------------------------------------------------------
+# Split bills
+# ---------------------------------------------------------------------------
+
+
+class SplitCreate(BaseModel):
+    """Body for POST /peers/splits. Amounts are in the bill's currency."""
+
+    connection_id: UUID
+    description: str = Field(..., min_length=1, max_length=200)
+    total_amount: Decimal = Field(..., gt=0)
+    currency: str = Field("TWD", min_length=3, max_length=3)
+    split_date: date
+    category_id: UUID
+    payer: Literal["me", "partner"] = "me"
+    method: Literal["equal", "percent", "fixed"] = "equal"
+    # percent: my share as a percentage of the total; fixed: my share as an amount
+    my_percent: Optional[Decimal] = Field(None, ge=0, le=100)
+    my_amount: Optional[Decimal] = Field(None, ge=0)
+
+
+class SplitRespond(BaseModel):
+    """Body for POST /peers/splits/{id}/respond."""
+
+    action: Literal["accept", "decline"]
+    # Your own row: pick your category and wallet (Life or Emergency only).
+    category_id: Optional[UUID] = None
+    wallet_type: Literal["life", "emergency"] = "life"
+
+
+class SplitOut(BaseModel):
+    """A split as one participant sees it."""
+
+    id: str
+    connection_id: str
+    description: str
+    total_amount: float
+    currency: str
+    split_date: str
+    category_id: Optional[str]
+    method: str
+    status: str
+    payer_is_me: bool
+    created_by_me: bool
+    partner_name: str
+    my_share: float
+    partner_share: float
+    my_share_status: str
+    partner_share_status: str
+    my_transaction_id: Optional[str]
+
+
+class CurrencyBalance(BaseModel):
+    currency: str
+    # > 0: your partner owes you this much; < 0: you owe your partner.
+    net: float
+
+
+class PeerBalanceOut(BaseModel):
+    connection_id: str
+    partner_name: str
+    balances: List[CurrencyBalance]
+
+
+class PeerPrefsOut(BaseModel):
+    connection_id: str
+    split_policy: Literal["off", "approve_each", "auto_accept"]
+
+
+class PeerPrefsUpdate(BaseModel):
+    split_policy: Literal["off", "approve_each", "auto_accept"]

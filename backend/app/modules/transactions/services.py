@@ -597,6 +597,23 @@ class TransactionService:
                         details={"fields": sorted(changed)},
                     )
 
+        # A share of a bill split with a peer: its money follows the split while
+        # the split is open, so only the row's own fields (description, notes,
+        # tags, category, payment method) change here.
+        if self._HOLDING_OWNED_FIELDS & data.keys():
+            stored = await self.transaction_repo.get_by_id(transaction_id, user_id)
+            if stored is not None and await self._split_is_open(stored):
+                changed = [
+                    field for field in self._HOLDING_OWNED_FIELDS & data.keys()
+                    if not self._same_value(getattr(stored, field), data[field])
+                ]
+                if changed:
+                    raise BusinessLogicException(
+                        "This entry is your share of a bill split with your partner. "
+                        "Change the split on Savings to change its amount or date.",
+                        details={"fields": sorted(changed)},
+                    )
+
         # Treat an empty loan_id as an explicit "unlink" (restore the balance).
         if "loan_id" in data and not data["loan_id"]:
             data["loan_id"] = None
@@ -704,6 +721,21 @@ class TransactionService:
             return stored_value.upper() == incoming_value.upper()
         return stored_value == incoming_value
 
+    async def _split_is_open(self, transaction) -> bool:
+        """Whether this row is a share of a split still proposed or active."""
+        if transaction is None or getattr(transaction, "peer_split_share_id", None) is None:
+            return False
+        from sqlalchemy import select
+
+        from app.modules.peers.models import PeerSplit, PeerSplitShare, SplitStatus
+
+        status_ = (await self.transaction_repo.db.execute(
+            select(PeerSplit.status)
+            .join(PeerSplitShare, PeerSplitShare.split_id == PeerSplit.id)
+            .where(PeerSplitShare.id == transaction.peer_split_share_id)
+        )).scalar_one_or_none()
+        return status_ in (SplitStatus.PROPOSED.value, SplitStatus.ACTIVE.value)
+
     async def holding_sole_purchase(self, transaction) -> Optional[bool]:
         """Whether editing this row's holding rewrites this row (None: no holding)."""
         if transaction is None or transaction.holding_id is None:
@@ -729,6 +761,12 @@ class TransactionService:
             raise BusinessLogicException(
                 "This entry is the cash side of a portfolio holding. Delete the "
                 "holding on Portfolio, which removes this entry with it.",
+            )
+
+        if existing is not None and await self._split_is_open(existing):
+            raise BusinessLogicException(
+                "This entry is your share of a bill split with your partner. "
+                "Withdraw the split on Savings instead.",
             )
 
         # The delete, the loan balance it restores and a transfer's other leg are one

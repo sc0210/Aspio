@@ -213,3 +213,121 @@ class SavingRecord(BaseModel):
             f"amount={self.amount}, "
             f"record_date={self.record_date})>"
         )
+
+
+# ---------------------------------------------------------------------------
+# Split bills between two peers
+#
+# Share basis: each person's ledger holds only their own share of a bill, as an
+# ordinary expense, so every total, review and dashboard figure counts it
+# correctly with no aggregation changes. The partner's row exists only once
+# they accept. What one owes the other is derived from accepted splits (never
+# stored); settling up is recorded separately and writes no transaction.
+# ---------------------------------------------------------------------------
+
+
+class SplitPolicy(str, enum.Enum):
+    """How a person handles split proposals from one partner."""
+
+    OFF = "off"                    # the partner can't propose splits
+    APPROVE_EACH = "approve_each"  # each proposal waits for an accept (default)
+    AUTO_ACCEPT = "auto_accept"    # proposals are accepted on arrival
+
+
+class PeerConnectionPref(BaseModel):
+    """One person's settings for one connection.
+
+    Keyed by (connection, user), never by requester/receiver side: re-inviting
+    after a remove swaps those sides, which once credited each person with the
+    other's goal savings.
+    """
+
+    __tablename__ = "peer_connection_prefs"
+
+    connection_id: Mapped[uuid.UUID] = mapped_column(
+        UUID(as_uuid=True), ForeignKey("peer_connections.id", ondelete="CASCADE"), primary_key=True
+    )
+    user_id: Mapped[uuid.UUID] = mapped_column(
+        UUID(as_uuid=True), ForeignKey("users.id", ondelete="CASCADE"), primary_key=True
+    )
+    split_policy: Mapped[str] = mapped_column(
+        String(16), nullable=False, default=SplitPolicy.APPROVE_EACH.value
+    )
+
+
+class SplitMethod(str, enum.Enum):
+    EQUAL = "equal"
+    PERCENT = "percent"
+    FIXED = "fixed"
+
+
+class SplitStatus(str, enum.Enum):
+    PROPOSED = "proposed"   # waiting for the partner
+    ACTIVE = "active"       # the partner accepted
+    DECLINED = "declined"   # the partner declined; the creator keeps their row
+    VOIDED = "voided"       # the creator withdrew it before an answer
+
+
+class ShareStatus(str, enum.Enum):
+    PROPOSED = "proposed"
+    ACCEPTED = "accepted"
+    DECLINED = "declined"
+
+
+class PeerSplit(BaseModel):
+    """A bill shared between the two people on a connection."""
+
+    __tablename__ = "peer_splits"
+
+    id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    connection_id: Mapped[uuid.UUID] = mapped_column(
+        UUID(as_uuid=True), ForeignKey("peer_connections.id", ondelete="CASCADE"), nullable=False
+    )
+    created_by: Mapped[uuid.UUID] = mapped_column(
+        UUID(as_uuid=True), ForeignKey("users.id", ondelete="CASCADE"), nullable=False
+    )
+    payer_id: Mapped[uuid.UUID] = mapped_column(
+        UUID(as_uuid=True), ForeignKey("users.id", ondelete="CASCADE"), nullable=False
+    )
+    description: Mapped[str] = mapped_column(String(200), nullable=False)
+    total_amount: Mapped[Decimal] = mapped_column(Numeric(15, 2), nullable=False)
+    currency: Mapped[str] = mapped_column(String(3), nullable=False, default="TWD")
+    category_id: Mapped[Optional[uuid.UUID]] = mapped_column(
+        UUID(as_uuid=True), ForeignKey("transaction_categories.id", ondelete="SET NULL"), nullable=True
+    )
+    split_date: Mapped[date] = mapped_column(Date, nullable=False)
+    method: Mapped[str] = mapped_column(String(10), nullable=False, default=SplitMethod.EQUAL.value)
+    status: Mapped[str] = mapped_column(String(10), nullable=False, default=SplitStatus.PROPOSED.value)
+
+    shares: Mapped[list["PeerSplitShare"]] = relationship(
+        "PeerSplitShare", back_populates="split", cascade="all, delete-orphan", lazy="selectin"
+    )
+
+    __table_args__ = (
+        CheckConstraint("total_amount > 0", name="peer_split_positive_total"),
+        Index("idx_peer_splits_connection", "connection_id"),
+    )
+
+
+class PeerSplitShare(BaseModel):
+    """One person's part of a split. transaction_id is their ledger row, if any."""
+
+    __tablename__ = "peer_split_shares"
+
+    id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    split_id: Mapped[uuid.UUID] = mapped_column(
+        UUID(as_uuid=True), ForeignKey("peer_splits.id", ondelete="CASCADE"), nullable=False
+    )
+    user_id: Mapped[uuid.UUID] = mapped_column(
+        UUID(as_uuid=True), ForeignKey("users.id", ondelete="CASCADE"), nullable=False
+    )
+    share_amount: Mapped[Decimal] = mapped_column(Numeric(15, 2), nullable=False)
+    status: Mapped[str] = mapped_column(String(10), nullable=False, default=ShareStatus.PROPOSED.value)
+
+    split: Mapped["PeerSplit"] = relationship("PeerSplit", back_populates="shares")
+
+    __table_args__ = (
+        UniqueConstraint("split_id", "user_id", name="peer_split_share_once_per_user"),
+        CheckConstraint("share_amount >= 0", name="peer_split_share_non_negative"),
+        Index("idx_peer_split_shares_user", "user_id"),
+    )
