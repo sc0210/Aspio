@@ -472,7 +472,10 @@ async def test_the_list_reports_each_rows_id(async_session, couple):
 
 
 
-async def test_cancelling_after_removal_clears_the_balance_without_double_counting(async_session, couple):
+@pytest.mark.parametrize("reconnected", [False, True])
+async def test_cancelling_after_removal_clears_the_balance_without_double_counting(
+        async_session, couple, reconnected):
+    from app.modules.peers.models import PeerStatus
     from app.modules.peers.service import PeerService
 
     c = couple
@@ -480,10 +483,45 @@ async def test_cancelling_after_removal_clears_the_balance_without_double_counti
     sid = uuid.UUID((await c["svc"].create_split(alice_id, _bill(c))).id)
     await c["svc"].respond(bob_id, sid, "accept", None, "life")
     await PeerService(async_session).remove_connection(c["conn"].id, alice_id)
+    if reconnected:  # a re-invite reuses the removed connection row
+        c["conn"].status = PeerStatus.ACCEPTED
+        await async_session.commit()
 
     svc = SplitService(async_session)
     assert (await svc.cancel(alice_id, sid)).status == "voided"
     # Spending is unchanged: 500 + 500 is still exactly the bill.
     assert await _rows(async_session, c["alice"]) == [Decimal("500")]
     assert await _rows(async_session, c["bob"]) == [Decimal("500")]
-    assert await svc.balances(alice_id) == []
+    # A current partner is listed with nothing owed; a former one drops off.
+    assert all(not b.balances for b in await svc.balances(alice_id))
+
+
+
+async def test_only_the_payer_cancels_after_removal(async_session, couple):
+    from fastapi import HTTPException
+    from app.modules.peers.service import PeerService
+
+    c = couple
+    alice_id, bob_id = c["alice"].id, c["bob"].id
+    sid = uuid.UUID((await c["svc"].create_split(alice_id, _bill(c))).id)
+    await c["svc"].respond(bob_id, sid, "accept", None, "life")
+    await PeerService(async_session).remove_connection(c["conn"].id, alice_id)
+    with pytest.raises(HTTPException) as err:
+        await SplitService(async_session).cancel(bob_id, sid)
+    assert err.value.status_code == 403
+
+
+async def test_demo_reset_closes_open_splits(async_session, couple):
+    from app.modules.peers.models import PeerSplit
+    from app.modules.users.init_demo_user import detach_demo_from_peers
+
+    c = couple
+    alice_id = c["alice"].id
+    sid = uuid.UUID((await c["svc"].create_split(alice_id, _bill(c))).id)
+    await detach_demo_from_peers(async_session, alice_id)
+    split = await async_session.get(PeerSplit, sid, populate_existing=True)
+    assert split.status == "declined"
+    # The payer keeps the whole bill as an ordinary, unlinked expense.
+    rows = (await async_session.execute(select(Transaction).where(
+        Transaction.user_id == alice_id))).scalars().all()
+    assert [(r.amount, r.peer_split_share_id) for r in rows] == [(Decimal("1000"), None)]

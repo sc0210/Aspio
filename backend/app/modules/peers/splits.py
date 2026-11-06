@@ -344,11 +344,12 @@ class SplitService:
                                 "Only the person who paid can cancel the split; ask them to")
         payer_share = next(s for s in split.shares if s.user_id == user_id)
         other_share = next(s for s in split.shares if s.user_id != user_id)
-        conn = await self.session.get(PeerConnection, split.connection_id)
-        if conn is None or conn.status != PeerStatus.ACCEPTED:
-            # The partner was removed, so both rows are already ordinary
-            # expenses each person owns. Rewriting them here would count the
-            # bill twice; closing the split only clears the balance.
+        if all([await self._row_for(s) is None for s in split.shares]):
+            # Removing the partner unlinked both rows (a linked row always
+            # means an open split), so each is now an ordinary expense its owner
+            # may have edited. That holds even if the same connection row was
+            # re-accepted since. Rewriting them would count the bill twice;
+            # closing the split only clears the balance.
             split.status = SplitStatus.VOIDED.value
             self._notify(other_share.user_id, "Shared bill closed",
                          f"{await self._name(user_id)} closed \"{split.description}\"; nothing is owed on it now.",
