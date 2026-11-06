@@ -225,10 +225,25 @@ describe('/savings — goals and compare as tabs over one roster', () => {
 
     for (const button of await screen.findAllByRole('button', { name: 'Remove {{name}}' })) {
       await user.click(button);
+      // Removing asks first: it ends the sharing for the partner too.
+      await user.click(await screen.findByRole('button', { name: 'Remove' }));
     }
 
     expect(await screen.findByText('Invite a peer to get started.')).toBeInTheDocument();
     expect(screen.queryByRole('tablist')).not.toBeInTheDocument();
+  });
+
+  it('asks before removing a peer, and Cancel keeps them', async () => {
+    const user = userEvent.setup();
+    render(<SavingsPage />);
+
+    const [first] = await screen.findAllByRole('button', { name: 'Remove {{name}}' });
+    const before = (await screen.findAllByRole('button', { name: 'Remove {{name}}' })).length;
+    await user.click(first);
+    expect(await screen.findByText('Remove this peer?')).toBeInTheDocument();
+    await user.click(screen.getByRole('button', { name: /cancel/i }));
+
+    expect(screen.getAllByRole('button', { name: 'Remove {{name}}' })).toHaveLength(before);
   });
 
   it('calls no API in demo mode, on either tab', async () => {

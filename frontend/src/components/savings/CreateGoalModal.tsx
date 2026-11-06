@@ -4,7 +4,7 @@ import { useState, useEffect } from 'react';
 import { useTranslation } from 'react-i18next';
 import { XMarkIcon } from '@heroicons/react/24/outline';
 import { apiClient } from '@/lib/api-client';
-import type { PeerConnectionOut } from '@/shared/types';
+import type { PeerConnectionOut, SharedGoalOut } from '@/shared/types';
 import { useDialog } from '@/hooks/useDialog';
 
 interface CreateGoalModalProps {
@@ -12,6 +12,8 @@ interface CreateGoalModalProps {
   onClose: () => void;
   onSuccess: () => void;
   connections: PeerConnectionOut[];
+  /** Edit this goal instead of creating one (either partner may edit). */
+  goal?: SharedGoalOut | null;
 }
 
 export default function CreateGoalModal({
@@ -19,6 +21,7 @@ export default function CreateGoalModal({
   onClose,
   onSuccess,
   connections,
+  goal = null,
 }: CreateGoalModalProps) {
   const { t } = useTranslation('common');
   const [connectionId, setConnectionId] = useState(connections[0]?.id ?? '');
@@ -35,26 +38,41 @@ export default function CreateGoalModal({
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState('');
 
+  // Prefill when opened to edit.
+  useEffect(() => {
+    if (isOpen && goal) {
+      setTitle(goal.title);
+      setTargetAmount(String(goal.target_amount));
+      setTargetDate(goal.target_date ?? '');
+    }
+  }, [isOpen, goal]);
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!connectionId || !title.trim() || !targetAmount) return;
+    if ((!goal && !connectionId) || !title.trim() || !targetAmount) return;
 
     setSubmitting(true);
     setError('');
     try {
-      await apiClient.createSharedGoal({
-        connection_id: connectionId,
+      const fields = {
         title: title.trim(),
         target_amount: parseFloat(targetAmount),
         target_date: targetDate || null,
-      });
+      };
+      if (goal) {
+        await apiClient.updateSharedGoal(goal.id, fields);
+      } else {
+        await apiClient.createSharedGoal({ connection_id: connectionId, ...fields });
+      }
       onSuccess();
       onClose();
       setTitle('');
       setTargetAmount('');
       setTargetDate('');
     } catch (err) {
-      setError(err instanceof Error ? err.message : t('savings.errors.createFailed', 'Failed to create goal'));
+      setError(err instanceof Error ? err.message : goal
+        ? t('savings.errors.updateFailed', 'Failed to update goal')
+        : t('savings.errors.createFailed', 'Failed to create goal'));
     } finally {
       setSubmitting(false);
     }
@@ -75,7 +93,7 @@ export default function CreateGoalModal({
       >
         <div className="flex items-center justify-between mb-5">
           <h2 id="create-savings-goal-title" className="text-base font-semibold text-gray-900 dark:text-white">
-            {t('savings.createGoalTitle', 'New Savings Goal')}
+            {goal ? t('savings.editGoalTitle', 'Edit Savings Goal') : t('savings.createGoalTitle', 'New Savings Goal')}
           </h2>
           <button
             onClick={onClose}
@@ -86,7 +104,7 @@ export default function CreateGoalModal({
         </div>
 
         <form onSubmit={handleSubmit} className="space-y-4">
-          {connections.length > 1 && (
+          {!goal && connections.length > 1 && (
             <div>
               <label htmlFor="creategoal-savings-selectpeer" className="block text-xs font-medium text-gray-700 dark:text-gray-300 mb-1">
                 {t('savings.selectPeer', 'Saving with')}
@@ -162,10 +180,12 @@ export default function CreateGoalModal({
 
           <button
             type="submit"
-            disabled={submitting || !title.trim() || !targetAmount || !connectionId}
+            disabled={submitting || !title.trim() || !targetAmount || (!goal && !connectionId)}
             className="w-full py-2.5 bg-blue-600 text-white text-sm font-medium rounded-lg hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
           >
-            {submitting ? t('savings.sending', 'Sending…') : t('savings.createGoal', 'New Goal')}
+            {submitting
+              ? t('savings.sending', 'Sending…')
+              : goal ? t('savings.saveGoal', 'Save') : t('savings.createGoal', 'New Goal')}
           </button>
         </form>
       </div>

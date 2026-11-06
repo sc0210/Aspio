@@ -1,7 +1,7 @@
 'use client';
 
 import { useTranslation } from 'react-i18next';
-import { TrashIcon, CheckCircleIcon, ListBulletIcon } from '@heroicons/react/24/outline';
+import { TrashIcon, CheckCircleIcon, ListBulletIcon, PencilSquareIcon } from '@heroicons/react/24/outline';
 import type { SharedGoalOut } from '@/shared/types';
 import { formatCurrency as formatCurrencyUtil } from '@/utils/formatters';
 
@@ -9,6 +9,7 @@ interface SharedGoalCardProps {
   goal: SharedGoalOut;
   onViewRecords: (goal: SharedGoalOut) => void;
   onDelete: (goalId: string) => void;
+  onEdit?: (goal: SharedGoalOut) => void;
   deleting?: boolean;
 }
 
@@ -16,7 +17,7 @@ const formatCurrency = (value: number) => formatCurrencyUtil(value, 'TWD', { pre
 
 const MILESTONES = [25, 50, 75];
 
-export default function SharedGoalCard({ goal, onViewRecords, onDelete, deleting }: SharedGoalCardProps) {
+export default function SharedGoalCard({ goal, onViewRecords, onDelete, onEdit, deleting }: SharedGoalCardProps) {
   const { t } = useTranslation('common');
   const isCompleted = goal.status === 'completed';
 
@@ -67,6 +68,16 @@ export default function SharedGoalCard({ goal, onViewRecords, onDelete, deleting
           >
             <ListBulletIcon className="w-4 h-4" aria-hidden="true" />
           </button>
+          {onEdit && (
+            <button
+              type="button"
+              onClick={() => onEdit(goal)}
+              aria-label={t('savings.editGoal', 'Edit goal {{title}}', { title: goal.title })}
+              className="p-1.5 min-w-[44px] min-h-[44px] flex items-center justify-center text-gray-500 dark:text-gray-400 hover:text-primary-600 dark:hover:text-primary-400 rounded-lg hover:bg-primary-50 dark:hover:bg-primary-900/20 transition-colors"
+            >
+              <PencilSquareIcon className="w-4 h-4" aria-hidden="true" />
+            </button>
+          )}
           {goal.is_creator && (
             <button
               type="button"

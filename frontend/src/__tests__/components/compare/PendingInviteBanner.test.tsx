@@ -46,6 +46,11 @@ describe('PendingInviteBanner', () => {
     expect(screen.getByText('Diana')).toBeInTheDocument();
   });
 
+  it('says that accepting shares wallet totals, debt and net worth', () => {
+    render(<PendingInviteBanner invites={[makeInvite('conn-1', 'Charlie')]} onRespond={onRespond} />);
+    expect(screen.getByText(/wallet totals, debt and net worth/)).toBeInTheDocument();
+  });
+
   it('renders the @username when present', () => {
     const invites = [makeInvite('conn-1', 'Charlie', 'charlie99')];
     render(<PendingInviteBanner invites={invites} onRespond={onRespond} />);

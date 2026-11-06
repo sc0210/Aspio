@@ -13,8 +13,7 @@ import {
   CompareDataResponse,
   SharedGoalOut,
   SharedGoalCreate,
-  SavingRecord,
-} from '@/shared/types';
+  SavingRecord, SharedGoalUpdate} from '@/shared/types';
 import { getSession } from 'next-auth/react';
 import { getPublicApiUrl, getServerApiUrl } from '@/lib/api-url';
 export interface GamificationStats {
@@ -574,6 +573,10 @@ class ApiClient {
 
   async createSharedGoal(data: SharedGoalCreate): Promise<ApiResponse<SharedGoalOut>> {
     return this.post<SharedGoalOut>('/peers/goals', data);
+  }
+
+  async updateSharedGoal(goalId: string, data: SharedGoalUpdate): Promise<ApiResponse<SharedGoalOut>> {
+    return this.patch<SharedGoalOut>(`/peers/goals/${goalId}`, data);
   }
 
   async deleteSharedGoal(goalId: string): Promise<ApiResponse<null>> {
