@@ -469,3 +469,21 @@ async def test_the_list_reports_each_rows_id(async_session, couple):
     listed = {s.id: s.my_transaction_id for s in await c["svc"].list_splits(c["alice"].id)}
     assert listed[first.id] == first.my_transaction_id and listed[first.id] is not None
     assert listed[second.id] == second.my_transaction_id and listed[second.id] != listed[first.id]
+
+
+
+async def test_cancelling_after_removal_clears_the_balance_without_double_counting(async_session, couple):
+    from app.modules.peers.service import PeerService
+
+    c = couple
+    alice_id, bob_id = c["alice"].id, c["bob"].id
+    sid = uuid.UUID((await c["svc"].create_split(alice_id, _bill(c))).id)
+    await c["svc"].respond(bob_id, sid, "accept", None, "life")
+    await PeerService(async_session).remove_connection(c["conn"].id, alice_id)
+
+    svc = SplitService(async_session)
+    assert (await svc.cancel(alice_id, sid)).status == "voided"
+    # Spending is unchanged: 500 + 500 is still exactly the bill.
+    assert await _rows(async_session, c["alice"]) == [Decimal("500")]
+    assert await _rows(async_session, c["bob"]) == [Decimal("500")]
+    assert await svc.balances(alice_id) == []

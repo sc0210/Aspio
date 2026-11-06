@@ -344,6 +344,17 @@ class SplitService:
                                 "Only the person who paid can cancel the split; ask them to")
         payer_share = next(s for s in split.shares if s.user_id == user_id)
         other_share = next(s for s in split.shares if s.user_id != user_id)
+        conn = await self.session.get(PeerConnection, split.connection_id)
+        if conn is None or conn.status != PeerStatus.ACCEPTED:
+            # The partner was removed, so both rows are already ordinary
+            # expenses each person owns. Rewriting them here would count the
+            # bill twice; closing the split only clears the balance.
+            split.status = SplitStatus.VOIDED.value
+            self._notify(other_share.user_id, "Shared bill closed",
+                         f"{await self._name(user_id)} closed \"{split.description}\"; nothing is owed on it now.",
+                         "peer_split_cancelled", split)
+            await self.session.commit()
+            return await self.get_split(user_id, split.id)
         if await self._row_for(payer_share) is None:
             await self._write_row(split, payer_share, split.total_amount, split.category_id, "life")
         else:
@@ -496,6 +507,8 @@ class SplitService:
                 # Two quick saves both found no row; the other inserted it.
                 await self.session.rollback()
                 pref = await self.session.get(PeerConnectionPref, (connection_id, user_id))
+                if pref is None:  # not the insert race: a real failure
+                    raise
                 pref.split_policy = split_policy
                 await self.session.commit()
         else:
