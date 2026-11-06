@@ -118,6 +118,7 @@ class TransactionService {
       transferGroupId: (tx.transferGroupId ?? tx.transfer_group_id) as string | undefined,
       loanId: (tx.loanId ?? tx.loan_id) as string | undefined,
       holdingId: (tx.holdingId ?? tx.holding_id) as string | undefined,
+      peerSplitShareId: (tx.peerSplitShareId ?? tx.peer_split_share_id ?? undefined) as string | undefined,
       createdAt: new Date(tx.created_at as string),
       updatedAt: new Date(tx.updated_at as string)
     } as Transaction;
@@ -346,6 +347,7 @@ class TransactionService {
           loan_id: (tx.loan_id ?? tx.loanId) as string | null | undefined,
           // Lets the edit form save a buy through its holding, not by guessing a symbol.
           holdingId: (tx.holdingId ?? tx.holding_id ?? undefined) as string | undefined,
+          peerSplitShareId: (tx.peerSplitShareId ?? tx.peer_split_share_id ?? undefined) as string | undefined,
           holdingSolePurchase: (tx.holdingSolePurchase ?? tx.holding_sole_purchase ?? undefined) as boolean | undefined,
           createdAt: new Date(tx.created_at as string),
           updatedAt: new Date(tx.updated_at as string)

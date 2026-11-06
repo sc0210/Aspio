@@ -105,6 +105,7 @@ export interface Transaction {
   transferGroupId?: string; // Links both legs of a wallet transfer; unset for regular income/expense rows
   loanId?: string; // The loan this expense pays down; unset for ordinary spending
   holdingId?: string; // The portfolio holding this row is the cash leg of
+  peerSplitShareId?: string; // Your share of a bill split with a partner
   holdingSolePurchase?: boolean; // Single reads only: this row is its holding's only purchase leg, so a holding edit rewrites it
   createdAt: Date;
   updatedAt: Date;
@@ -520,6 +521,56 @@ export interface SharedGoalCreate {
   title: string;
   target_amount: number;
   target_date?: string | null;
+}
+
+export type SplitMethod = 'equal' | 'percent' | 'fixed';
+export type SplitStatus = 'proposed' | 'active' | 'declined' | 'voided';
+export type SplitPolicy = 'off' | 'approve_each' | 'auto_accept';
+
+export interface SplitCreate {
+  connection_id: string;
+  description: string;
+  total_amount: number;
+  currency: string;
+  split_date: string;
+  category_id: string;
+  payer: 'me' | 'partner';
+  method: SplitMethod;
+  my_percent?: number | null;
+  my_amount?: number | null;
+}
+
+/** A bill split with a partner, as the viewer sees it. */
+export interface SplitOut {
+  id: string;
+  connection_id: string;
+  description: string;
+  total_amount: number;
+  currency: string;
+  split_date: string;
+  category_id: string | null;
+  method: SplitMethod;
+  status: SplitStatus;
+  payer_is_me: boolean;
+  created_by_me: boolean;
+  partner_name: string;
+  my_share: number;
+  partner_share: number;
+  my_share_status: 'proposed' | 'accepted' | 'declined';
+  partner_share_status: 'proposed' | 'accepted' | 'declined';
+  my_transaction_id: string | null;
+}
+
+export interface PeerBalanceOut {
+  connection_id: string;
+  partner_name: string;
+  /** net > 0: the partner owes you; net < 0: you owe them. */
+  balances: { currency: string; net: number }[];
+}
+
+export interface PeerPrefsOut {
+  connection_id: string;
+  split_policy: SplitPolicy;
 }
 
 export interface SharedGoalUpdate {

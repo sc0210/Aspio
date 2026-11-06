@@ -799,6 +799,67 @@
     "selectPeer": "Saving with",
     "sendInvite": "Send Invite",
     "sending": "Sending…",
+    "splits": {
+      "new": "Split a bill",
+      "newTitle": "Split a bill",
+      "with": "Split with",
+      "description": "What was it?",
+      "descriptionPlaceholder": "e.g. Dinner, groceries, rent",
+      "total": "Total",
+      "currency": "Currency",
+      "date": "Date",
+      "category": "Category",
+      "whoPaid": "Who paid?",
+      "paidByMe": "I paid",
+      "paidByPartner": "{{name}} paid",
+      "how": "How to split",
+      "myPercent": "My share (%)",
+      "myAmount": "My share",
+      "preview": "You: {{mine}} · {{name}}: {{theirs}}",
+      "consentNote": "{{name}} accepts before anything is added to their account.",
+      "submit": "Split the bill",
+      "intro": "Split a bill and each of you records only your own share.",
+      "balances": "Balances",
+      "settled": "All square",
+      "owesYou": "{{name}} owes you {{amount}}",
+      "youOwe": "You owe {{name}} {{amount}}",
+      "policyLabel": "Bills from {{name}}",
+      "inbox": "Waiting for you",
+      "yourShare": "Your share: {{amount}}",
+      "youPaid": "you paid",
+      "theyPaid": "{{name}} paid",
+      "history": "Shared bills",
+      "empty": "No shared bills yet.",
+      "shares": "you {{mine}} / {{name}} {{theirs}}",
+      "withdraw": "Withdraw",
+      "cancel": "Cancel split",
+      "confirmCancelTitle": "Cancel this split?",
+      "confirmCancelMessage": "You’ll carry the whole bill again and {{name}}’s share is removed from their account.",
+      "demoNote": "Sign in to split bills with a partner. Each of you records only your own share.",
+      "method": {
+        "equal": "50 / 50",
+        "percent": "%",
+        "fixed": "Amount",
+        "fixedLabel": "Amount"
+      },
+      "policy": {
+        "approve_each": "Ask me each time",
+        "auto_accept": "Add to my account automatically",
+        "off": "Don’t allow"
+      },
+      "status": {
+        "proposed": "Waiting",
+        "active": "Accepted",
+        "declined": "Declined",
+        "voided": "Cancelled"
+      },
+      "errors": {
+        "createFailed": "Failed to split the bill",
+        "loadFailed": "Failed to load shared bills",
+        "actionFailed": "That didn’t work",
+        "shareTooBig": "Your share has to be between 0 and the total."
+      }
+    },
     "summary": {
       "active": "active",
       "aria": "Combined savings progress: {{pct}}%",
@@ -810,7 +871,8 @@
     "tabs": {
       "compare": "Compare",
       "goals": "Shared goals",
-      "label": "Savings group views"
+      "label": "Savings group views",
+      "splits": "Shared spending"
     },
     "target": "Target",
     "targetAmountLabel": "Target Amount",

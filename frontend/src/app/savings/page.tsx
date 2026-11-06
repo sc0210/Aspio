@@ -18,6 +18,7 @@ import SharedGoalCard from '@/components/savings/SharedGoalCard';
 import CreateGoalModal from '@/components/savings/CreateGoalModal';
 import SavingRecordsModal from '@/components/savings/SavingRecordsModal';
 import { ConfirmDialog } from '@/components/ui/ConfirmDialog';
+import SharedSpendingTab from '@/components/savings/SharedSpendingTab';
 import { withRecordTotals } from '@/components/savings/recordOwnership';
 import { demoCompareData, demoPeerConnections, demoSavingRecords, demoSharedGoals } from '@/data/demoData';
 import type { CompareDataResponse, PeerConnectionOut, SharedGoalOut } from '@/shared/types';
@@ -36,8 +37,10 @@ const CompareLineChart = dynamic(() => import('@/components/compare/CompareLineC
 
 const formatTWD = (value: number) => formatCurrencyUtil(value, 'TWD', { precision: 0 });
 
-type Tab = 'goals' | 'compare';
-const TABS: Tab[] = ['goals', 'compare'];
+type Tab = 'goals' | 'splits' | 'compare';
+const TABS: Tab[] = ['goals', 'splits', 'compare'];
+// Phones skip the comparison chart (#344); splitting a bill works everywhere.
+const PHONE_TABS: Tab[] = ['goals', 'splits'];
 
 /**
  * Saving with other people: the goals you share, and how your finances compare.
@@ -73,7 +76,8 @@ function SavingsGroups() {
   // Who "you" are when a saving record is attributed; see isOwnRecord.
   const currentUserId = user?.id ?? '';
 
-  const tab: Tab = searchParams.get('tab') === 'compare' ? 'compare' : 'goals';
+  const requestedTab = searchParams.get('tab');
+  const tab: Tab = TABS.includes(requestedTab as Tab) ? (requestedTab as Tab) : 'goals';
 
   const [connections, setConnections] = useState<PeerConnectionOut[]>([]);
   const [goals, setGoals] = useState<SharedGoalOut[]>([]);
@@ -281,7 +285,7 @@ function SavingsGroups() {
   // Phones (#344): the goals view only, combined progress first and the roster
   // after it — the compare chart and its stat cards stay on bigger screens.
   const phone = isMobile === true;
-  const activeTab: Tab = phone ? 'goals' : tab;
+  const activeTab: Tab = phone && tab === 'compare' ? 'goals' : tab;
   const canCreateGoal = hasPeers && activeTab === 'goals';
   const roster = (
     <PeerRoster
@@ -385,14 +389,22 @@ function SavingsGroups() {
 
             {hasPeers && (
               <>
-                {!phone && <TabBar tab={tab} onSelect={selectTab} />}
+                <TabBar tab={activeTab} onSelect={selectTab} tabs={phone ? PHONE_TABS : TABS} />
 
                 <div
-                  role={phone ? undefined : 'tabpanel'}
-                  id={phone ? undefined : `savings-panel-${tab}`}
-                  aria-labelledby={phone ? undefined : `savings-tab-${tab}`}
+                  role="tabpanel"
+                  id={`savings-panel-${activeTab}`}
+                  aria-labelledby={`savings-tab-${activeTab}`}
                 >
-                  {activeTab === 'goals' ? (
+                  {activeTab === 'splits' ? (
+                    isDemo ? (
+                      <div className="bg-white dark:bg-gray-800 rounded-xl p-8 shadow-sm text-center text-sm text-gray-600 dark:text-gray-400">
+                        {t('savings.splits.demoNote', 'Sign in to split bills with a partner. Each of you records only your own share.')}
+                      </div>
+                    ) : (
+                      <SharedSpendingTab connections={accepted} />
+                    )
+                  ) : activeTab === 'goals' ? (
                     <div className="space-y-6">
                       {goals.length > 0 && <CombinedProgress goals={goals} />}
 
@@ -513,7 +525,7 @@ function SavingsGroups() {
   );
 }
 
-function TabBar({ tab, onSelect }: { tab: Tab; onSelect: (tab: Tab) => void }) {
+function TabBar({ tab, onSelect, tabs = TABS }: { tab: Tab; onSelect: (tab: Tab) => void; tabs?: Tab[] }) {
   const { t } = useTranslation('common');
 
   return (
@@ -522,7 +534,7 @@ function TabBar({ tab, onSelect }: { tab: Tab; onSelect: (tab: Tab) => void }) {
       aria-label={t('savings.tabs.label', 'Savings group views')}
       className="inline-flex p-1 rounded-lg bg-gray-100 dark:bg-gray-800"
     >
-      {TABS.map((id) => {
+      {tabs.map((id) => {
         const selected = tab === id;
         return (
           <button
@@ -539,7 +551,7 @@ function TabBar({ tab, onSelect }: { tab: Tab; onSelect: (tab: Tab) => void }) {
               if (e.key !== 'ArrowRight' && e.key !== 'ArrowLeft') return;
               e.preventDefault();
               const step = e.key === 'ArrowRight' ? 1 : -1;
-              const next = TABS[(TABS.indexOf(id) + step + TABS.length) % TABS.length];
+              const next = tabs[(tabs.indexOf(id) + step + tabs.length) % tabs.length];
               onSelect(next);
               document.getElementById(`savings-tab-${next}`)?.focus();
             }}
