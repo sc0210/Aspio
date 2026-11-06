@@ -1524,8 +1524,10 @@ class RecurringTransactionService:
         - Idempotent: an occurrence that already has its transaction is not
           posted again, so a second run the same day, or a crash between posting
           and advancing the rule, never double-posts.
-        - Rules without auto_create are left alone for the user to confirm;
-          advancing them here used up their occurrences with nothing posted.
+        - Rules without auto_create are reminders: get_due_transactions skips
+          them (advancing them here used up their occurrences with nothing
+          posted).
+        - A rule past its end_date or max_occurrences is deactivated.
         - A failing rule is rolled back and counted, and the rest still run.
         """
         if not max_date:
@@ -1538,7 +1540,7 @@ class RecurringTransactionService:
 
         # Snapshot first: a rollback after one failing rule expires every loaded
         # row, and reading the next rule's attributes would then fail as well.
-        rules = [self._rule_snapshot(r) for r in due_recurring if r.auto_create]
+        rules = [self._rule_snapshot(r) for r in due_recurring]
 
         for rule in rules:
             try:
@@ -1588,14 +1590,16 @@ class RecurringTransactionService:
         end_date, max_occurrences = rule["end_date"], rule["max_occurrences"]
         transaction_template = rule["template"]
 
+        def finished():
+            return bool((end_date and occurrence > end_date)
+                        or (max_occurrences and count >= max_occurrences))
+
         posted = 0
         for _ in range(self.MAX_CATCH_UP):
-            if occurrence > max_date:
+            if occurrence > max_date or finished():
                 break
-            if end_date and occurrence > end_date:
-                break
-            if max_occurrences and count >= max_occurrences:
-                break
+            if not await self.recurring_repo.lock_rule(rule_id):
+                break  # another run is posting this rule right now
 
             if not await self.recurring_repo.has_posted(rule_id, occurrence):
                 await self.transaction_service.create_transaction(
@@ -1607,6 +1611,9 @@ class RecurringTransactionService:
             occurrence = self._calculate_next_occurrence(occurrence, frequency, interval)
             count += 1
             await self.recurring_repo.update_next_occurrence(rule_id, occurrence)
+
+        if finished():
+            await self.recurring_repo.deactivate(rule_id)
         return posted
 
     def _calculate_next_occurrence(

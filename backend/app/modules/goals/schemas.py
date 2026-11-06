@@ -30,7 +30,7 @@ def _enum_code(enum_cls, value):
     raise ValueError(f"must be one of: {', '.join(m.value for m in enum_cls)}")
 
 
-# One definition per enum, shared by create, update and response schemas.
+# One definition per enum, shared by the create and update schemas.
 CategoryCode = Annotated[str, BeforeValidator(partial(_enum_code, GoalCategory))]
 PriorityCode = Annotated[str, BeforeValidator(partial(_enum_code, GoalPriority))]
 StatusCode = Annotated[str, BeforeValidator(partial(_enum_code, GoalStatus))]

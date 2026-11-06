@@ -185,3 +185,54 @@ async def test_end_date_and_max_occurrences_stop_the_catch_up(
 
     result = await scheduler_module.process_recurring_transactions()
     assert result["created"] == 4
+    rules = (await async_session.execute(select(RecurringTransaction))).scalars().all()
+    for rule in rules:
+        await async_session.refresh(rule)
+    # Both reached their end, so neither is loaded again tomorrow.
+    assert [r.is_active for r in rules] == [False, False]
+
+
+async def test_a_failure_mid_catch_up_keeps_what_was_posted(
+        monkeypatch, async_session, test_user, seed_categories):
+    from app.modules.transactions.services import TransactionService
+
+    category = await _expense_category(async_session, seed_categories)
+    user_id = test_user.id
+    start = business_today() - timedelta(days=2)
+    rule = await _rule(async_session, test_user, category, frequency=RecurringFrequency.DAILY,
+                       start_date=start, next_occurrence=start)
+    _use_session(monkeypatch, async_session)
+
+    real_create = TransactionService.create_transaction
+    calls = {"n": 0}
+
+    async def create(self, data, uid):
+        calls["n"] += 1
+        if calls["n"] == 2:
+            raise RuntimeError("simulated failure on the second occurrence")
+        return await real_create(self, data, uid)
+
+    monkeypatch.setattr(TransactionService, "create_transaction", create)
+    result = await scheduler_module.process_recurring_transactions()
+
+    assert result["failed"] == 1
+    assert await _posted(async_session, user_id) == [start]
+    await async_session.refresh(rule)
+    assert rule.next_occurrence == start + timedelta(days=1)  # resumes there next run
+
+
+async def test_catch_up_is_capped_per_run_and_resumes(monkeypatch, async_session, test_user, seed_categories):
+    from app.modules.transactions.services import RecurringTransactionService
+
+    category = await _expense_category(async_session, seed_categories)
+    cap = RecurringTransactionService.MAX_CATCH_UP
+    start = business_today() - timedelta(days=cap + 4)
+    await _rule(async_session, test_user, category, frequency=RecurringFrequency.DAILY,
+                start_date=start, next_occurrence=start)
+    _use_session(monkeypatch, async_session)
+
+    first = await scheduler_module.process_recurring_transactions()
+    second = await scheduler_module.process_recurring_transactions()
+
+    assert (first["created"], second["created"]) == (cap, 5)
+    assert len(await _posted(async_session, test_user)) == cap + 5

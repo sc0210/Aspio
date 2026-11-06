@@ -999,6 +999,8 @@ class TestRecurringTransactionService:
         svc.recurring_repo.get_due_transactions = AsyncMock(return_value=[mock_recurring])
         svc.recurring_repo.update_next_occurrence = AsyncMock()
         svc.recurring_repo.has_posted = AsyncMock(return_value=False)
+        svc.recurring_repo.lock_rule = AsyncMock(return_value=True)
+        svc.recurring_repo.deactivate = AsyncMock()
         svc.transaction_service.create_transaction = AsyncMock(return_value={"transaction": MagicMock()})
 
         result = await svc.process_due_transactions(business_today())

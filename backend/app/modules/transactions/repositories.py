@@ -1725,12 +1725,37 @@ class RecurringTransactionRepository:
                 and_(
                     RecurringTransaction.is_active == True,
                     RecurringTransaction.is_paused == False,
+                    # Rules without auto_create are reminders; nothing posts them.
+                    RecurringTransaction.auto_create == True,
                     RecurringTransaction.next_occurrence <= max_date,
                 )
             )
         )
         result = await self.db.execute(stmt)
         return list(result.scalars().all())
+
+    async def lock_rule(self, recurring_id) -> bool:
+        """Row-lock the rule for this occurrence; False if another run holds it.
+
+        Postgres only (SQLite ignores FOR UPDATE). Held until the next commit,
+        so the scheduler and the admin endpoint can't both pass has_posted for
+        the same occurrence and post it twice.
+        """
+        stmt = (
+            select(RecurringTransaction.id)
+            .where(RecurringTransaction.id == recurring_id)
+            .with_for_update(skip_locked=True)
+        )
+        return (await self.db.execute(stmt)).first() is not None
+
+    async def deactivate(self, recurring_id) -> None:
+        """Retire a rule that has reached its end_date or max_occurrences."""
+        await self.db.execute(
+            update(RecurringTransaction)
+            .where(RecurringTransaction.id == recurring_id)
+            .values(is_active=False, updated_at=datetime.now(timezone.utc))
+        )
+        await self.db.commit()
 
     async def has_posted(self, recurring_id, on_date: date) -> bool:
         """Whether this rule already has a (non-deleted) transaction on on_date."""
