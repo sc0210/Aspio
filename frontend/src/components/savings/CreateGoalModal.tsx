@@ -38,8 +38,9 @@ export default function CreateGoalModal({
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState('');
 
-  // Prefill when opened to edit.
+  // Prefill when opened to edit; a stale error from an earlier attempt goes.
   useEffect(() => {
+    if (isOpen) setError('');
     if (isOpen && goal) {
       setTitle(goal.title);
       setTargetAmount(String(goal.target_amount));

@@ -13,7 +13,7 @@ import {
   CompareDataResponse,
   SharedGoalOut,
   SharedGoalCreate,
-  SavingRecord, SharedGoalUpdate} from '@/shared/types';
+  SavingRecord, SharedGoalUpdate } from '@/shared/types';
 import { getSession } from 'next-auth/react';
 import { getPublicApiUrl, getServerApiUrl } from '@/lib/api-url';
 export interface GamificationStats {

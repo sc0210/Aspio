@@ -482,7 +482,7 @@ function SavingsGroups() {
       <ConfirmDialog
         isOpen={confirmRemoveId !== null}
         title={t('savings.confirmRemoveTitle', 'Remove this peer?')}
-        message={t('savings.confirmRemoveMessage', 'You will both stop seeing each other’s finances and your shared goals.')}
+        message={t('savings.confirmRemoveMessage', 'You will both stop seeing each other’s finances and your shared goals. Reconnecting later brings the goals back.')}
         confirmLabel={t('savings.confirmRemove', 'Remove')}
         onCancel={() => setConfirmRemoveId(null)}
         onConfirm={() => {
@@ -493,7 +493,7 @@ function SavingsGroups() {
       <ConfirmDialog
         isOpen={confirmDeleteGoalId !== null}
         title={t('savings.confirmDeleteGoalTitle', 'Delete this goal?')}
-        message={t('savings.confirmDeleteGoalMessage', 'This deletes the goal and every saving record in it, including your partner’s.')}
+        message={t('savings.confirmDeleteGoalMessage', 'This deletes the goal and every saving record in it, including your partner’s. It can’t be undone.')}
         confirmLabel={t('savings.confirmDeleteGoal', 'Delete goal')}
         onCancel={() => setConfirmDeleteGoalId(null)}
         onConfirm={() => {
