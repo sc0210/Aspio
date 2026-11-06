@@ -40,7 +40,7 @@ async def test_accepted_peers_both_see_the_goal(async_session, test_user):
     repo = SharedGoalRepository(async_session)
 
     for user in (test_user, peer):
-        assert [g.id for g, _ in await repo.list_active_for_participant(user.id)] == [goal.id]
+        assert [g.id for g, _ in await repo.list_for_participant(user.id)] == [goal.id]
         assert await repo.get_with_connection(goal.id, user.id) is not None
 
 
@@ -51,7 +51,7 @@ async def test_after_removal_neither_side_reaches_the_goal(async_session, test_u
     repo = SharedGoalRepository(async_session)
 
     for user in (test_user, peer):
-        assert await repo.list_active_for_participant(user.id) == []
+        assert await repo.list_for_participant(user.id) == []
         assert await repo.get_with_connection(goal.id, user.id) is None
 
 

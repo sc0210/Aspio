@@ -74,7 +74,9 @@ async def test_totals_follow_records_through_add_edit_delete(pair):
     assert {r.user_name for r in records} == {"alice", "bob"}
 
 
-async def test_goal_completes_at_target_and_then_rejects_records(pair):
+async def test_goal_completes_at_target_and_keeps_counting(pair):
+    """Saving past the target is allowed; the goal stays completed and the extra
+    still counts. Before, a completed goal refused new records (and vanished)."""
     svc, alice, bob, goal_id = pair["svc"], pair["alice"], pair["bob"], pair["goal_id"]
     await svc.add_record(alice.id, goal_id, rec(600))
     await svc.add_record(bob.id, goal_id, rec(400))
@@ -82,9 +84,10 @@ async def test_goal_completes_at_target_and_then_rejects_records(pair):
     goal = await svc.get_goal(alice.id, goal_id)
     assert goal.status == GoalStatus.completed
 
-    with pytest.raises(HTTPException) as exc:
-        await svc.add_record(alice.id, goal_id, rec(1))
-    assert exc.value.status_code == 400
+    await svc.add_record(alice.id, goal_id, rec(1))
+    goal = await svc.get_goal(alice.id, goal_id)
+    assert goal.status == GoalStatus.completed
+    assert goal.total_amount == 1001
 
 
 async def test_only_the_owner_edits_or_deletes_a_record(pair):

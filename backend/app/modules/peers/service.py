@@ -43,6 +43,7 @@ from app.modules.peers.schemas import (
     SavingRecordUpdate,
     SharedGoalCreate,
     SharedGoalOut,
+    SharedGoalUpdate,
     UserSearchResult,
     WalletTotals,
 )
@@ -55,6 +56,12 @@ MAX_PEERS = 2
 
 # Maximum number of goals allowed per connection (abuse prevention).
 MAX_GOALS_PER_CONNECTION = 10
+
+# After a decline, the same person can't re-invite (and re-notify) for this long.
+REINVITE_COOLDOWN = timedelta(days=7)
+
+# Where every peer notification links: invites, accepts, deposits, completions.
+PEERS_URL = "/savings"
 
 
 class PeerService:
@@ -75,14 +82,11 @@ class PeerService:
     async def search_user(
         self, username: str, requesting_user_id: UUID
     ) -> UserSearchResult | None:
-        """Look up a user by exact username (case-sensitive).
+        """Look up a user by exact username (case-insensitive).
 
         Returns None if the username does not exist, belongs to the
         requesting user, or belongs to a soft-deleted account.
         """
-        row = await self._users.get_profile_row(requesting_user_id)  # prime the cache
-        # We need a profile-row for the target user, not the requester.
-        # Use find_by_username which already excludes the requesting user.
         user = await self._users.find_by_username(username, exclude_id=requesting_user_id)
         if user is None:
             return None
@@ -131,12 +135,22 @@ class PeerService:
                 detail="The demo account cannot have peer connections",
             )
 
-        # 2. Check requester's accepted-peer count
+        # 2. The cap counts outstanding invites too: checking accepted ones only
+        #    let a user send unlimited invites and end up over the limit.
         accepted_count = await self._connections.count_accepted(requester_id)
-        if accepted_count >= MAX_PEERS:
+        pending_count = await self._connections.count_pending_sent(requester_id)
+        if accepted_count + pending_count >= MAX_PEERS:
             raise HTTPException(
                 status_code=status.HTTP_400_BAD_REQUEST,
-                detail="You already have the maximum number of peer connections (2)",
+                detail=(
+                    f"You already have the maximum number of peer connections "
+                    f"({MAX_PEERS}), counting invites you have sent"
+                ),
+            )
+        if await self._connections.count_accepted(receiver.id) >= MAX_PEERS:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="This user already has the maximum number of peer connections",
             )
 
         # 3. Check for any existing connection row (either direction)
@@ -156,14 +170,30 @@ class PeerService:
                     status_code=status.HTTP_409_CONFLICT,
                     detail="A pending or accepted connection already exists with this user",
                 )
+            if (
+                any_existing.status == PeerStatus.DECLINED
+                and any_existing.requester_id == requester_id
+                and _is_recent(any_existing.updated_at, REINVITE_COOLDOWN)
+            ):
+                raise HTTPException(
+                    status_code=status.HTTP_429_TOO_MANY_REQUESTS,
+                    detail="This user declined your invite recently; try again later",
+                )
             # REMOVED or DECLINED — reuse the row so the unique constraint on
             # (requester_id, receiver_id) is not violated by a second INSERT.
+            sides_swapped = any_existing.requester_id != requester_id
             any_existing.requester_id = requester_id
             any_existing.receiver_id = receiver.id
             any_existing.status = PeerStatus.PENDING
             any_existing.updated_at = datetime.now(timezone.utc)
             conn = any_existing
             await self.session.flush()
+            if sides_swapped:
+                # Goal totals are cached per side (requester/receiver), so a
+                # swapped row would credit each person with the other's savings
+                # (Alice 300 + 100 read as 700). Recompute them from the records.
+                for goal in await self._goals.list_for_connection(conn.id):
+                    await self._recalc_totals(goal, conn)
         else:
             # 5. Insert new connection
             conn = PeerConnection(
@@ -177,22 +207,15 @@ class PeerService:
 
         # 6. Insert notification for receiver
         requester_username = requester.username if requester else str(requester_id)
-        notification = Notification(
-            id=uuid.uuid4(),
-            user_id=receiver.id,
-            type=NotificationType.SYSTEM_UPDATE,
-            priority=NotificationPriority.MEDIUM,
-            status=NotificationStatus.PENDING,
-            title="New peer invite",
-            message=f"{requester_username} wants to connect with you as a peer.",
-            data={
-                "connection_id": str(conn.id),
-                "requester_username": requester_username,
-                "action": "peer_invite",
-            },
-            channels=[NotificationChannel.IN_APP],
+        self._notify(
+            receiver.id,
+            "New peer invite",
+            f"{requester_username} wants to connect with you as a peer. "
+            "Accepting shares your wallet totals and net worth with each other.",
+            "peer_invite",
+            connection_id=str(conn.id),
+            requester_username=requester_username,
         )
-        self.session.add(notification)
         await self.session.commit()
         await self._connections.refresh(conn)
         return conn
@@ -247,16 +270,31 @@ class PeerService:
             )
 
         if action == "accept":
-            accepted_count = await self._connections.count_accepted(user_id)
-            if accepted_count >= MAX_PEERS:
-                raise HTTPException(
-                    status_code=status.HTTP_400_BAD_REQUEST,
-                    detail="You already have the maximum number of peer connections (2)",
-                )
+            # Both sides: the inviter may have filled up since sending this.
+            for participant in (user_id, conn.requester_id):
+                if await self._connections.count_accepted(participant) >= MAX_PEERS:
+                    raise HTTPException(
+                        status_code=status.HTTP_400_BAD_REQUEST,
+                        detail=(
+                            "You already have the maximum number of peer connections"
+                            if participant == user_id
+                            else "The inviter already has the maximum number of peer connections"
+                        ),
+                    )
             conn.status = PeerStatus.ACCEPTED
         else:
             conn.status = PeerStatus.DECLINED
+        conn.updated_at = datetime.now(timezone.utc)
 
+        responder = await self._users.get_profile_row(user_id)
+        name = (responder or {}).get("name", "Your peer")
+        self._notify(
+            conn.requester_id,
+            "Peer invite accepted" if action == "accept" else "Peer invite declined",
+            f"{name} {'accepted' if action == 'accept' else 'declined'} your peer invite.",
+            f"peer_invite_{'accepted' if action == 'accept' else 'declined'}",
+            connection_id=str(conn.id),
+        )
         await self.session.commit()
         await self._connections.refresh(conn)
         return conn
@@ -325,12 +363,12 @@ class PeerService:
         return self._goal_to_out(goal, conn, user_id, users_by_id)
 
     async def list_goals(self, user_id: UUID) -> list[SharedGoalOut]:
-        """Return all active goals where the calling user is a participant.
+        """Return the active and completed goals the calling user takes part in.
 
         Joins shared_goals → peer_connections to filter by participant.
         Results are ordered newest-first.
         """
-        rows = await self._goals.list_active_for_participant(user_id)
+        rows = await self._goals.list_for_participant(user_id)
 
         if not rows:
             return []
@@ -354,39 +392,27 @@ class PeerService:
         users_by_id = await self._users.get_profiles([conn.requester_id, conn.receiver_id])
         return self._goal_to_out(goal, conn, user_id, users_by_id)
 
-    async def update_contribution(
-        self, user_id: UUID, goal_id: UUID, amount: Decimal
+    async def update_goal(
+        self, user_id: UUID, goal_id: UUID, data: SharedGoalUpdate
     ) -> SharedGoalOut:
-        """Set the calling user's contribution to *amount* (absolute, not delta).
+        """Edit a goal's title, target or date. Either participant may.
 
-        If the new total meets or exceeds target_amount the goal is
-        automatically marked as 'completed'.
+        Changing the target re-evaluates completion, so raising it re-opens a
+        completed goal and lowering it can complete an active one.
         """
         goal, conn = await self._get_goal_and_connection(goal_id, user_id)
-
-        if goal.status != GoalStatus.active:
+        if goal.status == GoalStatus.cancelled:
             raise HTTPException(
                 status_code=status.HTTP_400_BAD_REQUEST,
-                detail=f"Cannot update contribution on a '{goal.status}' goal",
+                detail="Cannot edit a cancelled goal",
             )
-
-        # Update the correct side
-        is_requester = conn.requester_id == user_id
-        if is_requester:
-            goal.requester_amount = amount
-        else:
-            goal.receiver_amount = amount
-
-        goal.updated_at = datetime.now(timezone.utc)
-
-        # Auto-complete when total >= target
-        total = goal.requester_amount + goal.receiver_amount
-        if total >= goal.target_amount:
-            goal.status = GoalStatus.completed
-
+        fields = data.model_dump(exclude_unset=True)
+        for name in ("title", "target_amount", "target_date"):
+            if name in fields:
+                setattr(goal, name, fields[name])
+        await self._recalc_totals(goal, conn)
         await self.session.commit()
         await self._goals.refresh(goal)
-
         users_by_id = await self._users.get_profiles([conn.requester_id, conn.receiver_id])
         return self._goal_to_out(goal, conn, user_id, users_by_id)
 
@@ -433,11 +459,8 @@ class PeerService:
         Only allowed when the goal is in 'active' status.
         """
         goal, conn = await self._get_goal_and_connection(goal_id, user_id)
-        if goal.status != GoalStatus.active:
-            raise HTTPException(
-                status_code=status.HTTP_400_BAD_REQUEST,
-                detail=f"Cannot add record to a '{goal.status}' goal",
-            )
+        self._require_open(goal)
+        was_completed = goal.status == GoalStatus.completed
         record = SavingRecord(
             id=uuid.uuid4(),
             goal_id=goal_id,
@@ -448,7 +471,27 @@ class PeerService:
         )
         self._records.add(record)
         await self.session.flush()
-        await self._recalc_contribution(goal, conn, user_id)
+        await self._recalc_totals(goal, conn)
+
+        partner_id = conn.receiver_id if conn.requester_id == user_id else conn.requester_id
+        saver = await self._users.get_profile_row(user_id)
+        saver_name = (saver or {}).get("name", "Your peer")
+        self._notify(
+            partner_id,
+            "New shared savings deposit",
+            f"{saver_name} saved {data.amount} toward \"{goal.title}\".",
+            "peer_goal_deposit",
+            goal_id=str(goal.id),
+        )
+        if goal.status == GoalStatus.completed and not was_completed:
+            for participant in (conn.requester_id, conn.receiver_id):
+                self._notify(
+                    participant,
+                    "Shared goal reached!",
+                    f"\"{goal.title}\" reached its target together.",
+                    "peer_goal_completed",
+                    goal_id=str(goal.id),
+                )
         await self.session.commit()
         await self._records.refresh(record)
         users_by_id = await self._users.get_profiles([user_id])
@@ -463,6 +506,7 @@ class PeerService:
     ) -> SavingRecordOut:
         """Update an existing record (only the record owner may edit)."""
         goal, conn = await self._get_goal_and_connection(goal_id, user_id)
+        self._require_open(goal)
         record = await self._records.get_by_id(record_id, goal_id)
         if record is None:
             raise HTTPException(
@@ -482,7 +526,7 @@ class PeerService:
             record.note = data.note
         record.updated_at = datetime.now(timezone.utc)
         await self.session.flush()
-        await self._recalc_contribution(goal, conn, user_id)
+        await self._recalc_totals(goal, conn)
         await self.session.commit()
         await self._records.refresh(record)
         users_by_id = await self._users.get_profiles([user_id])
@@ -493,6 +537,7 @@ class PeerService:
     ) -> None:
         """Delete a saving record (only the record owner may delete)."""
         goal, conn = await self._get_goal_and_connection(goal_id, user_id)
+        self._require_open(goal)
         record = await self._records.get_by_id(record_id, goal_id)
         if record is None:
             raise HTTPException(
@@ -506,28 +551,52 @@ class PeerService:
             )
         await self._records.delete(record)
         await self.session.flush()
-        await self._recalc_contribution(goal, conn, user_id)
+        await self._recalc_totals(goal, conn)
         await self.session.commit()
 
-    async def _recalc_contribution(
-        self, goal: SharedGoal, conn: PeerConnection, user_id: UUID
-    ) -> None:
-        """Recompute requester_amount or receiver_amount from sum of all records.
+    async def _recalc_totals(self, goal: SharedGoal, conn: PeerConnection) -> None:
+        """Recompute both sides' totals from the records, by user.
 
-        Called after every add / update / delete so the running totals on
-        SharedGoal always equal the sum of the individual SavingRecord rows.
-        Auto-completes the goal when the combined total meets target_amount.
+        Each side is the sum of that person's own records, mapped onto the
+        connection's current requester/receiver, so a re-invite that swaps the
+        sides can't credit one person with the other's savings. Completion
+        follows the total both ways: reaching the target completes the goal,
+        and dropping back below it (a deleted record, a raised target) re-opens
+        it, where before it stayed completed at any total.
         """
-        new_total = await self._records.sum_for_user(goal.id, user_id)
-        is_requester = conn.requester_id == user_id
-        if is_requester:
-            goal.requester_amount = new_total
-        else:
-            goal.receiver_amount = new_total
+        goal.requester_amount = await self._records.sum_for_user(goal.id, conn.requester_id)
+        goal.receiver_amount = await self._records.sum_for_user(goal.id, conn.receiver_id)
         combined = goal.requester_amount + goal.receiver_amount
-        if combined >= goal.target_amount and goal.status == GoalStatus.active:
+        if goal.status == GoalStatus.active and combined >= goal.target_amount:
             goal.status = GoalStatus.completed
+        elif goal.status == GoalStatus.completed and combined < goal.target_amount:
+            goal.status = GoalStatus.active
         goal.updated_at = datetime.now(timezone.utc)
+
+    @staticmethod
+    def _require_open(goal: SharedGoal) -> None:
+        if goal.status == GoalStatus.cancelled:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="Cannot change records on a cancelled goal",
+            )
+
+    def _notify(self, user_id: UUID, title: str, message: str, action: str, **data) -> None:
+        """Queue an in-app notification that links to the savings page."""
+        self.session.add(Notification(
+            id=uuid.uuid4(),
+            user_id=user_id,
+            type=NotificationType.SYSTEM_UPDATE,
+            priority=NotificationPriority.MEDIUM,
+            status=NotificationStatus.PENDING,
+            title=title,
+            message=message,
+            # The bell follows action_url only on actionable notifications.
+            action_url=PEERS_URL,
+            is_actionable=True,
+            data={"action": action, **data},
+            channels=[NotificationChannel.IN_APP],
+        ))
 
     def _record_to_out(
         self, record: SavingRecord, users_by_id: dict
@@ -801,3 +870,12 @@ class PeerService:
 def get_peer_service(session: AsyncSession) -> PeerService:
     """Construct a PeerService bound to the given session."""
     return PeerService(session)
+
+
+def _is_recent(moment, window: timedelta) -> bool:
+    """Whether *moment* (possibly naive UTC, as SQLite returns it) is within *window* of now."""
+    if moment is None:
+        return False
+    if moment.tzinfo is None:
+        moment = moment.replace(tzinfo=timezone.utc)
+    return datetime.now(timezone.utc) - moment < window

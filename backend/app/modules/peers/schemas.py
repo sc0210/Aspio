@@ -2,7 +2,7 @@
 Pydantic v2 schemas for the peers module.
 
 Request schemas:  PeerInviteRequest, PeerRespondRequest,
-                  SharedGoalCreate, SharedGoalContributionUpdate
+                  SharedGoalCreate, SharedGoalUpdate
 Response schemas: UserSearchResult, PeerConnectionOut,
                   WalletTotals, PeerStatCard,
                   CompareChartPoint, CompareDataResponse,
@@ -149,10 +149,12 @@ class SharedGoalCreate(BaseModel):
     target_date: Optional[date] = None
 
 
-class SharedGoalContributionUpdate(BaseModel):
-    """Body for PATCH /peers/goals/{goal_id}/contribution"""
+class SharedGoalUpdate(BaseModel):
+    """Body for PATCH /peers/goals/{goal_id}. Either participant may edit."""
 
-    amount: Decimal = Field(..., ge=0, description="New absolute contribution amount (>= 0)")
+    title: Optional[str] = Field(None, min_length=1, max_length=100)
+    target_amount: Optional[Decimal] = Field(None, gt=0)
+    target_date: Optional[date] = None
 
 
 class SharedGoalOut(BaseModel):

@@ -11,10 +11,10 @@ Endpoints:
   DELETE /peers/{id}                                      → remove a connection
   GET    /peers/compare-data                              → wallet-comparison data (self + peers)
 
-  GET    /peers/goals                                     → list active shared goals for the caller
+  GET    /peers/goals                                     → list active and completed shared goals for the caller
   POST   /peers/goals                                     → create a shared goal
   GET    /peers/goals/{goal_id}                           → get a single shared goal
-  PATCH  /peers/goals/{goal_id}/contribution              → update the caller's contribution amount (compat shim)
+  PATCH  /peers/goals/{goal_id}                           → edit title, target or date (either participant)
   DELETE /peers/goals/{goal_id}                           → delete a shared goal (creator only)
 
   GET    /peers/goals/{goal_id}/records                   → list saving records for a goal
@@ -39,7 +39,7 @@ from app.modules.peers.schemas import (
     SavingRecordCreate,
     SavingRecordOut,
     SavingRecordUpdate,
-    SharedGoalContributionUpdate,
+    SharedGoalUpdate,
     SharedGoalCreate,
     SharedGoalOut,
     UserSearchResult,
@@ -207,29 +207,25 @@ async def get_goal(
 
 
 @router.patch(
-    "/goals/{goal_id}/contribution",
+    "/goals/{goal_id}",
     response_model=ApiResponse[SharedGoalOut],
-    summary="Update the caller's contribution to a shared goal",
+    summary="Edit a shared goal's title, target or date",
 )
-async def update_contribution(
+async def update_goal(
     goal_id: UUID,
-    body: SharedGoalContributionUpdate,
+    body: SharedGoalUpdate,
     current_user: CurrentUser,
     session: AsyncSession = Depends(get_db),
 ):
-    """Set the calling user's contribution amount (absolute value, not a delta).
-
-    If the new combined total >= target_amount the goal transitions to
-    'completed' automatically.
+    """Either participant may edit. Raising the target re-opens a completed goal.
 
     Raises:
       - 404 if the goal is not found or the caller is not a participant
-      - 400 if the goal is not in 'active' status
+      - 400 if the goal is cancelled
     """
     svc = get_peer_service(session)
-    goal = await svc.update_contribution(current_user.id, goal_id, body.amount)
-    message = "Goal completed!" if goal.status == "completed" else "Contribution updated"
-    return ApiResponse.success_response(data=goal, message=message)
+    goal = await svc.update_goal(current_user.id, goal_id, body)
+    return ApiResponse.success_response(data=goal, message="Goal updated")
 
 
 @router.delete(
