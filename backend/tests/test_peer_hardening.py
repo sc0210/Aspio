@@ -203,3 +203,24 @@ async def test_a_duplicate_invite_is_409_even_at_the_cap(async_session, people):
     with pytest.raises(HTTPException) as exc:
         await svc.send_invite(alice.id, "bob")
     assert exc.value.status_code == 409
+
+
+async def test_a_removed_pair_at_the_cap_is_refused_and_left_alone(async_session, people):
+    svc = PeerService(async_session)
+    alice, bob = people["alice"], people["bob"]
+    old = await _connect(svc, alice, bob)
+    await svc.remove_connection(old.id, alice.id)
+    await svc.send_invite(alice.id, "carol")
+    await svc.send_invite(alice.id, "dave")  # at the cap with two outstanding
+
+    with pytest.raises(HTTPException) as exc:
+        await svc.send_invite(alice.id, "bob")
+    assert exc.value.status_code == 400
+    row = await async_session.get(PeerConnection, old.id)
+    await async_session.refresh(row)
+    assert row.status == PeerStatus.REMOVED
+
+
+async def test_null_goal_fields_are_422_over_http(authenticated_client):
+    r = authenticated_client.patch(f"/api/v1/peers/goals/{uuid.uuid4()}", json={"title": None})
+    assert r.status_code == 422

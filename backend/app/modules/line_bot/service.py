@@ -4749,6 +4749,19 @@ async def web_update_expense(
                     split.settled_at = settled_before.pop(key) or datetime.now(timezone.utc)
             await db.flush()
 
+    if not recompute and expense.payer_id != original_payer:
+        # A payer-only edit keeps the split rows, but every settled flag on them
+        # recorded a payment to the old payer; against the new payer nothing is
+        # paid yet.
+        from .models import ExpenseSplit
+
+        for split in (await db.execute(
+            select(ExpenseSplit).where(ExpenseSplit.expense_id == expense.id)
+        )).scalars().all():
+            split.settled = False
+            split.settled_at = None
+        await db.flush()
+
     await _log_activity(
         db,
         user_id,
