@@ -284,7 +284,7 @@ class SplitService:
                 # Backstop for the row lock (SQLite has none): only a collision on
                 # the one-live-row-per-share index means another Accept won.
                 # Anything else is a real failure and must surface.
-                if "peer_split_share" not in str(e.orig):
+                if not _is_live_row_collision(e):
                     raise
                 await self.session.rollback()
                 raise HTTPException(status.HTTP_409_CONFLICT, "This split was already answered")
@@ -436,3 +436,16 @@ class SplitService:
         pref.split_policy = split_policy
         await self.session.commit()
         return PeerPrefsOut(connection_id=str(connection_id), split_policy=split_policy)
+
+
+def _is_live_row_collision(error: IntegrityError) -> bool:
+    """Whether this is the one-live-row-per-share unique index, and nothing else.
+
+    Postgres names the index; SQLite names the column. A bare substring would
+    also match the share FK and the shares table's own constraints.
+    """
+    if getattr(error.orig, "constraint_name", None) == "uq_transactions_live_peer_split_share":
+        return True
+    msg = str(error.orig)
+    return ("uq_transactions_live_peer_split_share" in msg
+            or "UNIQUE constraint failed: transactions.peer_split_share_id" in msg)

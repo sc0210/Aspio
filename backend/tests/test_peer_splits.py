@@ -347,35 +347,48 @@ async def test_open_splits_are_listed_even_past_the_history_cap(async_session, c
     assert listed[0].id == open_.id
 
 
-async def test_a_lost_accept_race_is_a_409_and_leaves_nothing(async_session, couple, monkeypatch):
+@pytest.mark.parametrize("message", [
+    'duplicate key value violates unique constraint "uq_transactions_live_peer_split_share"',  # Postgres
+    "UNIQUE constraint failed: transactions.peer_split_share_id",  # SQLite
+])
+async def test_a_lost_accept_race_is_a_409_and_leaves_nothing(async_session, couple, monkeypatch, message):
     from sqlalchemy.exc import IntegrityError
 
     c = couple
+    bob_id = c["bob"].id  # the service's rollback expires the fixture's loaded rows
     sid = uuid.UUID((await c["svc"].create_split(c["alice"].id, _bill(c))).id)
 
     async def collide(*args, **kwargs):
-        raise IntegrityError("INSERT", {}, Exception(
-            "UNIQUE constraint failed: uq_transactions_live_peer_split_share"))
+        raise IntegrityError("INSERT", {}, Exception(message))
 
     monkeypatch.setattr(c["svc"], "_accept", collide)
     with pytest.raises(HTTPException) as exc:
-        await c["svc"].respond(c["bob"].id, sid, "accept", None, "life")
+        await c["svc"].respond(bob_id, sid, "accept", None, "life")
     assert exc.value.status_code == 409
-    assert await _rows(async_session, c["bob"]) == []
+    rows = (await async_session.execute(select(Transaction).where(
+        Transaction.user_id == bob_id, Transaction.is_deleted == False))).scalars().all()  # noqa: E712
+    assert rows == []
 
 
-async def test_other_integrity_errors_are_not_mistaken_for_the_race(async_session, couple, monkeypatch):
+@pytest.mark.parametrize("message", [
+    'insert or update on table "transactions" violates foreign key constraint '
+    '"transactions_peer_split_share_id_fkey"',
+    'new row for relation "peer_split_shares" violates check constraint "peer_split_share_non_negative"',
+    "FOREIGN KEY constraint failed",
+])
+async def test_other_integrity_errors_are_not_mistaken_for_the_race(async_session, couple, monkeypatch, message):
     from sqlalchemy.exc import IntegrityError
 
     c = couple
+    bob_id = c["bob"].id
     sid = uuid.UUID((await c["svc"].create_split(c["alice"].id, _bill(c))).id)
 
     async def broken(*args, **kwargs):
-        raise IntegrityError("INSERT", {}, Exception("FOREIGN KEY constraint failed"))
+        raise IntegrityError("INSERT", {}, Exception(message))
 
     monkeypatch.setattr(c["svc"], "_accept", broken)
     with pytest.raises(IntegrityError):
-        await c["svc"].respond(c["bob"].id, sid, "accept", None, "life")
+        await c["svc"].respond(bob_id, sid, "accept", None, "life")
 
 
 async def test_declined_splits_list_with_history_and_by_connection(async_session, couple):
