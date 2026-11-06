@@ -4709,6 +4709,17 @@ async def web_update_expense(
     recompute = body.splits is not None or body.amount is not None
 
     if recompute:
+        # Recomputing replaces the split rows, which used to reset every
+        # settled flag: debts already paid came back. Remember who had settled
+        # which amount, and keep it settled when their share is unchanged.
+        from .models import ExpenseSplit
+
+        prior = (await db.execute(
+            select(ExpenseSplit).where(ExpenseSplit.expense_id == expense.id)
+        )).scalars().all()
+        settled_before = {
+            (s.user_id, s.amount): s.settled_at for s in prior if s.settled
+        }
         await expense_repo.delete_splits_for_expense(expense.id)
         await db.flush()
         if body.splits is not None:
@@ -4723,6 +4734,16 @@ async def web_update_expense(
                     user_id=member.user_id,
                     amount=split_amount,
                 )
+            await db.flush()
+
+        if settled_before:
+            for split in (await db.execute(
+                select(ExpenseSplit).where(ExpenseSplit.expense_id == expense.id)
+            )).scalars().all():
+                key = (split.user_id, split.amount)
+                if key in settled_before:
+                    split.settled = True
+                    split.settled_at = settled_before.pop(key) or datetime.now(timezone.utc)
             await db.flush()
 
     await _log_activity(
@@ -4781,6 +4802,10 @@ async def web_settle(
         raise _http_error(422, "Both parties must be members of this group")
     if body.owed_by == body.owed_to:
         raise _http_error(422, "Cannot settle a debt with yourself")
+    # Only the two people the debt is between may settle it; any member could
+    # before, so a third person could clear a debt neither party agreed to.
+    if user_id not in (body.owed_by, body.owed_to):
+        raise _http_error(403, "Only the two members involved can settle this debt")
 
     total = await _settle_debt(
         db,
