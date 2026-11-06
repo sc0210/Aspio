@@ -1558,16 +1558,11 @@ class RecurringTransactionService:
 
     @staticmethod
     def _rule_snapshot(recurring) -> Dict[str, Any]:
-        """The plain values processing needs, read once from the ORM row."""
+        """What posting needs from the ORM row, read once. Scheduling fields are
+        re-read under the lock on every iteration instead."""
         return dict(
             id=recurring.id,
             user_id=str(recurring.user_id),
-            next_occurrence=recurring.next_occurrence,
-            occurrence_count=recurring.occurrence_count or 0,
-            frequency=recurring.frequency,
-            interval=recurring.interval,
-            end_date=recurring.end_date,
-            max_occurrences=recurring.max_occurrences,
             template=dict(
                 type=recurring.type,
                 amount=recurring.amount,
@@ -1583,26 +1578,25 @@ class RecurringTransactionService:
         )
 
     async def _post_due_occurrences(self, rule: Dict[str, Any], max_date: date) -> int:
-        """Post this rule's occurrences up to max_date; returns how many were new."""
+        """Post this rule's occurrences up to max_date; returns how many were new.
+
+        Every iteration re-reads the rule under a row lock and works only from
+        those values: another run (the scheduler vs the admin endpoint) may
+        have posted, advanced or paused it, and the user may have edited it.
+        """
         rule_id, user_id = rule["id"], rule["user_id"]
-        occurrence, count = rule["next_occurrence"], rule["occurrence_count"]
-        frequency, interval = rule["frequency"], rule["interval"]
-        end_date, max_occurrences = rule["end_date"], rule["max_occurrences"]
         transaction_template = rule["template"]
 
-        def finished():
-            return bool((end_date and occurrence > end_date)
-                        or (max_occurrences and count >= max_occurrences))
-
         posted = 0
+        finished = False
         for _ in range(self.MAX_CATCH_UP):
             row = await self.recurring_repo.lock_rule(rule_id)
             if row is None or not row.is_active or row.is_paused:
                 break  # another run holds it, or the user paused/removed it
-            # Work from the locked row, not the snapshot: another run may have
-            # advanced it, and advancing again from a stale date would rewind it.
             occurrence, count = row.next_occurrence, row.occurrence_count or 0
-            if occurrence > max_date or finished():
+            finished = bool((row.end_date and occurrence > row.end_date)
+                            or (row.max_occurrences and count >= row.max_occurrences))
+            if finished or occurrence > max_date:
                 break
 
             if not await self.recurring_repo.has_posted(rule_id, occurrence):
@@ -1612,11 +1606,17 @@ class RecurringTransactionService:
                 )
                 posted += 1
 
-            occurrence = self._calculate_next_occurrence(occurrence, frequency, interval)
-            count += 1
-            await self.recurring_repo.update_next_occurrence(rule_id, occurrence)
+            # Posting committed and released the lock, so advance only if the
+            # rule still sits on this occurrence; otherwise another run already
+            # counted it and we stop rather than count it twice.
+            next_date = self._calculate_next_occurrence(occurrence, row.frequency, row.interval)
+            if not await self.recurring_repo.update_next_occurrence(
+                rule_id, next_date, expected_current=occurrence
+            ):
+                break
 
-        if finished():
+        # Only retire on what a locked read showed, never on the snapshot.
+        if finished:
             try:
                 await self.recurring_repo.deactivate(rule_id)
             except Exception as e:  # posted rows are committed; retire it next run
