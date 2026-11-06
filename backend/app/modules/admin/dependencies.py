@@ -14,7 +14,6 @@ from app.modules.users.dependencies import (
     get_optional_current_user
 )
 from app.modules.users.models import User
-from app.core.exceptions import AuthorizationException
 from .models import AdminUser, AdminPermission, AdminRole
 from .repositories import AdminRepository
 

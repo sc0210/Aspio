@@ -16,8 +16,6 @@ from ..users.schemas import (
     TokenRefreshRequest,
     TokenRefreshResponse,
     LogoutRequest,
-    GoogleOAuthRequest,
-    GoogleOAuthResponse,
     GoogleCallbackRequest,
     GoogleCallbackResponse,
     VerifyEmailRequest,
@@ -117,50 +115,6 @@ async def logout(
 # ===== OAuth Endpoints =====
 
 
-@router.post("/oauth/google", response_model=GoogleOAuthResponse)
-async def google_oauth(
-    oauth_data: GoogleOAuthRequest,
-    client_ip: ClientIP,
-    session: AsyncSession = Depends(get_async_session),
-):
-    """
-    Google OAuth authentication.
-
-    This is an alias for the user Google OAuth endpoint, provided here
-    for consistency with traditional auth API patterns.
-    """
-    user_service = get_user_service(session)
-    return await user_service.google_oauth_login(oauth_data, client_ip)
-
-
-@router.get("/google/login", response_model=ApiResponse[dict])
-async def google_oauth_login():
-    """
-    Initiate Google OAuth login.
-
-    Returns the Google OAuth URL for frontend redirection.
-    This endpoint provides the URL that the frontend should redirect to
-    for Google OAuth authentication.
-    """
-    from ...core.config import get_settings
-    from ..users.security import google_oauth
-
-    settings = get_settings()
-
-    if not settings.google_oauth_enabled:
-        raise HTTPException(
-            status_code=status.HTTP_501_NOT_IMPLEMENTED,
-            detail="Google OAuth is not configured",
-        )
-
-    auth_url = google_oauth.get_authorization_url()
-
-    return ApiResponse.success_response(
-        data={"auth_url": auth_url, "provider": "google"},
-        message="Google OAuth URL generated successfully",
-    )
-
-
 @router.get("/google/callback", response_model=ApiResponse[dict])
 async def google_oauth_callback_get(
     code: str = None, state: str = None, error: str = None, request: Request = None
@@ -218,51 +172,7 @@ async def google_oauth_callback(
 # ===== Token Information Endpoints =====
 
 
-@router.get("/token/info", response_model=ApiResponse[dict])
-async def get_token_info(current_user: CurrentUser):
-    """
-    Get detailed information about the current token.
-
-    Returns token metadata and user information for debugging
-    and frontend state management.
-    """
-    return ApiResponse.success_response(
-        data={
-            "user_id": str(current_user.id),
-            "email": current_user.email,
-            "name": current_user.name,
-            "is_verified": current_user.is_verified,
-            "is_active": current_user.is_active,
-            "role": current_user.role.value,
-            "status": current_user.status.value,
-            "preferences": current_user.preferences,
-            "level": current_user.level,
-            "experience_points": current_user.experience_points,
-            "last_login_at": (
-                current_user.last_login_at.isoformat()
-                if current_user.last_login_at
-                else None
-            ),
-        },
-        message="Token information retrieved",
-    )
-
-
 # ===== Health Check Endpoints =====
-
-
-@router.get("/status", response_model=ApiResponse[dict])
-async def auth_status():
-    """
-    Get authentication service status.
-
-    Basic health check endpoint to verify that the authentication service
-    is operational and responding to requests.
-    """
-    return ApiResponse.success_response(
-        data={"service": "auth", "status": "operational"},
-        message="Authentication service is ready",
-    )
 
 
 @router.get("/health", response_model=ApiResponse[dict])

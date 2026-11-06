@@ -183,46 +183,6 @@ async def create_dividend(
         )
 
 
-@router.get("/dividends", response_model=ApiResponse[List[DividendResponse]])
-async def get_dividends(
-    symbol: Optional[str] = Query(None),
-    start_date: Optional[date] = Query(None),
-    end_date: Optional[date] = Query(None),
-    current_user: CurrentUser = None,
-    session: AsyncSession = Depends(get_db),
-):
-    """Get dividend history"""
-    from ..models import Dividend
-    from sqlalchemy import select, and_
-
-    try:
-        conditions = [Dividend.user_id == current_user.id]
-        if symbol:
-            conditions.append(Dividend.symbol == symbol)
-        if start_date:
-            conditions.append(Dividend.payment_date >= start_date)
-        if end_date:
-            conditions.append(Dividend.payment_date <= end_date)
-
-        stmt = (
-            select(Dividend)
-            .where(and_(*conditions))
-            .order_by(Dividend.payment_date.desc())
-            .limit(100)
-        )
-        result = await session.execute(stmt)
-        dividends = result.scalars().all()
-
-        return ApiResponse.success_response(
-            data=[DividendResponse.model_validate(d) for d in dividends]
-        )
-    except Exception as e:
-        logger.error(f"Failed to fetch dividends: {str(e)}", exc_info=True)
-        raise HTTPException(
-            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail="An internal error occurred"
-        )
-
-
 @router.delete("/dividends/{dividend_id}", status_code=status.HTTP_204_NO_CONTENT)
 async def delete_dividend(
     dividend_id: UUID,

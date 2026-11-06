@@ -42,7 +42,6 @@ from ....core.rate_limiter import (
 )
 from ..schemas import (
     PortfolioCreate,
-    PortfolioUpdate,
     PortfolioResponse,
     PortfolioSummary,
     HoldingCreate,
@@ -52,23 +51,15 @@ from ..schemas import (
     TransactionCreate,
     TransactionUpdate,
     TransactionResponse,
-    TransactionFilters,
     BulkTransactionCreate,
     BulkTransactionResponse,
-    PortfolioPerformance,
     MarketDataResponse,
     AssetAllocation,
-    PaginatedPortfoliosResponse,
     PaginatedHoldingsResponse,
-    PaginatedTransactionsResponse,
 )
 from ..dividend_schemas import (
     DividendCreate,
-    DividendUpdate,
-    DividendReinvest,
     DividendResponse,
-    DividendSummary,
-    DividendHistoryFilter,
 )
 from ..sell_schemas import SellHoldingResponse
 from ..services import get_portfolio_service, AnalyticsService
@@ -80,7 +71,6 @@ from ..repositories import (
     HoldingRepository,
 )
 from ..price_update_service import get_price_update_service
-from ..api_health import get_api_health_checker
 from ..irr_update_service import get_irr_update_service
 from ..historical_price_service import get_historical_price_service
 from ....utils.exchange_rate_service import ExchangeRateService
@@ -655,7 +645,6 @@ __all__ = [
     "rate_limit_analytics",
     "rate_limit_portfolio_sync",
     "PortfolioCreate",
-    "PortfolioUpdate",
     "PortfolioResponse",
     "PortfolioSummary",
     "HoldingCreate",
@@ -665,21 +654,13 @@ __all__ = [
     "TransactionCreate",
     "TransactionUpdate",
     "TransactionResponse",
-    "TransactionFilters",
     "BulkTransactionCreate",
     "BulkTransactionResponse",
-    "PortfolioPerformance",
     "MarketDataResponse",
     "AssetAllocation",
-    "PaginatedPortfoliosResponse",
     "PaginatedHoldingsResponse",
-    "PaginatedTransactionsResponse",
     "DividendCreate",
-    "DividendUpdate",
-    "DividendReinvest",
     "DividendResponse",
-    "DividendSummary",
-    "DividendHistoryFilter",
     "SellHoldingResponse",
     "get_portfolio_service",
     "AnalyticsService",
@@ -689,7 +670,6 @@ __all__ = [
     "PortfolioRepository",
     "HoldingRepository",
     "get_price_update_service",
-    "get_api_health_checker",
     "get_irr_update_service",
     "get_historical_price_service",
     "ExchangeRateService",

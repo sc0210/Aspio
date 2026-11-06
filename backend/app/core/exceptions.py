@@ -47,17 +47,6 @@ class ValidationException(AspiroException):
         )
 
 
-class AuthorizationException(AspiroException):
-    """Exception for authorization errors"""
-
-    def __init__(self, message: str = "Insufficient permissions"):
-        super().__init__(
-            message=message,
-            status_code=status.HTTP_403_FORBIDDEN,
-            error_code="AUTHORIZATION_ERROR",
-        )
-
-
 class NotFoundException(AspiroException):
     """Exception for resource not found errors"""
 
@@ -292,7 +281,6 @@ def setup_exception_handlers(app: FastAPI) -> None:
 __all__ = [
     "AspiroException",
     "ValidationException",
-    "AuthorizationException",
     "NotFoundException",
     "BusinessLogicException",
     "RateLimitException",

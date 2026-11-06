@@ -14,7 +14,7 @@ from .schemas import (
     UserCreate, UserUpdate, UserResponse, UserProfileResponse,
     LoginRequest, LoginResponse, TokenRefreshRequest, TokenRefreshResponse,
     ChangePasswordRequest, ForgotPasswordRequest, ResetPasswordRequest,
-    GoogleOAuthRequest, GoogleOAuthResponse, UserStatsResponse
+    UserStatsResponse
 )
 from .services import UserService, get_user_service
 from .repositories import (
@@ -23,9 +23,9 @@ from .repositories import (
 )
 from .dependencies import (
     get_current_user_from_token, get_current_active_user, get_current_verified_user,
-    get_current_premium_user, get_current_admin_user, get_current_moderator_user,
-    CurrentUser, CurrentVerifiedUser, CurrentPremiumUser, CurrentAdminUser,
-    CurrentModeratorUser, OptionalCurrentUser, ClientIP, UserAgent
+    get_current_admin_user,
+    CurrentUser, CurrentVerifiedUser, CurrentAdminUser,
+    OptionalCurrentUser, ClientIP, UserAgent
 )
 from .security import (
     SecurityUtils, JWTManager, GoogleOAuthManager, PasswordValidator,
@@ -44,7 +44,7 @@ __all__ = [
     "UserCreate", "UserUpdate", "UserResponse", "UserProfileResponse",
     "LoginRequest", "LoginResponse", "TokenRefreshRequest", "TokenRefreshResponse",
     "ChangePasswordRequest", "ForgotPasswordRequest", "ResetPasswordRequest",
-    "GoogleOAuthRequest", "GoogleOAuthResponse", "UserStatsResponse",
+    "UserStatsResponse",
     
     # Services
     "UserService", "get_user_service",
@@ -55,9 +55,9 @@ __all__ = [
     
     # Dependencies
     "get_current_user_from_token", "get_current_active_user", "get_current_verified_user",
-    "get_current_premium_user", "get_current_admin_user", "get_current_moderator_user",
-    "CurrentUser", "CurrentVerifiedUser", "CurrentPremiumUser", "CurrentAdminUser",
-    "CurrentModeratorUser", "OptionalCurrentUser", "ClientIP", "UserAgent",
+    "get_current_admin_user",
+    "CurrentUser", "CurrentVerifiedUser", "CurrentAdminUser",
+    "OptionalCurrentUser", "ClientIP", "UserAgent",
     
     # Security
     "SecurityUtils", "JWTManager", "GoogleOAuthManager", "PasswordValidator",

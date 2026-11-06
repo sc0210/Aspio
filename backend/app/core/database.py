@@ -211,15 +211,6 @@ async def init_db() -> None:
         raise
 
 
-async def close_db() -> None:
-    """Close database connection pool"""
-    try:
-        await engine.dispose()
-        logger.info("Database connection pool closed")
-    except Exception as e:
-        logger.error(f"Error closing database connection: {e}")
-
-
 async def get_db_health() -> bool:
     """
     Check database health for monitoring purposes.
@@ -279,11 +270,9 @@ if settings.is_development:
 # Export commonly used objects
 __all__ = [
     "Base",
-    "engine",
     "async_session",
     "get_db",
     "get_async_session",
     "init_db",
-    "close_db",
     "get_db_health",
 ]

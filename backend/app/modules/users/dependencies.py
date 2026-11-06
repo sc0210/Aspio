@@ -179,30 +179,6 @@ async def get_current_verified_user(
     return current_user
 
 
-async def get_current_premium_user(
-    current_user: User = Depends(get_current_verified_user),
-) -> User:
-    """
-    Get current premium user (role must be premium or admin).
-
-    Args:
-        current_user: Current verified user
-
-    Returns:
-        Premium user
-
-    Raises:
-        HTTPException: If user is not premium
-    """
-    if current_user.role not in [UserRole.PREMIUM, UserRole.ADMIN]:
-        raise HTTPException(
-            status_code=status.HTTP_403_FORBIDDEN,
-            detail="Premium subscription required",
-        )
-
-    return current_user
-
-
 async def get_current_admin_user(
     current_user: User = Depends(get_current_verified_user),
 ) -> User:
@@ -221,30 +197,6 @@ async def get_current_admin_user(
     if current_user.role != UserRole.ADMIN:
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN, detail="Admin privileges required"
-        )
-
-    return current_user
-
-
-async def get_current_moderator_user(
-    current_user: User = Depends(get_current_verified_user),
-) -> User:
-    """
-    Get current moderator user (role must be moderator or admin).
-
-    Args:
-        current_user: Current verified user
-
-    Returns:
-        Moderator user
-
-    Raises:
-        HTTPException: If user is not moderator or admin
-    """
-    if current_user.role not in [UserRole.MODERATOR, UserRole.ADMIN]:
-        raise HTTPException(
-            status_code=status.HTTP_403_FORBIDDEN,
-            detail="Moderator privileges required",
         )
 
     return current_user
@@ -444,9 +396,7 @@ async def rate_limit_check(request: Request) -> None:
 # Type aliases for dependency injection
 CurrentUser = Annotated[User, Depends(get_current_active_user)]
 CurrentVerifiedUser = Annotated[User, Depends(get_current_verified_user)]
-CurrentPremiumUser = Annotated[User, Depends(get_current_premium_user)]
 CurrentAdminUser = Annotated[User, Depends(get_current_admin_user)]
-CurrentModeratorUser = Annotated[User, Depends(get_current_moderator_user)]
 OptionalCurrentUser = Annotated[Optional[User], Depends(get_optional_current_user)]
 ClientIP = Annotated[str, Depends(get_client_ip)]
 UserAgent = Annotated[str, Depends(get_user_agent)]
@@ -454,24 +404,17 @@ UserAgent = Annotated[str, Depends(get_user_agent)]
 
 # Export dependencies
 __all__ = [
-    # Authentication dependencies
     "get_current_user_from_token",
     "get_current_active_user",
     "get_current_verified_user",
-    "get_current_premium_user",
     "get_current_admin_user",
-    "get_current_moderator_user",
     "get_optional_current_user",
-    # Utility dependencies
     "get_client_ip",
     "get_user_agent",
     "rate_limit_check",
-    # Type aliases
     "CurrentUser",
     "CurrentVerifiedUser",
-    "CurrentPremiumUser",
     "CurrentAdminUser",
-    "CurrentModeratorUser",
     "OptionalCurrentUser",
     "ClientIP",
     "UserAgent",

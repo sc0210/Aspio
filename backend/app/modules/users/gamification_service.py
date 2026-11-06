@@ -5,7 +5,6 @@ This module provides business logic for user gamification, achievements,
 analytics, and engagement features with comprehensive Asian market support.
 """
 
-import asyncio
 import logging
 from datetime import datetime, timedelta, timezone
 from typing import Optional, Dict, Any, List, Tuple
@@ -14,22 +13,17 @@ from uuid import UUID
 from sqlalchemy.ext.asyncio import AsyncSession
 from fastapi import HTTPException, status
 
-from .models import User, AchievementType, AchievementRarity
+from .models import AchievementType, AchievementRarity
 from .schemas import (
     UserGamificationStats,
     AchievementResponse,
     AchievementProgressResponse,
-    UserEngagementMetrics,
     UserActivityRequest,
     UserActivityResponse,
-    RegionalPreferencesUpdate,
-    DataExportRequest,
-    DataExportResponse,
 )
 from .gamification_repository import (
     get_gamification_repository,
     get_user_activity_repository,
-    get_user_security_repository,
 )
 from .repositories import get_user_repository
 from .achievement_catalogue import get_definition
@@ -91,7 +85,6 @@ class GamificationService:
         self.gamification_repo = get_gamification_repository(session)
         self.user_repo = get_user_repository(session)
         self.activity_repo = get_user_activity_repository(session)
-        self.security_repo = get_user_security_repository(session)
 
     async def get_user_gamification_stats(self, user_id: UUID) -> UserGamificationStats:
         """
@@ -536,32 +529,6 @@ class UserAnalyticsService:
             raise HTTPException(
                 status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
                 detail="Failed to log user activity",
-            )
-
-    async def get_user_engagement_metrics(
-        self, user_id: UUID, days_back: int = 30
-    ) -> UserEngagementMetrics:
-        """
-        Get comprehensive engagement metrics for a user.
-
-        Args:
-            user_id: User's UUID
-            days_back: Number of days to analyze
-
-        Returns:
-            UserEngagementMetrics with calculated metrics
-        """
-        try:
-            metrics_data = await self.activity_repo.get_user_engagement_metrics(
-                user_id, days_back
-            )
-            return UserEngagementMetrics(**metrics_data)
-
-        except Exception as e:
-            logger.error(f"Error getting engagement metrics: {str(e)}")
-            raise HTTPException(
-                status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-                detail="Failed to retrieve engagement metrics",
             )
 
     async def update_login_streak(self, user_id: UUID) -> Dict[str, Any]:

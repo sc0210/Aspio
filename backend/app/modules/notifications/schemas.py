@@ -39,16 +39,6 @@ class NotificationBase(BaseModel):
 # ===== Request Schemas =====
 
 
-class NotificationCreateRequest(NotificationBase):
-    """Request schema for creating a notification"""
-
-    user_id: Optional[UUID] = None  # Optional - can be set by service
-    scheduled_at: Optional[datetime] = None
-    related_entity_type: Optional[str] = None
-    related_entity_id: Optional[UUID] = None
-    group_key: Optional[str] = None
-
-
 class NotificationUpdateRequest(BaseModel):
     """Request schema for updating notification status"""
 
@@ -62,28 +52,6 @@ class BulkNotificationActionRequest(BaseModel):
 
     notification_ids: List[UUID] = Field(min_length=1, max_length=100)
     action: str = Field(pattern="^(mark_read|mark_unread|dismiss|delete)$")
-
-
-class NotificationTemplateCreateRequest(BaseModel):
-    """Request schema for creating notification templates"""
-
-    template_key: str = Field(min_length=1, max_length=100)
-    name: str = Field(min_length=1, max_length=100)
-    description: Optional[str] = None
-    type: NotificationType
-    priority: NotificationPriority = NotificationPriority.MEDIUM
-    title_template: str = Field(min_length=1, max_length=200)
-    message_template: str = Field(min_length=1)
-    default_channels: List[NotificationChannel] = Field(default_factory=list)
-    default_expires_hours: Optional[int] = Field(None, ge=1, le=8760)  # Max 1 year
-    variables: Optional[Dict[str, str]] = Field(default_factory=dict)
-    category: Optional[str] = None
-    supported_languages: List[str] = Field(default=["en"])
-    localized_content: Optional[Dict[str, Dict[str, str]]] = Field(default_factory=dict)
-    action_url_template: Optional[str] = None
-    action_label: Optional[str] = None
-    is_actionable: bool = False
-    is_persistent: bool = False
 
 
 class NotificationPreferencesUpdateRequest(BaseModel):
@@ -153,34 +121,6 @@ class NotificationListResponse(BaseModel):
     action_label: Optional[str] = None
     created_at: datetime
     expires_at: Optional[datetime] = None
-    model_config = ConfigDict(from_attributes=True)
-
-
-class NotificationTemplateResponse(BaseModel):
-    """Response schema for notification templates"""
-
-    id: UUID
-    template_key: str
-    name: str
-    description: Optional[str] = None
-    type: NotificationType
-    priority: NotificationPriority
-    title_template: str
-    message_template: str
-    default_channels: List[NotificationChannel]
-    default_expires_hours: Optional[int] = None
-    variables: Optional[Dict[str, str]] = None
-    category: Optional[str] = None
-    supported_languages: List[str]
-    localized_content: Optional[Dict[str, Dict[str, str]]] = None
-    action_url_template: Optional[str] = None
-    action_label: Optional[str] = None
-    is_actionable: bool
-    is_persistent: bool
-    is_active: bool
-    usage_count: int
-    created_at: datetime
-    updated_at: datetime
     model_config = ConfigDict(from_attributes=True)
 
 
@@ -254,5 +194,3 @@ class NotificationSortParams(BaseModel):
 
 
 # ===== Utility Schemas =====
-
-

@@ -5,7 +5,7 @@ This module provides async database operations for gamification features,
 achievements, user activity tracking, and analytics.
 """
 
-from datetime import datetime, timedelta, timezone
+from datetime import datetime, timezone
 from typing import Optional, List, Dict, Any
 from uuid import UUID
 import logging
@@ -14,7 +14,7 @@ from sqlalchemy import select, update, func, and_, desc
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from .models import (
-    User, UserGamificationAchievement, UserActivityLog, UserSecurityLog, AchievementType,
+    User, UserGamificationAchievement, UserActivityLog, AchievementType,
     AchievementRarity
 )
 from .achievement_catalogue import (
@@ -640,116 +640,6 @@ class UserActivityRepository:
             logger.error(f"Error getting user activities: {str(e)}")
             return []
     
-    async def get_user_engagement_metrics(
-        self, 
-        user_id: UUID,
-        days_back: int = 30
-    ) -> Dict[str, Any]:
-        """Calculate user engagement metrics"""
-        try:
-            end_date = datetime.now(timezone.utc)
-            start_date = end_date - timedelta(days=days_back)
-            
-            # Get recent activities
-            activities = await self.get_user_activities(
-                user_id, 
-                start_date=start_date, 
-                end_date=end_date,
-                limit=1000
-            )
-            
-            # Calculate metrics
-            total_sessions = len(set(act.session_id for act in activities if act.session_id))
-            unique_days = len(set(act.created_at.date() for act in activities))
-            features_used = list(set(act.activity_type for act in activities))
-            
-            # Calculate engagement scores (0-100)
-            daily_score = min(100, (unique_days / days_back) * 100)
-            feature_diversity_score = min(100, len(features_used) * 10)
-            session_frequency_score = min(100, (total_sessions / days_back) * 20)
-            
-            overall_engagement = (daily_score + feature_diversity_score + session_frequency_score) / 3
-            
-            # Determine trend
-            recent_activities = [act for act in activities if act.created_at >= end_date - timedelta(days=7)]
-            older_activities = [act for act in activities if act.created_at < end_date - timedelta(days=7)]
-            
-            recent_engagement = len(recent_activities) / 7 if recent_activities else 0
-            older_engagement = len(older_activities) / (days_back - 7) if older_activities else 0
-            
-            if recent_engagement > older_engagement * 1.1:
-                trend = "increasing"
-            elif recent_engagement < older_engagement * 0.9:
-                trend = "decreasing"
-            else:
-                trend = "stable"
-            
-            return {
-                "user_id": user_id,
-                "total_sessions": total_sessions,
-                "average_session_duration": 15.0,  # Placeholder - would need session tracking
-                "last_active": activities[0].created_at if activities else None,
-                "features_used": features_used,
-                "daily_engagement_score": daily_score,
-                "weekly_engagement_score": min(100, (unique_days / 7) * 100) if days_back >= 7 else daily_score,
-                "monthly_engagement_score": daily_score,
-                "engagement_trend": trend
-            }
-            
-        except Exception as e:
-            logger.error(f"Error calculating engagement metrics: {str(e)}")
-            return {
-                "user_id": user_id,
-                "total_sessions": 0,
-                "average_session_duration": 0.0,
-                "features_used": [],
-                "daily_engagement_score": 0.0,
-                "weekly_engagement_score": 0.0,
-                "monthly_engagement_score": 0.0,
-                "engagement_trend": "stable"
-            }
-
-
-class UserSecurityRepository:
-    """Repository for user security and audit logging"""
-    
-    def __init__(self, session: AsyncSession):
-        self.session = session
-    
-    async def log_security_event(
-        self,
-        user_id: Optional[UUID],
-        event_type: str,
-        event_description: str,
-        ip_address: Optional[str] = None,
-        user_agent: Optional[str] = None,
-        risk_level: str = "low",
-        metadata: Optional[Dict[str, Any]] = None
-    ) -> UserSecurityLog:
-        """Log security events for audit and monitoring"""
-        try:
-            security_log = UserSecurityLog(
-                user_id=user_id,
-                event_type=event_type,
-                event_description=event_description,
-                ip_address=ip_address,
-                user_agent=user_agent,
-                risk_level=risk_level,
-                metadata=metadata or {}
-            )
-            
-            self.session.add(security_log)
-            await self.session.commit()
-            await self.session.refresh(security_log)
-            
-            logger.info(f"Logged security event {event_type} for user {user_id} (risk: {risk_level})")
-            return security_log
-            
-        except Exception as e:
-            await self.session.rollback()
-            logger.error(f"Error logging security event: {str(e)}")
-            raise
-    
 # Repository factory functions
 def get_gamification_repository(session: AsyncSession) -> GamificationRepository:
     """Get gamification repository instance"""
@@ -759,8 +649,3 @@ def get_gamification_repository(session: AsyncSession) -> GamificationRepository
 def get_user_activity_repository(session: AsyncSession) -> UserActivityRepository:
     """Get user activity repository instance"""
     return UserActivityRepository(session)
-
-
-def get_user_security_repository(session: AsyncSession) -> UserSecurityRepository:
-    """Get user security repository instance"""
-    return UserSecurityRepository(session)

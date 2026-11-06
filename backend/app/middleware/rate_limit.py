@@ -107,7 +107,6 @@ class RateLimitMiddleware(BaseHTTPMiddleware):
             # Auth - very high limits for frequent checks
             "/api/v1/auth/session": {"requests": 2000, "window": 60, "burst": 500},
             "/api/v1/auth/me": {"requests": 2000, "window": 60, "burst": 500},
-            "/api/v1/auth/status": {"requests": 2000, "window": 60, "burst": 500},
             "/api/auth/session": {"requests": 2000, "window": 60, "burst": 500},
             # Core feature endpoints - very high limits for SPA usage
             "/api/v1/portfolio": {"requests": 2000, "window": 60, "burst": 500},
