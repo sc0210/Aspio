@@ -575,5 +575,13 @@
     "tip4": "This is a simulation — nothing here touches your real assets",
     "title": "What-If Simulator",
     "totalChange": "Total change"
+  },
+  "sharedBalance": {
+    "label": "Shared bills",
+    "owesYou": "{{name}} owes you {{amount}}",
+    "youOwe": "You owe {{name}} {{amount}}",
+    "higher": "Your wallets count only your share of shared bills, so they read {{amount}} more than your bank until you’re paid back.",
+    "lower": "Your wallets already count your share of shared bills, so they read {{amount}} less than your bank until you pay it.",
+    "settle": "Settle up"
   }
 }

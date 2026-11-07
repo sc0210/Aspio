@@ -38,6 +38,10 @@ export const QUERY_KEYS = {
   CASHFLOW_SPENDING_BY_CATEGORY: 'cashflow-spending-by-category',
   CASH_WALLET: 'cash-wallet',
   LOANS_LIST: 'loans-list',
+  // What partners owe you / you owe them: split rows are ledger rows, so a
+  // split write refreshes it with the rest. Repayments write no rows and
+  // invalidate it directly.
+  SPLIT_BALANCES: 'split-balances',
 
   // Month in Review reads a month of the same ledger.
   REVIEW_SPENDING: 'review-spending',
@@ -123,6 +127,7 @@ const LEDGER_DERIVED: readonly QueryKeyValue[] = [
   QUERY_KEYS.CASHFLOW_SPENDING_BY_CATEGORY,
   QUERY_KEYS.CASH_WALLET,
   QUERY_KEYS.LOANS_LIST,
+  QUERY_KEYS.SPLIT_BALANCES,
   QUERY_KEYS.REVIEW_SPENDING,
   QUERY_KEYS.REVIEW_GOALS,
   QUERY_KEYS.REVIEW_CONTEXT,
