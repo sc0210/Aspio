@@ -106,3 +106,25 @@ async def test_a_formula_like_partner_name_is_exported_as_text(async_session, co
     # Excel types the cell as text, so the name is stored exactly, never as a formula.
     assert dinner[11].value == name and dinner[11].data_type == "s"
     assert float(dinner[10].value) == 1000.0 and dinner[10].number_format == "0.00"
+
+
+async def test_formula_like_free_text_is_exported_as_text(async_session, couple):
+    """A description from an import or the LINE bot is someone else's text too."""
+    import openpyxl
+
+    c = couple
+    await TransactionRepository(async_session).create({
+        "type": TransactionType.EXPENSE, "wallet_type": TransactionWalletType.LIFE,
+        "amount": Decimal("10"), "currency": "TWD", "description": "=HYPERLINK(\"http://x\",\"y\")",
+        "merchant_name": "@cmd", "notes": "+1", "transaction_date": date(2026, 11, 4),
+        "category_id": c["food"].id,
+    }, str(c["alice"].id))
+    txs = TransactionService(TransactionRepository(async_session), TransactionCategoryRepository(async_session),
+                             RecurringTransactionRepository(async_session))
+    svc = ImportExportService(async_session, txs)
+    [row] = list(csv.DictReader(io.StringIO(await svc.export_csv(str(c["alice"].id)))))
+    assert (row["Description"][0], row["Merchant"], row["Notes"]) == ("'", "'@cmd", "'+1")
+    ws = openpyxl.load_workbook(io.BytesIO(await svc.export_excel(str(c["alice"].id)))).active
+    cells = list(ws.iter_rows(min_row=2))[0]
+    assert cells[4].value.startswith("=HYPERLINK") and cells[4].data_type == "s"
+    assert (cells[6].value, cells[9].value) == ("@cmd", "+1")

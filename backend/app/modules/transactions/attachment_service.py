@@ -505,10 +505,18 @@ class AttachmentService:
             raise HTTPException(status_code=500, detail="Failed to save file")
 
 def _safe_cell(text: str) -> str:
-    """A value someone else chose (a partner's display name), made inert for a
-    spreadsheet: one starting with = + - @ or a tab/CR is a formula to Excel and
-    would run when the export is opened. A leading apostrophe makes it text."""
+    """Free text made inert for a CSV opened in a spreadsheet: one starting with
+    = + - @ or a tab/CR is a formula to Excel and would run when the export is
+    opened. Text in an export can come from someone else (a partner's name, an
+    imported description, the LINE bot). A leading apostrophe makes it text."""
     return f"'{text}" if text and text[0] in "=+-@\t\r" else text
+
+
+def _text_cell(cell, text: str) -> None:
+    """Excel has cell types: store free text as text, exactly as written, so a
+    leading "=" is never evaluated (openpyxl would otherwise make it a formula)."""
+    cell.value = text
+    cell.data_type = "s"
 
 
 class ImportExportService:
@@ -787,12 +795,12 @@ class ImportExportService:
                 transaction.type.value,
                 str(transaction.amount),
                 transaction.currency,
-                transaction.description,
-                transaction.category_obj.name if transaction.category_obj else '',
-                transaction.merchant_name or '',
+                _safe_cell(transaction.description or ''),
+                _safe_cell(transaction.category_obj.name if transaction.category_obj else ''),
+                _safe_cell(transaction.merchant_name or ''),
                 transaction.payment_method.value if transaction.payment_method else '',
-                ','.join(transaction.tags) if transaction.tags else '',
-                transaction.notes or '',
+                _safe_cell(','.join(transaction.tags) if transaction.tags else ''),
+                _safe_cell(transaction.notes or ''),
                 *self._csv_shared_cells(shared, transaction),
             ])
         
@@ -845,20 +853,19 @@ class ImportExportService:
             ws.cell(row=row_idx, column=2, value=txn.type.value)
             ws.cell(row=row_idx, column=3, value=float(txn.amount))
             ws.cell(row=row_idx, column=4, value=txn.currency)
-            ws.cell(row=row_idx, column=5, value=txn.description)
-            ws.cell(row=row_idx, column=6, value=txn.category_obj.name if txn.category_obj else "")
-            ws.cell(row=row_idx, column=7, value=txn.merchant_name or "")
+            # Free text (a description can come from an import, a receipt scan or
+            # the LINE bot): typed as text, so a leading "=" is never a formula.
+            for col, text in ((5, txn.description), (6, txn.category_obj.name if txn.category_obj else ""),
+                              (7, txn.merchant_name or ""), (9, ",".join(txn.tags) if txn.tags else ""),
+                              (10, txn.notes or "")):
+                _text_cell(ws.cell(row=row_idx, column=col), text or "")
             ws.cell(row=row_idx, column=8, value=txn.payment_method.value if txn.payment_method else "")
-            ws.cell(row=row_idx, column=9, value=",".join(txn.tags) if txn.tags else "")
-            ws.cell(row=row_idx, column=10, value=txn.notes or "")
             bill_total, partner = self._shared_cells(shared, txn)
             if bill_total:  # the exact amount, not a float of it
                 ws.cell(row=row_idx, column=11, value=Decimal(bill_total)).number_format = "0.00"
             # Excel has cell types: store the name as plain text, exactly as written,
             # so a name like "=1+1" is never evaluated (openpyxl would make it a formula).
-            name_cell = ws.cell(row=row_idx, column=12)
-            name_cell.value = partner
-            name_cell.data_type = "s"
+            _text_cell(ws.cell(row=row_idx, column=12), partner)
 
         # Auto-fit column widths
         for col in ws.columns:
