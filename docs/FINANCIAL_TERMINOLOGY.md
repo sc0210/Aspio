@@ -187,6 +187,16 @@ Savings Rate = (Total Income - Total Expenses) / Total Income × 100%
 
 ---
 
+### Shared bills with a partner (`/savings`, Shared spending)
+
+Split bills are recorded on a **share basis** (`peers/splits.py`):
+
+- Each person's ledger holds an ordinary expense for **their own share only**. Across the two ledgers the shares add up to exactly the cash that left, so every total, review and dashboard figure is right with no special case.
+- Nothing reaches a partner's ledger until they accept (or have chosen auto-accept). Until then the payer's row carries the whole bill.
+- The **balance** (who owes whom, per currency) is derived, never stored. It equals the accepted splits less the confirmed repayments.
+- **Settling up writes no transactions.** The payer's ledger already shows only their share, so it already reads as if they had been paid back. A repayment row would count the money twice. A settlement only lowers the balance.
+- A row linked to an open split can't be deleted, and its amount can't be edited. Closing a split (cancel, or removing the partner) unlinks its rows, and they become ordinary expenses.
+
 ## Returns & Risk (Portfolio Wallet)
 
 All of these measure the **Portfolio wallet only**, in **TWD**, with your own deposits taken out. They share one source: the time-weighted return's daily returns. Never compute a portfolio return from `value / cost` or from a value series rebuilt from today's quantities. Both were in the code until 2026-10, and both were wrong (see "Data rules" below).

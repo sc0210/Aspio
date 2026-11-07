@@ -289,6 +289,36 @@ class SplitOut(BaseModel):
     my_transaction_id: Optional[str]
 
 
+class SettlementCreate(BaseModel):
+    """Body for POST /peers/splits/settlements: one of you paid the other back."""
+
+    connection_id: UUID
+    # they_paid_me: counts at once (it only lowers what you're owed);
+    # i_paid_them: waits for your partner to confirm it arrived.
+    direction: Literal["they_paid_me", "i_paid_them"]
+    amount: Decimal = Field(..., gt=0)
+    currency: str = Field("TWD", pattern=r"^[A-Za-z]{3}$")
+    settled_on: Optional[date] = None
+    note: Optional[str] = Field(None, max_length=200)
+
+
+class SettlementRespond(BaseModel):
+    action: Literal["confirm", "decline"]
+
+
+class SettlementOut(BaseModel):
+    id: str
+    connection_id: str
+    partner_name: str
+    i_paid: bool          # True: I paid my partner back; False: they paid me
+    created_by_me: bool
+    amount: float
+    currency: str
+    settled_on: str
+    note: Optional[str]
+    status: str
+
+
 class CurrencyBalance(BaseModel):
     currency: str
     # > 0: your partner owes you this much; < 0: you owe your partner.

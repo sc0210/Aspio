@@ -3,7 +3,7 @@ import { render, screen, fireEvent, waitFor } from '@testing-library/react';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import SharedSpendingTab from '@/components/savings/SharedSpendingTab';
 import { apiClient } from '@/lib/api-client';
-import type { PeerConnectionOut, SplitOut } from '@/shared/types';
+import type { PeerConnectionOut, SettlementOut, SplitOut } from '@/shared/types';
 
 jest.mock('react-i18next', () => {
   // One t for every render, as react-i18next gives: a new one each render
@@ -29,6 +29,10 @@ jest.mock('@/lib/api-client', () => ({
     voidSplit: jest.fn(),
     cancelSplit: jest.fn(),
     createSplit: jest.fn(),
+    listSettlements: jest.fn(),
+    respondToSettlement: jest.fn(),
+    voidSettlement: jest.fn(),
+    createSettlement: jest.fn(),
   },
 }));
 
@@ -57,6 +61,7 @@ function renderTab() {
 
 beforeEach(() => {
   jest.clearAllMocks();
+  api.listSettlements.mockResolvedValue({ data: [] });
   api.getPeerPrefs.mockResolvedValue({ data: { connection_id: 'conn-1', split_policy: 'approve_each' } });
   api.getSplitBalances.mockResolvedValue({ data: [
     { connection_id: 'conn-1', partner_name: 'Bob', balances: [{ currency: 'TWD', net: 500 }] },
@@ -157,4 +162,67 @@ it('shows a former partner’s balance without a setting', async () => {
   renderTab();
   expect(await screen.findByText(/You owe Carol/)).toBeInTheDocument();
   expect(screen.queryByRole('combobox')).not.toBeInTheDocument();
+});
+
+const repayment = (over: Partial<SettlementOut>): SettlementOut => ({
+  id: 'p1', connection_id: 'conn-1', partner_name: 'Bob', i_paid: false, created_by_me: false,
+  amount: 200, currency: 'TWD', settled_on: '2026-11-07', note: null, status: 'proposed', ...over,
+});
+
+describe('SharedSpendingTab settling up', () => {
+  it('records that the partner paid back, without touching the ledgers', async () => {
+    api.listSplits.mockResolvedValue({ data: [] });
+    api.createSettlement.mockResolvedValue({ data: {} });
+    renderTab();
+    fireEvent.click(await screen.findByRole('button', { name: 'Settle up' }));
+    expect(screen.getByLabelText('Amount (TWD)')).toHaveValue(500);
+    fireEvent.change(screen.getByLabelText('Amount (TWD)'), { target: { value: '200' } });
+    fireEvent.click(screen.getByRole('button', { name: 'Record repayment' }));
+    await waitFor(() => expect(api.createSettlement).toHaveBeenCalledWith({
+      connection_id: 'conn-1', direction: 'they_paid_me', amount: 200, currency: 'TWD', note: null,
+    }));
+    await waitFor(() => expect(api.listSettlements).toHaveBeenCalledTimes(2));
+    expect(invalidateAllFinancialData).not.toHaveBeenCalled();
+  });
+
+  it('sends my repayment for confirmation and caps it at what I owe', async () => {
+    api.listSplits.mockResolvedValue({ data: [] });
+    api.getSplitBalances.mockResolvedValue({ data: [
+      { connection_id: 'conn-1', partner_name: 'Bob', balances: [{ currency: 'TWD', net: -300 }] },
+    ] });
+    api.createSettlement.mockResolvedValue({ data: {} });
+    renderTab();
+    fireEvent.click(await screen.findByRole('button', { name: 'Settle up' }));
+    const submit = screen.getByRole('button', { name: 'Send for confirmation' });
+    fireEvent.change(screen.getByLabelText('Amount (TWD)'), { target: { value: '301' } });
+    expect(submit).toBeDisabled();
+    fireEvent.change(screen.getByLabelText('Amount (TWD)'), { target: { value: '300' } });
+    fireEvent.click(submit);
+    await waitFor(() => expect(api.createSettlement).toHaveBeenCalledWith(
+      expect.objectContaining({ direction: 'i_paid_them', amount: 300 })));
+  });
+
+  it('lets me confirm a repayment my partner sent', async () => {
+    api.listSplits.mockResolvedValue({ data: [] });
+    api.listSettlements.mockResolvedValue({ data: [repayment({})] });
+    api.respondToSettlement.mockResolvedValue({ data: {} });
+    renderTab();
+    expect(await screen.findByText(/Bob says they paid you back/)).toBeInTheDocument();
+    fireEvent.click(screen.getByRole('button', { name: 'It arrived' }));
+    await waitFor(() => expect(api.respondToSettlement).toHaveBeenCalledWith('p1', 'confirm'));
+  });
+
+  it('offers undo only to the person who was paid', async () => {
+    api.listSplits.mockResolvedValue({ data: [] });
+    api.listSettlements.mockResolvedValue({ data: [
+      repayment({ id: 'mine-received', status: 'confirmed', created_by_me: true }),
+      repayment({ id: 'mine-sent', status: 'confirmed', i_paid: true, created_by_me: true }),
+    ] });
+    api.voidSettlement.mockResolvedValue({ data: {} });
+    renderTab();
+    const undo = await screen.findAllByRole('button', { name: 'Undo' });
+    expect(undo).toHaveLength(1);
+    fireEvent.click(undo[0]);
+    await waitFor(() => expect(api.voidSettlement).toHaveBeenCalledWith('mine-received'));
+  });
 });

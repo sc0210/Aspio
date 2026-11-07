@@ -331,3 +331,43 @@ class PeerSplitShare(BaseModel):
         CheckConstraint("share_amount >= 0", name="peer_split_share_non_negative"),
         Index("idx_peer_split_shares_user", "user_id"),
     )
+
+
+class SettlementStatus(str, enum.Enum):
+    PROPOSED = "proposed"    # the person who owes said they paid; waiting for the other
+    CONFIRMED = "confirmed"  # counts against the balance
+    DECLINED = "declined"    # the person owed said it didn't arrive
+    VOIDED = "voided"        # withdrawn (proposed) or undone (confirmed)
+
+
+class PeerSettlement(BaseModel):
+    """Money one person paid the other back, against what accepted splits left
+    them owing. It writes no ledger rows: each ledger already holds only its
+    owner's share, so the repayment is already accounted for."""
+
+    __tablename__ = "peer_settlements"
+
+    id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    connection_id: Mapped[uuid.UUID] = mapped_column(
+        UUID(as_uuid=True), ForeignKey("peer_connections.id", ondelete="CASCADE"), nullable=False
+    )
+    from_user_id: Mapped[uuid.UUID] = mapped_column(  # who paid back (owed)
+        UUID(as_uuid=True), ForeignKey("users.id", ondelete="CASCADE"), nullable=False
+    )
+    to_user_id: Mapped[uuid.UUID] = mapped_column(  # who was paid (was owed)
+        UUID(as_uuid=True), ForeignKey("users.id", ondelete="CASCADE"), nullable=False
+    )
+    created_by: Mapped[uuid.UUID] = mapped_column(
+        UUID(as_uuid=True), ForeignKey("users.id", ondelete="CASCADE"), nullable=False
+    )
+    amount: Mapped[Decimal] = mapped_column(Numeric(15, 2), nullable=False)
+    currency: Mapped[str] = mapped_column(String(3), nullable=False, default="TWD")
+    settled_on: Mapped[date] = mapped_column(Date, nullable=False)
+    note: Mapped[Optional[str]] = mapped_column(String(200), nullable=True)
+    status: Mapped[str] = mapped_column(String(10), nullable=False, default=SettlementStatus.PROPOSED.value)
+
+    __table_args__ = (
+        CheckConstraint("amount > 0", name="peer_settlement_positive_amount"),
+        CheckConstraint("from_user_id <> to_user_id", name="peer_settlement_two_people"),
+        Index("idx_peer_settlements_connection", "connection_id"),
+    )

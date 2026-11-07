@@ -9,7 +9,8 @@ import { invalidateAllFinancialData } from '@/hooks/useDataSynchronization';
 import { formatCurrency } from '@/utils/formatters';
 import { ConfirmDialog } from '@/components/ui/ConfirmDialog';
 import NewSplitModal from './NewSplitModal';
-import type { PeerBalanceOut, PeerConnectionOut, SplitOut, SplitPolicy } from '@/shared/types';
+import SettleUpModal, { type SettleTarget } from './SettleUpModal';
+import type { PeerBalanceOut, PeerConnectionOut, SettlementOut, SplitOut, SplitPolicy } from '@/shared/types';
 
 const money = (value: number, currency: string) =>
   formatCurrency(Math.abs(value), currency, currency === 'TWD' ? { precision: 0 } : {});
@@ -21,10 +22,18 @@ const STATUS_STYLE: Record<SplitOut['status'], string> = {
   voided: 'bg-gray-100 text-gray-700 dark:bg-gray-700 dark:text-gray-300',
 };
 
+const SETTLEMENT_STYLE: Record<SettlementOut['status'], string> = {
+  proposed: STATUS_STYLE.proposed,
+  confirmed: STATUS_STYLE.active,
+  declined: STATUS_STYLE.declined,
+  voided: STATUS_STYLE.voided,
+};
+
 /**
  * Bills split with a partner. Each person's account holds only their share once
  * the partner accepts; nothing reaches a partner's account before that. The
- * balance is what the accepted splits leave one owing the other.
+ * balance is what the accepted splits leave one owing the other, less what has
+ * been paid back. Paying back changes neither account, only the balance.
  */
 export default function SharedSpendingTab({ connections }: { connections: PeerConnectionOut[] }) {
   const { t } = useTranslation('common');
@@ -39,12 +48,17 @@ export default function SharedSpendingTab({ connections }: { connections: PeerCo
   const [busyId, setBusyId] = useState<string | null>(null);
   const [isNewOpen, setIsNewOpen] = useState(false);
   const [confirmCancel, setConfirmCancel] = useState<SplitOut | null>(null);
+  const [settlements, setSettlements] = useState<SettlementOut[]>([]);
+  const [settleTarget, setSettleTarget] = useState<SettleTarget | null>(null);
 
   const load = useCallback(async () => {
     try {
-      const [s, b] = await Promise.all([apiClient.listSplits(), apiClient.getSplitBalances()]);
+      const [s, b, p] = await Promise.all([
+        apiClient.listSplits(), apiClient.getSplitBalances(), apiClient.listSettlements(),
+      ]);
       setSplits(s.data ?? []);
       setBalances(b.data ?? []);
+      setSettlements(p.data ?? []);
       setError('');
     } catch (err) {
       setError(err instanceof Error ? err.message : t('savings.splits.errors.loadFailed', 'Failed to load shared bills'));
@@ -72,11 +86,12 @@ export default function SharedSpendingTab({ connections }: { connections: PeerCo
     invalidateAllFinancialData(queryClient);
   }, [load, queryClient]);
 
-  const act = async (split: SplitOut, run: () => Promise<unknown>) => {
-    setBusyId(split.id);
+  // ledger: whether the action writes ledger rows (splits do; repayments don't).
+  const act = async (item: { id: string }, run: () => Promise<unknown>, ledger = true) => {
+    setBusyId(item.id);
     try {
       await run();
-      await changed();
+      await (ledger ? changed() : load());
     } catch (err) {
       setError(err instanceof Error ? err.message : t('savings.splits.errors.actionFailed', 'That didn’t work'));
     } finally {
@@ -98,6 +113,9 @@ export default function SharedSpendingTab({ connections }: { connections: PeerCo
 
   const inbox = splits.filter((s) => s.status === 'proposed' && !s.created_by_me);
   const others = splits.filter((s) => !(s.status === 'proposed' && !s.created_by_me));
+  // Repayments my partner says they sent me: I confirm they arrived.
+  const toConfirm = settlements.filter((p) => p.status === 'proposed' && !p.created_by_me);
+  const repayments = settlements.filter((p) => !(p.status === 'proposed' && !p.created_by_me));
 
   return (
     <div className="space-y-6">
@@ -127,12 +145,19 @@ export default function SharedSpendingTab({ connections }: { connections: PeerCo
                 {t('savings.splits.settled', 'All square')}
               </p>
             ) : b.balances.filter((x) => x.net !== 0).map((x) => (
-              <p key={x.currency} className={`mt-1 text-sm font-semibold ${x.net > 0
-                ? 'text-prosperity-700 dark:text-prosperity-400' : 'text-error-700 dark:text-error-400'}`}>
-                {x.net > 0
-                  ? t('savings.splits.owesYou', '{{name}} owes you {{amount}}', { name: b.partner_name, amount: money(x.net, x.currency) })
-                  : t('savings.splits.youOwe', 'You owe {{name}} {{amount}}', { name: b.partner_name, amount: money(x.net, x.currency) })}
-              </p>
+              <div key={x.currency} className="mt-1 flex items-center justify-between gap-2">
+                <p className={`text-sm font-semibold ${x.net > 0
+                  ? 'text-prosperity-700 dark:text-prosperity-400' : 'text-error-700 dark:text-error-400'}`}>
+                  {x.net > 0
+                    ? t('savings.splits.owesYou', '{{name}} owes you {{amount}}', { name: b.partner_name, amount: money(x.net, x.currency) })
+                    : t('savings.splits.youOwe', 'You owe {{name}} {{amount}}', { name: b.partner_name, amount: money(x.net, x.currency) })}
+                </p>
+                <button type="button"
+                  onClick={() => setSettleTarget({ connectionId: b.connection_id, partnerName: b.partner_name, currency: x.currency, net: x.net })}
+                  className="shrink-0 min-h-[44px] px-3 rounded-lg border border-gray-300 dark:border-gray-600 text-sm font-medium text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700">
+                  {t('savings.splits.settle.button', 'Settle up')}
+                </button>
+              </div>
             ))}
             {/* A former partner keeps their balance card, but has no setting left. */}
             {connections.some((c) => c.id === b.connection_id) && (
@@ -156,7 +181,7 @@ export default function SharedSpendingTab({ connections }: { connections: PeerCo
       </section>
 
       {/* Waiting for my answer */}
-      {inbox.length > 0 && (
+      {(inbox.length > 0 || toConfirm.length > 0) && (
         <section aria-label={t('savings.splits.inbox', 'Waiting for you')} className="space-y-2">
           <h3 className="text-sm font-semibold text-gray-900 dark:text-white">{t('savings.splits.inbox', 'Waiting for you')}</h3>
           {inbox.map((s) => (
@@ -179,6 +204,62 @@ export default function SharedSpendingTab({ connections }: { connections: PeerCo
                   {t('savings.decline', 'Decline')}
                 </button>
               </div>
+            </div>
+          ))}
+          {toConfirm.map((p) => (
+            <div key={p.id} className="bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-700 rounded-xl p-4 flex flex-col sm:flex-row sm:items-center gap-3">
+              <div className="flex-1 text-sm text-amber-900 dark:text-amber-100">
+                <p className="font-semibold">
+                  {t('savings.splits.settle.confirmPrompt', '{{name}} says they paid you back {{amount}}', { name: p.partner_name, amount: money(p.amount, p.currency) })}
+                </p>
+                <p>{p.settled_on}{p.note ? ` · ${p.note}` : ''}</p>
+              </div>
+              <div className="flex gap-2">
+                <button type="button" disabled={busyId === p.id}
+                  onClick={() => act(p, () => apiClient.respondToSettlement(p.id, 'confirm'), false)}
+                  className="min-h-[44px] px-4 rounded-lg bg-green-700 hover:bg-green-800 text-white text-sm font-medium disabled:opacity-50">
+                  {t('savings.splits.settle.confirm', 'It arrived')}
+                </button>
+                <button type="button" disabled={busyId === p.id}
+                  onClick={() => act(p, () => apiClient.respondToSettlement(p.id, 'decline'), false)}
+                  className="min-h-[44px] px-4 rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 text-gray-700 dark:text-gray-300 text-sm font-medium disabled:opacity-50">
+                  {t('savings.splits.settle.decline', 'Not received')}
+                </button>
+              </div>
+            </div>
+          ))}
+        </section>
+      )}
+
+      {/* Repayments */}
+      {repayments.length > 0 && (
+        <section aria-label={t('savings.splits.settle.history', 'Repayments')} className="space-y-2">
+          <h3 className="text-sm font-semibold text-gray-900 dark:text-white">{t('savings.splits.settle.history', 'Repayments')}</h3>
+          {repayments.map((p) => (
+            <div key={p.id} className="bg-white dark:bg-gray-800 rounded-xl p-4 shadow-sm flex flex-col sm:flex-row sm:items-center gap-2">
+              <div className="flex-1 min-w-0">
+                <p className="text-sm font-semibold text-gray-900 dark:text-white truncate">
+                  {p.i_paid
+                    ? t('savings.splits.settle.youPaid', 'You paid {{name}} {{amount}}', { name: p.partner_name, amount: money(p.amount, p.currency) })
+                    : t('savings.splits.settle.theyPaid', '{{name}} paid you {{amount}}', { name: p.partner_name, amount: money(p.amount, p.currency) })}
+                  <span className={`ml-2 text-xs font-medium px-1.5 py-0.5 rounded-full ${SETTLEMENT_STYLE[p.status]}`}>
+                    {t(`savings.splits.settle.status.${p.status}`, p.status)}
+                  </span>
+                </p>
+                <p className="text-xs text-gray-600 dark:text-gray-400">{p.settled_on}{p.note ? ` · ${p.note}` : ''}</p>
+              </div>
+              {p.status === 'proposed' && p.created_by_me && (
+                <button type="button" disabled={busyId === p.id} onClick={() => act(p, () => apiClient.voidSettlement(p.id), false)}
+                  className="min-h-[44px] px-3 rounded-lg text-sm font-medium text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 disabled:opacity-50">
+                  {t('savings.splits.withdraw', 'Withdraw')}
+                </button>
+              )}
+              {p.status === 'confirmed' && !p.i_paid && (
+                <button type="button" disabled={busyId === p.id} onClick={() => act(p, () => apiClient.voidSettlement(p.id), false)}
+                  className="min-h-[44px] px-3 rounded-lg text-sm font-medium text-error-700 dark:text-error-400 hover:bg-error-50 dark:hover:bg-error-900/20 disabled:opacity-50">
+                  {t('savings.splits.settle.undo', 'Undo')}
+                </button>
+              )}
             </div>
           ))}
         </section>
@@ -222,6 +303,7 @@ export default function SharedSpendingTab({ connections }: { connections: PeerCo
       </section>
 
       <NewSplitModal isOpen={isNewOpen} onClose={() => setIsNewOpen(false)} onSuccess={() => void changed()} connections={connections} />
+      <SettleUpModal target={settleTarget} onClose={() => setSettleTarget(null)} onSuccess={() => void load()} />
       <ConfirmDialog
         isOpen={confirmCancel !== null}
         title={t('savings.splits.confirmCancelTitle', 'Cancel this split?')}

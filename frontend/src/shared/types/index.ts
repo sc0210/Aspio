@@ -568,6 +568,29 @@ export interface PeerBalanceOut {
   balances: { currency: string; net: number }[];
 }
 
+export interface SettlementCreate {
+  connection_id: string;
+  /** they_paid_me counts at once; i_paid_them waits for the partner to confirm. */
+  direction: 'they_paid_me' | 'i_paid_them';
+  amount: number;
+  currency: string;
+  note?: string | null;
+}
+
+export interface SettlementOut {
+  id: string;
+  connection_id: string;
+  partner_name: string;
+  /** true: I paid my partner back; false: they paid me. */
+  i_paid: boolean;
+  created_by_me: boolean;
+  amount: number;
+  currency: string;
+  settled_on: string;
+  note: string | null;
+  status: 'proposed' | 'confirmed' | 'declined' | 'voided';
+}
+
 export interface PeerPrefsOut {
   connection_id: string;
   split_policy: SplitPolicy;

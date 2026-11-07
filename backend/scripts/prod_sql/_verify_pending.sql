@@ -148,7 +148,10 @@ WITH checks(sort, object, source_file, present) AS (
         EXISTS (SELECT 1 FROM information_schema.columns
                  WHERE table_name = 'transactions' AND column_name = 'peer_split_share_id')),
     (27, 'index uq_transactions_live_peer_split_share', '2026_11_07_peer_splits.sql',
-        to_regclass('public.uq_transactions_live_peer_split_share') IS NOT NULL)
+        to_regclass('public.uq_transactions_live_peer_split_share') IS NOT NULL),
+    (28, 'table peer_settlements (RLS on)', '2026_11_07_peer_settlements.sql',
+        EXISTS (SELECT 1 FROM pg_class WHERE oid = to_regclass('public.peer_settlements')
+                AND relrowsecurity))
 )
 SELECT
     CASE WHEN present THEN 'OK     ' ELSE 'MISSING' END AS status,

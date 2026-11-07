@@ -858,6 +858,32 @@
         "loadFailed": "Failed to load shared bills",
         "actionFailed": "That didn’t work",
         "shareTooBig": "Your share has to be between 0 and the total."
+      },
+      "settle": {
+        "button": "Settle up",
+        "receivedTitle": "{{name}} paid you back",
+        "paidTitle": "You paid {{name}} back",
+        "amount": "Amount ({{currency}})",
+        "tooMuch": "Only {{amount}} is outstanding.",
+        "note": "Note (optional)",
+        "notePlaceholder": "e.g. bank transfer, cash",
+        "receivedNote": "This lowers what {{name}} owes you. Neither account changes: each already holds only its own share.",
+        "paidNote": "{{name}} confirms it arrived before it counts. Neither account changes: each already holds only its own share.",
+        "submitReceived": "Record repayment",
+        "submitPaid": "Send for confirmation",
+        "confirmPrompt": "{{name}} says they paid you back {{amount}}",
+        "confirm": "It arrived",
+        "decline": "Not received",
+        "history": "Repayments",
+        "youPaid": "You paid {{name}} {{amount}}",
+        "theyPaid": "{{name}} paid you {{amount}}",
+        "undo": "Undo",
+        "status": {
+          "proposed": "Waiting",
+          "confirmed": "Confirmed",
+          "declined": "Not received",
+          "voided": "Withdrawn"
+        }
       }
     },
     "summary": {

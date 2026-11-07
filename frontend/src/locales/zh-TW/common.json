@@ -858,6 +858,32 @@
         "loadFailed": "無法載入共同帳單",
         "actionFailed": "操作失敗",
         "shareTooBig": "你的部分必須介於 0 與總額之間。"
+      },
+      "settle": {
+        "button": "結清",
+        "receivedTitle": "{{name}} 已還款給你",
+        "paidTitle": "你已還款給 {{name}}",
+        "amount": "金額（{{currency}}）",
+        "tooMuch": "尚欠金額只有 {{amount}}。",
+        "note": "備註（選填）",
+        "notePlaceholder": "例如：轉帳、現金",
+        "receivedNote": "這會減少 {{name}} 欠你的金額。兩邊帳戶都不會變動：各自只記錄自己的份額。",
+        "paidNote": "需等 {{name}} 確認收到才會計入。兩邊帳戶都不會變動：各自只記錄自己的份額。",
+        "submitReceived": "記錄還款",
+        "submitPaid": "送出待確認",
+        "confirmPrompt": "{{name}} 表示已還你 {{amount}}",
+        "confirm": "已收到",
+        "decline": "沒收到",
+        "history": "還款紀錄",
+        "youPaid": "你還給 {{name}} {{amount}}",
+        "theyPaid": "{{name}} 還你 {{amount}}",
+        "undo": "復原",
+        "status": {
+          "proposed": "待確認",
+          "confirmed": "已確認",
+          "declined": "未收到",
+          "voided": "已撤回"
+        }
       }
     },
     "summary": {

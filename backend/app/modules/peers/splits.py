@@ -7,8 +7,12 @@ any aggregation: across the two ledgers the shares add up to exactly the cash
 that left. Nothing is ever written into a partner's ledger without their
 consent: their row is created only when they accept (or under a standing
 auto-accept they chose). What one owes the other is derived from accepted
-splits, never stored. Recording that a balance was paid back (settling up) is
-not built yet; until then the balance only falls when the payer cancels.
+splits less confirmed settlements, never stored.
+
+Settling up writes no ledger rows either. The payer's row already holds only
+their share and the partner's row holds theirs, so each ledger is already as if
+the money had been paid back; a repayment row would count it twice. A
+settlement only lowers the balance.
 
 Until the partner answers, the payer's own row carries the whole bill; on accept
 it shrinks to the payer's share, and on decline it stays whole (they carry it).
@@ -38,9 +42,11 @@ from app.modules.notifications.models import (
 from app.modules.peers.models import (
     PeerConnection,
     PeerConnectionPref,
+    PeerSettlement,
     PeerSplit,
     PeerSplitShare,
     PeerStatus,
+    SettlementStatus,
     ShareStatus,
     SplitPolicy,
     SplitStatus,
@@ -49,6 +55,8 @@ from app.modules.peers.schemas import (
     CurrencyBalance,
     PeerBalanceOut,
     PeerPrefsOut,
+    SettlementCreate,
+    SettlementOut,
     SplitCreate,
     SplitOut,
 )
@@ -62,6 +70,7 @@ from app.modules.transactions.models import (
 )
 from app.modules.transactions.repositories import TransactionRepository
 from app.modules.users.models import User
+from app.utils.datetime_helpers import business_today
 
 CENT = Decimal("0.01")
 SPLITS_URL = "/savings?tab=splits"
@@ -199,12 +208,14 @@ class SplitService:
                 row.peer_split_share_id = None
         await self.session.flush()
 
-    def _notify(self, user_id: UUID, title: str, message: str, action: str, split: PeerSplit) -> None:
+    def _notify(self, user_id: UUID, title: str, message: str, action: str,
+                obj: PeerSplit | PeerSettlement) -> None:
         self.session.add(Notification(
             id=uuid.uuid4(), user_id=user_id, type=NotificationType.SYSTEM_UPDATE,
             priority=NotificationPriority.MEDIUM, status=NotificationStatus.PENDING,
             title=title, message=message, action_url=SPLITS_URL, is_actionable=True,
-            data={"action": action, "split_id": str(split.id)},
+            data={"action": action,
+                  ("settlement_id" if isinstance(obj, PeerSettlement) else "split_id"): str(obj.id)},
             channels=[NotificationChannel.IN_APP],
         ))
 
@@ -460,20 +471,7 @@ class SplitService:
         conns = (await self.session.execute(select(PeerConnection).where(
             or_(PeerConnection.requester_id == user_id, PeerConnection.receiver_id == user_id),
         ))).scalars().all()
-        active = (await self.session.execute(
-            select(PeerSplit)
-            .join(PeerSplitShare, PeerSplitShare.split_id == PeerSplit.id)
-            .where(and_(PeerSplitShare.user_id == user_id, PeerSplit.status == SplitStatus.ACTIVE.value))
-        )).scalars().unique().all()
-
-        net: dict[UUID, dict[str, Decimal]] = defaultdict(lambda: defaultdict(Decimal))
-        for split in active:
-            mine = next(s for s in split.shares if s.user_id == user_id)
-            theirs = next(s for s in split.shares if s.user_id != user_id)
-            if split.payer_id == user_id:
-                net[split.connection_id][split.currency] += theirs.share_amount
-            else:
-                net[split.connection_id][split.currency] -= mine.share_amount
+        net = await self._net(user_id)
 
         out = []
         for conn in conns:
@@ -486,6 +484,176 @@ class SplitService:
                 balances=[CurrencyBalance(currency=c, net=float(v)) for c, v in sorted(owed.items())],
             ))
         return out
+
+    async def _net(self, user_id: UUID, connection_id: Optional[UUID] = None) -> dict[UUID, dict[str, Decimal]]:
+        """{connection: {currency: amount}}, > 0 when the partner owes the user:
+        accepted splits, less confirmed settlements."""
+        split_q = (
+            select(PeerSplit)
+            .join(PeerSplitShare, PeerSplitShare.split_id == PeerSplit.id)
+            .where(and_(PeerSplitShare.user_id == user_id, PeerSplit.status == SplitStatus.ACTIVE.value))
+        )
+        settle_q = select(PeerSettlement).where(and_(
+            or_(PeerSettlement.from_user_id == user_id, PeerSettlement.to_user_id == user_id),
+            PeerSettlement.status == SettlementStatus.CONFIRMED.value,
+        ))
+        if connection_id is not None:
+            split_q = split_q.where(PeerSplit.connection_id == connection_id)
+            settle_q = settle_q.where(PeerSettlement.connection_id == connection_id)
+        active = (await self.session.execute(split_q)).scalars().unique().all()
+        settled = (await self.session.execute(settle_q)).scalars().all()
+
+        net: dict[UUID, dict[str, Decimal]] = defaultdict(lambda: defaultdict(Decimal))
+        for split in active:
+            mine = next(s for s in split.shares if s.user_id == user_id)
+            theirs = next(s for s in split.shares if s.user_id != user_id)
+            if split.payer_id == user_id:
+                net[split.connection_id][split.currency] += theirs.share_amount
+            else:
+                net[split.connection_id][split.currency] -= mine.share_amount
+        for st in settled:
+            sign = -1 if st.to_user_id == user_id else 1
+            net[st.connection_id][st.currency] += sign * st.amount
+        return net
+
+    # ------------------------------------------------------------------
+    # Settling up
+    # ------------------------------------------------------------------
+
+    async def _any_connection(self, connection_id: UUID, user_id: UUID) -> PeerConnection:
+        """The connection, locked, in any state: a former partner's balance can
+        still be settled."""
+        conn = (await self.session.execute(
+            select(PeerConnection).where(and_(
+                PeerConnection.id == connection_id,
+                or_(PeerConnection.requester_id == user_id, PeerConnection.receiver_id == user_id),
+            )).with_for_update().execution_options(populate_existing=True)
+        )).scalars().first()
+        if conn is None:
+            raise HTTPException(status.HTTP_404_NOT_FOUND, "Connection not found")
+        return conn
+
+    async def _check_owed(self, settlement: PeerSettlement) -> None:
+        owed = (await self._net(settlement.to_user_id, settlement.connection_id))[
+            settlement.connection_id][settlement.currency]
+        if settlement.amount > owed:
+            shown = f"{max(owed, Decimal('0')):,.2f} {settlement.currency}"
+            raise HTTPException(status.HTTP_409_CONFLICT,
+                                f"That's more than is owed: {shown} is outstanding")
+
+    async def _settlement_out(self, st: PeerSettlement, user_id: UUID) -> SettlementOut:
+        partner = st.to_user_id if st.from_user_id == user_id else st.from_user_id
+        return SettlementOut(
+            id=str(st.id), connection_id=str(st.connection_id), partner_name=await self._name(partner),
+            i_paid=st.from_user_id == user_id, created_by_me=st.created_by == user_id,
+            amount=float(st.amount), currency=st.currency, settled_on=st.settled_on.isoformat(),
+            note=st.note, status=st.status,
+        )
+
+    async def _settlement_for(self, settlement_id: UUID, user_id: UUID) -> PeerSettlement:
+        st = (await self.session.execute(
+            select(PeerSettlement).where(PeerSettlement.id == settlement_id)
+            .with_for_update().execution_options(populate_existing=True)
+        )).scalars().first()
+        if st is None or user_id not in (st.from_user_id, st.to_user_id):
+            raise HTTPException(status.HTTP_404_NOT_FOUND, "Settlement not found")
+        return st
+
+    async def create_settlement(self, user_id: UUID, data: SettlementCreate) -> SettlementOut:
+        """they_paid_me counts at once: it only lowers what the user is owed.
+        i_paid_them waits for the partner to confirm the money arrived."""
+        conn = await self._any_connection(data.connection_id, user_id)
+        partner_id = self._partner(conn, user_id)
+        received = data.direction == "they_paid_me"
+        if not received:
+            pending = (await self.session.execute(
+                select(sa_func.count()).select_from(PeerSettlement).where(and_(
+                    PeerSettlement.connection_id == conn.id,
+                    PeerSettlement.created_by == user_id,
+                    PeerSettlement.status == SettlementStatus.PROPOSED.value,
+                ))
+            )).scalar_one()
+            if pending >= MAX_OPEN_PROPOSALS:
+                raise HTTPException(status.HTTP_409_CONFLICT,
+                                    "Too many repayments are waiting for your partner to confirm")
+        st = PeerSettlement(
+            id=uuid.uuid4(), connection_id=conn.id,
+            from_user_id=partner_id if received else user_id,
+            to_user_id=user_id if received else partner_id,
+            created_by=user_id, amount=Decimal(data.amount).quantize(CENT),
+            currency=data.currency.upper(), settled_on=data.settled_on or business_today(),
+            note=(data.note or "").strip() or None,
+            status=(SettlementStatus.CONFIRMED if received else SettlementStatus.PROPOSED).value,
+        )
+        await self._check_owed(st)
+        self.session.add(st)
+        me = await self._name(user_id)
+        amount = f"{st.amount:,.2f} {st.currency}"
+        if received:
+            self._notify(partner_id, "Repayment recorded",
+                         f"{me} recorded that you paid back {amount}.", "peer_settlement_recorded", st)
+        else:
+            self._notify(partner_id, "Did this arrive?",
+                         f"{me} says they paid you back {amount}. Confirm it to clear it from what they owe.",
+                         "peer_settlement_proposed", st)
+        await self.session.commit()
+        return await self._settlement_out(st, user_id)
+
+    async def respond_settlement(self, user_id: UUID, settlement_id: UUID, action: str) -> SettlementOut:
+        st = await self._settlement_for(settlement_id, user_id)
+        if st.status != SettlementStatus.PROPOSED.value:
+            raise HTTPException(status.HTTP_409_CONFLICT, "This repayment has already been answered")
+        if st.to_user_id != user_id:
+            raise HTTPException(status.HTTP_403_FORBIDDEN, "Only the person paid can confirm a repayment")
+        await self._any_connection(st.connection_id, user_id)  # serialise with other settlements
+        if action == "confirm":
+            await self._check_owed(st)  # the balance may have moved since it was sent
+            st.status = SettlementStatus.CONFIRMED.value
+        else:
+            st.status = SettlementStatus.DECLINED.value
+        amount = f"{st.amount:,.2f} {st.currency}"
+        self._notify(st.from_user_id,
+                     "Repayment confirmed" if action == "confirm" else "Repayment not confirmed",
+                     f"{await self._name(user_id)} {'confirmed' if action == 'confirm' else 'did not confirm'}"
+                     f" your repayment of {amount}.", "peer_settlement_confirmed" if action == "confirm" else "peer_settlement_declined", st)
+        await self.session.commit()
+        return await self._settlement_out(st, user_id)
+
+    async def void_settlement(self, user_id: UUID, settlement_id: UUID) -> SettlementOut:
+        """The sender withdraws an unconfirmed repayment, or the person paid undoes
+        a confirmed one. Only ever raises what the one acting is owed, or takes
+        back their own unanswered claim."""
+        st = await self._settlement_for(settlement_id, user_id)
+        if st.status == SettlementStatus.PROPOSED.value:
+            if st.created_by != user_id:
+                raise HTTPException(status.HTTP_403_FORBIDDEN, "Confirm or decline it instead")
+        elif st.status == SettlementStatus.CONFIRMED.value:
+            if st.to_user_id != user_id:
+                raise HTTPException(status.HTTP_403_FORBIDDEN,
+                                    "Only the person who was paid can undo a repayment")
+        else:
+            raise HTTPException(status.HTTP_409_CONFLICT, "This repayment is already closed")
+        was_confirmed = st.status == SettlementStatus.CONFIRMED.value
+        st.status = SettlementStatus.VOIDED.value
+        other = st.from_user_id if st.to_user_id == user_id else st.to_user_id
+        amount = f"{st.amount:,.2f} {st.currency}"
+        self._notify(other, "Repayment undone" if was_confirmed else "Repayment withdrawn",
+                     f"{await self._name(user_id)} {'undid' if was_confirmed else 'withdrew'} the repayment of {amount}.",
+                     "peer_settlement_voided", st)
+        await self.session.commit()
+        return await self._settlement_out(st, user_id)
+
+    async def list_settlements(self, user_id: UUID) -> list[SettlementOut]:
+        """Every unanswered repayment, then the most recent LIST_LIMIT others."""
+        mine = or_(PeerSettlement.from_user_id == user_id, PeerSettlement.to_user_id == user_id)
+        order = (PeerSettlement.settled_on.desc(), PeerSettlement.created_at.desc())
+        proposed = PeerSettlement.status == SettlementStatus.PROPOSED.value
+        rows = [
+            *(await self.session.execute(select(PeerSettlement).where(and_(mine, proposed)).order_by(*order))).scalars(),
+            *(await self.session.execute(select(PeerSettlement).where(and_(mine, ~proposed))
+                                         .order_by(*order).limit(LIST_LIMIT))).scalars(),
+        ]
+        return [await self._settlement_out(st, user_id) for st in rows]
 
     # ------------------------------------------------------------------
     # Preferences

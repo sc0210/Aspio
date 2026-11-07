@@ -55,6 +55,9 @@ from app.modules.peers.schemas import (
     PeerBalanceOut,
     PeerPrefsOut,
     PeerPrefsUpdate,
+    SettlementCreate,
+    SettlementOut,
+    SettlementRespond,
     SplitCreate,
     SplitOut,
     SplitRespond,
@@ -389,6 +392,37 @@ async def list_splits(current_user: CurrentUser, connection_id: UUID | None = Qu
             summary="What each partner owes you, or you owe them, per currency")
 async def split_balances(current_user: CurrentUser, session: AsyncSession = Depends(get_db)):
     return ApiResponse.success_response(data=await SplitService(session).balances(current_user.id))
+
+
+# Settling up. Registered before /splits/{split_id} so "settlements" isn't read as an id.
+@router.post("/splits/settlements", response_model=ApiResponse[SettlementOut],
+             status_code=status.HTTP_201_CREATED, summary="Record that one of you paid the other back")
+async def create_settlement(body: SettlementCreate, current_user: CurrentUser,
+                            session: AsyncSession = Depends(get_db)):
+    """they_paid_me counts at once; i_paid_them waits for your partner to confirm.
+    No transactions are written: each ledger already holds only its owner's share."""
+    st = await SplitService(session).create_settlement(current_user.id, body)
+    return ApiResponse.success_response(data=st, message="Repayment recorded")
+
+
+@router.get("/splits/settlements", response_model=ApiResponse[list[SettlementOut]],
+            summary="List repayments between you and your partners")
+async def list_settlements(current_user: CurrentUser, session: AsyncSession = Depends(get_db)):
+    return ApiResponse.success_response(data=await SplitService(session).list_settlements(current_user.id))
+
+
+@router.post("/splits/settlements/{settlement_id}/respond", response_model=ApiResponse[SettlementOut],
+             summary="Confirm or decline a repayment your partner says they sent")
+async def respond_to_settlement(settlement_id: UUID, body: SettlementRespond, current_user: CurrentUser,
+                                session: AsyncSession = Depends(get_db)):
+    st = await SplitService(session).respond_settlement(current_user.id, settlement_id, body.action)
+    return ApiResponse.success_response(data=st)
+
+
+@router.post("/splits/settlements/{settlement_id}/void", response_model=ApiResponse[SettlementOut],
+             summary="Withdraw your unconfirmed repayment, or undo one you were paid")
+async def void_settlement(settlement_id: UUID, current_user: CurrentUser, session: AsyncSession = Depends(get_db)):
+    return ApiResponse.success_response(data=await SplitService(session).void_settlement(current_user.id, settlement_id))
 
 
 @router.get("/splits/{split_id}", response_model=ApiResponse[SplitOut], summary="Get one split")
