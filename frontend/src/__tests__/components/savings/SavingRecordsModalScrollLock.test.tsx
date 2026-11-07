@@ -4,7 +4,7 @@
  * Uses the real useDialog / useScrollLock, unlike SavingRecordsModal.test.tsx.
  */
 import React from 'react';
-import { render } from '@testing-library/react';
+import { fireEvent, render } from '@testing-library/react';
 import SavingRecordsModal from '@/components/savings/SavingRecordsModal';
 import { demoSharedGoals } from '@/data/demoData';
 
@@ -14,7 +14,7 @@ jest.mock('react-i18next', () => {
 });
 
 jest.mock('@/lib/api-client', () => ({
-  apiClient: { getSavingRecords: jest.fn().mockResolvedValue({ data: [] }) },
+  apiClient: { listSavingRecords: jest.fn().mockResolvedValue({ data: [] }) },
 }));
 
 const props = { isDemo: true, currentUserId: 'u1', onClose: jest.fn(), onRecordChanged: jest.fn() };
@@ -39,4 +39,10 @@ it('leaves the page scrollable while no goal is open, and locks it while one is'
   view.rerender(page(null));
   expect(main.style.overflow).toBe('');
   expect(document.body.style.overflow).toBe('');
+});
+
+it('leaves Escape alone while closed', () => {
+  render(page(null));
+  fireEvent.keyDown(document, { key: 'Escape' });
+  expect(props.onClose).not.toHaveBeenCalled();
 });
