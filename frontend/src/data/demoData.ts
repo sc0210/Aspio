@@ -224,8 +224,14 @@ export const demoPeerConnections: PeerConnectionOut[] = [
 // Shared spending, for the two demo partners above. Balances are derived from
 // these rows (the backend's rule: accepted splits less confirmed repayments), so
 // the cards can never disagree with the bills listed under them.
+// Dates count back from today (the app day), so the sample never looks stale.
+const splitDay = (daysAgo: number): string => {
+  const [y, m, d] = businessToday().split('-').map(Number);
+  return new Date(Date.UTC(y, m - 1, d - daysAgo)).toISOString().slice(0, 10);
+};
+
 const demoSplit = (over: Partial<SplitOut> & Pick<SplitOut, 'id' | 'description' | 'total_amount' | 'my_share'>): SplitOut => ({
-  connection_id: 'demo-conn-1', currency: 'TWD', split_date: '2026-11-02', category_id: null, method: 'equal',
+  connection_id: 'demo-conn-1', currency: 'TWD', split_date: splitDay(5), category_id: null, method: 'equal',
   status: 'active', payer_is_me: true, created_by_me: true, partner_name: '小明',
   partner_share: over.total_amount - over.my_share, my_share_status: 'accepted', partner_share_status: 'accepted',
   my_transaction_id: null, ...over,
@@ -233,21 +239,21 @@ const demoSplit = (over: Partial<SplitOut> & Pick<SplitOut, 'id' | 'description'
 
 export const demoSplits: SplitOut[] = [
   // 小明 is waiting on you: a bill they paid and split with you.
-  demoSplit({ id: 'demo-split-movie', description: 'Movie tickets', total_amount: 640, my_share: 320, split_date: '2026-11-06',
+  demoSplit({ id: 'demo-split-movie', description: 'Movie tickets', total_amount: 640, my_share: 320, split_date: splitDay(1),
     status: 'proposed', payer_is_me: false, created_by_me: false, my_share_status: 'proposed', partner_share_status: 'accepted' }),
   // You sent this one; 小明 hasn't answered yet.
   demoSplit({ id: 'demo-split-power', description: 'Electricity bill', total_amount: 1500, my_share: 900, method: 'percent',
-    split_date: '2026-11-05', status: 'proposed', partner_share_status: 'proposed' }),
-  demoSplit({ id: 'demo-split-dinner', description: 'Dinner at Din Tai Fung', total_amount: 2400, my_share: 1200, split_date: '2026-11-03' }),
-  demoSplit({ id: 'demo-split-costco', description: 'Costco groceries', total_amount: 3600, my_share: 1800, split_date: '2026-11-01',
+    split_date: splitDay(2), status: 'proposed', partner_share_status: 'proposed' }),
+  demoSplit({ id: 'demo-split-dinner', description: 'Dinner at Din Tai Fung', total_amount: 2400, my_share: 1200, split_date: splitDay(4) }),
+  demoSplit({ id: 'demo-split-costco', description: 'Costco groceries', total_amount: 3600, my_share: 1800, split_date: splitDay(6),
     payer_is_me: false, created_by_me: false }),
   demoSplit({ id: 'demo-split-taxi', connection_id: 'demo-conn-2', partner_name: '小美', description: 'Taxi home', total_amount: 480,
-    my_share: 240, split_date: '2026-10-28', payer_is_me: false, created_by_me: false }),
+    my_share: 240, split_date: splitDay(10), payer_is_me: false, created_by_me: false }),
 ];
 
 export const demoSettlements: SettlementOut[] = [
   { id: 'demo-settle-1', connection_id: 'demo-conn-1', partner_name: '小明', i_paid: true, created_by_me: true,
-    amount: 1000, currency: 'TWD', settled_on: '2026-11-04', note: 'Bank transfer', status: 'confirmed' },
+    amount: 1000, currency: 'TWD', settled_on: splitDay(3), note: 'Bank transfer', status: 'confirmed' },
 ];
 
 export const demoSplitBalances: PeerBalanceOut[] = demoPeerConnections
