@@ -165,11 +165,18 @@ describe('/savings — goals and compare as tabs over one roster', () => {
     expect(mockReplace).toHaveBeenLastCalledWith('/savings?tab=splits', { scroll: false });
   });
 
-  it('opens Shared spending from ?tab=splits; demo mode explains it needs an account', async () => {
+  it('opens Shared spending from ?tab=splits; demo mode shows sample bills, read-only', async () => {
     mockSearch = new URLSearchParams('tab=splits');
-    render(<SavingsPage />);
+    const { QueryClient, QueryClientProvider } = jest.requireActual('@tanstack/react-query');
+    render(<QueryClientProvider client={new QueryClient()}><SavingsPage /></QueryClientProvider>);
     expect(await screen.findByRole('tab', { name: 'savings.tabs.splits', selected: true })).toBeInTheDocument();
-    expect(screen.getByText(/Sign in to split bills with a partner/)).toBeInTheDocument();
+    expect(await screen.findByText(/Sample shared bills/)).toBeInTheDocument();
+    expect(screen.getByText('Dinner at Din Tai Fung')).toBeInTheDocument();
+    // Nothing can be saved, so nothing is offered.
+    for (const name of ['Split a bill', 'Settle up', 'Accept', 'Withdraw', 'Cancel split']) {
+      expect(screen.queryByRole('button', { name })).not.toBeInTheDocument();
+    }
+    expect(screen.queryByRole('combobox')).not.toBeInTheDocument();
   });
 
   it("moves a goal's totals when a deposit is recorded in demo mode", async () => {

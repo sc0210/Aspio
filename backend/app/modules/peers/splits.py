@@ -58,6 +58,7 @@ from app.modules.peers.schemas import (
     SettlementCreate,
     SettlementOut,
     SplitCreate,
+    SplitFromTransaction,
     SplitOut,
 )
 from app.modules.transactions.models import (
@@ -225,11 +226,48 @@ class SplitService:
 
     async def create_split(self, user_id: UUID, data: SplitCreate) -> SplitOut:
         conn = await self._connection(data.connection_id, user_id)
+        await self._expense_category(data.category_id)
+        payer_is_me = data.payer == "me"
+        mine, theirs = split_amounts(data.total_amount, data.method, payer_is_me, data.my_percent, data.my_amount)
+        return await self._propose(
+            user_id, conn, payer_is_me=payer_is_me, mine=mine, theirs=theirs,
+            description=data.description.strip(), currency=data.currency.upper(),
+            category_id=data.category_id, split_date=data.split_date, method=data.method,
+        )
+
+    async def split_transaction(self, user_id: UUID, data: SplitFromTransaction) -> SplitOut:
+        """Split an expense already in the user's ledger. They paid it, and that
+        row becomes their share's row: whole until the partner accepts, then
+        their share. Withdrawing or a decline hands it back whole."""
+        conn = await self._connection(data.connection_id, user_id)
+        row = (await self.session.execute(
+            select(Transaction).where(and_(
+                Transaction.id == data.transaction_id,
+                Transaction.user_id == user_id,
+                Transaction.is_deleted == False,  # noqa: E712
+            )).with_for_update().execution_options(populate_existing=True)
+        )).scalars().first()
+        if row is None:
+            raise HTTPException(status.HTTP_404_NOT_FOUND, "Transaction not found")
+        reason = _unsplittable(row)
+        if reason:
+            raise HTTPException(status.HTTP_409_CONFLICT, reason)
+        mine, theirs = split_amounts(row.amount, data.method, True, data.my_percent, data.my_amount)
+        return await self._propose(
+            user_id, conn, payer_is_me=True, mine=mine, theirs=theirs,
+            description=(row.description or "Shared bill")[:200], currency=row.currency.upper(),
+            category_id=row.category_id, split_date=row.transaction_date, method=data.method,
+            source=row,
+        )
+
+    async def _propose(self, user_id: UUID, conn: PeerConnection, *, payer_is_me: bool,
+                       mine: Decimal, theirs: Decimal, description: str, currency: str,
+                       category_id: UUID, split_date, method: str,
+                       source: Optional[Transaction] = None) -> SplitOut:
         partner_id = self._partner(conn, user_id)
         partner_policy = await self._policy(conn.id, partner_id)
         if partner_policy == SplitPolicy.OFF.value:
             raise HTTPException(status.HTTP_403_FORBIDDEN, "Your partner has turned off bill splitting with you")
-        await self._expense_category(data.category_id)
         open_count = (await self.session.execute(
             select(sa_func.count()).select_from(PeerSplit).where(and_(
                 PeerSplit.connection_id == conn.id,
@@ -241,15 +279,13 @@ class SplitService:
             raise HTTPException(status.HTTP_409_CONFLICT,
                                 "Too many bills are waiting for your partner's answer")
 
-        payer_is_me = data.payer == "me"
-        mine, theirs = split_amounts(data.total_amount, data.method, payer_is_me, data.my_percent, data.my_amount)
-
         split = PeerSplit(
             id=uuid.uuid4(), connection_id=conn.id, created_by=user_id,
             payer_id=user_id if payer_is_me else partner_id,
-            description=data.description.strip(), total_amount=mine + theirs,
-            currency=data.currency.upper(), category_id=data.category_id,
-            split_date=data.split_date, method=data.method, status=SplitStatus.PROPOSED.value,
+            description=description, total_amount=mine + theirs, currency=currency,
+            category_id=category_id, split_date=split_date, method=method,
+            status=SplitStatus.PROPOSED.value,
+            source_transaction_id=source.id if source is not None else None,
         )
         my_share = PeerSplitShare(id=uuid.uuid4(), split_id=split.id, user_id=user_id,
                                   share_amount=mine, status=ShareStatus.ACCEPTED.value)
@@ -259,14 +295,19 @@ class SplitService:
         self.session.add(split)
         await self.session.flush()
 
-        # The payer fronted the whole bill: until the partner takes their part,
-        # the whole of it is the payer's spending.
-        await self._write_row(split, my_share, split.total_amount if payer_is_me else mine,
-                              data.category_id, "life")
+        if source is not None:
+            # The expense already carries the whole bill: it becomes the payer's row.
+            source.peer_split_share_id = my_share.id
+            await self.session.flush()
+        else:
+            # The payer fronted the whole bill: until the partner takes their part,
+            # the whole of it is the payer's spending.
+            await self._write_row(split, my_share, split.total_amount if payer_is_me else mine,
+                                  category_id, "life")
 
         my_name = await self._name(user_id)
         if partner_policy == SplitPolicy.AUTO_ACCEPT.value:
-            await self._accept(split, their_share, data.category_id, "life")
+            await self._accept(split, their_share, category_id, "life")
             self._notify(partner_id, "Shared bill added",
                          f"{my_name} split \"{split.description}\" with you; your share is in your ledger.",
                          "peer_split_added", split)
@@ -334,7 +375,11 @@ class SplitService:
         if split.status != SplitStatus.PROPOSED.value:
             raise HTTPException(status.HTTP_409_CONFLICT, "Only a split still waiting for an answer can be withdrawn")
         for share in split.shares:
+            if split.source_transaction_id is not None and share.user_id == split.created_by:
+                continue  # an expense they recorded themselves: handed back below
             await self._set_row_amount(share, Decimal("0"))
+        # Unlinked, the expense they split (still whole) is theirs to edit again.
+        await self._detach_rows(split)
         split.status = SplitStatus.VOIDED.value
         partner_id = next(s.user_id for s in split.shares if s.user_id != user_id)
         self._notify(partner_id, "Shared bill withdrawn",
@@ -687,6 +732,26 @@ class SplitService:
             pref.split_policy = split_policy
             await self.session.commit()
         return PeerPrefsOut(connection_id=str(connection_id), split_policy=split_policy)
+
+
+def _unsplittable(row: Transaction) -> Optional[str]:
+    """Why this ledger row can't become a split, or None if it can."""
+    if row.type != TransactionType.EXPENSE:
+        return "Only an expense can be split"
+    if row.peer_split_share_id is not None:
+        return "This expense is already part of a split"
+    if row.holding_id is not None:
+        return "A purchase for a holding can't be split"
+    if row.transfer_group_id is not None:
+        return "A transfer between your wallets can't be split"
+    if row.loan_id is not None:
+        # Accepting would shrink the row and leave the loan's balance wrong.
+        return "An expense that repays a loan can't be split"
+    if row.status != TransactionStatus.COMPLETED:
+        return "Only a completed expense can be split"
+    if row.amount is None or Decimal(row.amount) <= 0:
+        return "Only an expense with an amount can be split"
+    return None
 
 
 def _is_live_row_collision(error: IntegrityError) -> bool:

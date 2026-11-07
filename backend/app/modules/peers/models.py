@@ -298,6 +298,18 @@ class PeerSplit(BaseModel):
     split_date: Mapped[date] = mapped_column(Date, nullable=False)
     method: Mapped[str] = mapped_column(String(10), nullable=False, default=SplitMethod.EQUAL.value)
     status: Mapped[str] = mapped_column(String(10), nullable=False, default=SplitStatus.PROPOSED.value)
+    # Set when the split was made from an expense already in the payer's ledger
+    # ("Split this"): that row is the payer's, so closing the split must hand it
+    # back whole, never delete it.
+    source_transaction_id: Mapped[Optional[uuid.UUID]] = mapped_column(
+        UUID(as_uuid=True),
+        # transactions -> shares -> splits -> transactions is a cycle: use_alter
+        # lets metadata order the tables. Named as Postgres names it, which is
+        # what the migration and prod SQL create.
+        ForeignKey("transactions.id", ondelete="SET NULL", use_alter=True,
+                   name="peer_splits_source_transaction_id_fkey"),
+        nullable=True,
+    )
 
     shares: Mapped[list["PeerSplitShare"]] = relationship(
         "PeerSplitShare", back_populates="split", cascade="all, delete-orphan", lazy="selectin"

@@ -304,7 +304,8 @@
     "undo": "復原",
     "updating": "更新中…",
     "walletPlaceholder": "重新分配錢包",
-    "holdingLinkedSkipped": "有 {{count}} 筆選取的紀錄屬於投資組合持倉，已保持不變。請到投資組合修改。"
+    "holdingLinkedSkipped": "有 {{count}} 筆選取的紀錄屬於投資組合持倉，已保持不變。請到投資組合修改。",
+    "split": "與夥伴分攤"
   },
   "monthlySummary": "月度總結",
   "monthlySummaryPage": {
@@ -464,7 +465,8 @@
     "investSyncFailed": "交易已更新，但無法同步持股，請手動更新。",
     "savedAddNext": "已儲存，請輸入下一筆。",
     "demoSaved": "示範模式：本次工作階段已儲存，註冊後才能保留真實資料",
-    "investTagsFailed": "持倉已儲存，但標籤沒有儲存成功。請再儲存一次。"
+    "investTagsFailed": "持倉已儲存，但標籤沒有儲存成功。請再儲存一次。",
+    "splitSent": "已送給你的夥伴"
   },
   "types": {
     "expense": "支出",

@@ -568,6 +568,15 @@ export interface PeerBalanceOut {
   balances: { currency: string; net: number }[];
 }
 
+/** Split an expense you already recorded; amount, date and category come from it. */
+export interface SplitFromTransaction {
+  transaction_id: string;
+  connection_id: string;
+  method: SplitMethod;
+  my_percent?: number | null;
+  my_amount?: number | null;
+}
+
 export interface SettlementCreate {
   connection_id: string;
   /** they_paid_me counts at once; i_paid_them waits for the partner to confirm. */

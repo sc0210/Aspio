@@ -20,7 +20,9 @@ import SavingRecordsModal from '@/components/savings/SavingRecordsModal';
 import { ConfirmDialog } from '@/components/ui/ConfirmDialog';
 import SharedSpendingTab from '@/components/savings/SharedSpendingTab';
 import { withRecordTotals } from '@/components/savings/recordOwnership';
-import { demoCompareData, demoPeerConnections, demoSavingRecords, demoSharedGoals } from '@/data/demoData';
+import {
+  demoCompareData, demoPeerConnections, demoSavingRecords, demoSettlements, demoSharedGoals, demoSplitBalances, demoSplits,
+} from '@/data/demoData';
 import type { CompareDataResponse, PeerConnectionOut, SharedGoalOut } from '@/shared/types';
 import { formatCurrency as formatCurrencyUtil } from '@/utils/formatters';
 import { cn } from '@/utils/cn';
@@ -36,6 +38,9 @@ const CompareLineChart = dynamic(() => import('@/components/compare/CompareLineC
 });
 
 const formatTWD = (value: number) => formatCurrencyUtil(value, 'TWD', { precision: 0 });
+
+// One object for the life of the module, so the tab's load effect doesn't re-run.
+const DEMO_SHARED_SPENDING = { splits: demoSplits, balances: demoSplitBalances, settlements: demoSettlements };
 
 type Tab = 'goals' | 'splits' | 'compare';
 const TABS: Tab[] = ['goals', 'splits', 'compare'];
@@ -400,13 +405,7 @@ function SavingsGroups() {
                   aria-labelledby={`savings-tab-${activeTab}`}
                 >
                   {activeTab === 'splits' ? (
-                    isDemo ? (
-                      <div className="bg-white dark:bg-gray-800 rounded-xl p-8 shadow-sm text-center text-sm text-gray-600 dark:text-gray-400">
-                        {t('savings.splits.demoNote', 'Sign in to split bills with a partner. Each of you records only your own share.')}
-                      </div>
-                    ) : (
-                      <SharedSpendingTab connections={accepted} />
-                    )
+                    <SharedSpendingTab connections={accepted} demo={isDemo ? DEMO_SHARED_SPENDING : undefined} />
                   ) : activeTab === 'goals' ? (
                     <div className="space-y-6">
                       {goals.length > 0 && <CombinedProgress goals={goals} />}

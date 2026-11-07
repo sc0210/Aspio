@@ -86,7 +86,7 @@ Typical module structure: `models.py · schemas.py · repositories.py · service
 | `goals` | Savings goals, milestones, gamification (streaks, achievements) |
 | `line_bot` | LINE Messaging API webhook + account linking + group expense splitting |
 | `loans` | Peer loan tracking |
-| `peers` | Social comparison / peer connections |
+| `peers` | Peer connections and comparison, shared savings goals, bill splitting and settling up (`splits.py`; share basis, see `docs/FINANCIAL_TERMINOLOGY.md`) |
 | `reports` | Spending, monthly-trend and goals reads behind `/review` |
 | `admin` | Admin panel: user management and approvals, DB stats and cleanup, audit log, system health |
 | `notifications` | Alerts and reminders |

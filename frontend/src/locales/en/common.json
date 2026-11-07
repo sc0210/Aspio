@@ -835,7 +835,6 @@
       "cancel": "Cancel split",
       "confirmCancelTitle": "Cancel this split?",
       "confirmCancelMessage": "You’ll carry the whole bill again and {{name}}’s share is removed from their account.",
-      "demoNote": "Sign in to split bills with a partner. Each of you records only your own share.",
       "method": {
         "equal": "50 / 50",
         "percent": "%",
@@ -884,7 +883,14 @@
           "declined": "Not received",
           "voided": "Withdrawn"
         }
-      }
+      },
+      "existing": {
+        "title": "Split this expense",
+        "noPartner": "Add a partner on Savings first, then you can split bills with them.",
+        "goToSavings": "Go to Savings",
+        "note": "This expense stays whole until {{name}} accepts, then holds only your share. Withdraw it and it’s yours again, unchanged."
+      },
+      "demoSample": "Sample shared bills. Sign in to split real bills with a partner and settle up."
     },
     "summary": {
       "active": "active",

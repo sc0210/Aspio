@@ -304,7 +304,8 @@
     "undo": "Undo",
     "updating": "Updating…",
     "walletPlaceholder": "Reassign wallet",
-    "holdingLinkedSkipped": "{{count}} selected entries belong to portfolio holdings and were left as they are. Change them on Portfolio."
+    "holdingLinkedSkipped": "{{count}} selected entries belong to portfolio holdings and were left as they are. Change them on Portfolio.",
+    "split": "Split with partner"
   },
   "monthlySummary": "Monthly Summary",
   "monthlySummaryPage": {
@@ -464,7 +465,8 @@
     "investSyncFailed": "Transaction updated. Could not sync portfolio holding — update it manually.",
     "savedAddNext": "Saved. Add the next one.",
     "demoSaved": "Demo: saved for this session — sign up to keep real data",
-    "investTagsFailed": "The holding was saved, but the tags were not. Try saving again."
+    "investTagsFailed": "The holding was saved, but the tags were not. Try saving again.",
+    "splitSent": "Sent to your partner"
   },
   "types": {
     "expense": "Expense",

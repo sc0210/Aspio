@@ -62,7 +62,7 @@ rebalancing calculators.
 | `goals` | Savings goals, milestones, streaks |
 | `line_bot` | LINE webhook, account linking, group expense splitting. Optional: mounted only when `settings.line_bot_enabled`; the frontend reads `GET /features` and hides LINE surfaces |
 | `loans` | Peer loan tracking |
-| `peers` | Social comparison / peer connections |
+| `peers` | Peer connections and comparison, shared savings goals, bill splitting and settling up (`splits.py`; share basis, see `docs/FINANCIAL_TERMINOLOGY.md`) |
 | `reports` | Spending, monthly-trend and goals reads behind `/review` |
 | `admin` | Admin panel: user management and approvals, DB stats and cleanup, audit log, system health |
 | `notifications` | Alerts and reminders |

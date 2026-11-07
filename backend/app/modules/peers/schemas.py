@@ -258,6 +258,18 @@ class SplitCreate(BaseModel):
     my_amount: Optional[Decimal] = Field(None, ge=0, decimal_places=2)
 
 
+class SplitFromTransaction(BaseModel):
+    """Body for POST /peers/splits/from-transaction: split an expense you already
+    recorded. You paid it; amount, currency, date, category and description come
+    from the expense."""
+
+    transaction_id: UUID
+    connection_id: UUID
+    method: Literal["equal", "percent", "fixed"] = "equal"
+    my_percent: Optional[Decimal] = Field(None, ge=0, le=100)
+    my_amount: Optional[Decimal] = Field(None, ge=0, decimal_places=2)
+
+
 class SplitRespond(BaseModel):
     """Body for POST /peers/splits/{id}/respond."""
 

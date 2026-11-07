@@ -1,4 +1,4 @@
-import { Transaction, PortfolioHolding, User, PeerConnectionOut, SharedGoalOut, SavingRecord, CompareDataResponse, PeerStatCard } from '@/shared/types';
+import { Transaction, PortfolioHolding, User, PeerConnectionOut, SharedGoalOut, SavingRecord, CompareDataResponse, PeerStatCard, SplitOut, SettlementOut, PeerBalanceOut } from '@/shared/types';
 import type { DebtAccount } from '@/services/loanService';
 import { minimumsOnly } from '@/lib/finance/payoffPlan';
 import { businessToday } from '@/lib/portfolio/businessDate';
@@ -220,6 +220,60 @@ export const demoPeerConnections: PeerConnectionOut[] = [
     created_at: '2026-02-14T10:00:00Z',
   },
 ];
+
+// Shared spending, for the two demo partners above. Balances are derived from
+// these rows (the backend's rule: accepted splits less confirmed repayments), so
+// the cards can never disagree with the bills listed under them.
+// Dates count back from today (the app day), so the sample never looks stale.
+const splitDay = (daysAgo: number): string => {
+  const [y, m, d] = businessToday().split('-').map(Number);
+  return new Date(Date.UTC(y, m - 1, d - daysAgo)).toISOString().slice(0, 10);
+};
+
+const demoSplit = (over: Partial<SplitOut> & Pick<SplitOut, 'id' | 'description' | 'total_amount' | 'my_share'>): SplitOut => ({
+  connection_id: 'demo-conn-1', currency: 'TWD', split_date: splitDay(5), category_id: null, method: 'equal',
+  status: 'active', payer_is_me: true, created_by_me: true, partner_name: '小明',
+  partner_share: over.total_amount - over.my_share, my_share_status: 'accepted', partner_share_status: 'accepted',
+  my_transaction_id: null, ...over,
+});
+
+export const demoSplits: SplitOut[] = [
+  // 小明 is waiting on you: a bill they paid and split with you.
+  demoSplit({ id: 'demo-split-movie', description: 'Movie tickets', total_amount: 640, my_share: 320, split_date: splitDay(1),
+    status: 'proposed', payer_is_me: false, created_by_me: false, my_share_status: 'proposed', partner_share_status: 'accepted' }),
+  // You sent this one; 小明 hasn't answered yet.
+  demoSplit({ id: 'demo-split-power', description: 'Electricity bill', total_amount: 1500, my_share: 900, method: 'percent',
+    split_date: splitDay(2), status: 'proposed', partner_share_status: 'proposed' }),
+  demoSplit({ id: 'demo-split-dinner', description: 'Dinner at Din Tai Fung', total_amount: 2400, my_share: 1200, split_date: splitDay(4) }),
+  demoSplit({ id: 'demo-split-costco', description: 'Costco groceries', total_amount: 3600, my_share: 1800, split_date: splitDay(6),
+    payer_is_me: false, created_by_me: false }),
+  demoSplit({ id: 'demo-split-taxi', connection_id: 'demo-conn-2', partner_name: '小美', description: 'Taxi home', total_amount: 480,
+    my_share: 240, split_date: splitDay(10), payer_is_me: false, created_by_me: false }),
+];
+
+export const demoSettlements: SettlementOut[] = [
+  { id: 'demo-settle-1', connection_id: 'demo-conn-1', partner_name: '小明', i_paid: true, created_by_me: true,
+    amount: 1000, currency: 'TWD', settled_on: splitDay(3), note: 'Bank transfer', status: 'confirmed' },
+];
+
+export const demoSplitBalances: PeerBalanceOut[] = demoPeerConnections
+  .filter((c) => c.status === 'accepted')
+  .map((c) => {
+    const net: Record<string, number> = {};
+    for (const s of demoSplits) {
+      if (s.connection_id !== c.id || s.status !== 'active') continue;
+      net[s.currency] = (net[s.currency] ?? 0) + (s.payer_is_me ? s.partner_share : -s.my_share);
+    }
+    for (const p of demoSettlements) {
+      if (p.connection_id !== c.id || p.status !== 'confirmed') continue;
+      net[p.currency] = (net[p.currency] ?? 0) + (p.i_paid ? p.amount : -p.amount);
+    }
+    return {
+      connection_id: c.id,
+      partner_name: c.other_user.name,
+      balances: Object.entries(net).filter(([, v]) => v !== 0).map(([currency, v]) => ({ currency, net: v })),
+    };
+  });
 
 export const demoSharedGoals: SharedGoalOut[] = [
   {

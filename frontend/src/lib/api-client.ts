@@ -14,7 +14,7 @@ import {
   SharedGoalOut,
   SharedGoalCreate,
   SavingRecord, SharedGoalUpdate,
-  SplitCreate, SplitOut, PeerBalanceOut, PeerPrefsOut, SplitPolicy, SettlementCreate, SettlementOut } from '@/shared/types';
+  SplitCreate, SplitOut, PeerBalanceOut, PeerPrefsOut, SplitPolicy, SettlementCreate, SettlementOut, SplitFromTransaction } from '@/shared/types';
 import { getSession } from 'next-auth/react';
 import { getPublicApiUrl, getServerApiUrl } from '@/lib/api-url';
 export interface GamificationStats {
@@ -606,6 +606,10 @@ class ApiClient {
 
   async cancelSplit(splitId: string): Promise<ApiResponse<SplitOut>> {
     return this.post<SplitOut>(`/peers/splits/${splitId}/cancel`, {});
+  }
+
+  async splitTransaction(body: SplitFromTransaction): Promise<ApiResponse<SplitOut>> {
+    return this.post<SplitOut>('/peers/splits/from-transaction', body);
   }
 
   async createSettlement(body: SettlementCreate): Promise<ApiResponse<SettlementOut>> {
