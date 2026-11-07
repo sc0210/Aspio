@@ -53,6 +53,7 @@ const PAGES = [
   { name: 'portfolio', path: '/portfolio', label: 'Portfolio' },
   { name: 'rebalancing', path: '/rebalancing', label: 'Rebalancing' },
   { name: 'goals', path: '/goals', label: 'Goals' },
+  { name: 'shared-spending', path: '/savings?tab=splits', label: 'Shared spending' },
   { name: 'review', path: '/review', label: 'Month in Review' },
   { name: 'lifecycle', path: '/lifecycle', label: 'Lifecycle' },
 ];
