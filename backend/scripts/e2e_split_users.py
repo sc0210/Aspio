@@ -3,6 +3,7 @@
 Two throwaway partner accounts for the shared-spending Playwright test (dev only).
 
     ASPIRO_E2E=1 python scripts/e2e_split_users.py setup      # prints JSON credentials
+    ASPIRO_E2E=1 python scripts/e2e_split_users.py ledger     # prints each one's live rows
     ASPIRO_E2E=1 python scripts/e2e_split_users.py teardown   # locks both accounts again
 
 The test (frontend/tests/e2e/shared-spending.spec.ts) runs it in the dev backend
@@ -13,8 +14,11 @@ a fresh random password, printed once and never stored, and teardown deactivates
 both accounts and scrambles their passwords. So an account with a known password
 never outlives a run, even if this is pointed at the wrong database by mistake.
 
-Refuses to run without ASPIRO_E2E=1. ENVIRONMENT is not a guard: the self-hosted
-production stack reports "development" too.
+Refuses unless every sign says this is the dev stack: ASPIRO_E2E=1 (the caller
+vouches), ENVIRONMENT is not "production", and the public demo account is
+enabled (the production stack defaults it off). No single one is enough: the
+caller sets the first itself, and an older self-hosted stack reported
+"development".
 Exit status: 0 done, 2 bad arguments or not opted in.
 """
 
@@ -31,6 +35,7 @@ sys.path.insert(0, str(Path(__file__).parent.parent))
 import app.main  # noqa: E402,F401  (registers every model for the relationships)
 from sqlalchemy import and_, delete, or_, select  # noqa: E402
 
+from app.core.config import get_settings  # noqa: E402
 from app.core.database import async_session  # noqa: E402
 from app.modules.notifications.models import Notification  # noqa: E402
 from app.modules.peers.models import (  # noqa: E402
@@ -98,6 +103,19 @@ async def setup() -> dict:
         return creds
 
 
+async def ledger() -> dict:
+    """Each account's live rows: what a repayment must leave alone."""
+    async with async_session() as session:
+        out = {}
+        for key, (email, _, _) in zip(("alice", "bob"), ACCOUNTS):
+            user = (await session.execute(select(User).where(User.email == email))).scalar_one()
+            rows = (await session.execute(select(Transaction.amount).where(and_(
+                Transaction.user_id == user.id, Transaction.is_deleted == False,  # noqa: E712
+            )))).scalars().all()
+            out[key] = sorted(float(a) for a in rows)
+        return out
+
+
 async def teardown() -> None:
     async with async_session() as session:
         for email, _, _ in ACCOUNTS:
@@ -109,16 +127,23 @@ async def teardown() -> None:
 
 
 def main() -> int:
-    if os.environ.get("ASPIRO_E2E") != "1":
-        print("Refusing: set ASPIRO_E2E=1 to confirm this is a development database.", file=sys.stderr)
+    settings = get_settings()
+    refusal = (
+        "set ASPIRO_E2E=1 to confirm this is a development database" if os.environ.get("ASPIRO_E2E") != "1"
+        else "ENVIRONMENT is production" if str(settings.ENVIRONMENT).lower() == "production"
+        else "the demo account is disabled, as on a production stack" if not settings.DEMO_ACCOUNT_ENABLED
+        else None
+    )
+    if refusal:
+        print(f"Refusing: {refusal}.", file=sys.stderr)
         return 2
-    if len(sys.argv) != 2 or sys.argv[1] not in ("setup", "teardown"):
+    if len(sys.argv) != 2 or sys.argv[1] not in ("setup", "ledger", "teardown"):
         print(__doc__, file=sys.stderr)
         return 2
-    if sys.argv[1] == "setup":
-        print(json.dumps(asyncio.run(setup())))
-    else:
+    if sys.argv[1] == "teardown":
         asyncio.run(teardown())
+    else:
+        print(json.dumps(asyncio.run(setup() if sys.argv[1] == "setup" else ledger())))
     return 0
 
 

@@ -4,9 +4,11 @@
  *
  * Needs the Docker dev stack (frontend :3000, backend container). Each run asks
  * `backend/scripts/e2e_split_users.py` for two fresh partner accounts (random
- * passwords, wiped ledgers) and locks them again afterwards. Run on its own:
+ * passwords, wiped ledgers) and locks them again afterwards. Opt-in, and on one
+ * project only: parallel projects would reset the same two accounts under each
+ * other, and a machine without the stack would just fail.
  *
- *   npx playwright test tests/e2e/shared-spending.spec.ts --project=chromium
+ *   E2E_SPLITS=1 npx playwright test tests/e2e/shared-spending.spec.ts --project=chromium
  *
  * E2E_BACKEND_CONTAINER names the backend container (default aspiro-backend).
  */
@@ -17,7 +19,7 @@ interface Account { email: string; password: string; name: string }
 
 const CONTAINER = process.env.E2E_BACKEND_CONTAINER ?? 'aspiro-backend';
 
-function seed(action: 'setup' | 'teardown'): string {
+function seed(action: 'setup' | 'ledger' | 'teardown'): string {
   return execFileSync('docker', ['exec', '-w', '/app', '-e', 'ASPIRO_E2E=1', CONTAINER,
     'python', 'scripts/e2e_split_users.py', action], { encoding: 'utf8' });
 }
@@ -66,16 +68,24 @@ test.describe.configure({ mode: 'serial' });
 
 let alice: Account;
 let bob: Account;
+let seeded = false;
 
-test.beforeAll(() => {
-  // The app's startup logs share stdout; the credentials are the one JSON line.
-  const line = seed('setup').split('\n').reverse().find((l) => l.startsWith('{'));
-  if (!line) throw new Error('e2e_split_users.py setup printed no credentials');
-  ({ alice, bob } = JSON.parse(line) as { alice: Account; bob: Account });
+/** The script's one JSON line (the app's startup logs share stdout). */
+function json<T>(action: 'setup' | 'ledger'): T {
+  const line = seed(action).split('\n').reverse().find((l) => l.startsWith('{'));
+  if (!line) throw new Error(`e2e_split_users.py ${action} printed no JSON`);
+  return JSON.parse(line) as T;
+}
+
+test.beforeAll(({}, testInfo) => {
+  test.skip(process.env.E2E_SPLITS !== '1', 'Two-account flow against the Docker stack: opt in with E2E_SPLITS=1');
+  test.skip(testInfo.project.name !== 'chromium', 'Runs on chromium only: projects would share the two accounts');
+  ({ alice, bob } = json<{ alice: Account; bob: Account }>('setup'));
+  seeded = true;
 });
 
 test.afterAll(() => {
-  seed('teardown');
+  if (seeded) seed('teardown');
 });
 
 test('split a bill, accept it, pay it back, confirm, and end square', async ({ browser }) => {
@@ -104,6 +114,8 @@ test('split a bill, accept it, pay it back, confirm, and end square', async ({ b
   await expect(b.getByLabel(/Amount/)).toHaveValue('500.00');
   await b.getByRole('button', { name: 'Send for confirmation' }).click();
   await see(b, `You paid ${alice.name} NT$500`);
+  // Still owed: a repayment counts only once confirmed.
+  await expect(b.getByText('Waiting', { exact: true })).toBeVisible();
   await see(b, `You owe ${alice.name} NT$500`);
 
   await see(a, `${bob.name} says they paid you back NT$500`);
@@ -111,4 +123,8 @@ test('split a bill, accept it, pay it back, confirm, and end square', async ({ b
   await see(a, 'All square');
   await see(b, 'All square');
   await see(b, `You paid ${alice.name} NT$500`);
+  await expect(b.getByText('Confirmed', { exact: true })).toBeVisible();
+
+  // Each ledger holds only its owner's half; paying back added no row to either.
+  expect(json<{ alice: number[]; bob: number[] }>('ledger')).toEqual({ alice: [500], bob: [500] });
 });
