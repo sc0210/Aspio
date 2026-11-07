@@ -26,6 +26,34 @@ export interface ChangelogEntry {
 
 export const CHANGELOG: ChangelogEntry[] = [
     {
+        version: '2026.11',
+        date: '2026-11-07',
+        title: { zh: '和伴侶分帳', en: 'Split bills with your partner' },
+        highlights: [
+            {
+                emoji: '🧾',
+                text: {
+                    zh: '「儲蓄」新增「共同支出」分頁。分攤一筆帳單（平分、比例或指定金額）後，你們的帳戶各自只記錄自己那一份，總額剛好等於實際付出的錢。對方接受前，不會有任何東西寫進他的帳戶。',
+                    en: 'Savings has a Shared spending tab. Split a bill (50/50, by percent or a set amount) and each of your accounts records only your own share, so the two add up to exactly what was paid. Nothing reaches your partner’s account until they accept.',
+                },
+            },
+            {
+                emoji: '🤝',
+                text: {
+                    zh: '結清欠款：記錄對方已還你錢會立即生效；你還給對方的錢，需等對方確認收到。兩邊帳戶都不會多一筆紀錄，因為各自原本就只記了自己的份額。',
+                    en: 'Settle up: record that your partner paid you back and it counts at once; money you paid them counts once they confirm it arrived. Neither account gains an entry, since each already holds only its own share.',
+                },
+            },
+            {
+                emoji: '✂️',
+                text: {
+                    zh: '已記錄的支出也能分攤：在「交易」裡點該筆的 ⋮ 選「與夥伴分攤」。對方接受後，它會變成你的份額；撤回或被拒絕則原封不動還給你。',
+                    en: 'Split an expense you already recorded: on Transactions, open its ⋮ menu and choose Split with partner. Once they accept it holds only your share; withdraw it or have it declined and it’s yours again, unchanged.',
+                },
+            },
+        ],
+    },
+    {
         version: '2026.09.3',
         date: '2026-09-24',
         title: { zh: '還債獨立成一欄', en: 'Debt repayments get their own column' },

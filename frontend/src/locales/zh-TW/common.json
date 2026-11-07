@@ -835,7 +835,6 @@
       "cancel": "取消分帳",
       "confirmCancelTitle": "取消這筆分帳？",
       "confirmCancelMessage": "整筆帳單將回到你的帳上，{{name}} 那部分會從對方帳戶移除。",
-      "demoNote": "登入後即可與夥伴分攤帳單，各自只記自己的部分。",
       "method": {
         "equal": "各半",
         "percent": "%",
@@ -890,7 +889,8 @@
         "noPartner": "請先到「儲蓄」新增夥伴，才能與對方分攤帳單。",
         "goToSavings": "前往儲蓄",
         "note": "在 {{name}} 接受前，這筆支出維持全額；接受後只保留你的份額。撤回後會恢復原狀，歸你所有。"
-      }
+      },
+      "demoSample": "以下為示範的分帳資料。登入後即可與夥伴分攤真實帳單並結清。"
     },
     "summary": {
       "active": "進行中",

@@ -35,7 +35,18 @@ const SETTLEMENT_STYLE: Record<SettlementOut['status'], string> = {
  * balance is what the accepted splits leave one owing the other, less what has
  * been paid back. Paying back changes neither account, only the balance.
  */
-export default function SharedSpendingTab({ connections }: { connections: PeerConnectionOut[] }) {
+export interface SharedSpendingDemo {
+  splits: SplitOut[];
+  balances: PeerBalanceOut[];
+  settlements: SettlementOut[];
+}
+
+/**
+ * demo: show these sample rows, read-only. Nothing is fetched and no action is
+ * offered, since nothing can be saved.
+ */
+export default function SharedSpendingTab({ connections, demo }: { connections: PeerConnectionOut[]; demo?: SharedSpendingDemo }) {
+  const readOnly = demo !== undefined;
   const { t } = useTranslation('common');
   const queryClient = useQueryClient();
   const [splits, setSplits] = useState<SplitOut[]>([]);
@@ -52,6 +63,13 @@ export default function SharedSpendingTab({ connections }: { connections: PeerCo
   const [settleTarget, setSettleTarget] = useState<SettleTarget | null>(null);
 
   const load = useCallback(async () => {
+    if (demo) {
+      setSplits(demo.splits);
+      setBalances(demo.balances);
+      setSettlements(demo.settlements);
+      setLoading(false);
+      return;
+    }
     try {
       const [s, b, p] = await Promise.all([
         apiClient.listSplits(), apiClient.getSplitBalances(), apiClient.listSettlements(),
@@ -65,11 +83,12 @@ export default function SharedSpendingTab({ connections }: { connections: PeerCo
     } finally {
       setLoading(false);
     }
-  }, [t]);
+  }, [t, demo]);
 
   useEffect(() => { void load(); }, [load]);
 
   useEffect(() => {
+    if (readOnly) return;
     void Promise.all(connections.map(async (c) => {
       try {
         const res = await apiClient.getPeerPrefs(c.id);
@@ -78,7 +97,7 @@ export default function SharedSpendingTab({ connections }: { connections: PeerCo
         return [c.id, undefined] as const;
       }
     })).then((pairs) => setPolicies(Object.fromEntries(pairs)));
-  }, [connections]);
+  }, [connections, readOnly]);
 
   // Every split change writes ledger rows: refresh transactions, wallets, review.
   const changed = useCallback(async () => {
@@ -123,6 +142,7 @@ export default function SharedSpendingTab({ connections }: { connections: PeerCo
         <p className="text-sm text-gray-600 dark:text-gray-400">
           {t('savings.splits.intro', 'Split a bill and each of you records only your own share.')}
         </p>
+        {!readOnly && (
         <button
           type="button"
           onClick={() => setIsNewOpen(true)}
@@ -131,7 +151,14 @@ export default function SharedSpendingTab({ connections }: { connections: PeerCo
           <PlusIcon className="w-4 h-4" aria-hidden="true" />
           {t('savings.splits.new', 'Split a bill')}
         </button>
+        )}
       </div>
+
+      {readOnly && (
+        <p className="text-sm rounded-lg px-3 py-2 bg-amber-50 dark:bg-amber-900/20 text-amber-900 dark:text-amber-100">
+          {t('savings.splits.demoSample', 'Sample shared bills. Sign in to split real bills with a partner and settle up.')}
+        </p>
+      )}
 
       {error && <p role="alert" className="text-sm text-error-700 dark:text-error-400">{error}</p>}
 
@@ -152,15 +179,15 @@ export default function SharedSpendingTab({ connections }: { connections: PeerCo
                     ? t('savings.splits.owesYou', '{{name}} owes you {{amount}}', { name: b.partner_name, amount: money(x.net, x.currency) })
                     : t('savings.splits.youOwe', 'You owe {{name}} {{amount}}', { name: b.partner_name, amount: money(x.net, x.currency) })}
                 </p>
-                <button type="button"
+                {!readOnly && <button type="button"
                   onClick={() => setSettleTarget({ connectionId: b.connection_id, partnerName: b.partner_name, currency: x.currency, net: x.net })}
                   className="shrink-0 min-h-[44px] px-3 rounded-lg border border-gray-300 dark:border-gray-600 text-sm font-medium text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700">
                   {t('savings.splits.settle.button', 'Settle up')}
-                </button>
+                </button>}
               </div>
             ))}
             {/* A former partner keeps their balance card, but has no setting left. */}
-            {connections.some((c) => c.id === b.connection_id) && (
+            {!readOnly && connections.some((c) => c.id === b.connection_id) && (
             <label className="mt-3 block text-xs text-gray-600 dark:text-gray-400">
               {t('savings.splits.policyLabel', 'Bills from {{name}}', { name: b.partner_name })}
               <select
@@ -192,7 +219,7 @@ export default function SharedSpendingTab({ connections }: { connections: PeerCo
                   {' · '}{s.payer_is_me ? t('savings.splits.youPaid', 'you paid') : t('savings.splits.theyPaid', '{{name}} paid', { name: s.partner_name })}
                 </p>
               </div>
-              <div className="flex gap-2">
+              {!readOnly && <div className="flex gap-2">
                 <button type="button" disabled={busyId === s.id}
                   onClick={() => act(s, () => apiClient.respondToSplit(s.id, { action: 'accept' }))}
                   className="min-h-[44px] px-4 rounded-lg bg-green-700 hover:bg-green-800 text-white text-sm font-medium disabled:opacity-50">
@@ -203,7 +230,7 @@ export default function SharedSpendingTab({ connections }: { connections: PeerCo
                   className="min-h-[44px] px-4 rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 text-gray-700 dark:text-gray-300 text-sm font-medium disabled:opacity-50">
                   {t('savings.decline', 'Decline')}
                 </button>
-              </div>
+              </div>}
             </div>
           ))}
           {toConfirm.map((p) => (
@@ -214,7 +241,7 @@ export default function SharedSpendingTab({ connections }: { connections: PeerCo
                 </p>
                 <p>{p.settled_on}{p.note ? ` · ${p.note}` : ''}</p>
               </div>
-              <div className="flex gap-2">
+              {!readOnly && <div className="flex gap-2">
                 <button type="button" disabled={busyId === p.id}
                   onClick={() => act(p, () => apiClient.respondToSettlement(p.id, 'confirm'), false)}
                   className="min-h-[44px] px-4 rounded-lg bg-green-700 hover:bg-green-800 text-white text-sm font-medium disabled:opacity-50">
@@ -225,7 +252,7 @@ export default function SharedSpendingTab({ connections }: { connections: PeerCo
                   className="min-h-[44px] px-4 rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 text-gray-700 dark:text-gray-300 text-sm font-medium disabled:opacity-50">
                   {t('savings.splits.settle.decline', 'Not received')}
                 </button>
-              </div>
+              </div>}
             </div>
           ))}
         </section>
@@ -248,13 +275,13 @@ export default function SharedSpendingTab({ connections }: { connections: PeerCo
                 </p>
                 <p className="text-xs text-gray-600 dark:text-gray-400">{p.settled_on}{p.note ? ` · ${p.note}` : ''}</p>
               </div>
-              {p.status === 'proposed' && p.created_by_me && (
+              {!readOnly && p.status === 'proposed' && p.created_by_me && (
                 <button type="button" disabled={busyId === p.id} onClick={() => act(p, () => apiClient.voidSettlement(p.id), false)}
                   className="min-h-[44px] px-3 rounded-lg text-sm font-medium text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 disabled:opacity-50">
                   {t('savings.splits.withdraw', 'Withdraw')}
                 </button>
               )}
-              {p.status === 'confirmed' && !p.i_paid && (
+              {!readOnly && p.status === 'confirmed' && !p.i_paid && (
                 <button type="button" disabled={busyId === p.id} onClick={() => act(p, () => apiClient.voidSettlement(p.id), false)}
                   className="min-h-[44px] px-3 rounded-lg text-sm font-medium text-error-700 dark:text-error-400 hover:bg-error-50 dark:hover:bg-error-900/20 disabled:opacity-50">
                   {t('savings.splits.settle.undo', 'Undo')}
@@ -286,13 +313,13 @@ export default function SharedSpendingTab({ connections }: { connections: PeerCo
                 })}
               </p>
             </div>
-            {s.status === 'proposed' && s.created_by_me && (
+            {!readOnly && s.status === 'proposed' && s.created_by_me && (
               <button type="button" disabled={busyId === s.id} onClick={() => act(s, () => apiClient.voidSplit(s.id))}
                 className="min-h-[44px] px-3 rounded-lg text-sm font-medium text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 disabled:opacity-50">
                 {t('savings.splits.withdraw', 'Withdraw')}
               </button>
             )}
-            {s.status === 'active' && s.payer_is_me && (
+            {!readOnly && s.status === 'active' && s.payer_is_me && (
               <button type="button" disabled={busyId === s.id} onClick={() => setConfirmCancel(s)}
                 className="min-h-[44px] px-3 rounded-lg text-sm font-medium text-error-700 dark:text-error-400 hover:bg-error-50 dark:hover:bg-error-900/20 disabled:opacity-50">
                 {t('savings.splits.cancel', 'Cancel split')}
