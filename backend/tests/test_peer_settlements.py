@@ -161,3 +161,43 @@ async def test_settlement_routes_resolve_over_http(authenticated_client):
     assert r.json()["data"] == []
     r = authenticated_client.post(f"/api/v1/peers/splits/settlements/{uuid.uuid4()}/void")
     assert r.status_code == 404
+
+
+async def test_cancelling_a_repaid_split_leaves_the_payer_owing_the_repayment(async_session, couple):
+    """Bob really handed over 500; once Alice takes the whole bill back, she owes it to him."""
+    c = couple
+    sid = await _owed_to_alice(c)
+    await c["svc"].create_settlement(c["alice"].id, _pay(c, "they_paid_me", "500"))
+    await c["svc"].cancel(c["alice"].id, sid)
+    assert (await _net(c["svc"], c["alice"].id))[str(c["conn"].id)] == {"TWD": -500}
+    assert await _rows(async_session, c["alice"]) == [Decimal("1000")]
+
+
+async def test_a_pending_repayment_survives_removal(async_session, couple):
+    c = couple
+    await _owed_to_alice(c)
+    sent = await c["svc"].create_settlement(c["bob"].id, _pay(c, "i_paid_them", "500"))
+    await PeerService(async_session).remove_connection(c["conn"].id, c["alice"].id)
+    svc = SplitService(async_session)
+    assert (await svc.respond_settlement(c["alice"].id, uuid.UUID(sent.id), "confirm")).status == "confirmed"
+    assert await svc.balances(c["alice"].id) == []
+
+
+async def test_repayments_are_whole_cents(couple):
+    from pydantic import ValidationError
+    with pytest.raises(ValidationError):
+        _pay(couple, "they_paid_me", "0.004")
+    with pytest.raises(ValidationError):
+        _bill(couple, total_amount=Decimal("10.999"))
+
+
+async def test_waiting_repayments_are_capped(async_session, couple, monkeypatch):
+    import app.modules.peers.splits as splits
+    monkeypatch.setattr(splits, "MAX_OPEN_PROPOSALS", 2)
+    c = couple
+    await _owed_to_alice(c)
+    for _ in range(2):
+        await c["svc"].create_settlement(c["bob"].id, _pay(c, "i_paid_them", "10"))
+    with pytest.raises(HTTPException) as err:
+        await c["svc"].create_settlement(c["bob"].id, _pay(c, "i_paid_them", "10"))
+    assert err.value.status_code == 409

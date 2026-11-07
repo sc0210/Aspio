@@ -45,7 +45,13 @@ def upgrade() -> None:
             sa.CheckConstraint("amount > 0", name="peer_settlement_positive_amount"),
             sa.CheckConstraint("from_user_id <> to_user_id", name="peer_settlement_two_people"),
         )
-        op.create_index("idx_peer_settlements_connection", "peer_settlements", ["connection_id"])
+    # Balances and the list filter by either person.
+    existing = {i["name"] for i in sa.inspect(bind).get_indexes("peer_settlements")}
+    for name, column in (("idx_peer_settlements_connection", "connection_id"),
+                         ("idx_peer_settlements_from_user", "from_user_id"),
+                         ("idx_peer_settlements_to_user", "to_user_id")):
+        if name not in existing:
+            op.create_index(name, "peer_settlements", [column])
     if bind.dialect.name == "postgresql":
         op.execute("ALTER TABLE public.peer_settlements ENABLE ROW LEVEL SECURITY")
 

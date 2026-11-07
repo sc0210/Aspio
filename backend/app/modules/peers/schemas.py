@@ -247,7 +247,7 @@ class SplitCreate(BaseModel):
 
     connection_id: UUID
     description: str = Field(..., min_length=1, max_length=200)
-    total_amount: Decimal = Field(..., gt=0)
+    total_amount: Decimal = Field(..., gt=0, decimal_places=2)
     currency: str = Field("TWD", pattern=r"^[A-Za-z]{3}$")
     split_date: date
     category_id: UUID
@@ -255,7 +255,7 @@ class SplitCreate(BaseModel):
     method: Literal["equal", "percent", "fixed"] = "equal"
     # percent: my share as a percentage of the total; fixed: my share as an amount
     my_percent: Optional[Decimal] = Field(None, ge=0, le=100)
-    my_amount: Optional[Decimal] = Field(None, ge=0)
+    my_amount: Optional[Decimal] = Field(None, ge=0, decimal_places=2)
 
 
 class SplitRespond(BaseModel):
@@ -296,7 +296,8 @@ class SettlementCreate(BaseModel):
     # they_paid_me: counts at once (it only lowers what you're owed);
     # i_paid_them: waits for your partner to confirm it arrived.
     direction: Literal["they_paid_me", "i_paid_them"]
-    amount: Decimal = Field(..., gt=0)
+    # Whole cents: a sub-cent amount would round to 0 and fail the DB check.
+    amount: Decimal = Field(..., gt=0, decimal_places=2)
     currency: str = Field("TWD", pattern=r"^[A-Za-z]{3}$")
     settled_on: Optional[date] = None
     note: Optional[str] = Field(None, max_length=200)

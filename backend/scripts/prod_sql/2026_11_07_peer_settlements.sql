@@ -25,5 +25,7 @@ CREATE TABLE IF NOT EXISTS peer_settlements (
     CONSTRAINT peer_settlement_two_people CHECK (from_user_id <> to_user_id)
 );
 CREATE INDEX IF NOT EXISTS idx_peer_settlements_connection ON peer_settlements (connection_id);
+CREATE INDEX IF NOT EXISTS idx_peer_settlements_from_user ON peer_settlements (from_user_id);
+CREATE INDEX IF NOT EXISTS idx_peer_settlements_to_user ON peer_settlements (to_user_id);
 
 ALTER TABLE public.peer_settlements ENABLE ROW LEVEL SECURITY;

@@ -370,4 +370,6 @@ class PeerSettlement(BaseModel):
         CheckConstraint("amount > 0", name="peer_settlement_positive_amount"),
         CheckConstraint("from_user_id <> to_user_id", name="peer_settlement_two_people"),
         Index("idx_peer_settlements_connection", "connection_id"),
+        Index("idx_peer_settlements_from_user", "from_user_id"),
+        Index("idx_peer_settlements_to_user", "to_user_id"),
     )

@@ -561,7 +561,10 @@ class SplitService:
 
     async def create_settlement(self, user_id: UUID, data: SettlementCreate) -> SettlementOut:
         """they_paid_me counts at once: it only lowers what the user is owed.
-        i_paid_them waits for the partner to confirm the money arrived."""
+        i_paid_them waits for the partner to confirm the money arrived.
+
+        Removing a partner leaves repayments alone, proposed ones included: the
+        balance outlives removal, and so does a claim that money was sent."""
         conn = await self._any_connection(data.connection_id, user_id)
         partner_id = self._partner(conn, user_id)
         received = data.direction == "they_paid_me"
