@@ -61,3 +61,16 @@ it('hides amounts when values are hidden', () => {
   expect(screen.getByText(/Bob owes you •••/)).toBeInTheDocument();
   expect(screen.queryByText(/400/)).not.toBeInTheDocument();
 });
+
+it('explains balances that cancel out instead of leaving the line empty', () => {
+  mockBalances = [balance('Bob', 400), balance('Amy', -400)];
+  render(<SharedBalanceNote />);
+  expect(screen.getByText(/cancel out, so they match your bank/)).toBeInTheDocument();
+});
+
+it('rounds float residue to cents', () => {
+  mockBalances = [balance('A', 0.1), balance('B', 0.2), balance('C', -0.3)];
+  render(<SharedBalanceNote />);
+  expect(screen.getByText(/cancel out/)).toBeInTheDocument();
+  expect(screen.queryByText(/more than your bank/)).not.toBeInTheDocument();
+});

@@ -582,6 +582,7 @@
     "youOwe": "You owe {{name}} {{amount}}",
     "higher": "Your wallets count only your share of shared bills, so they read {{amount}} more than your bank until you’re paid back.",
     "lower": "Your wallets already count your share of shared bills, so they read {{amount}} less than your bank until you pay it.",
-    "settle": "Settle up"
+    "settle": "Settle up",
+    "even": "Your wallets count only your share of shared bills; in {{currency}} what you’re owed and what you owe cancel out, so they match your bank."
   }
 }

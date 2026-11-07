@@ -32,6 +32,8 @@ export function SharedBalanceNote() {
   // Per currency: > 0, the wallets read higher than the bank; < 0, lower.
   const totals = new Map<string, number>();
   for (const x of owed) totals.set(x.currency, (totals.get(x.currency) ?? 0) + x.net);
+  // Amounts arrive as floats: round to cents, or three partners can leave 1e-17.
+  const gaps = [...totals.entries()].map(([currency, v]) => [currency, Math.round(v * 100) / 100] as const);
   const hidden = '•••';
   const show = (value: number, currency: string) => (isValueVisible ? money(value, currency) : hidden);
 
@@ -54,9 +56,11 @@ export function SharedBalanceNote() {
             ))}
           </p>
           <p className="text-gray-600 dark:text-gray-400">
-            {[...totals.entries()].filter(([, v]) => v !== 0).map(([currency, v]) => (
+            {gaps.map(([currency, v]) => (
               <span key={currency} className="block">
-                {v > 0
+                {v === 0
+                  ? t('sharedBalance.even', 'Your wallets count only your share of shared bills; in {{currency}} what you’re owed and what you owe cancel out, so they match your bank.', { currency })
+                  : v > 0
                   ? t('sharedBalance.higher', 'Your wallets count only your share of shared bills, so they read {{amount}} more than your bank until you’re paid back.', { amount: show(v, currency) })
                   : t('sharedBalance.lower', 'Your wallets already count your share of shared bills, so they read {{amount}} less than your bank until you pay it.', { amount: show(v, currency) })}
               </span>
