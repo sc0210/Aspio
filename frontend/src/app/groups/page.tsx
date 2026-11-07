@@ -1,5 +1,6 @@
 'use client';
 
+import { RelatedMoneyLinks } from '@/components/layout/RelatedMoneyLinks';
 import { LineBotGate } from '@/components/line/LineBotGate';
 import { useState, useEffect } from 'react';
 import Link from 'next/link';
@@ -231,6 +232,8 @@ function DesktopGroupsPage() {
                 ) : undefined
             }
         />
+
+        <RelatedMoneyLinks current="groups" />
 
         {/* Content */}
         {loading ? (

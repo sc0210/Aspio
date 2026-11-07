@@ -8,6 +8,9 @@ import { useLoans } from '@/hooks/useLoans';
 
 const mockDeleteMutateAsync = jest.fn().mockResolvedValue({});
 
+// RelatedMoneyLinks asks which add-ons this instance has (a query); not under test here.
+jest.mock('@/hooks/useFeatures', () => ({ useFeatures: () => ({ lineBot: true, isLoading: false, isError: false }) }));
+
 jest.mock('@/hooks/useLoans', () => ({
   useLoans: jest.fn(),
   useDeleteLoan: jest.fn(() => ({

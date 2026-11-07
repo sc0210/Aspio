@@ -575,5 +575,14 @@
     "tip4": "此為模擬工具，不會影響實際資產",
     "title": "What-If 模擬器",
     "totalChange": "總變化"
+  },
+  "sharedBalance": {
+    "label": "共同支出",
+    "owesYou": "{{name}} 欠你 {{amount}}",
+    "youOwe": "你欠 {{name}} {{amount}}",
+    "higher": "錢包只計入你在共同帳單中的份額，因此在對方還款前，會比銀行餘額多 {{amount}}。",
+    "lower": "錢包已計入你在共同帳單中的份額，因此在你還款前，會比銀行餘額少 {{amount}}。",
+    "settle": "結清",
+    "even": "錢包只計入你在共同帳單中的份額；{{currency}} 的應收與應付剛好抵銷，因此與銀行餘額一致。"
   }
 }
