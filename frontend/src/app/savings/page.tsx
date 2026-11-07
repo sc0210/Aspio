@@ -270,6 +270,10 @@ function SavingsGroups() {
     [isDemo, refreshGoals, currentUserId],
   );
 
+  // Memoized (and above the early return, like every hook): tabs and modals key effects on it, and a fresh array each render
+  // refetched every partner's settings and wiped a modal's error.
+  const accepted = useMemo(() => connections.filter((c) => c.status === 'accepted'), [connections]);
+
   if (isLoading) {
     return <PageSpinner />;
   }
@@ -280,9 +284,6 @@ function SavingsGroups() {
   const sentPending = connections.filter(
     (c) => c.direction === 'sent' && c.status === 'pending',
   );
-  // Memoized: tabs and modals key effects on it, and a fresh array each render
-  // refetched every partner's settings and wiped a modal's error.
-  const accepted = useMemo(() => connections.filter((c) => c.status === 'accepted'), [connections]);
   const hasPeers = accepted.length > 0;
   // Phones (#344): the goals view only, combined progress first and the roster
   // after it — the compare chart and its stat cards stay on bigger screens.
