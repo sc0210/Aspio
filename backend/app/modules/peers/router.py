@@ -59,6 +59,7 @@ from app.modules.peers.schemas import (
     SettlementOut,
     SettlementRespond,
     SplitCreate,
+    SplitFromTransaction,
     SplitOut,
     SplitRespond,
 )
@@ -379,6 +380,16 @@ async def create_split(body: SplitCreate, current_user: CurrentUser, session: As
     """Your share goes into your ledger now (the whole bill if you paid, until your
     partner accepts); theirs only when they accept, or at once if they auto-accept."""
     split = await SplitService(session).create_split(current_user.id, body)
+    return ApiResponse.success_response(data=split, message="Bill split")
+
+
+@router.post("/splits/from-transaction", response_model=ApiResponse[SplitOut],
+             status_code=status.HTTP_201_CREATED, summary="Split an expense you already recorded")
+async def split_transaction(body: SplitFromTransaction, current_user: CurrentUser,
+                            session: AsyncSession = Depends(get_db)):
+    """You paid it. The expense stays whole until your partner accepts, then holds
+    only your share; withdrawing or a decline hands it back whole."""
+    split = await SplitService(session).split_transaction(current_user.id, body)
     return ApiResponse.success_response(data=split, message="Bill split")
 
 

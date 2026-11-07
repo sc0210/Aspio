@@ -884,6 +884,12 @@
           "declined": "Not received",
           "voided": "Withdrawn"
         }
+      },
+      "existing": {
+        "title": "Split this expense",
+        "noPartner": "Add a partner on Savings first, then you can split bills with them.",
+        "goToSavings": "Go to Savings",
+        "note": "This expense stays whole until {{name}} accepts, then holds only your share. Withdraw it and it’s yours again, unchanged."
       }
     },
     "summary": {

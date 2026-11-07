@@ -17,6 +17,7 @@ import { log } from '@/utils/logger';
 import { usePrivacy } from '@/contexts/PrivacyContext';
 import { useTranslation } from 'react-i18next';
 import { TransactionRow } from './TransactionRow';
+import SplitExpenseModal from './SplitExpenseModal';
 import { SortableDayGrid } from './SortableDayGrid';
 import { apiDate, applyDayOrder } from './dayOrder';
 
@@ -124,6 +125,14 @@ export function TransactionList({ transactions, isLoading, isFetching, isSearchi
   // any parent state change — exactly what the memo is there to prevent.
   const handleDeleteTransaction = useCallback((id: string) => {
     setPendingDeleteId(id);
+  }, []);
+
+  // Read through a ref so the callback stays stable across data refreshes.
+  const [splitTarget, setSplitTarget] = useState<Transaction | null>(null);
+  const transactionsRef = useRef(transactions);
+  transactionsRef.current = transactions;
+  const handleSplitTransaction = useCallback((id: string) => {
+    setSplitTarget(transactionsRef.current.find((tx) => tx.id === id) ?? null);
   }, []);
 
   const confirmDelete = async () => {
@@ -572,6 +581,7 @@ export function TransactionList({ transactions, isLoading, isFetching, isSearchi
                       searchQuery={searchQuery}
                       onSelect={handleSelectTransaction}
                       onDelete={handleDeleteTransaction}
+                      onSplit={isDemo ? undefined : handleSplitTransaction}
                     />
                   )}
                 />
@@ -580,6 +590,14 @@ export function TransactionList({ transactions, isLoading, isFetching, isSearchi
           );
         })
       }
+      {/* Mounted only while open, so the list itself needs no query client. */}
+      {splitTarget && (
+        <SplitExpenseModal
+          transaction={splitTarget}
+          onClose={() => setSplitTarget(null)}
+          onSuccess={() => toast.success(t('transactions:toast.splitSent', 'Sent to your partner'))}
+        />
+      )}
     </div>
   );
 }

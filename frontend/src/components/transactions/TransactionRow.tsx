@@ -8,6 +8,7 @@ import {
   PencilIcon,
   TrashIcon,
   EllipsisVerticalIcon,
+  UsersIcon,
 } from '@heroicons/react/24/outline';
 import { Menu, MenuButton, MenuItems, MenuItem, Transition } from '@headlessui/react';
 import { useTranslation } from 'react-i18next';
@@ -18,6 +19,7 @@ import { highlight } from '@/utils/highlight';
 import { getCategoryIcon } from '@/utils/categoryIcon';
 import { Transaction } from '@/shared/types';
 import { getPaymentMethodColor, getWalletTypeBadge } from './transactionRowStyles';
+import { canSplit } from './SplitExpenseModal';
 
 interface TransactionRowProps {
   transaction: Transaction;
@@ -30,6 +32,8 @@ interface TransactionRowProps {
   searchQuery?: string;
   onSelect: (id: string) => void;
   onDelete: (id: string) => void;
+  /** Split this expense with a partner; omitted where splitting isn't offered (demo). */
+  onSplit?: (id: string) => void;
 }
 
 /**
@@ -55,6 +59,7 @@ function TransactionRowBase({
   searchQuery,
   onSelect,
   onDelete,
+  onSplit,
 }: TransactionRowProps) {
   const { t } = useTranslation(['transactions']);
   // Edit links carry the list view they were opened from, so saving comes back to it.
@@ -199,6 +204,22 @@ function TransactionRowBase({
                               </Link>
                             )}
                           </MenuItem>
+                          {onSplit && canSplit(transaction) && (
+                          <MenuItem>
+                            {({ active }) => (
+                              <button
+                                onClick={() => onSplit(transaction.id)}
+                                className={cn(
+                                  'flex items-center w-full px-4 py-2 text-sm',
+                                  active ? 'bg-gray-100 dark:bg-gray-700 text-gray-900 dark:text-white' : 'text-gray-700 dark:text-gray-300'
+                                )}
+                              >
+                                <UsersIcon className="w-4 h-4 mr-3" />
+                                {t('transactions:list.split', 'Split with partner')}
+                              </button>
+                            )}
+                          </MenuItem>
+                          )}
                           {/* A holding's cash side goes with the holding, and a split share with
                               its split (open while linked); the API refuses either alone. */}
                           {!transaction.holdingId && !transaction.peerSplitShareId && (
