@@ -143,6 +143,23 @@ Projects configured: `setup` (auth), chromium, firefox, webkit, Mobile Chrome, M
 Microsoft Edge, Google Chrome. `tests/auth.setup.ts` establishes the session the other projects
 reuse.
 
+**Two real accounts: `tests/e2e/shared-spending.spec.ts`.** Most specs run as one (often mock)
+session. This one drives split → accept → pay back → confirm with two signed-in partners in two
+browser contexts, against the Docker dev stack:
+
+```bash
+npx playwright test tests/e2e/shared-spending.spec.ts --project=chromium
+```
+
+- **Accounts:** it gets them from `backend/scripts/e2e_split_users.py`, run in the backend
+  container with `docker exec` (container name: `E2E_BACKEND_CONTAINER`, default `aspiro-backend`).
+  Each run resets two `@example.com` accounts with fresh random passwords and wipes their
+  ledgers. Afterwards it deactivates them. The script refuses to run without `ASPIRO_E2E=1`.
+- **Rate limits:** both accounts reach the backend through the Next proxy, so they share one
+  per-IP limit, and the dev `.env` sets it tight (`RATE_LIMIT_BURST=10`). The spec waits out the
+  burst window and reloads instead of failing on a 429. Login is limited to 5 a minute, so leave
+  about a minute between back-to-back runs.
+
 Playwright needs the app running and is not part of the merge gate — run it before shipping
 anything that changes a user flow.
 
