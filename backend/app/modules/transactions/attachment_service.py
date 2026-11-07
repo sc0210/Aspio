@@ -718,6 +718,17 @@ class ImportExportService:
         
         return transaction_data
 
+    async def _shared_bills(self, user_id: str, transactions) -> dict:
+        from app.modules.peers.splits import shared_bill_context
+
+        share_ids = [t.peer_split_share_id for t in transactions if t.peer_split_share_id]
+        return await shared_bill_context(self.db, uuid.UUID(str(user_id)), share_ids)
+
+    @staticmethod
+    def _shared_cells(shared: dict, transaction) -> tuple[str, str]:
+        bill = shared.get(transaction.peer_split_share_id) if transaction.peer_split_share_id else None
+        return (str(bill[0]), bill[2]) if bill else ("", "")
+
     async def export_csv(
         self,
         user_id: str,
@@ -742,6 +753,8 @@ class ImportExportService:
             limit=10000  # Large limit for export
         )
         
+        shared = await self._shared_bills(user_id, transactions)
+
         # Generate CSV
         output = StringIO()
         writer = csv.writer(output)
@@ -749,7 +762,9 @@ class ImportExportService:
         # Write headers
         headers = [
             'Date', 'Type', 'Amount', 'Currency', 'Description',
-            'Category', 'Merchant', 'Payment Method', 'Tags', 'Notes'
+            'Category', 'Merchant', 'Payment Method', 'Tags', 'Notes',
+            # A shared bill's row holds only your share: the whole bill, and who with.
+            'Shared Bill Total', 'Shared With',
         ]
         writer.writerow(headers)
         
@@ -765,7 +780,8 @@ class ImportExportService:
                 transaction.merchant_name or '',
                 transaction.payment_method.value if transaction.payment_method else '',
                 ','.join(transaction.tags) if transaction.tags else '',
-                transaction.notes or ''
+                transaction.notes or '',
+                *self._shared_cells(shared, transaction),
             ])
         
         return output.getvalue()
@@ -792,6 +808,8 @@ class ImportExportService:
             limit=10000,
         )
 
+        shared = await self._shared_bills(user_id, transactions)
+
         wb = openpyxl.Workbook()
         ws = wb.active
         ws.title = "Transactions"
@@ -799,6 +817,7 @@ class ImportExportService:
         headers = [
             "Date", "Type", "Amount", "Currency", "Description",
             "Category", "Merchant", "Payment Method", "Tags", "Notes",
+            "Shared Bill Total", "Shared With",
         ]
 
         header_font = Font(bold=True, color="FFFFFF")
@@ -820,6 +839,9 @@ class ImportExportService:
             ws.cell(row=row_idx, column=8, value=txn.payment_method.value if txn.payment_method else "")
             ws.cell(row=row_idx, column=9, value=",".join(txn.tags) if txn.tags else "")
             ws.cell(row=row_idx, column=10, value=txn.notes or "")
+            bill_total, partner = self._shared_cells(shared, txn)
+            ws.cell(row=row_idx, column=11, value=float(bill_total) if bill_total else "")
+            ws.cell(row=row_idx, column=12, value=partner)
 
         # Auto-fit column widths
         for col in ws.columns:

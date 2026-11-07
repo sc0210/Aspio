@@ -44,6 +44,7 @@ const defaultFilters: TransactionFilters = {
   type: 'all',
   category: 'all',
   walletType: 'all',
+  shared: 'all',
   dateRange: 'month',
   sortBy: 'date',
   sortOrder: 'desc',
@@ -314,5 +315,21 @@ describe('ExpenseGroupSummary', () => {
       expect(screen.getAllByText('篩選範圍內無支出記錄').length).toBeGreaterThanOrEqual(1);
       expect(screen.queryByText('無法載入此區塊')).toBeNull();
     });
+  });
+});
+
+describe('ExpenseGroupSummary shared-bills filter', () => {
+  it('turns the shared-bills filter on', () => {
+    const onFiltersChange = jest.fn();
+    render(
+      <ExpenseGroupSummary
+        {...defaultProps}
+        onFiltersChange={onFiltersChange}
+        categoryBreakdown={[]}
+        expenseCategoryBreakdown={[]}
+      />
+    );
+    fireEvent.click(screen.getByRole('checkbox', { name: '只看共同支出' }));
+    expect(onFiltersChange).toHaveBeenCalledWith(expect.objectContaining({ shared: 'shared' }));
   });
 });
