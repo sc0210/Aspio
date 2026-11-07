@@ -415,6 +415,7 @@
     "verifyBody": "Low confidence detected. Please review and correct if needed.",
     "verifyTitle": "Please verify details"
   },
+  "splitBadge": "Split",
   "stats": {
     "averageTransaction": "Average Transaction",
     "hideTransfers": "Hide transfers",

@@ -359,6 +359,10 @@ class TransactionResponse(TransactionBase, TimestampMixin):
         None,
         description="The loan this expense is applied to (reduces its balance); null otherwise",
     )
+    peer_split_share_id: Optional[str] = Field(
+        None,
+        description="Set when this row is your share of a bill split with a peer",
+    )
     holding_id: Optional[str] = Field(
         None,
         description="The portfolio holding this row is the cash leg of; null otherwise",
@@ -379,6 +383,7 @@ class TransactionResponse(TransactionBase, TimestampMixin):
         "transfer_group_id",
         "loan_id",
         "holding_id",
+        "peer_split_share_id",
         mode="before",
     )
     @classmethod

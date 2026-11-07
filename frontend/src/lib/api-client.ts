@@ -13,7 +13,8 @@ import {
   CompareDataResponse,
   SharedGoalOut,
   SharedGoalCreate,
-  SavingRecord, SharedGoalUpdate } from '@/shared/types';
+  SavingRecord, SharedGoalUpdate,
+  SplitCreate, SplitOut, PeerBalanceOut, PeerPrefsOut, SplitPolicy, SettlementCreate, SettlementOut } from '@/shared/types';
 import { getSession } from 'next-auth/react';
 import { getPublicApiUrl, getServerApiUrl } from '@/lib/api-url';
 export interface GamificationStats {
@@ -577,6 +578,58 @@ class ApiClient {
 
   async updateSharedGoal(goalId: string, data: SharedGoalUpdate): Promise<ApiResponse<SharedGoalOut>> {
     return this.patch<SharedGoalOut>(`/peers/goals/${goalId}`, data);
+  }
+
+  // ── Split bills ──────────────────────────────────────────────────────────
+  async createSplit(data: SplitCreate): Promise<ApiResponse<SplitOut>> {
+    return this.post<SplitOut>('/peers/splits', data);
+  }
+
+  async listSplits(): Promise<ApiResponse<SplitOut[]>> {
+    return this.get<SplitOut[]>('/peers/splits');
+  }
+
+  async getSplitBalances(): Promise<ApiResponse<PeerBalanceOut[]>> {
+    return this.get<PeerBalanceOut[]>('/peers/splits/balances');
+  }
+
+  async respondToSplit(
+    splitId: string,
+    body: { action: 'accept' | 'decline'; category_id?: string | null; wallet_type?: 'life' | 'emergency' },
+  ): Promise<ApiResponse<SplitOut>> {
+    return this.post<SplitOut>(`/peers/splits/${splitId}/respond`, body);
+  }
+
+  async voidSplit(splitId: string): Promise<ApiResponse<SplitOut>> {
+    return this.post<SplitOut>(`/peers/splits/${splitId}/void`, {});
+  }
+
+  async cancelSplit(splitId: string): Promise<ApiResponse<SplitOut>> {
+    return this.post<SplitOut>(`/peers/splits/${splitId}/cancel`, {});
+  }
+
+  async createSettlement(body: SettlementCreate): Promise<ApiResponse<SettlementOut>> {
+    return this.post<SettlementOut>('/peers/splits/settlements', body);
+  }
+
+  async listSettlements(): Promise<ApiResponse<SettlementOut[]>> {
+    return this.get<SettlementOut[]>('/peers/splits/settlements');
+  }
+
+  async respondToSettlement(settlementId: string, action: 'confirm' | 'decline'): Promise<ApiResponse<SettlementOut>> {
+    return this.post<SettlementOut>(`/peers/splits/settlements/${settlementId}/respond`, { action });
+  }
+
+  async voidSettlement(settlementId: string): Promise<ApiResponse<SettlementOut>> {
+    return this.post<SettlementOut>(`/peers/splits/settlements/${settlementId}/void`, {});
+  }
+
+  async getPeerPrefs(connectionId: string): Promise<ApiResponse<PeerPrefsOut>> {
+    return this.get<PeerPrefsOut>(`/peers/${connectionId}/prefs`);
+  }
+
+  async setPeerPrefs(connectionId: string, splitPolicy: SplitPolicy): Promise<ApiResponse<PeerPrefsOut>> {
+    return this.patch<PeerPrefsOut>(`/peers/${connectionId}/prefs`, { split_policy: splitPolicy });
   }
 
   async deleteSharedGoal(goalId: string): Promise<ApiResponse<null>> {

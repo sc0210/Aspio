@@ -415,6 +415,7 @@
     "verifyBody": "辨識信心度偏低，請檢查並視需要修正。",
     "verifyTitle": "請確認明細"
   },
+  "splitBadge": "分帳",
   "stats": {
     "averageTransaction": "平均交易金額",
     "hideTransfers": "排除轉帳",

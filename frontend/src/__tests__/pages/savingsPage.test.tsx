@@ -162,7 +162,14 @@ describe('/savings — goals and compare as tabs over one roster', () => {
 
     screen.getByRole('tab', { name: 'savings.tabs.goals' }).focus();
     await user.keyboard('{ArrowRight}');
-    expect(mockReplace).toHaveBeenLastCalledWith('/savings?tab=compare', { scroll: false });
+    expect(mockReplace).toHaveBeenLastCalledWith('/savings?tab=splits', { scroll: false });
+  });
+
+  it('opens Shared spending from ?tab=splits; demo mode explains it needs an account', async () => {
+    mockSearch = new URLSearchParams('tab=splits');
+    render(<SavingsPage />);
+    expect(await screen.findByRole('tab', { name: 'savings.tabs.splits', selected: true })).toBeInTheDocument();
+    expect(screen.getByText(/Sign in to split bills with a partner/)).toBeInTheDocument();
   });
 
   it("moves a goal's totals when a deposit is recorded in demo mode", async () => {

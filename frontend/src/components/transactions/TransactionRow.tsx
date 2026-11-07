@@ -92,6 +92,14 @@ function TransactionRowBase({
                 </p>
                 <div className="flex flex-wrap items-center gap-1 text-xs text-gray-500 dark:text-gray-400 min-w-0">
                   <span className="flex-shrink-0">{searchQuery ? highlight(transaction.category, searchQuery) : transaction.category}</span>
+                  {transaction.peerSplitShareId && (
+                    <>
+                      <span className="flex-shrink-0">•</span>
+                      <span className="flex-shrink-0 px-1.5 py-0.5 rounded-full font-medium whitespace-nowrap bg-indigo-50 text-indigo-700 dark:bg-indigo-900/30 dark:text-indigo-300">
+                        {t('transactions:splitBadge', 'Split')}
+                      </span>
+                    </>
+                  )}
                   {/* Wallet Type Badge - Always visible */}
                   <>
                     <span className="flex-shrink-0">•</span>
@@ -191,8 +199,9 @@ function TransactionRowBase({
                               </Link>
                             )}
                           </MenuItem>
-                          {/* A holding's cash side goes with the holding (the API refuses it alone). */}
-                          {!transaction.holdingId && (
+                          {/* A holding's cash side goes with the holding, and a split share with
+                              its split (open while linked); the API refuses either alone. */}
+                          {!transaction.holdingId && !transaction.peerSplitShareId && (
                           <MenuItem>
                             {({ active }) => (
                               <button

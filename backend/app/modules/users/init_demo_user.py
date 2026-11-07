@@ -99,8 +99,12 @@ async def detach_demo_from_peers(session: AsyncSession, demo_user_id: uuid.UUID)
             )
         )
     )).scalars().all()
+    from app.modules.peers.splits import SplitService
+
     for conn in rows:
         conn.status = PeerStatus.REMOVED
+        # Same as a user removing a partner: no split left open or locked.
+        await SplitService(session).close_for_removed_connection(conn.id)
     if rows:
         await session.commit()
         logger.info("Removed %d peer connection(s) involving the demo account", len(rows))

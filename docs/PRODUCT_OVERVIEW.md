@@ -27,7 +27,7 @@ What makes it specific rather than generic:
 | Transactions | `/transactions`, `/add`, `/edit/[id]`, `/monthly-summary`, `/scan` | Income/expense CRUD, categories, filters, transfers between Life and Emergency, receipt scanning via local OCR, CSV import |
 | Portfolio | `/portfolio`, `/add`, `/edit/[id]`, `/holdings/[symbol]`, `/trend` | Holdings, live and historical prices, per-holding drill-down, allocation, performance, IRR |
 | Rebalancing | `/rebalancing` | Deviation detection against target allocation, buy/sell quantities, fee estimation, FX conversion timing |
-| Goals & savings | `/goals`, `/savings`, `/achievements` | Savings goals, milestones, contributions, streaks and achievement badges. `/savings` is saving with peers: one roster, a Shared goals tab and a Compare tab (`/compare` redirects to it) |
+| Goals & savings | `/goals`, `/savings`, `/achievements` | Savings goals, milestones, contributions, streaks and achievement badges. `/savings` is money with peers: one roster, a Shared goals tab, a Shared spending tab (split bills and settle up; see `FINANCIAL_TERMINOLOGY.md`) and a Compare tab (`/compare` redirects to it) |
 | Loans | `/loans` | Peer loan tracking; an expense can repay a loan via `loan_id` |
 | Groups | `/groups`, `/groups/[id]` | Shared expenses and settlement, fed by LINE group splitting |
 | Housing | `/housing` | Client-side buy-vs-rent simulator, readiness scorecard, car-impact panel |

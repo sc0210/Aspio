@@ -799,6 +799,93 @@
     "selectPeer": "與夥伴",
     "sendInvite": "發送邀請",
     "sending": "發送中…",
+    "splits": {
+      "new": "分帳",
+      "newTitle": "分攤帳單",
+      "with": "與誰分攤",
+      "description": "消費內容",
+      "descriptionPlaceholder": "例如：晚餐、日用品、房租",
+      "total": "總額",
+      "currency": "幣別",
+      "date": "日期",
+      "category": "分類",
+      "whoPaid": "誰付的錢？",
+      "paidByMe": "我付的",
+      "paidByPartner": "{{name}} 付的",
+      "how": "分攤方式",
+      "myPercent": "我的比例（%）",
+      "myAmount": "我的金額",
+      "preview": "約為 — 你：{{mine}} · {{name}}：{{theirs}}",
+      "consentNote": "{{name}} 接受後才會記入對方的帳戶。",
+      "submit": "送出分帳",
+      "intro": "分攤帳單後，你們各自只記自己負擔的部分。",
+      "balances": "帳款",
+      "settled": "已兩清",
+      "owesYou": "{{name}} 欠你 {{amount}}",
+      "youOwe": "你欠 {{name}} {{amount}}",
+      "policyLabel": "來自 {{name}} 的帳單",
+      "inbox": "等你回覆",
+      "yourShare": "你的部分：{{amount}}",
+      "youPaid": "你付的",
+      "theyPaid": "{{name}} 付的",
+      "history": "共同帳單",
+      "empty": "還沒有共同帳單。",
+      "shares": "你 {{mine}} / {{name}} {{theirs}}",
+      "withdraw": "撤回",
+      "cancel": "取消分帳",
+      "confirmCancelTitle": "取消這筆分帳？",
+      "confirmCancelMessage": "整筆帳單將回到你的帳上，{{name}} 那部分會從對方帳戶移除。",
+      "demoNote": "登入後即可與夥伴分攤帳單，各自只記自己的部分。",
+      "method": {
+        "equal": "各半",
+        "percent": "%",
+        "fixed": "金額",
+        "fixedLabel": "金額"
+      },
+      "policy": {
+        "approve_each": "每次詢問我",
+        "auto_accept": "自動記入我的帳戶",
+        "off": "不允許"
+      },
+      "status": {
+        "proposed": "等待回覆",
+        "active": "已接受",
+        "declined": "已婉拒",
+        "voided": "已取消"
+      },
+      "errors": {
+        "createFailed": "分帳失敗",
+        "loadFailed": "無法載入共同帳單",
+        "actionFailed": "操作失敗",
+        "shareTooBig": "你的部分必須介於 0 與總額之間。"
+      },
+      "settle": {
+        "button": "結清",
+        "receivedTitle": "{{name}} 已還款給你",
+        "paidTitle": "你已還款給 {{name}}",
+        "amount": "金額（{{currency}}）",
+        "tooMuch": "尚欠金額只有 {{amount}}。",
+        "note": "備註（選填）",
+        "notePlaceholder": "例如：轉帳、現金",
+        "receivedNote": "這會減少 {{name}} 欠你的金額。兩邊帳戶都不會變動：各自只記錄自己的份額。",
+        "paidNote": "需等 {{name}} 確認收到才會計入。兩邊帳戶都不會變動：各自只記錄自己的份額。",
+        "submitReceived": "記錄還款",
+        "submitPaid": "送出待確認",
+        "confirmPrompt": "{{name}} 表示已還你 {{amount}}",
+        "confirm": "已收到",
+        "decline": "沒收到",
+        "history": "還款紀錄",
+        "youPaid": "你還給 {{name}} {{amount}}",
+        "theyPaid": "{{name}} 還你 {{amount}}",
+        "undo": "復原",
+        "status": {
+          "proposed": "待確認",
+          "confirmed": "已確認",
+          "declined": "未收到",
+          "voided": "已撤回"
+        }
+      }
+    },
     "summary": {
       "active": "進行中",
       "aria": "共同儲蓄進度：{{pct}}%",
@@ -810,7 +897,8 @@
     "tabs": {
       "compare": "比較",
       "goals": "共同目標",
-      "label": "共同儲蓄檢視"
+      "label": "共同儲蓄檢視",
+      "splits": "共同支出"
     },
     "target": "目標",
     "targetAmountLabel": "目標金額",
