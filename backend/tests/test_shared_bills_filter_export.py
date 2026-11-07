@@ -75,3 +75,34 @@ async def test_excel_export_has_the_same_columns(async_session, couple):
 async def test_list_route_takes_the_filter(authenticated_client):
     r = authenticated_client.get("/api/v1/transactions/?shared_only=true")
     assert r.status_code == 200, r.text[:200]
+
+
+async def test_page_stats_follow_the_filter(async_session, couple):
+    c = couple
+    await _setup(async_session, c)
+    txs = TransactionService(TransactionRepository(async_session), TransactionCategoryRepository(async_session),
+                             RecurringTransactionRepository(async_session))
+    shared = await txs.get_page_stats(str(c["alice"].id), TransactionFilter(shared_only=True))
+    everything = await txs.get_page_stats(str(c["alice"].id), TransactionFilter())
+    assert (shared["stats"]["total_expenses"], everything["stats"]["total_expenses"]) == (500, 800)
+
+
+@pytest.mark.parametrize("name", ["=1+1", "+cmd", "-2", "@SUM(A1)", "\tx"])
+async def test_a_formula_like_partner_name_is_exported_as_text(async_session, couple, name):
+    """The partner chooses their name; in your export it must not run as a formula."""
+    import openpyxl
+
+    c = couple
+    c["bob"].name = name
+    await async_session.commit()
+    await _setup(async_session, c)
+    txs = TransactionService(TransactionRepository(async_session), TransactionCategoryRepository(async_session),
+                             RecurringTransactionRepository(async_session))
+    svc = ImportExportService(async_session, txs)
+    rows = {r["Description"]: r for r in csv.DictReader(io.StringIO(await svc.export_csv(str(c["alice"].id))))}
+    assert rows["Dinner"]["Shared With"] == "'" + name
+    ws = openpyxl.load_workbook(io.BytesIO(await svc.export_excel(str(c["alice"].id)))).active
+    dinner = next(r for r in ws.iter_rows(min_row=2) if r[4].value == "Dinner")
+    # Excel types the cell as text, so the name is stored exactly, never as a formula.
+    assert dinner[11].value == name and dinner[11].data_type == "s"
+    assert float(dinner[10].value) == 1000.0 and dinner[10].number_format == "0.00"

@@ -504,6 +504,13 @@ class AttachmentService:
             logger.error(f"Failed to save file {file_path}: {str(e)}")
             raise HTTPException(status_code=500, detail="Failed to save file")
 
+def _safe_cell(text: str) -> str:
+    """A value someone else chose (a partner's display name), made inert for a
+    spreadsheet: one starting with = + - @ or a tab/CR is a formula to Excel and
+    would run when the export is opened. A leading apostrophe makes it text."""
+    return f"'{text}" if text and text[0] in "=+-@\t\r" else text
+
+
 class ImportExportService:
     """Service for importing and exporting transaction data"""
     
@@ -729,6 +736,11 @@ class ImportExportService:
         bill = shared.get(transaction.peer_split_share_id) if transaction.peer_split_share_id else None
         return (str(bill[0]), bill[2]) if bill else ("", "")
 
+    @classmethod
+    def _csv_shared_cells(cls, shared: dict, transaction) -> tuple[str, str]:
+        total, partner = cls._shared_cells(shared, transaction)
+        return total, _safe_cell(partner)  # CSV has no cell types: neutralise by prefix
+
     async def export_csv(
         self,
         user_id: str,
@@ -781,7 +793,7 @@ class ImportExportService:
                 transaction.payment_method.value if transaction.payment_method else '',
                 ','.join(transaction.tags) if transaction.tags else '',
                 transaction.notes or '',
-                *self._shared_cells(shared, transaction),
+                *self._csv_shared_cells(shared, transaction),
             ])
         
         return output.getvalue()
@@ -840,8 +852,13 @@ class ImportExportService:
             ws.cell(row=row_idx, column=9, value=",".join(txn.tags) if txn.tags else "")
             ws.cell(row=row_idx, column=10, value=txn.notes or "")
             bill_total, partner = self._shared_cells(shared, txn)
-            ws.cell(row=row_idx, column=11, value=float(bill_total) if bill_total else "")
-            ws.cell(row=row_idx, column=12, value=partner)
+            if bill_total:  # the exact amount, not a float of it
+                ws.cell(row=row_idx, column=11, value=Decimal(bill_total)).number_format = "0.00"
+            # Excel has cell types: store the name as plain text, exactly as written,
+            # so a name like "=1+1" is never evaluated (openpyxl would make it a formula).
+            name_cell = ws.cell(row=row_idx, column=12)
+            name_cell.value = partner
+            name_cell.data_type = "s"
 
         # Auto-fit column widths
         for col in ws.columns:

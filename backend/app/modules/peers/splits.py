@@ -748,6 +748,8 @@ async def shared_bill_context(session: AsyncSession, user_id: UUID,
         .where(PeerSplitShare.id.in_(share_ids))
     )).all()
     split_ids = [split_id for _, split_id, _, _ in bills]
+    # A split is two people (create_split makes exactly two shares), so the one
+    # share that isn't the user's is the partner.
     partners = dict((await session.execute(
         select(PeerSplitShare.split_id, User.name)
         .join(User, User.id == PeerSplitShare.user_id)
