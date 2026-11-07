@@ -43,7 +43,9 @@ export default function SavingRecordsModal({
   onRecordChanged,
 }: SavingRecordsModalProps) {
   const { t } = useTranslation('common');
-  const { panelRef, dialogProps } = useDialog({ isOpen: true, onClose: onClose });
+  // Always mounted by /savings, so open only while a goal is shown: a constant
+  // true held the page's scroll lock for as long as you were on it.
+  const { panelRef, dialogProps } = useDialog({ isOpen: goal !== null, onClose });
   const [records, setRecords] = useState<SavingRecord[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
