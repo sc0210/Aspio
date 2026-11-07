@@ -16,7 +16,11 @@ from sqlalchemy import select
 
 from app.modules.peers.models import PeerSplit
 from app.modules.peers.schemas import SplitFromTransaction
-from app.modules.transactions.models import Transaction, TransactionType, TransactionWalletType
+from app.core.exceptions import BusinessLogicException
+from app.modules.peers.service import PeerService
+from app.modules.transactions.models import (
+    Transaction, TransactionStatus, TransactionType, TransactionWalletType,
+)
 from app.modules.transactions.repositories import TransactionRepository
 from test_peer_splits import _rows, couple  # noqa: F401  (fixture)
 
@@ -90,6 +94,7 @@ async def test_auto_accept_splits_it_at_once(async_session, couple):
     ({"transfer_group_id": uuid.uuid4()}, "transfer"),
     ({"loan_id": uuid.uuid4()}, "loan"),
     ({"holding_id": uuid.uuid4()}, "holding"),
+    ({"status": TransactionStatus.PENDING}, "completed"),
 ])
 async def test_rows_that_cannot_be_split(async_session, couple, extra, message):
     c = couple
@@ -136,3 +141,33 @@ async def test_split_route_resolves_over_http(authenticated_client):
     r = authenticated_client.post("/api/v1/peers/splits/from-transaction",
                                   json={"transaction_id": str(uuid.uuid4()), "connection_id": str(uuid.uuid4())})
     assert r.status_code == 404, r.text[:200]  # no such connection, not a routing miss
+
+
+async def test_removing_the_partner_leaves_the_expense_whole(async_session, couple):
+    c = couple
+    txn_id = await _expense(async_session, c)
+    await c["svc"].split_transaction(c["alice"].id, _body(c, txn_id))
+    await PeerService(async_session).remove_connection(c["conn"].id, c["alice"].id)
+    row = await _row(async_session, txn_id)
+    assert (row.is_deleted, row.amount, row.peer_split_share_id) == (False, Decimal("1000"), None)
+
+
+async def test_an_open_split_row_cannot_be_linked_to_a_loan(async_session, couple):
+    from app.modules.transactions.repositories import (
+        RecurringTransactionRepository, TransactionCategoryRepository,
+    )
+    from app.modules.transactions.schemas import TransactionUpdate
+    from app.modules.transactions.services import TransactionService
+
+    c = couple
+    txn_id = await _expense(async_session, c)
+    await c["svc"].split_transaction(c["alice"].id, _body(c, txn_id))
+    txs = TransactionService(TransactionRepository(async_session), TransactionCategoryRepository(async_session),
+                             RecurringTransactionRepository(async_session))
+    alice = str(c["alice"].id)
+    with pytest.raises(BusinessLogicException) as err:
+        await txs.update_transaction(str(txn_id), alice, TransactionUpdate(loan_id=str(uuid.uuid4())))
+    assert "loan_id" in err.value.details["fields"]
+    # Resending no loan (as an edit form does) is not a change.
+    await txs.update_transaction(str(txn_id), alice, TransactionUpdate(loan_id=None, description="Weekly groceries"))
+    assert (await _row(async_session, txn_id)).description == "Weekly groceries"

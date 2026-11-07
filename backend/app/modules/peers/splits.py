@@ -747,6 +747,8 @@ def _unsplittable(row: Transaction) -> Optional[str]:
     if row.loan_id is not None:
         # Accepting would shrink the row and leave the loan's balance wrong.
         return "An expense that repays a loan can't be split"
+    if row.status != TransactionStatus.COMPLETED:
+        return "Only a completed expense can be split"
     if row.amount is None or Decimal(row.amount) <= 0:
         return "Only an expense with an amount can be split"
     return None

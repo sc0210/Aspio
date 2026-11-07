@@ -599,14 +599,19 @@ class TransactionService:
 
         # A share of a bill split with a peer: its money follows the split while
         # the split is open, so only the row's own fields (description, notes,
-        # tags, category, payment method) change here.
-        if self._HOLDING_OWNED_FIELDS & data.keys():
+        # tags, category, payment method) change here. Nor may it gain or lose a
+        # loan: accepting or cancelling resizes the row, which would leave the
+        # loan's balance out of step.
+        if (self._HOLDING_OWNED_FIELDS | {"loan_id"}) & data.keys():
             stored = await self.transaction_repo.get_by_id(transaction_id, user_id)
             if stored is not None and await self._split_is_open(stored):
                 changed = [
                     field for field in self._HOLDING_OWNED_FIELDS & data.keys()
                     if not self._same_value(getattr(stored, field), data[field])
                 ]
+                if "loan_id" in data and (str(data["loan_id"]) if data["loan_id"] else None) != (
+                        str(stored.loan_id) if stored.loan_id else None):
+                    changed.append("loan_id")
                 if changed:
                     raise BusinessLogicException(
                         "This entry is your share of a bill split with your partner. "
