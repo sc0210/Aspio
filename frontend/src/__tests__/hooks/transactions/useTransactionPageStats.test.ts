@@ -21,7 +21,7 @@ const dualMode = useDualModeQuery as jest.Mock;
 const getPageStats = transactionService.getPageStats as jest.Mock;
 
 const all: TransactionFilters = {
-  type: 'all', category: 'all', walletType: 'all', dateRange: 'all',
+  type: 'all', category: 'all', walletType: 'all', shared: 'all', dateRange: 'all',
   sortBy: 'date', sortOrder: 'desc', startDate: '', endDate: '',
 };
 
@@ -57,7 +57,7 @@ it('keys on every filter, the search, the window, the toggle and the demo revisi
   const range = { start: new Date('2026-10-01T00:00:00Z'), end: new Date('2026-10-31T00:00:00Z') };
   const { key } = render({ ...all, type: 'expense', category: 'Dining' }, 'ra', range, true);
   expect(key).toEqual([
-    'transaction-page-stats', 'expense', 'Dining', 'all', 'ra',
+    'transaction-page-stats', 'expense', 'Dining', 'all', 'all', 'ra',
     range.start.toISOString(), range.end.toISOString(), true, 3,
   ]);
 });
@@ -123,6 +123,14 @@ describe('demo computation', () => {
     ['blank query', '   ', ['old', 'ramen', 'salary', 'taxi']],
   ])('searches by %s', (_label, query, expected) => {
     expect(ids(render(all, query).demoFn())).toEqual(expected);
+  });
+
+  it('keeps only shared-bill rows when asked', () => {
+    (useDemo as jest.Mock).mockReturnValue({
+      demoTransactions: [...fixtures, tx({ id: 'dinner', amount: 500, peerSplitShareId: 'share-1' })],
+      demoRevision: 3,
+    });
+    expect(ids(render({ ...all, shared: 'shared' }).demoFn())).toEqual(['dinner']);
   });
 
   it('applies category and wallet filters to the totals but not the dropdown breakdown', () => {

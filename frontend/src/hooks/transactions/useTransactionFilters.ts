@@ -9,6 +9,8 @@ export interface TransactionFilters {
   type: string;
   category: string;
   walletType: string;
+  /** 'shared': only your share of bills split with a partner. */
+  shared: string;
   dateRange: string;
   sortBy: string;
   sortOrder: string;
@@ -26,6 +28,7 @@ const DEFAULT_FILTERS: TransactionFilters = {
   type: 'all',
   category: 'all',
   walletType: 'all',
+  shared: 'all',
   dateRange: 'month',
   sortBy: 'date',
   sortOrder: 'desc',
@@ -49,6 +52,7 @@ const PARAM: Record<keyof TransactionFilters, string> = {
   type: 'type',
   category: 'category',
   walletType: 'wallet',
+  shared: 'shared',
   dateRange: 'range',
   sortBy: 'sort',
   sortOrder: 'order',
@@ -69,6 +73,7 @@ const SEARCH_PARAM = 'q';
 const ALLOWED: Partial<Record<keyof TransactionFilters, readonly string[]>> = {
   type: ['all', 'income', 'expense', 'transfer'],
   walletType: ['all', 'life', 'emergency'],
+  shared: ['all', 'shared'],
   dateRange: ['all', '7d', 'month', '30d', '90d', '1y', 'custom'],
   sortBy: ['date', 'amount', 'category', 'description'],
   sortOrder: ['asc', 'desc'],
@@ -98,6 +103,7 @@ function filtersFromParams(params: URLSearchParams): TransactionFilters {
     type: readFilter(params, 'type'),
     category: readFilter(params, 'category'),
     walletType: readFilter(params, 'walletType'),
+    shared: readFilter(params, 'shared'),
     dateRange: readFilter(params, 'dateRange'),
     sortBy: readFilter(params, 'sortBy'),
     sortOrder: readFilter(params, 'sortOrder'),
@@ -272,8 +278,12 @@ export function useTransactionFilters() {
       });
     }
 
+    if (filters.shared === 'shared') {
+      activeFilterList.push({ key: 'shared', label: '🤝 Shared bills', value: filters.shared });
+    }
+
     return activeFilterList;
-  }, [filters.type, filters.category, filters.dateRange, filters.startDate, filters.endDate, filters.walletType]);
+  }, [filters.type, filters.category, filters.dateRange, filters.startDate, filters.endDate, filters.walletType, filters.shared]);
 
   const removeFilter = useCallback((key: string) => {
     setFilters(prev => ({

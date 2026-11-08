@@ -114,7 +114,8 @@
       "emergency": "緊急錢包",
       "life": "生活錢包"
     },
-    "walletType": "錢包類型"
+    "walletType": "錢包類型",
+    "sharedOnly": "只看共同支出"
   },
   "form": {
     "addTag": "新增",
