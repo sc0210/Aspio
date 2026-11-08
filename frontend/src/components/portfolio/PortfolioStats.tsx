@@ -12,7 +12,7 @@ import {
   ScaleIcon
 } from '@heroicons/react/24/outline';
 import { cn } from '@/utils/cn';
-import { direction } from '@/components/dashboard/direction';
+import { direction, type Direction } from '@/components/dashboard/direction';
 import { areRatesLive, formatCurrency, getUnconvertedCurrencies } from '@/utils/formatters';
 import { lastSessionWeekday } from '@/utils/marketStatus';
 import type { PortfolioHolding } from '@/shared/types';
@@ -73,7 +73,8 @@ interface PortfolioStatsProps {
 const formatPercentage = (value: number | string) => {
   const numValue = typeof value === 'string' ? parseFloat(value) : value;
   if (isNaN(numValue)) return '0.00%';
-  return `${numValue >= 0 ? '+' : ''}${numValue.toFixed(2)}%`;
+  const shown = asShown(numValue, 2); // no "+0.00%" / "-0.00%" beside a flat figure
+  return `${shown > 0 ? '+' : ''}${shown.toFixed(2)}%`;
 };
 
 // CSS-based Tooltip component (replaces framer-motion version)
@@ -126,6 +127,21 @@ function useConversionNote(t: (key: string, opts?: Record<string, unknown>) => s
   return null;
 }
 
+
+/**
+ * A money figure rounded as it's displayed, so its colour and sign match what the
+ * reader sees: halves go away from zero, as the currency formatter does, and
+ * `|| 0` drops −0 (and NaN). Otherwise +0.4 reads as a green "+NT$0".
+ */
+function asShown(value: number, digits = 0): number {
+  const scale = 10 ** digits;
+  return (Math.sign(value) * Math.round(Math.abs(value) * scale)) / scale || 0;
+}
+
+/** Picks the gain, loss or flat (grey, no sign) variant for a direction. */
+const toneOf = (d: Direction) => (up: string, down: string, flat: string) =>
+  d === 'up' ? up : d === 'down' ? down : flat;
+
 export function PortfolioStats({ portfolio, performance, isValueVisible, apiStatus: _apiStatus = 'connected', showPerformancePeriods = false, onTodayChangeClick, onViewTrendClick, isLoading = false, riskMetrics, dividendIncome, realizedPnl }: PortfolioStatsProps) {
   // Get sidebar state to determine if we should show compact numbers
   const { sidebarCollapsed: _sidebarCollapsed } = useSidebar();
@@ -159,13 +175,15 @@ export function PortfolioStats({ portfolio, performance, isValueVisible, apiStat
 
   // Calculate today's P/L (use performance.oneDay if todayGainLoss not provided)
   const todayChange = portfolio.todayGainLoss ?? (portfolio.totalValue * (performance.oneDay / 100));
-  // Zero is flat (grey, no sign), not a gain: a quiet day read "+NT$0" in green.
-  // Rounded as displayed (whole units), so ±0.4 isn't a "+NT$0" or "-NT$0"; `|| 0` drops −0.
-  // Halves round away from zero, as the currency formatter does (Math.round takes −2.5 to −2).
-  const todayShown = Math.sign(todayChange) * Math.round(Math.abs(todayChange)) || 0;
+  const todayShown = asShown(todayChange);
   const todayDir = direction(todayShown);
-  const tone = (up: string, down: string, flat: string) =>
-    todayDir === 'up' ? up : todayDir === 'down' ? down : flat;
+  const tone = toneOf(todayDir);
+  const totalShown = asShown(portfolio.totalGainLoss);
+  const totalDir = direction(totalShown);
+  const totalTone = toneOf(totalDir);
+  const realizedShown = asShown(realizedPnl?.realizedGainLoss ?? 0);
+  const realizedDir = direction(realizedShown);
+  const realizedTone = toneOf(realizedDir);
   const todayChangePercent = portfolio.todayGainLossPercentage ?? performance.oneDay;
   const _hasTodayData = todayChange !== 0 || todayChangePercent !== 0;
 
@@ -231,13 +249,13 @@ export function PortfolioStats({ portfolio, performance, isValueVisible, apiStat
                   <p
                     className={cn(
                       "text-base font-bold tabular-nums transition-all duration-200",
-                      period.dollarValue >= 0 ? 'text-success-700 dark:text-success-400' : 'text-error-700 dark:text-error-400'
+                      toneOf(direction(asShown(period.dollarValue, 2)))('text-success-700 dark:text-success-400', 'text-error-700 dark:text-error-400', 'text-gray-500 dark:text-gray-400')
                     )}
                   >
                     {isValueVisible ? (
                       <>
-                        {period.dollarValue >= 0 ? '+' : ''}
-                        {formatCurrency(period.dollarValue, portfolio.currency)}
+                        {asShown(period.dollarValue, 2) > 0 ? '+' : ''}
+                        {formatCurrency(asShown(period.dollarValue, 2), portfolio.currency)}
                       </>
                     ) : (
                       '•••••'
@@ -295,45 +313,41 @@ export function PortfolioStats({ portfolio, performance, isValueVisible, apiStat
               <Tooltip content={t('portfolio:stats.totalGainTooltip')}>
                 <div className={cn(
                   "w-full relative overflow-hidden rounded-xl p-4 border shadow-sm hover:shadow-md transition-all duration-300 group min-h-[110px]",
-                  portfolio.totalGainLoss >= 0
-                    ? 'bg-gradient-to-br from-success-50 via-white to-success-50/30 dark:from-success-900/10 dark:via-gray-800/50 dark:to-success-900/5 border-success-200/50 dark:border-success-800/30'
-                    : 'bg-gradient-to-br from-error-50 via-white to-error-50/30 dark:from-error-900/10 dark:via-gray-800/50 dark:to-error-900/5 border-error-200/50 dark:border-error-800/30'
+                  totalTone('bg-gradient-to-br from-success-50 via-white to-success-50/30 dark:from-success-900/10 dark:via-gray-800/50 dark:to-success-900/5 border-success-200/50 dark:border-success-800/30', 'bg-gradient-to-br from-error-50 via-white to-error-50/30 dark:from-error-900/10 dark:via-gray-800/50 dark:to-error-900/5 border-error-200/50 dark:border-error-800/30', 'bg-gradient-to-br from-gray-50 via-white to-gray-50/30 dark:from-gray-800/40 dark:via-gray-800/50 dark:to-gray-800/20 border-gray-200 dark:border-gray-700')
                 )}>
                   <div className={cn(
                     "absolute top-0 right-0 w-20 h-20 rounded-full -mr-10 -mt-10 group-hover:scale-150 transition-transform duration-500",
-                    portfolio.totalGainLoss >= 0 ? 'bg-success-500/8 dark:bg-success-500/15' : 'bg-error-500/8 dark:bg-error-500/15'
+                    totalTone('bg-success-500/8 dark:bg-success-500/15', 'bg-error-500/8 dark:bg-error-500/15', 'bg-gray-500/8 dark:bg-gray-500/15')
                   )}></div>
                   <div className="relative flex items-center gap-2 sm:gap-2.5 md:gap-3">
                     <div className={cn(
                       'flex-shrink-0 p-2.5 rounded-lg shadow-sm group-hover:scale-110 transition-transform duration-300',
-                      portfolio.totalGainLoss >= 0
-                        ? 'bg-success-100 dark:bg-success-900/30'
-                        : 'bg-error-100 dark:bg-error-900/30'
+                      totalTone('bg-success-100 dark:bg-success-900/30', 'bg-error-100 dark:bg-error-900/30', 'bg-gray-100 dark:bg-gray-700/40')
                     )}>
                       <ChartBarIcon className={cn(
                         'w-6 h-6',
-                        portfolio.totalGainLoss >= 0 ? 'text-success-700 dark:text-success-400' : 'text-error-700 dark:text-error-400'
+                        totalTone('text-success-700 dark:text-success-400', 'text-error-700 dark:text-error-400', 'text-gray-500 dark:text-gray-400')
                       )} />
                     </div>
                     <div className="flex-1">
                       <p className={cn(
                         'text-xs md:text-sm font-semibold mb-1 uppercase tracking-wider',
-                        portfolio.totalGainLoss >= 0 ? 'text-success-700 dark:text-success-300' : 'text-error-700 dark:text-error-300'
+                        totalTone('text-success-700 dark:text-success-300', 'text-error-700 dark:text-error-300', 'text-gray-600 dark:text-gray-300')
                       )}>{ t('portfolio:stats.totalGain')}</p>
                       <div className="flex items-center gap-2">
                         <p className={cn(
                           'text-xl sm:text-2xl md:text-2xl font-bold',
-                          portfolio.totalGainLoss >= 0 ? 'text-success-700 dark:text-success-400' : 'text-error-700 dark:text-error-400'
+                          totalTone('text-success-700 dark:text-success-400', 'text-error-700 dark:text-error-400', 'text-gray-500 dark:text-gray-400')
                         )}>
                           {isValueVisible
-                            ? `${portfolio.totalGainLoss >= 0 ? '+' : ''}${formatCurrency(portfolio.totalGainLoss, portfolio.currency, { precision: 0 })}`
+                            ? `${totalDir === 'up' ? '+' : ''}${formatCurrency(totalShown, portfolio.currency, { precision: 0 })}`
                             : '•••••••'
                           }
                         </p>
                       </div>
                       <p className={cn(
                         'text-xs mt-0.5 font-semibold',
-                        portfolio.gainLossPercentage >= 0 ? 'text-success-700 dark:text-success-400' : 'text-error-700 dark:text-error-400'
+                        totalTone('text-success-700 dark:text-success-400', 'text-error-700 dark:text-error-400', 'text-gray-500 dark:text-gray-400')
                       )}>
                         {isValueVisible
                           ? `${formatPercentage(portfolio.gainLossPercentage)} ${t('portfolio:stats.roi')}`
@@ -624,35 +638,33 @@ export function PortfolioStats({ portfolio, performance, isValueVisible, apiStat
                 <Tooltip content={t('portfolio:stats.realizedTooltip', { count: realizedPnl!.realizedCount })}>
                   <div className={cn(
                     "w-full relative overflow-hidden rounded-xl p-4 border shadow-sm hover:shadow-md transition-all duration-300 group cursor-help min-h-[110px]",
-                    realizedPnl!.realizedGainLoss >= 0
-                      ? "bg-gradient-to-br from-success-50 via-white to-success-50/30 dark:from-success-900/10 dark:via-gray-800/50 dark:to-success-900/5 border-success-200/50 dark:border-success-800/30"
-                      : "bg-gradient-to-br from-error-50 via-white to-error-50/30 dark:from-error-900/10 dark:via-gray-800/50 dark:to-error-900/5 border-error-200/50 dark:border-error-800/30"
+                    realizedTone('bg-gradient-to-br from-success-50 via-white to-success-50/30 dark:from-success-900/10 dark:via-gray-800/50 dark:to-success-900/5 border-success-200/50 dark:border-success-800/30', 'bg-gradient-to-br from-error-50 via-white to-error-50/30 dark:from-error-900/10 dark:via-gray-800/50 dark:to-error-900/5 border-error-200/50 dark:border-error-800/30', 'bg-gradient-to-br from-gray-50 via-white to-gray-50/30 dark:from-gray-800/40 dark:via-gray-800/50 dark:to-gray-800/20 border-gray-200 dark:border-gray-700')
                   )}>
                     <div className={cn(
                       "absolute top-0 right-0 w-20 h-20 rounded-full -mr-10 -mt-10 group-hover:scale-150 transition-transform duration-500",
-                      realizedPnl!.realizedGainLoss >= 0 ? "bg-success-500/8 dark:bg-success-500/15" : "bg-error-500/8 dark:bg-error-500/15"
+                      realizedTone('bg-success-500/8 dark:bg-success-500/15', 'bg-error-500/8 dark:bg-error-500/15', 'bg-gray-500/8 dark:bg-gray-500/15')
                     )} />
                     <div className="relative flex items-center gap-2 sm:gap-2.5 md:gap-3">
                       <div className={cn(
                         "flex-shrink-0 p-2.5 rounded-lg shadow-sm group-hover:scale-110 transition-transform duration-300",
-                        realizedPnl!.realizedGainLoss >= 0 ? "bg-success-100 dark:bg-success-900/30" : "bg-error-100 dark:bg-error-900/30"
+                        realizedTone('bg-success-100 dark:bg-success-900/30', 'bg-error-100 dark:bg-error-900/30', 'bg-gray-100 dark:bg-gray-700/40')
                       )}>
                         <ArrowTrendingUpIcon className={cn(
                           "w-6 h-6",
-                          realizedPnl!.realizedGainLoss >= 0 ? "text-success-700 dark:text-success-400" : "text-error-700 dark:text-error-400"
+                          realizedTone('text-success-700 dark:text-success-400', 'text-error-700 dark:text-error-400', 'text-gray-500 dark:text-gray-400')
                         )} />
                       </div>
                       <div className="flex-1">
                         <p className={cn(
                           "text-xs md:text-sm font-semibold mb-1 uppercase tracking-wider",
-                          realizedPnl!.realizedGainLoss >= 0 ? "text-success-700 dark:text-success-300" : "text-error-700 dark:text-error-300"
+                          realizedTone('text-success-700 dark:text-success-300', 'text-error-700 dark:text-error-300', 'text-gray-600 dark:text-gray-300')
                         )}>{t('portfolio:stats.realizedLabel')}</p>
                         <p className={cn(
                           "text-xl sm:text-2xl font-bold tabular-nums",
-                          realizedPnl!.realizedGainLoss >= 0 ? "text-success-700 dark:text-success-400" : "text-error-700 dark:text-error-400"
+                          realizedTone('text-success-700 dark:text-success-400', 'text-error-700 dark:text-error-400', 'text-gray-500 dark:text-gray-400')
                         )}>
                           {isValueVisible
-                            ? `${realizedPnl!.realizedGainLoss >= 0 ? '+' : ''}${formatCurrency(realizedPnl!.realizedGainLoss, realizedPnl!.currency, { precision: 0 })}`
+                            ? `${realizedDir === 'up' ? '+' : ''}${formatCurrency(realizedShown, realizedPnl!.currency, { precision: 0 })}`
                             : '•••••••'
                           }
                         </p>

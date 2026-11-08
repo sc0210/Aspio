@@ -154,4 +154,17 @@ describe('PortfolioStats', () => {
 
         expect(screen.getByText('-NT$3')).toBeInTheDocument();
     });
+
+    it('shows a total and realized result that round to nothing as flat', () => {
+        show({
+            portfolio: { ...portfolio, totalGainLoss: -0.3, gainLossPercentage: -0.001 },
+            realizedPnl: { realizedGainLoss: 0.2, realizedCount: 1, currency: 'TWD' },
+        });
+
+        expect(screen.queryByText(/[+-]NT\$0$/)).not.toBeInTheDocument();
+        const flat = screen.getAllByText('NT$0');
+        expect(flat.length).toBeGreaterThanOrEqual(2);
+        flat.forEach((el) => expect(el.className).not.toMatch(/success|error/));
+        expect(screen.getByText(/^0\.00% /)).toBeInTheDocument();
+    });
 });
