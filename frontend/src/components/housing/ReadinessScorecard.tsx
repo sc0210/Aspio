@@ -193,7 +193,7 @@ export function ReadinessScorecard({ seed, cashNeededAtPurchase, monthlyHousingC
                             : 'border-gray-200 dark:border-gray-700',
                     )}>
                         <div className={cn('text-4xl font-bold tabular-nums', scoreColor)}>{readiness.score}</div>
-                        <div className="text-sm text-gray-500 dark:text-gray-500 mb-2">{t('housing.ready.scoreLabel', 'readiness score')}</div>
+                        <div className="text-sm text-gray-500 dark:text-gray-400 mb-2">{t('housing.ready.scoreLabel', 'readiness score')}</div>
                         <div className="text-sm font-semibold text-gray-700 dark:text-gray-200">
                             {t('housing.ready.metCount', '{{n}} of 4 conditions met', { n: readiness.metCount })}
                         </div>
@@ -286,7 +286,7 @@ export function ReadinessScorecard({ seed, cashNeededAtPurchase, monthlyHousingC
                                     </div>
                                 )}
                                 <div className="flex items-center justify-between mt-1">
-                                    <span className="text-xs text-gray-500 dark:text-gray-500">
+                                    <span className="text-xs text-gray-500 dark:text-gray-400">
                                         {c.key !== 'debt' && (
                                             <>{t('housing.ready.target', 'target')} {isValueVisible ? formatTWDCompact(c.target) : '•••'}</>
                                         )}
@@ -341,9 +341,9 @@ function WanField({ label, value, onChange, isValueVisible }: { label: string; v
                         aria-label={label}
                     />
                 ) : (
-                    <span className="w-full text-right tabular-nums text-gray-500 dark:text-gray-500 text-sm">•••</span>
+                    <span className="w-full text-right tabular-nums text-gray-500 dark:text-gray-400 text-sm">•••</span>
                 )}
-                <span className="text-xs text-gray-500 dark:text-gray-500">{t('housing.unitWan')}</span>
+                <span className="text-xs text-gray-500 dark:text-gray-400">{t('housing.unitWan')}</span>
             </div>
         </div>
     );
@@ -363,7 +363,7 @@ function RawField({ label, value, onChange, isValueVisible }: { label: string; v
                     aria-label={label}
                 />
             ) : (
-                <span className="w-full block text-right tabular-nums text-gray-500 dark:text-gray-500 text-sm">•••</span>
+                <span className="w-full block text-right tabular-nums text-gray-500 dark:text-gray-400 text-sm">•••</span>
             )}
         </div>
     );

@@ -113,7 +113,7 @@ export function RetirementProgressTracker({
                             <span className="text-sm font-semibold text-gray-900 dark:text-gray-100 leading-none">
                                 {t('portfolio:retirement.title')}
                             </span>
-                            <span className="text-xs font-medium px-1.5 py-0.5 rounded bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-400">
+                            <span className="text-xs font-medium px-1.5 py-0.5 rounded bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-300">
                                 {t(`portfolio:retirement.stages.${stage.key}.label`, stage.label)} · {stageIndex + 1}/{FINANCIAL_STAGES.length}
                             </span>
                         </div>
@@ -212,7 +212,7 @@ export function RetirementProgressTracker({
                 <div className="flex items-stretch gap-2">
                     {/* Save / month */}
                     <div className="flex-1 bg-gray-50 dark:bg-gray-700/50 rounded-lg px-3 py-2 border border-gray-100 dark:border-gray-700">
-                        <p className="text-xs font-medium text-gray-500 dark:text-gray-500 uppercase tracking-wide mb-0.5">
+                        <p className="text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wide mb-0.5">
                             {t('portfolio:retirement.savePerMonth')}
                         </p>
                         <p className="text-sm font-bold text-gray-900 dark:text-gray-100 tabular-nums leading-tight">
@@ -223,7 +223,7 @@ export function RetirementProgressTracker({
                                     : isValueVisible ? fmt(monthlyRequired, currency) : masked
                             }
                         </p>
-                        <p className="text-xs text-gray-500 dark:text-gray-500 leading-tight mt-0.5">
+                        <p className="text-xs text-gray-500 dark:text-gray-400 leading-tight mt-0.5">
                             {monthlyRequired === null
                                 ? t('portfolio:retirement.setTargetDate')
                                 : monthlyRequired === 0
@@ -235,7 +235,7 @@ export function RetirementProgressTracker({
 
                     {/* Time to goal */}
                     <div className="flex-1 bg-gray-50 dark:bg-gray-700/50 rounded-lg px-3 py-2 border border-gray-100 dark:border-gray-700">
-                        <p className="text-xs font-medium text-gray-500 dark:text-gray-500 uppercase tracking-wide mb-0.5">
+                        <p className="text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wide mb-0.5">
                             {t('portfolio:retirement.timeLeft')}
                         </p>
                         <p className="text-sm font-bold text-gray-900 dark:text-gray-100 tabular-nums leading-tight">
@@ -246,7 +246,7 @@ export function RetirementProgressTracker({
                                     : <span className="text-gray-500 dark:text-gray-400">—</span>
                             }
                         </p>
-                        <p className="text-xs text-gray-500 dark:text-gray-500 leading-tight mt-0.5">
+                        <p className="text-xs text-gray-500 dark:text-gray-400 leading-tight mt-0.5">
                             {yearsToTarget !== null && yearsToTarget > 0
                                 ? t('portfolio:retirement.estimatedYear', { year: targetYear })
                                 : yearsToTarget === 0
@@ -258,7 +258,7 @@ export function RetirementProgressTracker({
 
                     {/* Still needed */}
                     <div className="flex-1 bg-gray-50 dark:bg-gray-700/50 rounded-lg px-3 py-2 border border-gray-100 dark:border-gray-700">
-                        <p className="text-xs font-medium text-gray-500 dark:text-gray-500 uppercase tracking-wide mb-0.5">
+                        <p className="text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wide mb-0.5">
                             {t('portfolio:retirement.stillNeed')}
                         </p>
                         <p className={cn(
@@ -272,7 +272,7 @@ export function RetirementProgressTracker({
                                 : isValueVisible ? fmt(gap, currency) : masked
                             }
                         </p>
-                        <p className="text-xs text-gray-500 dark:text-gray-500 leading-tight mt-0.5">
+                        <p className="text-xs text-gray-500 dark:text-gray-400 leading-tight mt-0.5">
                             {progressPercent >= 100
                                 ? t('portfolio:retirement.enjoy')
                                 : t('portfolio:retirement.percentComplete', { percent: Math.min(progressPercent, 100).toFixed(0) })
@@ -300,14 +300,14 @@ export function RetirementProgressTracker({
                         {/* Passive income + milestones */}
                         <div className="grid grid-cols-2 gap-2">
                             <div className="bg-gray-50 dark:bg-gray-700/50 rounded-lg px-3 py-2 border border-gray-100 dark:border-gray-700">
-                                <p className="text-xs font-medium text-gray-500 dark:text-gray-500 uppercase tracking-wide mb-0.5">{t('portfolio:retirement.passiveIncome')}</p>
+                                <p className="text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wide mb-0.5">{t('portfolio:retirement.passiveIncome')}</p>
                                 <p className="text-sm font-bold text-emerald-700 dark:text-emerald-400 tabular-nums">
                                     {isValueVisible ? `${fmtFull(monthlyPassiveIncome, currency)}/mo` : masked}
                                 </p>
                                 <p className="text-xs text-gray-500 dark:text-gray-400 mt-0.5">{t('portfolio:retirement.withdrawalRule')}</p>
                             </div>
                             <div className="bg-gray-50 dark:bg-gray-700/50 rounded-lg px-3 py-2 border border-gray-100 dark:border-gray-700">
-                                <p className="text-xs font-medium text-gray-500 dark:text-gray-500 uppercase tracking-wide mb-0.5">{t('portfolio:retirement.milestonesLabel')}</p>
+                                <p className="text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wide mb-0.5">{t('portfolio:retirement.milestonesLabel')}</p>
                                 <p className="text-sm font-bold text-gray-900 dark:text-gray-100 tabular-nums">
                                     {reachedMilestones}/{milestones.length}
                                 </p>

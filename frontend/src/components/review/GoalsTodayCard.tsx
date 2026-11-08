@@ -32,7 +32,7 @@ export function GoalsTodayCard({ goals, loading, error }: GoalsTodayCardProps) {
             <h2 className="text-base font-semibold text-gray-900 dark:text-white">
                 {t('review.goals', 'Goals')}
             </h2>
-            <span className="text-xs text-gray-500 dark:text-gray-500">
+            <span className="text-xs text-gray-500 dark:text-gray-400">
                 {t('review.asOfToday', 'as of today')}
             </span>
         </div>

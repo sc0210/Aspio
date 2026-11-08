@@ -34,7 +34,7 @@ export function HousingPrinciples() {
                 <ChevronDownIcon className={cn('w-4 h-4 text-gray-500 dark:text-gray-400 transition-transform', open && 'rotate-180')} />
             </button>
 
-            <p className="text-sm text-gray-500 dark:text-gray-500 mt-1">
+            <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">
                 {t('housing.principles.subtitle', 'A home should raise quality of life — the goal is a calm, spacious future, not just a title deed.')}
             </p>
 

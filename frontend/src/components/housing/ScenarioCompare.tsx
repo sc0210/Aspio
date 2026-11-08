@@ -112,7 +112,7 @@ export function ScenarioCompare({ current, onLoad }: Props) {
                 <div className="mt-3 overflow-x-auto -mx-1 px-1">
                     <table className="w-full min-w-[560px] text-xs">
                         <thead>
-                            <tr className="text-left text-gray-500 dark:text-gray-500">
+                            <tr className="text-left text-gray-500 dark:text-gray-400">
                                 <th className="py-1.5 font-medium">{t('housing.scenarios.colName', 'Scenario')}</th>
                                 <th className="py-1.5 font-medium text-right">{t('housing.sim.housePrice', 'House price')}</th>
                                 <th className="py-1.5 font-medium text-right">{t('housing.sim.downPct', 'Down payment')}</th>

@@ -336,7 +336,7 @@ function StreakStrip({ streak, longest }: { streak: number; longest: number }) {
             >
               {d.active ? '🔥' : '·'}
             </div>
-            <span className="text-xs font-medium uppercase text-gray-500 dark:text-gray-500">
+            <span className="text-xs font-medium uppercase text-gray-500 dark:text-gray-400">
               {d.label}
             </span>
           </div>
@@ -564,7 +564,7 @@ export default function AchievementsPage() {
                     <span className="text-sm font-medium text-gray-700 dark:text-gray-300">
                       {stats.experience_points.toLocaleString()} XP
                     </span>
-                    <span className="text-xs text-gray-500 dark:text-gray-500">
+                    <span className="text-xs text-gray-500 dark:text-gray-400">
                       {stats.experience_to_next_level.toLocaleString()} to next level
                     </span>
                   </div>
@@ -638,7 +638,7 @@ export default function AchievementsPage() {
                     ))}
                   </div>
                 )}
-                <p className="text-center px-4 pt-1 text-xs font-semibold leading-relaxed text-gray-500 dark:text-gray-500">
+                <p className="text-center px-4 pt-1 text-xs font-semibold leading-relaxed text-gray-500 dark:text-gray-400">
                   {t('dashboard:mobile.fullAchievements', 'Every badge, scores, search & filters')}
                   <br />
                   <span className="text-primary-700 dark:text-primary-400">→ {t('dashboard:mobile.onLargerScreen', 'on tablet / desktop')}</span>

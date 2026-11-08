@@ -216,7 +216,7 @@ export function AccountMenu({ collapsed, onNavigate }: AccountMenuProps) {
             <span className="rounded-full bg-primary-100 px-2 py-0.5 text-xs font-semibold text-primary-700 dark:bg-primary-900/40 dark:text-primary-300">
               Lv {level}
             </span>
-            <span className="text-xs text-gray-500 dark:text-gray-500">{xp} XP</span>
+            <span className="text-xs text-gray-500 dark:text-gray-400">{xp} XP</span>
           </div>
           <div
             role="progressbar"

@@ -176,7 +176,7 @@ function VerifyEmailContent() {
             >
               <Link href="/auth/signin">{t('auth:verification.continueToSignIn')}</Link>
             </Button>
-            <p className="text-xs text-gray-500 dark:text-gray-500 text-center">
+            <p className="text-xs text-gray-500 dark:text-gray-400 text-center">
               {t('auth:verification.redirecting')}
             </p>
           </div>
@@ -244,7 +244,7 @@ function VerifyEmailContent() {
             </p>
 
             {verificationState.userEmail && verificationState.status !== 'loading' && (
-              <p className="text-xs text-gray-500 dark:text-gray-500 mb-5">
+              <p className="text-xs text-gray-500 dark:text-gray-400 mb-5">
                 {t('auth:verification.emailLabel')} <strong className="text-gray-600 dark:text-gray-300">{verificationState.userEmail}</strong>
               </p>
             )}
@@ -253,7 +253,7 @@ function VerifyEmailContent() {
 
             {(verificationState.status === 'expired' || verificationState.status === 'invalid' || verificationState.status === 'error') && (
               <div className="mt-5 pt-5 border-t border-gray-100 dark:border-gray-700">
-                <p className="text-xs text-gray-500 dark:text-gray-500">
+                <p className="text-xs text-gray-500 dark:text-gray-400">
                   Still having trouble?{' '}
                   <a
                     href="mailto:support@aspiro.app"

@@ -119,7 +119,7 @@ export function GlidepathChart({ data, colors, crossoverAge, maxLeverage, labels
                     <ReferenceLine
                         y={1}
                         stroke="currentColor"
-                        className="text-gray-500 dark:text-gray-500"
+                        className="text-gray-500 dark:text-gray-400"
                         strokeDasharray="4 4"
                         label={{ value: labels.noDebt, position: 'insideBottomRight', fontSize: 10, fill: 'currentColor' }}
                     />

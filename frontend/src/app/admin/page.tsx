@@ -308,7 +308,7 @@ export default function AdminPage() {
             {users.length === 0 ? (
               <div className="p-12 text-center">
                 <div className="w-16 h-16 mx-auto mb-4 rounded-2xl bg-gradient-to-br from-gray-100 to-gray-200 dark:from-gray-700 dark:to-gray-800 flex items-center justify-center">
-                  <UsersIcon className="w-8 h-8 text-gray-500 dark:text-gray-500" />
+                  <UsersIcon className="w-8 h-8 text-gray-500 dark:text-gray-400" />
                 </div>
                 <h3 className="text-lg font-bold text-gray-900 dark:text-white mb-2">{t('admin:noUsers')}</h3>
                 <p className="text-sm text-gray-500 dark:text-gray-400">
@@ -390,7 +390,7 @@ export default function AdminPage() {
                           <td className="hidden md:table-cell px-6 py-3 whitespace-nowrap text-sm text-gray-600 dark:text-gray-400 tabular-nums">
                             {user.last_login_at
                               ? <span title={new Date(user.last_login_at).toLocaleString()}>{formatTimeAgo(user.last_login_at)}</span>
-                              : <span className="text-gray-500 dark:text-gray-500 italic">{t('admin:never')}</span>
+                              : <span className="text-gray-500 dark:text-gray-400 italic">{t('admin:never')}</span>
                             }
                           </td>
                           <td className="px-3 sm:px-6 py-3 whitespace-nowrap text-right">
@@ -1274,11 +1274,11 @@ function ConnectionStateBadge({ state, waitEvent }: { state: string; waitEvent?:
     'idle in transaction': { label: 'idle in tx', cls: 'bg-warning-100 dark:bg-warning-900/30 text-warning-700 dark:text-warning-300' },
     'idle in transaction (aborted)': { label: 'aborted', cls: 'bg-red-100 dark:bg-red-900/30 text-red-700 dark:text-red-300' },
   };
-  const { label, cls } = cfg[state] ?? { label: state, cls: 'bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-500' };
+  const { label, cls } = cfg[state] ?? { label: state, cls: 'bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-400' };
   return (
     <div className="flex flex-col gap-0.5">
       <span className={cn('inline-block px-1.5 py-0.5 text-xs font-semibold rounded', cls)}>{label}</span>
-      {waitEvent && <span className="text-xs text-gray-500 dark:text-gray-500">{waitEvent}</span>}
+      {waitEvent && <span className="text-xs text-gray-500 dark:text-gray-400">{waitEvent}</span>}
     </div>
   );
 }

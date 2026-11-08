@@ -264,7 +264,7 @@ export function AssetCandlestickChart({ chartData, avgCost, currency, isValueVis
                     </span>
                 )}
                 {bucketSize > 1 && (
-                    <span role="listitem" className="ml-auto text-gray-500 dark:text-gray-500" title="Daily bars are grouped so the chart stays readable over long ranges">
+                    <span role="listitem" className="ml-auto text-gray-500 dark:text-gray-400" title="Daily bars are grouped so the chart stays readable over long ranges">
                         {bucketSize}-day bars
                     </span>
                 )}

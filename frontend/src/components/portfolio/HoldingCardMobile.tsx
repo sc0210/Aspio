@@ -228,7 +228,7 @@ function HoldingCardMobileBase({
           {isValueVisible && baseRate !== undefined && (
             // Same rule as the desktop row: absent when the pair could not be
             // priced, never a guess.
-            <p className="text-xs text-gray-500 dark:text-gray-500 tabular-nums">
+            <p className="text-xs text-gray-500 dark:text-gray-400 tabular-nums">
               ≈ {formatCurrency(holding.totalValue * baseRate, baseCurrency)}
             </p>
           )}

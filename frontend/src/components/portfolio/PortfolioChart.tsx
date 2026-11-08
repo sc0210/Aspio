@@ -705,7 +705,7 @@ export const PortfolioChart = memo(function PortfolioChart({ holdings, baseCurre
                     className={cn(
                       'px-2 sm:px-3.5 py-2 text-xs sm:text-sm font-semibold rounded-lg transition-all duration-200 whitespace-nowrap flex-shrink-0',
                       timeframe === option.value
-                        ? 'bg-primary-700 dark:bg-primary-500 text-white shadow-lg shadow-primary-500/30 scale-105'
+                        ? 'bg-primary-700 text-white shadow-lg shadow-primary-500/30 scale-105'
                         : 'text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white hover:bg-gray-50 dark:hover:bg-gray-700/50'
                     )}
                   >

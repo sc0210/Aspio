@@ -56,7 +56,7 @@ export function SafetyPanel({ stress, cashFlowBasisMonths = 0 }: Props) {
                 <ShieldExclamationIcon className="w-4 h-4 text-error-700 dark:text-error-500" />
                 {t('lifecycle.safety.title', 'Can you survive a bad market?')}
             </h3>
-            <p className="text-sm text-gray-500 dark:text-gray-500 mt-1 mb-4">
+            <p className="text-sm text-gray-500 dark:text-gray-400 mt-1 mb-4">
                 {t('lifecycle.safety.subtitle', 'The loan payment is due whatever the market does. Being forced to sell holdings to make it is the one failure the strategy cannot recover from.')}
             </p>
 
@@ -91,7 +91,7 @@ export function SafetyPanel({ stress, cashFlowBasisMonths = 0 }: Props) {
                             })}
                     </p>
                     {cashFlowBasisMonths > 0 && (
-                        <p className="mt-1 text-xs text-gray-500 dark:text-gray-500">
+                        <p className="mt-1 text-xs text-gray-500 dark:text-gray-400">
                             {t('lifecycle.safety.basis', 'based on a {{n}}-month average', { n: cashFlowBasisMonths })}
                         </p>
                     )}
@@ -144,7 +144,7 @@ export function SafetyPanel({ stress, cashFlowBasisMonths = 0 }: Props) {
             <div className="overflow-x-auto -mx-1 px-1">
                 <table className="w-full text-xs min-w-[380px]">
                     <thead>
-                        <tr className="text-xs uppercase tracking-wide text-gray-500 dark:text-gray-500">
+                        <tr className="text-xs uppercase tracking-wide text-gray-500 dark:text-gray-400">
                             <th className="text-left font-medium py-1.5">{t('lifecycle.safety.colDrop', 'Market drop')}</th>
                             <th className="text-right font-medium py-1.5">{t('lifecycle.safety.colYours', 'Your money left')}</th>
                             <th className="text-right font-medium py-1.5">{t('lifecycle.safety.colLoss', 'You lose')}</th>
@@ -174,7 +174,7 @@ export function SafetyPanel({ stress, cashFlowBasisMonths = 0 }: Props) {
                     </tbody>
                 </table>
             </div>
-            <p className="mt-2 text-xs text-gray-500 dark:text-gray-500 leading-relaxed">
+            <p className="mt-2 text-xs text-gray-500 dark:text-gray-400 leading-relaxed">
                 {t('lifecycle.safety.note', 'Drops apply to the stock exposure only; cash and reserves are assumed intact. Leverage rises after a fall because the debt does not shrink with the market.')}
             </p>
         </Card>

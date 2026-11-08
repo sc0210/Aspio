@@ -153,13 +153,13 @@ export function MobilePortfolio() {
                 <section data-tour="pf-m-hero" className="rounded-3xl bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 shadow-sm p-5">
                     <div className="flex items-center gap-4">
                         <div className="min-w-0 flex-1">
-                            <p className="text-xs font-bold tracking-wide text-gray-500 dark:text-gray-500">{t('portfolio:stats.totalValue', 'Portfolio Value')}</p>
+                            <p className="text-xs font-bold tracking-wide text-gray-500 dark:text-gray-400">{t('portfolio:stats.totalValue', 'Portfolio Value')}</p>
                             <p className="mt-1.5 text-[32px] leading-none font-extrabold tracking-tight tabular-nums text-gray-900 dark:text-white">
                                 {isValueVisible ? formatTWD(model.totalValue) : hidden}
                             </p>
                             <p className={cn('mt-2 text-sm font-bold tabular-nums', totalUp ? 'text-prosperity-700 dark:text-prosperity-400' : 'text-error-700 dark:text-error-500')}>
                                 {totalUp ? '▲' : '▼'} {isValueVisible ? formatTWDCompact(Math.abs(model.totalGain)) : '•••'}
-                                <span className="text-gray-500 dark:text-gray-500 font-semibold ml-1">
+                                <span className="text-gray-500 dark:text-gray-400 font-semibold ml-1">
                                     {totalUp ? '+' : '−'}{Math.abs(model.totalGainPct).toFixed(1)}%
                                 </span>
                             </p>
@@ -179,7 +179,7 @@ export function MobilePortfolio() {
 
                     {/* Today's change */}
                     <div className="mt-4 pt-3 border-t border-gray-100 dark:border-gray-700 flex items-center justify-between">
-                        <span className="text-xs font-semibold text-gray-500 dark:text-gray-500">
+                        <span className="text-xs font-semibold text-gray-500 dark:text-gray-400">
                             {lastSessionDay
                                 ? t('portfolio:lastSessionShort', { day: lastSessionDay, defaultValue: '{{day}}' })
                                 : t('portfolio:todayChange', "Today")}
@@ -190,7 +190,7 @@ export function MobilePortfolio() {
                     </div>
                     {annualPct !== null && (
                         <div className="mt-2 flex items-center justify-between">
-                            <span className="text-xs font-semibold text-gray-500 dark:text-gray-500">
+                            <span className="text-xs font-semibold text-gray-500 dark:text-gray-400">
                                 {t('portfolio:stats.cagrLabel', 'Annual return')}
                                 <span className="ml-1 font-normal">· {t('portfolio:stats.cagrCaption', 'Time-weighted, per year')}</span>
                             </span>
@@ -203,7 +203,7 @@ export function MobilePortfolio() {
 
                 {/* Allocation legend */}
                 <Card as="section" padding="sm" shadow="none">
-                    <p className="text-xs font-bold text-gray-500 dark:text-gray-500 mb-3">{t('portfolio:allocation', 'Allocation')}</p>
+                    <p className="text-xs font-bold text-gray-500 dark:text-gray-400 mb-3">{t('portfolio:allocation', 'Allocation')}</p>
                     <div className="grid grid-cols-2 gap-x-4 gap-y-2.5">
                         {model.slices.map((s) => (
                             <div key={s.label} className="flex items-center gap-2 min-w-0">
@@ -225,7 +225,7 @@ export function MobilePortfolio() {
                                 <div key={h.id} className="flex items-center gap-3 px-4 py-3">
                                     <div className="min-w-0 flex-1">
                                         <p className="text-sm font-extrabold tracking-tight text-gray-900 dark:text-white truncate">{h.symbol}</p>
-                                        <p className="text-xs font-medium text-gray-500 dark:text-gray-500 truncate">{h.name || h.type}</p>
+                                        <p className="text-xs font-medium text-gray-500 dark:text-gray-400 truncate">{h.name || h.type}</p>
                                     </div>
                                     <div className="text-right flex-shrink-0">
                                         <p className="text-[13.5px] font-bold tabular-nums text-gray-900 dark:text-white">
@@ -240,13 +240,13 @@ export function MobilePortfolio() {
                         })}
                     </Card>
                     {model.count > 8 && (
-                        <p className="text-center mt-2 text-xs font-semibold text-gray-500 dark:text-gray-500">
+                        <p className="text-center mt-2 text-xs font-semibold text-gray-500 dark:text-gray-400">
                             {t('portfolio:andMore', '+{{n}} more', { n: model.count - 8 })}
                         </p>
                     )}
                 </section>
 
-                <p className="text-center px-4 pt-1 text-xs font-semibold leading-relaxed text-gray-500 dark:text-gray-500">
+                <p className="text-center px-4 pt-1 text-xs font-semibold leading-relaxed text-gray-500 dark:text-gray-400">
                     {t('dashboard:mobile.fullPortfolio', 'Performance charts, IRR & rebalancing')}
                     <br />
                     <span className="text-primary-700 dark:text-primary-400">→ {t('dashboard:mobile.onLargerScreen', 'on tablet / desktop')}</span>

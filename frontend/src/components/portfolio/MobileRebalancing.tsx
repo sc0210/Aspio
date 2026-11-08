@@ -114,7 +114,7 @@ export function MobileRebalancing({ allocations, actions, onBack }: MobileRebala
                 {allocations.length > 0 && <section className="rounded-3xl bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 shadow-sm p-5">
                     <div className="flex items-baseline justify-between">
                         <h2 className="text-base font-extrabold text-gray-900 dark:text-white">{t('allocation.title')}</h2>
-                        <span className="text-xs font-semibold text-gray-500 dark:text-gray-500">
+                        <span className="text-xs font-semibold text-gray-500 dark:text-gray-400">
                             {t('mobile.rebalance.legend', 'Bar = now · Line = target')}
                         </span>
                     </div>
@@ -128,7 +128,7 @@ export function MobileRebalancing({ allocations, actions, onBack }: MobileRebala
                                     <div className="flex items-baseline justify-between gap-3">
                                         <p className="min-w-0 truncate text-sm font-bold text-gray-900 dark:text-white">
                                             {code}
-                                            {name && <span className="ml-1.5 text-xs font-semibold text-gray-500 dark:text-gray-500">{name}</span>}
+                                            {name && <span className="ml-1.5 text-xs font-semibold text-gray-500 dark:text-gray-400">{name}</span>}
                                         </p>
                                         <span className={`shrink-0 text-[12.5px] font-extrabold tabular-nums ${tone.text}`}>
                                             {d > 0 ? '+' : ''}{d.toFixed(1)} {t('mobile.rebalance.points', 'pp')}
@@ -192,7 +192,7 @@ export function MobileRebalancing({ allocations, actions, onBack }: MobileRebala
                     </section>
                 )}
 
-                <p className="text-center px-4 pt-1 text-xs font-semibold leading-relaxed text-gray-500 dark:text-gray-500">
+                <p className="text-center px-4 pt-1 text-xs font-semibold leading-relaxed text-gray-500 dark:text-gray-400">
                     {t('mobile.fullRebalancing', 'Edit targets, FX tracker & What-If')}
                     <br />
                     <span className="text-primary-700 dark:text-primary-400">→ {t('mobile.onLargerScreen', 'on tablet / desktop')}</span>

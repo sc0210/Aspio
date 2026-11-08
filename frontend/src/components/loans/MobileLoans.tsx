@@ -132,7 +132,7 @@ export function MobileLoans() {
                                         <div className="flex items-center gap-3">
                                             <div className="min-w-0 flex-1">
                                                 <p className="text-sm font-bold text-gray-900 dark:text-white truncate">{loan.name}</p>
-                                                <p className="text-xs font-medium text-gray-500 dark:text-gray-500 tabular-nums">
+                                                <p className="text-xs font-medium text-gray-500 dark:text-gray-400 tabular-nums">
                                                     {t('loans:card.remaining', { amount: hide(fmt(loan.current_balance, loan.currency)) })}
                                                     {next ? ` · ${t('loans:card.next', { date: next })}` : ''}
                                                 </p>
@@ -157,7 +157,7 @@ export function MobileLoans() {
                 <div className="px-4 text-center">
                     <RelatedMoneyLinks current="loans" />
                 </div>
-                <p className="text-center px-4 pt-1 text-xs font-semibold leading-relaxed text-gray-500 dark:text-gray-500">
+                <p className="text-center px-4 pt-1 text-xs font-semibold leading-relaxed text-gray-500 dark:text-gray-400">
                     {t('dashboard:mobile.fullLoans', 'Edit, delete & paid-off history')}
                     <br />
                     <span className="text-primary-700 dark:text-primary-400">→ {t('dashboard:mobile.onLargerScreen', 'on tablet / desktop')}</span>

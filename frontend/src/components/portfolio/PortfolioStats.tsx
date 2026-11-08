@@ -430,7 +430,7 @@ export function PortfolioStats({ portfolio, performance, isValueVisible, apiStat
               <p className="text-sm font-semibold text-gray-800 dark:text-gray-100">
                 {t('portfolio:stats.analysisTitle')}
               </p>
-              <p className="text-xs text-gray-500 dark:text-gray-500 truncate">
+              <p className="text-xs text-gray-500 dark:text-gray-400 truncate">
                 {t('portfolio:stats.analysisSubtitle')}
               </p>
             </div>
@@ -471,8 +471,8 @@ export function PortfolioStats({ portfolio, performance, isValueVisible, apiStat
                               </>
                             ) : (
                               <>
-                                <p className="text-lg font-bold text-gray-500 dark:text-gray-500">N/A</p>
-                                <p className="text-xs text-gray-500 dark:text-gray-500">{t('portfolio:riskMetrics.needData')}</p>
+                                <p className="text-lg font-bold text-gray-500 dark:text-gray-400">N/A</p>
+                                <p className="text-xs text-gray-500 dark:text-gray-400">{t('portfolio:riskMetrics.needData')}</p>
                               </>
                             )}
                           </div>
@@ -497,8 +497,8 @@ export function PortfolioStats({ portfolio, performance, isValueVisible, apiStat
                               </>
                             ) : (
                               <>
-                                <p className="text-lg font-bold text-gray-500 dark:text-gray-500">N/A</p>
-                                <p className="text-xs text-gray-500 dark:text-gray-500">{t('portfolio:riskMetrics.noSpyData')}</p>
+                                <p className="text-lg font-bold text-gray-500 dark:text-gray-400">N/A</p>
+                                <p className="text-xs text-gray-500 dark:text-gray-400">{t('portfolio:riskMetrics.noSpyData')}</p>
                               </>
                             )}
                           </div>

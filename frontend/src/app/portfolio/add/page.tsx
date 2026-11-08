@@ -765,7 +765,7 @@ export default function AddInvestmentPage() {
                 >
                   <div className="font-semibold text-sm text-gray-900 dark:text-gray-100">{investment.symbol}</div>
                   <div className="text-xs text-gray-600 dark:text-gray-400 truncate">{investment.name}</div>
-                  <div className="text-xs text-gray-500 dark:text-gray-500 mt-0.5">
+                  <div className="text-xs text-gray-500 dark:text-gray-400 mt-0.5">
                     {investment.type.toUpperCase()}
                   </div>
                 </button>
