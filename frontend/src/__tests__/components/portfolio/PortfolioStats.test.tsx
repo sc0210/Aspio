@@ -148,4 +148,10 @@ describe('PortfolioStats', () => {
         expect(figure.className).toContain('text-gray-500');
         expect(figure.className).not.toMatch(/success/);
     });
+
+    it('rounds a negative half away from zero, as the figure is formatted', () => {
+        show({ portfolio: { ...portfolio, todayGainLoss: -2.5 } });
+
+        expect(screen.getByText('-NT$3')).toBeInTheDocument();
+    });
 });

@@ -161,7 +161,8 @@ export function PortfolioStats({ portfolio, performance, isValueVisible, apiStat
   const todayChange = portfolio.todayGainLoss ?? (portfolio.totalValue * (performance.oneDay / 100));
   // Zero is flat (grey, no sign), not a gain: a quiet day read "+NT$0" in green.
   // Rounded as displayed (whole units), so ±0.4 isn't a "+NT$0" or "-NT$0"; `|| 0` drops −0.
-  const todayShown = Math.round(todayChange) || 0;
+  // Halves round away from zero, as the currency formatter does (Math.round takes −2.5 to −2).
+  const todayShown = Math.sign(todayChange) * Math.round(Math.abs(todayChange)) || 0;
   const todayDir = direction(todayShown);
   const tone = (up: string, down: string, flat: string) =>
     todayDir === 'up' ? up : todayDir === 'down' ? down : flat;
