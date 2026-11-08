@@ -294,6 +294,17 @@ class RecurringSplitCreate(BaseModel):
     method: Literal["equal", "percent", "fixed"] = "equal"
     my_percent: Optional[Decimal] = Field(None, ge=0, le=100)
     my_amount: Optional[Decimal] = Field(None, ge=0, decimal_places=2)
+    # The bill on start_date was already split by hand: post from the next
+    # period on. start_date still sets the day it comes round (the 31st stays
+    # the 31st, clamped only in short months).
+    skip_first: bool = False
+
+    @field_validator("description")
+    @classmethod
+    def _not_blank(cls, v: str) -> str:
+        if not v.strip():
+            raise ValueError("Describe the bill")
+        return v.strip()
 
 
 class RecurringSplitOut(BaseModel):
@@ -319,6 +330,13 @@ class SplitAmend(BaseModel):
     my_percent: Optional[Decimal] = Field(None, ge=0, le=100)
     my_amount: Optional[Decimal] = Field(None, ge=0, decimal_places=2)
     description: Optional[str] = Field(None, min_length=1, max_length=200)
+
+    @field_validator("description")
+    @classmethod
+    def _not_blank(cls, v: Optional[str]) -> Optional[str]:
+        if v is not None and not v.strip():
+            raise ValueError("Describe the bill")
+        return v.strip() if v is not None else v
 
 
 class AmendmentRespond(BaseModel):

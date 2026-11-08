@@ -548,7 +548,10 @@ export interface RecurringSplitCreate {
   total_amount: number;
   currency: string;
   category_id: string;
+  /** The day it comes round on (its day of month is kept, clamped in short months). */
   start_date: string;
+  /** The bill on start_date was already split by hand: post from the next period. */
+  skip_first?: boolean;
   frequency?: 'weekly' | 'monthly' | 'yearly';
   method: SplitMethod;
   my_percent?: number | null;

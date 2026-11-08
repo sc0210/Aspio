@@ -1646,6 +1646,7 @@ class RecurringTransactionService:
             occurrence, count = row.next_occurrence, row.occurrence_count or 0
             # Read now: a failed split below rolls back, which expires `row`.
             frequency, interval = row.frequency, row.interval
+            anchor_day = row.start_date.day if row.start_date else None
             finished = bool((row.end_date and occurrence > row.end_date)
                             or (row.max_occurrences and count >= row.max_occurrences))
             if finished or occurrence > max_date:
@@ -1663,7 +1664,7 @@ class RecurringTransactionService:
             # Posting committed and released the lock, so advance only if the
             # rule still sits on this occurrence; otherwise another run already
             # counted it and we stop rather than count it twice.
-            next_date = self._calculate_next_occurrence(occurrence, frequency, interval)
+            next_date = self._calculate_next_occurrence(occurrence, frequency, interval, anchor_day)
             if not await self.recurring_repo.update_next_occurrence(
                 rule_id, next_date, expected_current=occurrence
             ):
@@ -1707,11 +1708,23 @@ class RecurringTransactionService:
         except HTTPException as e:
             await self.recurring_repo.db.rollback()
             logger.warning(f"Recurring rule {rule['id']}: occurrence {transaction_id} not split: {e.detail}")
+        except Exception:
+            # Anything else: the expense is already posted, so let the rule move
+            # on (a retry would skip the posted occurrence anyway) and say why.
+            await self.recurring_repo.db.rollback()
+            logger.exception(f"Recurring rule {rule['id']}: splitting occurrence {transaction_id} failed")
 
+    @staticmethod
     def _calculate_next_occurrence(
-        self, current_date: date, frequency: RecurringFrequency, interval: int
+        current_date: date, frequency: RecurringFrequency, interval: int,
+        anchor_day: Optional[int] = None,
     ) -> date:
-        """Calculate the next occurrence date"""
+        """Calculate the next occurrence date.
+
+        anchor_day is the day of month the rule is for (its start date's day).
+        Without it a bill due on the 31st, clamped to the 28th in February,
+        stayed on the 28th for good: each step started from the clamped date.
+        """
 
         if frequency == RecurringFrequency.DAILY:
             return current_date + timedelta(days=interval)
@@ -1726,22 +1739,26 @@ class RecurringTransactionService:
                 year += 1
                 month -= 12
 
-            # Handle day overflow (e.g., Jan 31 -> Feb 28/29)
-            day = min(current_date.day, self._get_days_in_month(year, month))
+            # Handle day overflow (e.g., Jan 31 -> Feb 28/29), back to the
+            # anchor day once the month allows it again (Feb 28 -> Mar 31).
+            day = min(anchor_day or current_date.day, RecurringTransactionService._get_days_in_month(year, month))
 
             return date(year, month, day)
         elif frequency == RecurringFrequency.QUARTERLY:
-            return self._calculate_next_occurrence(
-                current_date, RecurringFrequency.MONTHLY, interval * 3
+            return RecurringTransactionService._calculate_next_occurrence(
+                current_date, RecurringFrequency.MONTHLY, interval * 3, anchor_day
             )
         elif frequency == RecurringFrequency.YEARLY:
-            return date(
-                current_date.year + interval, current_date.month, current_date.day
-            )
+            # 29 Feb has no date in most years: clamp, as months do.
+            year = current_date.year + interval
+            day = min(anchor_day or current_date.day,
+                      RecurringTransactionService._get_days_in_month(year, current_date.month))
+            return date(year, current_date.month, day)
         else:
             return current_date + timedelta(days=1)  # Fallback
 
-    def _get_days_in_month(self, year: int, month: int) -> int:
+    @staticmethod
+    def _get_days_in_month(year: int, month: int) -> int:
         """Get number of days in a month"""
         if month == 2:
             return (

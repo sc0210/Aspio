@@ -104,7 +104,10 @@ export default function NewSplitModal({ isOpen, onClose, onSuccess, connections 
           total_amount: totalNum,
           currency,
           category_id: categoryId,
-          start_date: sameDayNextMonth(date),
+          // This month's is split above. The rule keeps this date's day, so a bill
+          // on the 31st comes back on the 31st after a short month.
+          start_date: date,
+          skip_first: true,
           frequency: 'monthly',
           ...shares,
         });

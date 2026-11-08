@@ -87,7 +87,7 @@ describe('repeat every month', () => {
     fireEvent.click(screen.getByRole('button', { name: 'Split the bill' }));
     await waitFor(() => expect(apiClient.createRecurringSplit).toHaveBeenCalledWith(expect.objectContaining({
       connection_id: 'conn-1', description: 'Rent', total_amount: 30000, category_id: 'food',
-      start_date: '2026-02-28', frequency: 'monthly', method: 'equal',
+      start_date: '2026-01-31', skip_first: true, frequency: 'monthly', method: 'equal',
     })));
     expect(apiClient.createSplit).toHaveBeenCalledWith(expect.objectContaining({ split_date: '2026-01-31' }));
     expect(onClose).toHaveBeenCalled();

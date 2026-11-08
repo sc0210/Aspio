@@ -129,3 +129,69 @@ async def test_recurring_routes_resolve_over_http(authenticated_client):
     r = authenticated_client.get("/api/v1/peers/splits/recurring")
     assert r.status_code == 200 and r.json()["data"] == []
     assert authenticated_client.post(f"/api/v1/peers/splits/recurring/{uuid.uuid4()}/stop").status_code == 404
+
+
+async def test_a_bill_due_on_the_31st_comes_back_to_the_31st(async_session, couple):
+    """Clamped to Feb 28 in February, it returns to the 31st in March: the rule
+    keeps its start day, it doesn't step on from the clamped date."""
+    c = couple
+    alice_id = c["alice"].id
+    await c["svc"].set_prefs(c["bob"].id, c["conn"].id, split_policy="auto_accept")
+    await c["svc"].create_recurring(alice_id, _rent(c, start_date=date(2027, 1, 31)))
+    await _run(async_session, date(2027, 5, 1))
+    dates = (await async_session.execute(select(Transaction.transaction_date).where(
+        Transaction.user_id == alice_id).order_by(Transaction.transaction_date))).scalars().all()
+    assert [d.isoformat() for d in dates] == ["2027-01-31", "2027-02-28", "2027-03-31", "2027-04-30"]
+
+
+async def test_skip_first_starts_next_period_on_the_same_day(async_session, couple):
+    c = couple
+    out = await c["svc"].create_recurring(c["alice"].id, _rent(c, start_date=date(2027, 1, 31), skip_first=True))
+    assert out.next_occurrence == "2027-02-28"  # this month's was split by hand
+
+
+async def test_an_unexpected_split_failure_still_moves_the_rule_on(async_session, couple, monkeypatch):
+    c = couple
+    alice_id = c["alice"].id
+
+    async def boom(*_a, **_k):
+        raise RuntimeError("database hiccup")
+
+    monkeypatch.setattr(SplitService, "split_transaction", boom)
+    await c["svc"].create_recurring(alice_id, _rent(c, start_date=date(2026, 11, 1)))
+    result = await _run(async_session, date(2026, 11, 7))
+    assert (result["created"], result["failed"]) == (1, 0)
+    rule = (await async_session.execute(select(RecurringTransaction))).scalars().one()
+    assert rule.next_occurrence == date(2026, 12, 1)
+
+
+async def test_the_list_survives_a_rule_edited_out_of_shape(async_session, couple):
+    c = couple
+    alice_id = c["alice"].id
+    await c["svc"].create_recurring(alice_id, _rent(c, method="fixed", my_amount=Decimal("20000")))
+    rule = (await async_session.execute(select(RecurringTransaction))).scalars().one()
+    rule.amount = Decimal("10000")  # edited elsewhere below the saved share
+    await async_session.commit()
+    assert await SplitService(async_session).list_recurring(alice_id) == []
+
+
+def test_a_blank_description_is_refused(couple):
+    from pydantic import ValidationError
+    from app.modules.peers.schemas import SplitAmend
+    with pytest.raises(ValidationError):
+        _rent(couple, description="   ")
+    with pytest.raises(ValidationError):
+        SplitAmend(total_amount=Decimal("10"), description="  ")
+
+
+@pytest.mark.parametrize("current, freq, anchor, expected", [
+    (date(2027, 2, 28), "monthly", 31, date(2027, 3, 31)),   # back to the anchor
+    (date(2027, 1, 31), "monthly", 31, date(2027, 2, 28)),   # clamped in a short month
+    (date(2027, 2, 28), "monthly", None, date(2027, 3, 28)),  # no anchor: steps from the date
+    (date(2027, 11, 30), "quarterly", 31, date(2028, 2, 29)),
+    (date(2028, 2, 29), "yearly", 29, date(2029, 2, 28)),    # used to raise: no 29 Feb in 2029
+])
+def test_next_occurrence_keeps_the_anchor_day(current, freq, anchor, expected):
+    from app.modules.transactions.models import RecurringFrequency
+    assert RecurringTransactionService._calculate_next_occurrence(
+        current, RecurringFrequency(freq), 1, anchor) == expected

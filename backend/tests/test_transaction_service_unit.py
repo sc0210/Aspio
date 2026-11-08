@@ -926,7 +926,7 @@ def _locked(next_occurrence, count=0, *, active=True, paused=False, end_date=Non
     """What RecurringTransactionRepository.lock_rule returns for a rule."""
     return MagicMock(next_occurrence=next_occurrence, occurrence_count=count, is_active=active,
                      is_paused=paused, frequency=RecurringFrequency.MONTHLY, interval=1,
-                     end_date=end_date, max_occurrences=max_occurrences)
+                     end_date=end_date, max_occurrences=max_occurrences, start_date=next_occurrence)
 
 
 def _due_rule():
