@@ -100,7 +100,7 @@ function DesktopReviewPage() {
                     accent="primary"
                 />
 
-                <MonthPicker range={review.range} onChange={setMonthKey} />
+                <div data-tour="rev-month"><MonthPicker range={review.range} onChange={setMonthKey} /></div>
 
                 {showSpinner ? (
                     <div className="flex items-center justify-center py-24">
@@ -134,7 +134,7 @@ function DesktopReviewPage() {
                     />
                 ) : (
                     <>
-                        <ReviewHero review={review} />
+                        <div data-tour="rev-hero"><ReviewHero review={review} /></div>
 
                         <MonthContextCard
                             context={context}
@@ -145,7 +145,7 @@ function DesktopReviewPage() {
                         <NextMonthCard review={review} context={contextLoading || contextError ? undefined : context} />
 
                         <div className="grid grid-cols-1 lg:grid-cols-3 gap-5">
-                            <div className="lg:col-span-2 space-y-5">
+                            <div className="lg:col-span-2 space-y-5" data-tour="rev-breakdown">
                                 <SpendingBreakdown review={review} />
                                 {/* Where it came from, beneath where it went. */}
                                 <IncomeBreakdown review={review} />

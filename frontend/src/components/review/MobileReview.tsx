@@ -43,7 +43,7 @@ export function MobileReview() {
 
                 <BiggerScreenHint />
 
-                <MonthPicker range={review.range} onChange={setMonthKey} />
+                <div data-tour="rev-month"><MonthPicker range={review.range} onChange={setMonthKey} /></div>
 
                 {showSpinner ? (
                     <div className="flex items-center justify-center py-24"><LoadingSpinner /></div>
@@ -67,10 +67,10 @@ export function MobileReview() {
                     />
                 ) : (
                     <>
-                        <ReviewHero review={review} />
+                        <div data-tour="rev-hero"><ReviewHero review={review} /></div>
                         {/* No twelve-month context on phones, so the below-average prompt is desktop-only. */}
                         <NextMonthCard review={review} />
-                        <SpendingBreakdown review={review} />
+                        <div data-tour="rev-breakdown"><SpendingBreakdown review={review} /></div>
                     </>
                 )}
 

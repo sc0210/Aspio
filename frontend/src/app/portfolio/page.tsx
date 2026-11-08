@@ -315,16 +315,18 @@ function DesktopPortfolioPage() {
         />
 
         {/* Portfolio Stats Section - Moved to top */}
-        <PortfolioStatsSection
-          portfolioData={portfolioData}
-          analyticsData={analyticsData}
-          riskMetrics={riskMetrics}
-          dividendIncome={dividendIncome}
-          realizedPnl={realizedPnl}
-          viewState={viewState}
-          onTodayChangeClick={actions.handleTodayChangeClick}
-          onViewTrendClick={actions.handleViewTrendClick}
-        />
+        <div data-tour="pf-stats">
+          <PortfolioStatsSection
+            portfolioData={portfolioData}
+            analyticsData={analyticsData}
+            riskMetrics={riskMetrics}
+            dividendIncome={dividendIncome}
+            realizedPnl={realizedPnl}
+            viewState={viewState}
+            onTodayChangeClick={actions.handleTodayChangeClick}
+            onViewTrendClick={actions.handleViewTrendClick}
+          />
+        </div>
 
         <MarketStatusStrip holdings={portfolioData?.holdings ?? []} />
 
@@ -362,22 +364,24 @@ function DesktopPortfolioPage() {
         )}
 
         {/* Holdings Section */}
-        <PortfolioHoldingsSection
-          viewType={viewState.viewType}
-          holdings={aggregatedHoldings}
-          allHoldings={allAggregatedHoldings}
-          rawHoldings={portfolioData?.holdings || []}
-          analyticsData={analyticsData}
-          filters={filters}
-          editState={editState}
-          modals={modals}
-          onHoldingClick={actions.handleHoldingClick as never}
-          onDeleteHolding={holdingOps.handleDeleteHolding}
-          onUpdateLot={holdingOps.handleUpdateLot}
-          onUpdateSymbol={holdingOps.handleUpdateSymbol}
-          onAddInvestment={holdingOps.handleAddInvestment}
-          onSellFromWallet={holdingOps.handleSellFromWallet}
-        />
+        <div data-tour="pf-holdings">
+          <PortfolioHoldingsSection
+            viewType={viewState.viewType}
+            holdings={aggregatedHoldings}
+            allHoldings={allAggregatedHoldings}
+            rawHoldings={portfolioData?.holdings || []}
+            analyticsData={analyticsData}
+            filters={filters}
+            editState={editState}
+            modals={modals}
+            onHoldingClick={actions.handleHoldingClick as never}
+            onDeleteHolding={holdingOps.handleDeleteHolding}
+            onUpdateLot={holdingOps.handleUpdateLot}
+            onUpdateSymbol={holdingOps.handleUpdateSymbol}
+            onAddInvestment={holdingOps.handleAddInvestment}
+            onSellFromWallet={holdingOps.handleSellFromWallet}
+          />
+        </div>
 
         {/* Modals Container */}
         <PortfolioModalsContainer

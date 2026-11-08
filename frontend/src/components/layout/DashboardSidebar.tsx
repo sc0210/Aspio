@@ -234,6 +234,7 @@ export function DashboardSidebar({ open, collapsed, onToggleCollapsed, onClose }
             type="button"
             onClick={() => { onClose(); openCommandPalette(); }}
             aria-label={t('navigation.search', 'Search')}
+            data-tour="search"
             className={cn(
               'group relative flex w-full items-center gap-3 rounded-lg border border-gray-200 px-3 py-2 text-sm text-gray-500 dark:text-gray-400 transition-colors hover:border-primary-300 hover:text-gray-600 dark:border-gray-700 dark:hover:border-primary-600 dark:hover:text-gray-300',
               'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-400',
@@ -255,6 +256,7 @@ export function DashboardSidebar({ open, collapsed, onToggleCollapsed, onClose }
             firing mouseleave, so the tooltip would go on naming the icon that
             used to be there. */}
         <nav
+          data-tour="nav"
           onScroll={() => setRailTooltip(null)}
           className={cn('flex-1 py-3 overflow-y-auto space-y-1', isCollapsed ? 'px-1' : 'px-3')}
         >

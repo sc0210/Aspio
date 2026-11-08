@@ -110,7 +110,7 @@ export function MobileDashboard() {
                 </section>
 
                 {/* THREE WALLETS — one compact row */}
-                <section className="grid grid-cols-3 gap-2.5">
+                <section data-tour="dash-wallets" className="grid grid-cols-3 gap-2.5">
                     {wallets.map(({ label, value, color, Icon }) => (
                         <Card key={label} padding="none" shadow="none" className="flex flex-col gap-2 px-3 py-3">
                             <span className="grid place-items-center w-8 h-8 rounded-lg" style={{ background: `color-mix(in srgb, ${color} 16%, transparent)` }}>
@@ -130,7 +130,7 @@ export function MobileDashboard() {
                 <SharedBalanceNote />
 
                 {/* TODAY'S HIGHLIGHTS — swipeable */}
-                <section>
+                <section data-tour="dash-flow">
                     <p className="flex items-center px-1 mb-2.5 text-sm font-extrabold tracking-tight text-gray-900 dark:text-white">
                         {t('mobile.highlights', "Today's highlights")}
                         <span className="ml-auto text-xs font-semibold text-gray-500 dark:text-gray-400">

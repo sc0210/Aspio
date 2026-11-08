@@ -296,12 +296,14 @@ function SavingsGroups() {
   const activeTab: Tab = phone && tab === 'compare' ? 'goals' : tab;
   const canCreateGoal = hasPeers && activeTab === 'goals';
   const roster = (
-    <PeerRoster
-      accepted={accepted}
-      sentPending={sentPending}
-      removingId={removingId}
-      onRemove={setConfirmRemoveId}
-    />
+    <div data-tour="sav-members">
+      <PeerRoster
+        accepted={accepted}
+        sentPending={sentPending}
+        removingId={removingId}
+        onRemove={setConfirmRemoveId}
+      />
+    </div>
   );
 
   return (
@@ -533,6 +535,7 @@ function TabBar({ tab, onSelect, tabs = TABS }: { tab: Tab; onSelect: (tab: Tab)
   return (
     <div
       role="tablist"
+      data-tour="sav-tabs"
       aria-label={t('savings.tabs.label', 'Savings group views')}
       className="inline-flex p-1 rounded-lg bg-gray-100 dark:bg-gray-800"
     >
