@@ -33,6 +33,9 @@ jest.mock('@/lib/api-client', () => ({
     respondToSettlement: jest.fn(),
     voidSettlement: jest.fn(),
     createSettlement: jest.fn(),
+    amendSplit: jest.fn(),
+    respondToAmendment: jest.fn(),
+    withdrawAmendment: jest.fn(),
   },
 }));
 
@@ -244,5 +247,44 @@ describe('SharedSpendingTab notifications', () => {
     await waitFor(() => expect(api.setPeerPrefs).toHaveBeenLastCalledWith('conn-1', { notify: true }));
     await waitFor(() => expect(box).not.toBeChecked());
     expect(await screen.findByRole('alert')).toHaveTextContent('down');
+  });
+});
+
+describe('SharedSpendingTab changes to an accepted split', () => {
+  const change = (proposedByMe: boolean) => ({
+    id: 'a1', proposed_by_me: proposedByMe, total_amount: 1200, my_share: 800, partner_share: 400,
+    method: 'fixed' as const, description: 'Dinner + drinks',
+  });
+
+  it('puts a change Bob proposed in Waiting for you, and accepting refreshes the ledger', async () => {
+    api.listSplits.mockResolvedValue({ data: [split({ pending_amendment: change(false) })] });
+    api.respondToAmendment.mockResolvedValue({ data: {} });
+    renderTab();
+    expect(await screen.findByText(/Bob wants to change “Dinner”/)).toBeInTheDocument();
+    fireEvent.click(screen.getByRole('button', { name: 'Accept' }));
+    await waitFor(() => expect(api.respondToAmendment).toHaveBeenCalledWith('s1', 'accept'));
+    await waitFor(() => expect(invalidateAllFinancialData).toHaveBeenCalled());
+  });
+
+  it('shows my own change as sent, with Withdraw instead of Change', async () => {
+    api.listSplits.mockResolvedValue({ data: [split({ pending_amendment: change(true) })] });
+    api.withdrawAmendment.mockResolvedValue({ data: {} });
+    renderTab();
+    expect(await screen.findByText(/Change sent/)).toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: 'Change' })).not.toBeInTheDocument();
+    fireEvent.click(screen.getByRole('button', { name: 'Withdraw change' }));
+    await waitFor(() => expect(api.withdrawAmendment).toHaveBeenCalledWith('s1'));
+  });
+
+  it('offers Change on an accepted split and sends it', async () => {
+    api.listSplits.mockResolvedValue({ data: [split({})] });
+    api.amendSplit.mockResolvedValue({ data: {} });
+    renderTab();
+    fireEvent.click(await screen.findByRole('button', { name: 'Change' }));
+    fireEvent.change(screen.getByLabelText('Total (TWD)'), { target: { value: '1200' } });
+    fireEvent.click(screen.getByRole('button', { name: 'Send the change' }));
+    await waitFor(() => expect(api.amendSplit).toHaveBeenCalledWith('s1', {
+      total_amount: 1200, method: 'equal', my_percent: null, my_amount: null, description: 'Dinner',
+    }));
   });
 });

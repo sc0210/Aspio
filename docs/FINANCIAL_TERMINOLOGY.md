@@ -195,6 +195,7 @@ Split bills are recorded on a **share basis** (`peers/splits.py`):
 - Nothing reaches a partner's ledger until they accept (or have chosen auto-accept). Until then the payer's row carries the whole bill.
 - The **balance** (who owes whom, per currency) is derived, never stored. It equals the accepted splits less the confirmed repayments.
 - **Splitting an expense you already recorded** ("Split with partner" on a transaction) reuses that row as the payer's share instead of writing a new one, and the split records it in `source_transaction_id`. Withdrawing, a decline or a cancel hands it back whole and unlinked; it is never deleted. Expenses that can't be split: income, transfer legs, holding purchases, loan repayments (shrinking one would put the loan's balance out of step), and rows already in a split.
+- **Changing an accepted split** takes both people: one proposes a new total, division or description (the payer stays), and only when the other accepts do the split and both ledger rows take the new figures (`peer_split_amendments`, one open per split). Closing the split drops an open change.
 - **Settling up writes no transactions.** The payer's ledger already shows only their share, so it already reads as if they had been paid back. A repayment row would count the money twice. A settlement only lowers the balance.
 - A row linked to an open split can't be deleted, and its amount can't be edited. Closing a split (cancel, or removing the partner) unlinks its rows, and they become ordinary expenses.
 

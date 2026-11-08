@@ -541,6 +541,26 @@ export interface SplitCreate {
 }
 
 /** A bill split with a partner, as the viewer sees it. */
+/** A proposed change to an accepted split, as one participant sees it. */
+export interface AmendmentOut {
+  id: string;
+  proposed_by_me: boolean;
+  total_amount: number;
+  my_share: number;
+  partner_share: number;
+  method: SplitMethod;
+  description: string;
+}
+
+/** Propose a change; my_percent / my_amount are yours, as when splitting. */
+export interface SplitAmend {
+  total_amount: number;
+  method: SplitMethod;
+  my_percent?: number | null;
+  my_amount?: number | null;
+  description?: string | null;
+}
+
 export interface SplitOut {
   id: string;
   connection_id: string;
@@ -559,6 +579,8 @@ export interface SplitOut {
   my_share_status: 'proposed' | 'accepted' | 'declined';
   partner_share_status: 'proposed' | 'accepted' | 'declined';
   my_transaction_id: string | null;
+  /** An open proposed change to this (accepted) split, if any. */
+  pending_amendment?: AmendmentOut | null;
 }
 
 export interface PeerBalanceOut {

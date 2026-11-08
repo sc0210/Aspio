@@ -55,8 +55,10 @@ from app.modules.peers.schemas import (
     PeerBalanceOut,
     PeerPrefsOut,
     PeerPrefsUpdate,
+    AmendmentRespond,
     SettlementCreate,
     SettlementOut,
+    SplitAmend,
     SettlementRespond,
     SplitCreate,
     SplitFromTransaction,
@@ -460,6 +462,28 @@ async def void_split(split_id: UUID, current_user: CurrentUser, session: AsyncSe
              summary="Cancel an accepted split (the payer); they carry the whole bill again")
 async def cancel_split(split_id: UUID, current_user: CurrentUser, session: AsyncSession = Depends(get_db)):
     return ApiResponse.success_response(data=await SplitService(session).cancel(current_user.id, split_id))
+
+
+@router.post("/splits/{split_id}/amend", response_model=ApiResponse[SplitOut],
+             summary="Propose a change to an accepted split; your partner must accept it")
+async def amend_split(split_id: UUID, body: SplitAmend, current_user: CurrentUser,
+                      session: AsyncSession = Depends(get_db)):
+    split = await SplitService(session).propose_amendment(current_user.id, split_id, body)
+    return ApiResponse.success_response(data=split, message="Change sent")
+
+
+@router.post("/splits/{split_id}/amendment/respond", response_model=ApiResponse[SplitOut],
+             summary="Accept or decline a change your partner proposed")
+async def respond_to_amendment(split_id: UUID, body: AmendmentRespond, current_user: CurrentUser,
+                               session: AsyncSession = Depends(get_db)):
+    split = await SplitService(session).respond_amendment(current_user.id, split_id, body.action)
+    return ApiResponse.success_response(data=split)
+
+
+@router.post("/splits/{split_id}/amendment/withdraw", response_model=ApiResponse[SplitOut],
+             summary="Withdraw a change you proposed")
+async def withdraw_amendment(split_id: UUID, current_user: CurrentUser, session: AsyncSession = Depends(get_db)):
+    return ApiResponse.success_response(data=await SplitService(session).withdraw_amendment(current_user.id, split_id))
 
 
 @router.get("/{connection_id}/prefs", response_model=ApiResponse[PeerPrefsOut],

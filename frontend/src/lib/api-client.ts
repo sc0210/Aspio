@@ -14,7 +14,7 @@ import {
   SharedGoalOut,
   SharedGoalCreate,
   SavingRecord, SharedGoalUpdate,
-  SplitCreate, SplitOut, PeerBalanceOut, PeerPrefsOut, SplitPolicy, SettlementCreate, SettlementOut, SplitFromTransaction, PeerPrefsUpdate } from '@/shared/types';
+  SplitCreate, SplitOut, PeerBalanceOut, PeerPrefsOut, SplitPolicy, SettlementCreate, SettlementOut, SplitFromTransaction, PeerPrefsUpdate, SplitAmend } from '@/shared/types';
 import { getSession } from 'next-auth/react';
 import { getPublicApiUrl, getServerApiUrl } from '@/lib/api-url';
 export interface GamificationStats {
@@ -610,6 +610,18 @@ class ApiClient {
 
   async splitTransaction(body: SplitFromTransaction): Promise<ApiResponse<SplitOut>> {
     return this.post<SplitOut>('/peers/splits/from-transaction', body);
+  }
+
+  async amendSplit(splitId: string, body: SplitAmend): Promise<ApiResponse<SplitOut>> {
+    return this.post<SplitOut>(`/peers/splits/${splitId}/amend`, body);
+  }
+
+  async respondToAmendment(splitId: string, action: 'accept' | 'decline'): Promise<ApiResponse<SplitOut>> {
+    return this.post<SplitOut>(`/peers/splits/${splitId}/amendment/respond`, { action });
+  }
+
+  async withdrawAmendment(splitId: string): Promise<ApiResponse<SplitOut>> {
+    return this.post<SplitOut>(`/peers/splits/${splitId}/amendment/withdraw`, {});
   }
 
   async createSettlement(body: SettlementCreate): Promise<ApiResponse<SettlementOut>> {

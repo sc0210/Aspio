@@ -10,6 +10,7 @@ import { formatCurrency } from '@/utils/formatters';
 import { ConfirmDialog } from '@/components/ui/ConfirmDialog';
 import NewSplitModal from './NewSplitModal';
 import SettleUpModal, { type SettleTarget } from './SettleUpModal';
+import AmendSplitModal from './AmendSplitModal';
 import type { PeerBalanceOut, PeerConnectionOut, SettlementOut, SplitOut, SplitPolicy } from '@/shared/types';
 
 const money = (value: number, currency: string) =>
@@ -61,6 +62,7 @@ export default function SharedSpendingTab({ connections, demo }: { connections: 
   const [confirmCancel, setConfirmCancel] = useState<SplitOut | null>(null);
   const [settlements, setSettlements] = useState<SettlementOut[]>([]);
   const [settleTarget, setSettleTarget] = useState<SettleTarget | null>(null);
+  const [amendTarget, setAmendTarget] = useState<SplitOut | null>(null);
   // Per partner: ring the bell for their bills and repayments. undefined: not loaded.
   const [notify, setNotifyState] = useState<Record<string, boolean | undefined>>({});
 
@@ -147,6 +149,8 @@ export default function SharedSpendingTab({ connections, demo }: { connections: 
   };
 
   const inbox = splits.filter((s) => s.status === 'proposed' && !s.created_by_me);
+  // Changes my partner proposed to an accepted split: mine to answer.
+  const changesForMe = splits.filter((s) => s.status === 'active' && s.pending_amendment && !s.pending_amendment.proposed_by_me);
   const others = splits.filter((s) => !(s.status === 'proposed' && !s.created_by_me));
   // Repayments my partner says they sent me: I confirm they arrived.
   const toConfirm = settlements.filter((p) => p.status === 'proposed' && !p.created_by_me);
@@ -236,9 +240,39 @@ export default function SharedSpendingTab({ connections, demo }: { connections: 
       </section>
 
       {/* Waiting for my answer */}
-      {(inbox.length > 0 || toConfirm.length > 0) && (
+      {(inbox.length > 0 || toConfirm.length > 0 || changesForMe.length > 0) && (
         <section aria-label={t('savings.splits.inbox', 'Waiting for you')} className="space-y-2">
           <h3 className="text-sm font-semibold text-gray-900 dark:text-white">{t('savings.splits.inbox', 'Waiting for you')}</h3>
+          {changesForMe.map((s) => {
+            const change = s.pending_amendment!;
+            return (
+              <div key={`change-${s.id}`} className="bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-700 rounded-xl p-4 flex flex-col sm:flex-row sm:items-center gap-3">
+                <div className="flex-1 text-sm text-amber-900 dark:text-amber-100">
+                  <p className="font-semibold">
+                    {t('savings.splits.amend.prompt', '{{name}} wants to change “{{description}}”', { name: s.partner_name, description: s.description })}
+                  </p>
+                  <p>
+                    {change.description !== s.description && `${change.description} · `}
+                    {money(s.total_amount, s.currency)} → {money(change.total_amount, s.currency)} · {t('savings.splits.shares', 'you {{mine}} / {{name}} {{theirs}}', {
+                      mine: money(change.my_share, s.currency), theirs: money(change.partner_share, s.currency), name: s.partner_name,
+                    })}
+                  </p>
+                </div>
+                {!readOnly && <div className="flex gap-2">
+                  <button type="button" disabled={busyId === s.id}
+                    onClick={() => act(s, () => apiClient.respondToAmendment(s.id, 'accept'))}
+                    className="min-h-[44px] px-4 rounded-lg bg-green-700 hover:bg-green-800 text-white text-sm font-medium disabled:opacity-50">
+                    {t('savings.accept', 'Accept')}
+                  </button>
+                  <button type="button" disabled={busyId === s.id}
+                    onClick={() => act(s, () => apiClient.respondToAmendment(s.id, 'decline'), false)}
+                    className="min-h-[44px] px-4 rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 text-gray-700 dark:text-gray-300 text-sm font-medium disabled:opacity-50">
+                    {t('savings.decline', 'Decline')}
+                  </button>
+                </div>}
+              </div>
+            );
+          })}
           {inbox.map((s) => (
             <div key={s.id} className="bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-700 rounded-xl p-4 flex flex-col sm:flex-row sm:items-center gap-3">
               <div className="flex-1 text-sm text-amber-900 dark:text-amber-100">
@@ -340,7 +374,28 @@ export default function SharedSpendingTab({ connections, demo }: { connections: 
                   mine: money(s.my_share, s.currency), theirs: money(s.partner_share, s.currency), name: s.partner_name,
                 })}
               </p>
+              {s.pending_amendment?.proposed_by_me && (
+                <p className="text-xs text-amber-800 dark:text-amber-200">
+                  {t('savings.splits.amend.sent', 'Change sent: {{total}} · you {{mine}} / {{name}} {{theirs}}', {
+                    total: money(s.pending_amendment.total_amount, s.currency),
+                    mine: money(s.pending_amendment.my_share, s.currency),
+                    theirs: money(s.pending_amendment.partner_share, s.currency), name: s.partner_name,
+                  })}
+                </p>
+              )}
             </div>
+            {!readOnly && s.pending_amendment?.proposed_by_me && (
+              <button type="button" disabled={busyId === s.id} onClick={() => act(s, () => apiClient.withdrawAmendment(s.id), false)}
+                className="min-h-[44px] px-3 rounded-lg text-sm font-medium text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 disabled:opacity-50">
+                {t('savings.splits.amend.withdraw', 'Withdraw change')}
+              </button>
+            )}
+            {!readOnly && s.status === 'active' && !s.pending_amendment && (
+              <button type="button" disabled={busyId === s.id} onClick={() => setAmendTarget(s)}
+                className="min-h-[44px] px-3 rounded-lg text-sm font-medium text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 disabled:opacity-50">
+                {t('savings.splits.amend.button', 'Change')}
+              </button>
+            )}
             {!readOnly && s.status === 'proposed' && s.created_by_me && (
               <button type="button" disabled={busyId === s.id} onClick={() => act(s, () => apiClient.voidSplit(s.id))}
                 className="min-h-[44px] px-3 rounded-lg text-sm font-medium text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 disabled:opacity-50">
@@ -358,6 +413,7 @@ export default function SharedSpendingTab({ connections, demo }: { connections: 
       </section>
 
       <NewSplitModal isOpen={isNewOpen} onClose={() => setIsNewOpen(false)} onSuccess={() => void changed()} connections={connections} />
+      <AmendSplitModal split={amendTarget} onClose={() => setAmendTarget(null)} onSuccess={() => void load()} />
       <SettleUpModal target={settleTarget} onClose={() => setSettleTarget(null)} onSuccess={() => void load()} />
       <ConfirmDialog
         isOpen={confirmCancel !== null}

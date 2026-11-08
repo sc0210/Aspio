@@ -392,3 +392,43 @@ class PeerSettlement(BaseModel):
         Index("idx_peer_settlements_from_user", "from_user_id"),
         Index("idx_peer_settlements_to_user", "to_user_id"),
     )
+
+
+class AmendmentStatus(str, enum.Enum):
+    PROPOSED = "proposed"    # waiting for the other person
+    ACCEPTED = "accepted"    # applied to the split and both ledger rows
+    DECLINED = "declined"
+    WITHDRAWN = "withdrawn"  # by the proposer, or because the split closed
+
+
+class PeerSplitAmendment(BaseModel):
+    """A change to an accepted split that one person proposes and the other must
+    accept: a new total, how it divides, and/or the description. The payer stays.
+    Shares are stored by role (payer / other), as the split's own shares are by
+    person; at most one is open per split."""
+
+    __tablename__ = "peer_split_amendments"
+
+    id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    split_id: Mapped[uuid.UUID] = mapped_column(
+        UUID(as_uuid=True), ForeignKey("peer_splits.id", ondelete="CASCADE"), nullable=False
+    )
+    proposed_by: Mapped[uuid.UUID] = mapped_column(
+        UUID(as_uuid=True), ForeignKey("users.id", ondelete="CASCADE"), nullable=False
+    )
+    total_amount: Mapped[Decimal] = mapped_column(Numeric(15, 2), nullable=False)
+    payer_share: Mapped[Decimal] = mapped_column(Numeric(15, 2), nullable=False)
+    other_share: Mapped[Decimal] = mapped_column(Numeric(15, 2), nullable=False)
+    method: Mapped[str] = mapped_column(String(10), nullable=False, default=SplitMethod.EQUAL.value)
+    description: Mapped[str] = mapped_column(String(200), nullable=False)
+    status: Mapped[str] = mapped_column(String(10), nullable=False, default=AmendmentStatus.PROPOSED.value)
+
+    __table_args__ = (
+        CheckConstraint("total_amount > 0", name="peer_split_amendment_positive_total"),
+        CheckConstraint("payer_share >= 0 AND other_share >= 0", name="peer_split_amendment_shares_non_negative"),
+        CheckConstraint("payer_share + other_share = total_amount", name="peer_split_amendment_shares_sum"),
+        Index("idx_peer_split_amendments_split", "split_id"),
+        # One open change per split, whatever races.
+        Index("uq_peer_split_amendments_open", "split_id", unique=True,
+              postgresql_where=text("status = 'proposed'"), sqlite_where=text("status = 'proposed'")),
+    )

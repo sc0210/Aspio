@@ -44,8 +44,10 @@ from app.modules.peers.models import (
     PeerConnectionPref,
     PeerSettlement,
     PeerSplit,
+    PeerSplitAmendment,
     PeerSplitShare,
     PeerStatus,
+    AmendmentStatus,
     SettlementStatus,
     ShareStatus,
     SplitPolicy,
@@ -57,6 +59,8 @@ from app.modules.peers.schemas import (
     PeerPrefsOut,
     SettlementCreate,
     SettlementOut,
+    AmendmentOut,
+    SplitAmend,
     SplitCreate,
     SplitFromTransaction,
     SplitOut,
@@ -412,6 +416,7 @@ class SplitService:
             # re-accepted since. Rewriting them would count the bill twice;
             # closing the split only clears the balance.
             split.status = SplitStatus.VOIDED.value
+            await self._drop_open_amendment(split)
             await self._notify(other_share.user_id, "Shared bill closed",
                          f"{await self._name(user_id)} closed \"{split.description}\"; nothing is owed on it now.",
                          "peer_split_cancelled", split)
@@ -423,6 +428,7 @@ class SplitService:
             await self._set_row_amount(payer_share, split.total_amount)
         await self._set_row_amount(other_share, Decimal("0"))
         await self._detach_rows(split)
+        await self._drop_open_amendment(split)
         split.status = SplitStatus.VOIDED.value
         await self._notify(other_share.user_id, "Shared bill cancelled",
                      f"{await self._name(user_id)} cancelled \"{split.description}\"; your share was removed.",
@@ -449,15 +455,139 @@ class SplitService:
                     await self._set_row_amount(creator_share, Decimal("0"))
                 split.status = SplitStatus.DECLINED.value
             await self._detach_rows(split)
+            await self._drop_open_amendment(split)
+
+    # ------------------------------------------------------------------
+    # Changing an accepted split
+    # ------------------------------------------------------------------
+
+    async def _drop_open_amendment(self, split: PeerSplit) -> None:
+        """A split that closes takes its open proposed change with it."""
+        amendment = await self._open_amendment(split.id)
+        if amendment is not None:
+            amendment.status = AmendmentStatus.WITHDRAWN.value
+
+    async def _amendable(self, split_id: UUID, user_id: UUID) -> PeerSplit:
+        split = await self._split_for(split_id, user_id, lock=True)
+        if split.status != SplitStatus.ACTIVE.value:
+            raise HTTPException(status.HTTP_409_CONFLICT, "Only an accepted split can be changed")
+        await self._connection(split.connection_id, user_id)  # not with a former partner
+        if all([await self._row_for(s) is None for s in split.shares]):
+            # Its rows were unlinked (the partner was removed and re-added):
+            # they're ordinary expenses now, and there is nothing to keep in step.
+            raise HTTPException(status.HTTP_409_CONFLICT, "This split is closed")
+        return split
+
+    async def propose_amendment(self, user_id: UUID, split_id: UUID, data: SplitAmend) -> SplitOut:
+        """Either person proposes a new total, division and/or description. Nothing
+        changes until the other accepts. The payer stays who they were."""
+        split = await self._amendable(split_id, user_id)
+        if await self._open_amendment(split.id, lock=True) is not None:
+            raise HTTPException(status.HTTP_409_CONFLICT, "A change to this split is already waiting for an answer")
+        i_pay = split.payer_id == user_id
+        mine, theirs = split_amounts(data.total_amount, data.method, i_pay, data.my_percent, data.my_amount)
+        payer_share, other_share = (mine, theirs) if i_pay else (theirs, mine)
+        description = (data.description or split.description).strip()
+        current = {s.user_id == split.payer_id: s.share_amount for s in split.shares}
+        if (mine + theirs, payer_share, other_share, description) == (
+                split.total_amount, current[True], current[False], split.description):
+            raise HTTPException(status.HTTP_422_UNPROCESSABLE_ENTITY, "That's the split as it is")
+        amendment = PeerSplitAmendment(
+            id=uuid.uuid4(), split_id=split.id, proposed_by=user_id, total_amount=mine + theirs,
+            payer_share=payer_share, other_share=other_share, method=data.method,
+            description=description, status=AmendmentStatus.PROPOSED.value,
+        )
+        self.session.add(amendment)
+        try:
+            await self.session.flush()
+        except IntegrityError:
+            # Backstop for the lock (SQLite has none): another proposal won.
+            await self.session.rollback()
+            raise HTTPException(status.HTTP_409_CONFLICT, "A change to this split is already waiting for an answer")
+        partner_id = next(s.user_id for s in split.shares if s.user_id != user_id)
+        await self._notify(partner_id, "Change to a shared bill",
+                           f"{await self._name(user_id)} wants to change \"{split.description}\".",
+                           "peer_split_amend_proposed", split)
+        await self.session.commit()
+        return await self.get_split(user_id, split.id)
+
+    async def respond_amendment(self, user_id: UUID, split_id: UUID, action: str) -> SplitOut:
+        """The other person accepts (the split and both rows take the new figures) or
+        declines (nothing changes)."""
+        split = await self._amendable(split_id, user_id)
+        amendment = await self._open_amendment(split.id, lock=True)
+        if amendment is None:
+            raise HTTPException(status.HTTP_409_CONFLICT, "No change is waiting for an answer")
+        if amendment.proposed_by == user_id:
+            raise HTTPException(status.HTTP_403_FORBIDDEN, "Your partner answers a change you proposed")
+        if action == "accept":
+            for share in split.shares:
+                amount = amendment.payer_share if share.user_id == split.payer_id else amendment.other_share
+                share.share_amount = amount
+                row = await self._row_for(share)
+                if row is None:
+                    # A share that was 0 had no row; one it now has gets written.
+                    await self._write_row(split, share, amount, split.category_id, "life")
+                else:
+                    if amendment.description != split.description:
+                        row.description = amendment.description
+                    await self._set_row_amount(share, amount)
+            split.total_amount = amendment.total_amount
+            split.method = amendment.method
+            split.description = amendment.description
+            amendment.status = AmendmentStatus.ACCEPTED.value
+        else:
+            amendment.status = AmendmentStatus.DECLINED.value
+        verb = "accepted" if action == "accept" else "declined"
+        await self._notify(amendment.proposed_by, f"Change {verb}",
+                           f"{await self._name(user_id)} {verb} your change to \"{split.description}\".",
+                           f"peer_split_amend_{verb}", split)
+        await self.session.commit()
+        return await self.get_split(user_id, split.id)
+
+    async def withdraw_amendment(self, user_id: UUID, split_id: UUID) -> SplitOut:
+        split = await self._split_for(split_id, user_id, lock=True)
+        amendment = await self._open_amendment(split.id, lock=True)
+        if amendment is None:
+            raise HTTPException(status.HTTP_409_CONFLICT, "No change is waiting for an answer")
+        if amendment.proposed_by != user_id:
+            raise HTTPException(status.HTTP_403_FORBIDDEN, "Only the person who proposed a change can withdraw it")
+        amendment.status = AmendmentStatus.WITHDRAWN.value
+        await self.session.commit()
+        return await self.get_split(user_id, split.id)
 
     # ------------------------------------------------------------------
     # Reads
     # ------------------------------------------------------------------
 
+    async def _open_amendment(self, split_id: UUID, *, lock: bool = False) -> Optional[PeerSplitAmendment]:
+        stmt = select(PeerSplitAmendment).where(and_(
+            PeerSplitAmendment.split_id == split_id,
+            PeerSplitAmendment.status == AmendmentStatus.PROPOSED.value,
+        ))
+        if lock:
+            stmt = stmt.with_for_update().execution_options(populate_existing=True)
+        return (await self.session.execute(stmt)).scalars().first()
+
+    @staticmethod
+    def _amendment_out(split: PeerSplit, amendment: PeerSplitAmendment, user_id: UUID) -> AmendmentOut:
+        i_pay = split.payer_id == user_id
+        return AmendmentOut(
+            id=str(amendment.id), proposed_by_me=amendment.proposed_by == user_id,
+            total_amount=float(amendment.total_amount),
+            my_share=float(amendment.payer_share if i_pay else amendment.other_share),
+            partner_share=float(amendment.other_share if i_pay else amendment.payer_share),
+            method=amendment.method, description=amendment.description,
+        )
+
     async def _out(self, split: PeerSplit, user_id: UUID,
-                   rows: Optional[dict[UUID, UUID]] = None) -> SplitOut:
+                   rows: Optional[dict[UUID, UUID]] = None,
+                   amendments: Optional[dict[UUID, PeerSplitAmendment]] = None) -> SplitOut:
         mine = next(s for s in split.shares if s.user_id == user_id)
         theirs = next(s for s in split.shares if s.user_id != user_id)
+        amendment = (amendments.get(split.id) if amendments is not None
+                     else await self._open_amendment(split.id) if split.status == SplitStatus.ACTIVE.value
+                     else None)
         if rows is None:
             row = await self._row_for(mine)
             row_id = row.id if row else None
@@ -473,6 +603,7 @@ class SplitService:
             my_share=float(mine.share_amount), partner_share=float(theirs.share_amount),
             my_share_status=mine.status, partner_share_status=theirs.status,
             my_transaction_id=str(row_id) if row_id else None,
+            pending_amendment=self._amendment_out(split, amendment, user_id) if amendment else None,
         )
 
     async def get_split(self, user_id: UUID, split_id: UUID) -> SplitOut:
@@ -509,7 +640,15 @@ class SplitService:
                 Transaction.is_deleted == False,  # noqa: E712
             ))
         )).all()) if my_share_ids else {}
-        return [await self._out(s, user_id, rows) for s in splits]
+        # And every open proposed change, in one query too.
+        active_ids = [s.id for s in splits if s.status == SplitStatus.ACTIVE.value]
+        amendments = {a.split_id: a for a in (await self.session.execute(
+            select(PeerSplitAmendment).where(and_(
+                PeerSplitAmendment.split_id.in_(active_ids),
+                PeerSplitAmendment.status == AmendmentStatus.PROPOSED.value,
+            ))
+        )).scalars().all()} if active_ids else {}
+        return [await self._out(s, user_id, rows, amendments) for s in splits]
 
     async def balances(self, user_id: UUID) -> list[PeerBalanceOut]:
         """Per partner and currency: > 0 they owe you, < 0 you owe them.
