@@ -47,7 +47,7 @@ export function WealthMoveCard({
 
     if (loading && !hasAny) {
         return (
-            <Card className="h-full">
+            <Card>
                 <h2 className="text-base font-semibold text-gray-900 dark:text-white">
                     {t('review.balances', 'Balances')}
                 </h2>
@@ -63,7 +63,7 @@ export function WealthMoveCard({
 
     if (!hasAny) {
         return (
-            <Card className="h-full">
+            <Card>
                 <h2 className="text-base font-semibold text-gray-900 dark:text-white">
                     {t('review.balances', 'Balances')}
                 </h2>
@@ -89,7 +89,7 @@ export function WealthMoveCard({
     const short = moves.find((move) => move?.openedInside);
 
     return (
-        <Card className="h-full">
+        <Card>
             <h2 className="text-base font-semibold text-gray-900 dark:text-white">
                 {t('review.balances', 'Balances')}
             </h2>
