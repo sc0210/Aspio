@@ -521,20 +521,21 @@ class SplitService:
         if amendment.proposed_by == user_id:
             raise HTTPException(status.HTTP_403_FORBIDDEN, "Your partner answers a change you proposed")
         if action == "accept":
+            # The split first, so a row written below carries the new description.
+            split.total_amount = amendment.total_amount
+            split.method = amendment.method
+            split.description = amendment.description
             for share in split.shares:
                 amount = amendment.payer_share if share.user_id == split.payer_id else amendment.other_share
                 share.share_amount = amount
                 row = await self._row_for(share)
                 if row is None:
-                    # A share that was 0 had no row; one it now has gets written.
+                    # A share that was 0 had no row (and so no wallet was ever chosen
+                    # for it): one it now has goes to Life. _write_row skips 0.
                     await self._write_row(split, share, amount, split.category_id, "life")
                 else:
-                    if amendment.description != split.description:
-                        row.description = amendment.description
+                    row.description = amendment.description
                     await self._set_row_amount(share, amount)
-            split.total_amount = amendment.total_amount
-            split.method = amendment.method
-            split.description = amendment.description
             amendment.status = AmendmentStatus.ACCEPTED.value
         else:
             amendment.status = AmendmentStatus.DECLINED.value

@@ -116,10 +116,39 @@ async def test_a_zero_share_gains_a_row_when_changed(async_session, couple):
     sid = uuid.UUID((await c["svc"].create_split(c["alice"].id, _bill(c, method="fixed", my_amount=Decimal("1000")))).id)
     await c["svc"].respond(c["bob"].id, sid, "accept", None, "life")
     assert await _rows(async_session, c["bob"]) == []  # his share was 0
-    await c["svc"].propose_amendment(c["alice"].id, sid, SplitAmend(total_amount=Decimal("1000")))
+    await c["svc"].propose_amendment(c["alice"].id, sid, SplitAmend(
+        total_amount=Decimal("1000"), description="Dinner, shared after all"))
     await c["svc"].respond_amendment(c["bob"].id, sid, "accept")
     assert await _rows(async_session, c["bob"]) == [Decimal("500")]
     assert await _rows(async_session, c["alice"]) == [Decimal("500")]
+    # The row it gained carries the new description, like Alice's existing one.
+    from sqlalchemy import select
+    from app.modules.transactions.models import Transaction
+    descriptions = (await async_session.execute(select(Transaction.description).where(
+        Transaction.is_deleted == False))).scalars().all()  # noqa: E712
+    assert set(descriptions) == {"Dinner, shared after all"}
+
+
+async def test_a_share_that_stays_zero_gets_no_row(async_session, couple):
+    c = couple
+    sid = uuid.UUID((await c["svc"].create_split(c["alice"].id, _bill(c, method="fixed", my_amount=Decimal("1000")))).id)
+    await c["svc"].respond(c["bob"].id, sid, "accept", None, "life")
+    await c["svc"].propose_amendment(c["alice"].id, sid, SplitAmend(
+        total_amount=Decimal("1200"), method="fixed", my_amount=Decimal("1200")))
+    await c["svc"].respond_amendment(c["bob"].id, sid, "accept")
+    assert await _rows(async_session, c["bob"]) == []
+    assert await _rows(async_session, c["alice"]) == [Decimal("1200")]
+
+
+async def test_a_share_moved_to_zero_loses_its_row(async_session, couple):
+    c = couple
+    sid = await _active(c)
+    await c["svc"].propose_amendment(c["alice"].id, sid, SplitAmend(
+        total_amount=Decimal("1000"), method="fixed", my_amount=Decimal("1000")))
+    await c["svc"].respond_amendment(c["bob"].id, sid, "accept")
+    assert await _rows(async_session, c["bob"]) == []
+    assert await _rows(async_session, c["alice"]) == [Decimal("1000")]
+    assert (await _owed(c, c["alice"]))["bob"] == {}
 
 
 async def test_amend_routes_resolve_over_http(authenticated_client):
