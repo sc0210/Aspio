@@ -139,4 +139,13 @@ describe('PortfolioStats', () => {
         expect(container.querySelector('details')).toBeInTheDocument();
         expect(screen.getAllByText('•••••••').length).toBeGreaterThan(0);
     });
+
+    it('shows a day that rounds to nothing as flat, not a green gain', () => {
+        show({ portfolio: { ...portfolio, todayGainLoss: 0.4, todayGainLossPercentage: 0 } });
+
+        const figure = screen.getByText('NT$0');
+        expect(screen.queryByText('+NT$0')).not.toBeInTheDocument();
+        expect(figure.className).toContain('text-gray-500');
+        expect(figure.className).not.toMatch(/success/);
+    });
 });

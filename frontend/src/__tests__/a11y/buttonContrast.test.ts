@@ -24,14 +24,31 @@ const LITERAL = /(['"`])((?:(?!\1)[\s\S])*?)\1/g;
 const WHITE = /(^|\s)text-white(?![\w/-])/;
 const DARK_500 = /(^|\s)dark:bg-(primary|prosperity|green|success|warning|error)-500(?![\w/-])/;
 
+/**
+ * Comments and in-word apostrophes ("don't", JSX "You're") would pair with the
+ * next real quote and shift every literal after them, so drop them first.
+ */
+function stripNoise(source: string): string {
+  return source
+    .replace(/\/\*[\s\S]*?\*\//g, '')
+    .replace(/(^|\s)\/\/.*$/gm, '$1')
+    .replace(/(?<=\w)['’](?=\w)/g, '');
+}
+
 export function offendingLiterals(source: string): string[] {
-  return [...source.matchAll(LITERAL)].map((m) => m[2]).filter((s) => WHITE.test(s) && DARK_500.test(s));
+  return [...stripNoise(source).matchAll(LITERAL)].map((m) => m[2]).filter((s) => WHITE.test(s) && DARK_500.test(s));
 }
 
 it('catches a class list wrapped over lines, and not an opacity tint', () => {
   expect(offendingLiterals("cn('px-3 text-white\n  dark:bg-primary-500')")).toHaveLength(1);
   expect(offendingLiterals("'text-white dark:bg-primary-500/20'")).toHaveLength(0);
   expect(offendingLiterals("'text-white dark:bg-primary-700'")).toHaveLength(0);
+});
+
+it('stays in step after an apostrophe in a comment or JSX text', () => {
+  const src = "// don't\n<p>You're in</p>\n<b className='text-white dark:bg-error-500' />";
+  expect(offendingLiterals(src)).toHaveLength(1);
+  expect(offendingLiterals("/* it's */ cn('text-white dark:bg-green-500')")).toHaveLength(1);
 });
 
 it('no white-text class list puts it on a 500 background in dark mode', () => {

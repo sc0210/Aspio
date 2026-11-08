@@ -160,7 +160,8 @@ export function PortfolioStats({ portfolio, performance, isValueVisible, apiStat
   // Calculate today's P/L (use performance.oneDay if todayGainLoss not provided)
   const todayChange = portfolio.todayGainLoss ?? (portfolio.totalValue * (performance.oneDay / 100));
   // Zero is flat (grey, no sign), not a gain: a quiet day read "+NT$0" in green.
-  const todayDir = direction(todayChange);
+  // Rounded as displayed (whole units), so +0.4 isn't a green "+NT$0".
+  const todayDir = direction(Math.round(todayChange));
   const tone = (up: string, down: string, flat: string) =>
     todayDir === 'up' ? up : todayDir === 'down' ? down : flat;
   const todayChangePercent = portfolio.todayGainLossPercentage ?? performance.oneDay;
