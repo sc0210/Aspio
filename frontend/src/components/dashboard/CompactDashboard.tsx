@@ -71,11 +71,10 @@ export function CompactDashboard() {
                     </h2>
                     <span className="text-xs font-semibold text-gray-500 dark:text-gray-400">{t('view.compactBadge', 'Compact view')}</span>
                 </div>
-
-                {/* HERO — net worth + wide sparkline */}
                 {/* Nothing recorded yet: the first steps, before the zeros. */}
                 {m.isNewUser && <GetStarted variant="list" />}
 
+                {/* HERO — net worth + wide sparkline */}
                 <section className="rounded-3xl bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 shadow-sm px-7 pt-6 pb-2 overflow-hidden">
                     <p className="text-sm font-bold tracking-wide text-gray-500 dark:text-gray-400">{t('wallet.netWorth', 'Net Worth')}</p>
                     <div className="flex flex-wrap items-end gap-x-4 gap-y-1">

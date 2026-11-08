@@ -137,3 +137,13 @@ describe('isNewUser', () => {
     expect(arrange({ isDemo: true, stats: empty, series: [], open: null, portfolio: null }).isNewUser).toBe(false);
   });
 });
+
+it('does not call someone new while their goals are still loading', () => {
+  const empty = { total_asset: 0, total_debt: 0, monthlyIncome: 0, monthlyExpenses: 0, portfolio_wallet: 0 };
+  mode.mockReturnValue({ isDemo: false });
+  dashboard.mockReturnValue({ data: { data: { stats: empty } }, isLoading: false });
+  trends.mockReturnValue({ data: [] });
+  baseline.mockReturnValue({ data: undefined });
+  goals.mockReturnValue({ data: undefined, isLoading: true });
+  expect(renderHook(() => useDashboardSummary()).result.current.isNewUser).toBe(false);
+});
