@@ -20,6 +20,8 @@ jest.mock('@/contexts/PrivacyContext', () => ({
 
 jest.mock('@/utils/formatters', () => ({
   formatTWD: (v: number) => `TWD ${v}`,
+  // Pure, and it formats through the mocked formatTWD above.
+  compactAxisFormatter: jest.requireActual('@/utils/formatters').compactAxisFormatter,
 }));
 
 // Stub recharts to avoid SVG rendering issues in jsdom

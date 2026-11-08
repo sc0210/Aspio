@@ -118,3 +118,22 @@ it('handles an empty dashboard payload', () => {
   const s = renderHook(() => useDashboardSummary()).result.current;
   expect(s).toMatchObject({ netWorth: 0, income: 0, portfolioValue: 0, primaryGoal: null, isLoading: true });
 });
+
+describe('isNewUser', () => {
+  const empty = { total_asset: 0, total_debt: 0, monthlyIncome: 0, monthlyExpenses: 0, portfolio_wallet: 0 };
+
+  it('is true only with nothing recorded', () => {
+    expect(arrange({ stats: empty, series: [], open: null, portfolio: null }).isNewUser).toBe(true);
+    expect(arrange().isNewUser).toBe(false);
+  });
+
+  it('is false once anything exists: a goal, a debt, or spending', () => {
+    expect(arrange({ stats: empty, series: [], open: null, portfolio: null, goalList: [{ id: 'g' }] }).isNewUser).toBe(false);
+    expect(arrange({ stats: { ...empty, total_debt: 5 }, series: [], open: null, portfolio: null }).isNewUser).toBe(false);
+    expect(arrange({ stats: { ...empty, monthlyExpenses: 5 }, series: [], open: null, portfolio: null }).isNewUser).toBe(false);
+  });
+
+  it('is never true in demo mode', () => {
+    expect(arrange({ isDemo: true, stats: empty, series: [], open: null, portfolio: null }).isNewUser).toBe(false);
+  });
+});

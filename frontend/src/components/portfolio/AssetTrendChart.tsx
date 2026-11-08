@@ -22,7 +22,7 @@ import {
 } from '@heroicons/react/24/outline';
 import { useTranslation } from 'react-i18next';
 import { cn } from '@/utils/cn';
-import { formatCurrency } from '@/utils/formatters';
+import { compactAxisFormatter, formatCurrency } from '@/utils/formatters';
 import { getLocaleByLanguage } from '@/lib/i18n';
 import { niceAxis } from '@/utils/niceAxis';
 
@@ -550,6 +550,9 @@ export const AssetTrendChart = memo(function AssetTrendChart({
         ? niceAxis(Math.min(stats.troughValue, ...costs) * 0.97, Math.max(stats.peakValue, ...costs) * 1.02, { padRatio: 0 })
         : null;
     const yDomain: [number | string, number | string] = valueAxis ? valueAxis.domain : ['auto', 'auto'];
+    // Enough decimals that close ticks (1.9M–2.1M) don't all print "2M".
+    const valueTick = compactAxisFormatter(valueAxis?.ticks, (v, d) =>
+        formatCurrency(v, currency, { compact: true, showSymbol: false, compactDigits: d }));
 
     return (
         <div className={cn('flex flex-col', className)}>
@@ -722,7 +725,8 @@ export const AssetTrendChart = memo(function AssetTrendChart({
                 <ResponsiveContainer width="100%" height="100%">
                     <ComposedChart
                         data={mergedChartData}
-                        margin={{ top: 10, right: 10, left: 0, bottom: brushEnabled ? 40 : 5 }}
+                        // right: room for the last date label, which was clipped ("Nov (").
+                        margin={{ top: 10, right: 24, left: 0, bottom: brushEnabled ? 40 : 5 }}
                     >
                         <defs>
                             <linearGradient id="valueGradient" x1="0" y1="0" x2="0" y2="1">
@@ -778,7 +782,7 @@ export const AssetTrendChart = memo(function AssetTrendChart({
                                 if (viewMode === 'return') {
                                     return `${value.toFixed(1)}%`;
                                 }
-                                return formatCurrency(value, currency, { compact: true, showSymbol: false });
+                                return valueTick(value);
                             }}
                             domain={yDomain}
                             ticks={valueAxis?.ticks}

@@ -12,6 +12,11 @@ export function niceAxis(
     if (!Number.isFinite(min) || !Number.isFinite(max) || max < min) {
         return { domain: [0, 1], ticks: [] };
     }
+    // All zero (a new account): one baseline. Padding it out to 0–1 printed
+    // money ticks at 0, 0.5 and 1 that all round to "NT$0"/"NT$1".
+    if (min === 0 && max === 0) {
+        return { domain: [0, 1], ticks: [0] };
+    }
     // A flat series (one point, or a value that never moves) gets a band around
     // its value; a 0-based axis with no ticks squashed it against the top.
     const pad = max > min ? (max - min) * padRatio : Math.abs(max) * 0.05 || 1;

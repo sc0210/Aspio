@@ -304,7 +304,7 @@
       },
       "recordIncome": {
         "cta": "Add income",
-        "desc": "Add your salary or income sources",
+        "desc": "Your salary, or what’s in the bank today as a starting balance",
         "title": "Record income"
       },
       "setGoal": {
@@ -338,9 +338,9 @@
     "allocation": "Allocation",
     "allocationTab": "Allocation",
     "annualIncome": "Annual Income",
-    "annualisedReturn": "Annualised return",
+    "annualisedReturn": "Time-weighted, per year",
     "bySector": "By Sector",
-    "cagr": "CAGR",
+    "cagr": "Annual return",
     "calendarView": "Calendar view — daily P&L heatmap",
     "fullCalendar": "Full calendar →",
     "hideValues": "Hide values",
@@ -522,7 +522,8 @@
     "portfolioChangeHint": "Change in portfolio value over this period. Includes money you put in or took out, not just market movement — see the portfolio page for return on cost.",
     "saved": "Saved",
     "savingsRate": "{{rate}}% savings rate",
-    "totalAssets": "Total Assets"
+    "totalAssets": "Total Assets",
+    "noIncome": "No income this period"
   },
   "view": {
     "compact": "Compact",

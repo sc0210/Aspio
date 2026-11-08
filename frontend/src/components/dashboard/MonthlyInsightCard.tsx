@@ -37,6 +37,7 @@ export function MonthlyInsightCard({ stats, dateRange, trendData }: MonthlyInsig
   const incomeBarWidth = (income / maxValue) * 100;
   const expenseBarWidth = (expenses / maxValue) * 100;
   const savingsRateColor =
+    income <= 0 ? 'text-gray-500 dark:text-gray-400' :
     savingsRate >= 20 ? 'text-prosperity-700 dark:text-prosperity-400' :
     savingsRate >= 0  ? 'text-amber-700 dark:text-amber-400' :
                         'text-error-700 dark:text-error-400';
@@ -140,12 +141,14 @@ export function MonthlyInsightCard({ stats, dateRange, trendData }: MonthlyInsig
                 {t('dashboard:cashFlow.netSaved', 'Net Saved')}
               </p>
               <p className={`text-lg font-bold leading-tight ${net >= 0 ? 'text-prosperity-700 dark:text-prosperity-400' : 'text-error-700 dark:text-error-400'}`}>
-                {isValueVisible ? `${net >= 0 ? '+' : ''}${formatTWD(net)}` : '•••••'}
+                {isValueVisible ? `${net > 0 ? '+' : ''}${formatTWD(net)}` : '•••••'}
               </p>
             </div>
             <div className={cn(
               'w-24 flex-shrink-0 rounded-xl px-3 py-2.5 flex flex-col items-center justify-center',
-              savingsRate >= 20
+              income <= 0
+                ? 'bg-gray-50 dark:bg-gray-700/40'
+                : savingsRate >= 20
                 ? 'bg-prosperity-50 dark:bg-prosperity-900/20'
                 : savingsRate >= 0
                   ? 'bg-amber-50 dark:bg-amber-900/20'
@@ -155,7 +158,8 @@ export function MonthlyInsightCard({ stats, dateRange, trendData }: MonthlyInsig
                 {t('dashboard:cashFlow.savingsRate', 'Rate')}
               </p>
               <p className={`text-xl font-bold leading-tight ${savingsRateColor}`}>
-                {isValueVisible ? `${savingsRate.toFixed(1)}%` : '•••%'}
+                {/* No income: a rate of nothing isn't 0%. */}
+                {income <= 0 ? '—' : isValueVisible ? `${savingsRate.toFixed(1)}%` : '•••%'}
               </p>
             </div>
           </div>

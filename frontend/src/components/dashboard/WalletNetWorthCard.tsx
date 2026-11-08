@@ -16,7 +16,7 @@ import {
     Cell,
 } from 'recharts';
 import { usePrivacy } from '@/contexts/PrivacyContext';
-import { formatTWD, formatTWDCompact } from '@/utils/formatters';
+import { compactAxisFormatter, formatTWD } from '@/utils/formatters';
 import type { WalletTrendDataPoint } from '@/hooks/useWalletTrends';
 import { cn } from '@/utils/cn';
 import { netWorthOf } from '@/lib/dashboard/periodChange';
@@ -78,6 +78,9 @@ const WALLET_COLORS = {
     violet: { border: 'border-l-violet-400', text: 'text-violet-600 dark:text-violet-400', dot: '#8b5cf6' },
     amber: { border: 'border-l-amber-400', text: 'text-amber-700 dark:text-amber-400', dot: '#f59e0b' },
 };
+
+/** The empty allocation ring: drawn in the wrapper's text colour, so it follows the theme. */
+const EMPTY_RING = 'currentColor';
 
 const CHART_COLORS = {
     life:       '#0ea5e9', // sky-500
@@ -190,6 +193,7 @@ export function WalletNetWorthCard({
         };
     }, [walletTrendsData]);
 
+    const hasAssets = stats.life_wallet > 0 || stats.portfolio_wallet > 0 || stats.emergency_wallet > 0;
     const composition = useMemo(() => {
         const life = Math.max(0, stats.life_wallet);
         const port = Math.max(0, stats.portfolio_wallet);
@@ -238,6 +242,8 @@ export function WalletNetWorthCard({
         return niceAxis(min, max, { padRatio: 0.25 });
     }, [chartData, hasDebtTrend, lineVisibility]);
     const yDomain = yAxis.domain;
+    // Enough decimals that close ticks don't print alike.
+    const yTick = compactAxisFormatter(yAxis.ticks, (v, d) => formatTWD(v, { compact: true, compactDigits: d }));
 
     // Animate y-axis domain with ease-out cubic via rAF
     const [animatedDomain, setAnimatedDomain] = useState<[number, number]>(yDomain);
@@ -416,7 +422,7 @@ export function WalletNetWorthCard({
                                     </defs>
                                     <CartesianGrid strokeDasharray="3 3" stroke="currentColor" className="text-gray-200 dark:text-gray-700 opacity-50" vertical={false} />
                                     <XAxis dataKey="displayDate" tick={{ fill: 'currentColor', fontSize: 12, fontWeight: 500 }} className="text-gray-500 dark:text-gray-400" tickLine={false} interval="preserveStartEnd" />
-                                    <YAxis tick={{ fill: 'currentColor', fontSize: 12, fontWeight: 500 }} className="text-gray-500 dark:text-gray-400" tickLine={false} tickFormatter={(v) => isValueVisible ? formatTWDCompact(v) : '•••'} width={84} tickMargin={4} domain={animatedDomain} ticks={axisSettled ? yAxis.ticks : undefined} />
+                                    <YAxis tick={{ fill: 'currentColor', fontSize: 12, fontWeight: 500 }} className="text-gray-500 dark:text-gray-400" tickLine={false} tickFormatter={(v) => isValueVisible ? yTick(v) : '•••'} width={84} tickMargin={4} domain={animatedDomain} ticks={axisSettled ? yAxis.ticks : undefined} />
                                     <Tooltip content={<CustomTooltip isValueVisible={isValueVisible} walletDefs={WALLET_DEFS} t={t} />} cursor={{ stroke: '#0ea5e9', strokeWidth: 1.5, strokeDasharray: '5 5' }} />
                                     {lineVisibility.totalAsset && (
                                         <Area type="monotone" dataKey="totalAsset" stroke={CHART_COLORS.total} strokeWidth={2.5} fill="none" fillOpacity={1} dot={false} activeDot={{ r: 4, fill: '#6366f1', stroke: 'white', strokeWidth: 2 }} name="Total Assets" />
@@ -493,7 +499,7 @@ export function WalletNetWorthCard({
                                     <span className={cn(
                                         'font-medium transition-colors',
                                         lineVisibility.debtBalance
-                                            ? 'text-rose-700 dark:text-rose-500'
+                                            ? 'text-rose-700 dark:text-rose-400'
                                             : 'text-gray-500 dark:text-gray-400 line-through decoration-gray-300 dark:decoration-gray-600'
                                     )}>
                                         {t('wallet.debtBalance', 'Debt Balance')}
@@ -556,16 +562,21 @@ export function WalletNetWorthCard({
                     {/* Donut + legend */}
                     <div className="flex flex-col items-center gap-4 flex-1">
                         {/* Donut chart */}
-                        <div className="relative w-full" style={{ height: 210 }}>
+                        {/* Decorative: the legend below carries every figure as text, so the
+                            chart is hidden from screen readers and kept out of the tab order. */}
+                        <div className="relative w-full text-gray-200 dark:text-gray-700" style={{ height: 210 }} aria-hidden="true">
                             <ResponsiveContainer width="100%" height="100%">
-                                <PieChart>
+                                <PieChart accessibilityLayer={false}>
                                     {/* Inner asset allocation donut */}
                                     <Pie
-                                        data={[
+                                        rootTabIndex={-1}
+                                        // Nothing held yet: one grey ring. Three equal slices
+                                        // read as a split that doesn't exist.
+                                        data={hasAssets ? [
                                             { name: WALLET_DEFS[0].label, value: Math.max(composition.life, 0.01), raw: stats.life_wallet, color: '#0ea5e9' },
                                             { name: WALLET_DEFS[1].label, value: Math.max(composition.portfolio, 0.01), raw: stats.portfolio_wallet, color: '#8b5cf6' },
                                             { name: WALLET_DEFS[2].label, value: Math.max(composition.emergency, 0.01), raw: stats.emergency_wallet, color: '#f59e0b' },
-                                        ]}
+                                        ] : [{ name: '', value: 1, raw: 0, color: EMPTY_RING }]}
                                         cx="50%"
                                         cy="50%"
                                         innerRadius={55}
@@ -576,16 +587,19 @@ export function WalletNetWorthCard({
                                         startAngle={90}
                                         endAngle={-270}
                                     >
-                                        <Cell fill={CHART_COLORS.life} />
-                                        <Cell fill={CHART_COLORS.portfolio} />
-                                        <Cell fill={CHART_COLORS.emergency} />
+                                        {hasAssets ? [
+                                            <Cell key="life" fill={CHART_COLORS.life} />,
+                                            <Cell key="portfolio" fill={CHART_COLORS.portfolio} />,
+                                            <Cell key="emergency" fill={CHART_COLORS.emergency} />,
+                                        ] : <Cell fill={EMPTY_RING} />}
                                     </Pie>
 
                                     {/* Outer debt ring — gap at r=78, ring at 82–93 */}
                                     {hasDebtBalance && (
                                         <Pie
+                                            rootTabIndex={-1}
                                             data={[
-                                                { name: '負債', value: debtRatio * 100, raw: totalDebt, isDebt: true },
+                                                { name: t('wallet.debt', 'Debt'), value: debtRatio * 100, raw: totalDebt, isDebt: true },
                                                 { name: '', value: (1 - debtRatio) * 100, raw: 0, isDebt: false },
                                             ]}
                                             cx="50%"
@@ -614,7 +628,7 @@ export function WalletNetWorthCard({
                                             return (
                                                 <div style={{ background: '#111827', border: '1px solid rgba(255,255,255,0.08)', borderRadius: 8, padding: '8px 12px', fontSize: 12, color: '#f9fafb', minWidth: 140 }}>
                                                     <p className="font-semibold mb-1" style={{ color: isDebtSlice ? '#f43f5e' : entry.color }}>{entry.name}</p>
-                                                    <p className="tabular-nums text-gray-300">{isDebtSlice ? `${(debtRatio * 100).toFixed(1)}% of assets` : `${Number(entry.value).toFixed(1)}%`}</p>
+                                                    <p className="tabular-nums text-gray-300">{isDebtSlice ? `${(debtRatio * 100).toFixed(1)}% ${t('wallet.ofAssets', 'of assets')}` : `${Number(entry.value).toFixed(1)}%`}</p>
                                                     <p className="tabular-nums font-medium text-white mt-0.5">{isValueVisible ? formatTWD(entry.raw) : '•••'}</p>
                                                 </div>
                                             );
@@ -639,6 +653,8 @@ export function WalletNetWorthCard({
                         <div className="w-full space-y-2">
                             {WALLET_DEFS.map(({ key, changeKey, label }, i) => {
                                 const DONUT_COLORS = ['#0ea5e9', '#8b5cf6', '#f59e0b'];
+                                // The 400 shades for text on dark: the 500s fell short of 4.5:1.
+                                const DONUT_TEXT_DARK = ['#38bdf8', '#a78bfa', '#fbbf24'];
                                 const color = DONUT_COLORS[i];
                                 const value = stats[key];
                                 const pct = composition[changeKey];
@@ -646,7 +662,7 @@ export function WalletNetWorthCard({
                                     <div key={label} className="flex items-center gap-2 px-1">
                                         <div className="w-2.5 h-2.5 rounded-full flex-shrink-0" style={{ background: color }} />
                                         <span className="text-xs text-gray-600 dark:text-gray-400 flex-1 truncate">{label}</span>
-                                        <span className="text-xs font-semibold tabular-nums text-gray-700 dark:[color:var(--legend)]" style={{ '--legend': color } as CSSProperties}>
+                                        <span className="text-xs font-semibold tabular-nums text-gray-700 dark:[color:var(--legend)]" style={{ '--legend': DONUT_TEXT_DARK[i] } as CSSProperties}>
                                             {pct.toFixed(1)}%
                                         </span>
                                         <span className="text-xs font-bold text-gray-900 dark:text-white tabular-nums w-24 text-right">

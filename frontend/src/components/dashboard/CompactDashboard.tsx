@@ -1,5 +1,6 @@
 'use client';
 
+import { GetStarted } from './GetStarted';
 import { SharedBalanceNote } from './SharedBalanceNote';
 import { useTranslation } from 'react-i18next';
 import {
@@ -20,6 +21,7 @@ import { greetingName } from '@/lib/dashboard/greetingName';
 import { usePrivacy } from '@/contexts/PrivacyContext';
 import { formatTWD, formatTWDCompact } from '@/utils/formatters';
 import { cn } from '@/utils/cn';
+import { ARROW, DIRECTION_TEXT, SIGN, direction } from './direction';
 import { Card } from '@/components/ui/Card';
 
 const NW_COLOR = '#10b981';
@@ -52,7 +54,7 @@ export function CompactDashboard() {
         : hour < 18 ? t('greeting.afternoon', 'Good afternoon')
             : t('greeting.evening', 'Good evening');
     const name = greetingName(isDemo, user, t('common:user', 'there'));
-    const up = m.changeAbs >= 0;
+    const change = direction(m.changeAbs);
 
     const wallets = [
         { label: t('wallet.lifeWallet', 'Life'), value: m.stats?.life_wallet ?? 0, color: '#0ea5e9', Icon: BanknotesIcon },
@@ -71,16 +73,19 @@ export function CompactDashboard() {
                 </div>
 
                 {/* HERO — net worth + wide sparkline */}
+                {/* Nothing recorded yet: the first steps, before the zeros. */}
+                {m.isNewUser && <GetStarted variant="list" />}
+
                 <section className="rounded-3xl bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 shadow-sm px-7 pt-6 pb-2 overflow-hidden">
                     <p className="text-sm font-bold tracking-wide text-gray-500 dark:text-gray-400">{t('wallet.netWorth', 'Net Worth')}</p>
                     <div className="flex flex-wrap items-end gap-x-4 gap-y-1">
                         <p className="text-[clamp(2.5rem,5vw,3.5rem)] leading-none font-extrabold tracking-tight tabular-nums text-gray-900 dark:text-white">
                             {isValueVisible ? formatTWD(m.netWorth) : hidden}
                         </p>
-                        <p className={cn('mb-1 text-base font-bold tabular-nums', up ? 'text-prosperity-700 dark:text-prosperity-400' : 'text-error-700 dark:text-error-500')}>
-                            {up ? '▲' : '▼'} {isValueVisible ? formatTWDCompact(Math.abs(m.changeAbs)) : '•••'}
+                        <p className={cn('mb-1 text-base font-bold tabular-nums', DIRECTION_TEXT[change])}>
+                            {ARROW[change]}{isValueVisible ? formatTWDCompact(Math.abs(m.changeAbs)) : '•••'}
                             <span className="text-gray-500 dark:text-gray-400 font-semibold ml-1.5">
-                                {up ? '+' : '−'}{Math.abs(m.changePct).toFixed(1)}% · {t('mobile.thisMonth', 'this month')}
+                                {SIGN[change]}{Math.abs(m.changePct).toFixed(1)}% · {t('mobile.thisMonth', 'this month')}
                             </span>
                         </p>
                     </div>
@@ -128,26 +133,29 @@ export function CompactDashboard() {
                         {/* Cash flow */}
                         <article className="rounded-3xl bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 p-5">
                             <p className="text-sm font-bold text-gray-500 dark:text-gray-400">{t('mobile.cashFlow', 'Cash flow this month')}</p>
-                            <p className={cn('mt-2 text-[26px] font-extrabold tracking-tight tabular-nums', m.net >= 0 ? 'text-prosperity-700 dark:text-prosperity-400' : 'text-error-700 dark:text-error-500')}>
-                                {m.net >= 0 ? '+' : '−'}{isValueVisible ? formatTWDCompact(Math.abs(m.net)) : '•••'}
+                            <p className={cn('mt-2 text-[26px] font-extrabold tracking-tight tabular-nums', DIRECTION_TEXT[direction(m.net)])}>
+                                {SIGN[direction(m.net)]}{isValueVisible ? formatTWDCompact(Math.abs(m.net)) : '•••'}
                             </p>
                             <p className="text-[12.5px] font-semibold text-gray-500 dark:text-gray-400">
                                 {t('mobile.income', 'Income')} {isValueVisible ? formatTWDCompact(m.income) : '•••'} · {t('mobile.expense', 'Spent')} {isValueVisible ? formatTWDCompact(m.expenses) : '•••'}
                             </p>
                             <div className="mt-4 h-2.5 rounded-full bg-gray-100 dark:bg-gray-700 overflow-hidden flex">
-                                <span className="h-full bg-error-400" style={{ width: `${m.expenseShare}%` }} />
-                                <span className="h-full bg-prosperity-500" style={{ width: `${100 - m.expenseShare}%` }} />
+                                {/* Nothing in or out yet: an empty track, not a full green bar. */}
+                                {(m.income > 0 || m.expenses > 0) && (<>
+                                    <span className="h-full bg-error-400" style={{ width: `${m.expenseShare}%` }} />
+                                    <span className="h-full bg-prosperity-500" style={{ width: `${100 - m.expenseShare}%` }} />
+                                </>)}
                             </div>
                         </article>
 
                         {/* Portfolio P/L */}
                         <article className="rounded-3xl bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 p-5">
                             <p className="text-sm font-bold text-gray-500 dark:text-gray-400">{t('mobile.portfolioPnl', 'Portfolio gain / loss')}</p>
-                            <p className={cn('mt-2 text-[26px] font-extrabold tracking-tight tabular-nums', m.pnl >= 0 ? 'text-prosperity-700 dark:text-prosperity-400' : 'text-error-700 dark:text-error-500')}>
-                                {m.pnl >= 0 ? '▲' : '▼'} {isValueVisible ? formatTWDCompact(Math.abs(m.pnl)) : '•••'}
+                            <p className={cn('mt-2 text-[26px] font-extrabold tracking-tight tabular-nums', DIRECTION_TEXT[direction(m.pnl)])}>
+                                {ARROW[direction(m.pnl)]}{isValueVisible ? formatTWDCompact(Math.abs(m.pnl)) : '•••'}
                             </p>
                             <p className="text-[12.5px] font-semibold text-gray-500 dark:text-gray-400 tabular-nums">
-                                {m.pnl >= 0 ? '+' : '−'}{Math.abs(m.pnlPct).toFixed(1)}% · {t('mobile.totalReturn', 'total return')}
+                                {SIGN[direction(m.pnl)]}{Math.abs(m.pnlPct).toFixed(1)}% · {t('mobile.totalReturn', 'total return')}
                             </p>
                             <p className="mt-4 text-[12.5px] font-semibold text-gray-500 dark:text-gray-400">
                                 {t('wallet.portfolioWallet', 'Portfolio')}: {isValueVisible ? formatTWDCompact(m.portfolioValue) : '•••'}

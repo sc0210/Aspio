@@ -106,6 +106,8 @@ interface DashboardSummary {
     } | undefined;
     isLoading: boolean;
     isDemo: boolean;
+    /** Nothing recorded yet: no assets or debt, no activity this month, no goals. */
+    isNewUser: boolean;
 }
 
 export function useDashboardSummary(): DashboardSummary {
@@ -155,10 +157,14 @@ export function useDashboardSummary(): DashboardSummary {
 
         const { primaryGoal, goalPct } = selectPrimaryGoal(goals, portfolioValue);
 
+        const isNewUser = !isLoading && !isDemo && !!s
+            && (s.total_asset ?? 0) === 0 && (s.total_debt ?? 0) === 0
+            && income === 0 && expenses === 0 && goals.length === 0;
+
         return {
             netWorth, changeAbs, changePct, income, expenses, net, expenseShare,
             pnl, pnlPct, portfolioValue, primaryGoal, goalPct,
-            spark: buildSpark(nwSeries), stats: s, isLoading, isDemo,
+            spark: buildSpark(nwSeries), stats: s, isLoading, isDemo, isNewUser,
         };
     }, [stats, portfolio, trend, trendBaseline, goals, isDemo, isLoading]);
 }

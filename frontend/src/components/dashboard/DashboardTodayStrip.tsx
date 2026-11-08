@@ -14,7 +14,8 @@ interface DashboardTodayStripProps {
   /** Absolute change over the period, shown next to the percentage badge */
   totalAssetsChangeAmount?: number;
   netSaved: number;
-  savingsRate: number;
+  /** null when there was no income: a rate of nothing isn't 0%. */
+  savingsRate: number | null;
   portfolioValue: number;
   portfolioChangePercent?: number;
   /** Absolute gain/loss behind portfolioChangePercent */
@@ -91,7 +92,7 @@ function StripGrid({
   t,
 }: {
   totalAssets?: number; totalAssetsChangePercent?: number; totalAssetsChangeAmount?: number;
-  netSaved: number; savingsRate: number;
+  netSaved: number; savingsRate: number | null;
   portfolioValue: number; portfolioChangePercent?: number; portfolioChangeAmount?: number;
   periodLabel: string; fmt: (v: number) => string; fmtDelta: (v: number) => string;
   t: (key: string, opts?: Record<string, unknown>) => string;
@@ -129,7 +130,9 @@ function StripGrid({
           {fmt(netSaved)}
         </p>
         <p className="text-xs text-gray-500 dark:text-gray-400">
-          {t('dashboard:todayStrip.savingsRate', { rate: savingsRate.toFixed(1) })}
+          {savingsRate === null
+            ? t('dashboard:todayStrip.noIncome', { defaultValue: 'No income this period' })
+            : t('dashboard:todayStrip.savingsRate', { rate: savingsRate.toFixed(1) })}
         </p>
       </div>
 
