@@ -1204,5 +1204,13 @@
     "changeLater": "You can change this anytime in Settings → Privacy & Display.",
     "accept": "Accept Analytics",
     "decline": "Decline"
+  },
+  "relatedMoney": {
+    "splits": "Splitting a bill with one partner?",
+    "splitsLink": "Shared spending",
+    "groups": "Splitting with a group on LINE?",
+    "groupsLink": "Groups",
+    "loans": "Lent or borrowed money?",
+    "loansLink": "Loans"
   }
 }

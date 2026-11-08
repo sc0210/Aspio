@@ -1,5 +1,6 @@
 'use client';
 
+import { SharedBalanceNote } from './SharedBalanceNote';
 import { useState, useMemo } from 'react';
 import Link from 'next/link';
 import { DashboardLayout } from '@/components/layout/DashboardLayout';
@@ -367,6 +368,9 @@ export function ComprehensiveDashboard() {
             isPeriodSwitching={isFetching}
           />
         </section>
+
+        {/* Open shared bills: why the wallets differ from the bank */}
+        <SharedBalanceNote />
 
         {/* ========== FLOW STRIP ==========
             What moved over the selected period, under the balance it moved.

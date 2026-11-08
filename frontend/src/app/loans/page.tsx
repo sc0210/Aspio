@@ -1,5 +1,6 @@
 'use client';
 
+import { RelatedMoneyLinks } from '@/components/layout/RelatedMoneyLinks';
 import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import dynamic from 'next/dynamic';
@@ -99,6 +100,8 @@ function DesktopLoansPage() {
             </Button>
           }
         />
+
+        <RelatedMoneyLinks current="loans" />
 
         {/* Stats grid */}
         {summary && summary.loan_count > 0 && (
