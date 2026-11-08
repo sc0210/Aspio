@@ -303,6 +303,7 @@ function DesktopTransactionsPage() {
         {/* Stats Cards */}
         <div
           key={`stats-${filters.type}-${filters.category}-${filters.dateRange}`}
+          data-tour="tx-stats"
           className="animate-fade-in"
         >
           <TransactionStats
@@ -322,7 +323,7 @@ function DesktopTransactionsPage() {
         {/* Two Column Layout: Left (Content) and Right (Filter Panel) */}
         <div className="flex flex-col lg:flex-row gap-6 items-start">
           {/* Left Column: Transaction List */}
-          <div className="flex-1 min-w-0 w-full space-y-4">
+          <div className="flex-1 min-w-0 w-full space-y-4" data-tour="tx-list">
             {/* Mobile Filters Toggle (Mobile only) */}
             <div className="lg:hidden flex gap-2">
               <Button
@@ -473,7 +474,7 @@ function DesktopTransactionsPage() {
               Search + Export/Import move to the top bar only at xl+; in the
               lg–xl band this panel hosts them (searchExportClassName hides
               them at xl to avoid a duplicate). */}
-          <div className="hidden lg:block lg:w-72 xl:w-80 2xl:w-96 flex-shrink-0">
+          <div className="hidden lg:block lg:w-72 xl:w-80 2xl:w-96 flex-shrink-0" data-tour="tx-filters">
             <div className="sticky top-0 max-h-[calc(100vh-120px)] overflow-y-auto scrollbar-thin scrollbar-thumb-gray-300 dark:scrollbar-thumb-gray-600">
               <ExpenseGroupSummary
                 categoryBreakdown={pageStats?.categoryBreakdown || []}

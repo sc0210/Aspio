@@ -105,7 +105,7 @@ function DesktopLoansPage() {
 
         {/* Stats grid */}
         {summary && summary.loan_count > 0 && (
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4 animate-fade-in">
+          <div data-tour="loans-stats" className="grid grid-cols-1 md:grid-cols-3 gap-4 animate-fade-in">
             <Card padding="sm" accent="rose">
               <div className="flex items-center gap-2 mb-1">
                 <BanknotesIcon className="w-4 h-4 text-red-700 dark:text-red-500" />
@@ -149,7 +149,7 @@ function DesktopLoansPage() {
         {activeLoans.length > 0 && <UpcomingPayments loans={activeLoans} />}
 
         {/* When am I debt free — and what would extra money change? */}
-        {activeLoans.length > 0 && <PayoffPlanner loans={activeLoans} />}
+        {activeLoans.length > 0 && <div data-tour="loans-plan"><PayoffPlanner loans={activeLoans} /></div>}
 
         {/* Empty state */}
         {!isLoading && loans.length === 0 && (
@@ -177,7 +177,7 @@ function DesktopLoansPage() {
 
         {/* Active loans */}
         {!isLoading && activeLoans.length > 0 && (
-          <div>
+          <div data-tour="loans-list">
             <div className="flex items-center justify-between mb-4">
               <h2 className="text-xl font-semibold text-gray-900 dark:text-white">
                 {t('sections.active', { count: activeLoans.length })}

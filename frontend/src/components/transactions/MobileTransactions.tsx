@@ -110,7 +110,7 @@ export function MobileTransactions() {
                 <BiggerScreenHint />
 
                 {/* HERO — spent vs income this month */}
-                <section className="rounded-3xl bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 shadow-sm p-5">
+                <section data-tour="tx-m-hero" className="rounded-3xl bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 shadow-sm p-5">
                     <p className="text-xs font-bold tracking-wide text-gray-500 dark:text-gray-500">
                         {t('dashboard:mobile.cashFlow', 'Cash flow this month')}
                     </p>
@@ -144,7 +144,7 @@ export function MobileTransactions() {
                 </section>
 
                 {/* Recent transactions — grouped by day */}
-                <section>
+                <section data-tour="tx-m-recent">
                     <p className="px-1 mb-2.5 text-sm font-extrabold tracking-tight text-gray-900 dark:text-white">{t('transactions:recent', 'Recent')}</p>
                     {model.groups.length === 0 ? (
                         <Card padding="xl" shadow="none" className="text-center">

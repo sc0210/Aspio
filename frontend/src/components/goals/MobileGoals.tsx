@@ -111,7 +111,7 @@ export function MobileGoals() {
                             const meta = catMeta(g.category);
                             const eta = etaText(g);
                             return (
-                                <section className="rounded-3xl bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 shadow-sm p-5 flex items-center gap-5">
+                                <section data-tour="goals-m-hero" className="rounded-3xl bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 shadow-sm p-5 flex items-center gap-5">
                                     <svg viewBox="0 0 100 100" className="w-[112px] h-[112px] flex-shrink-0 -rotate-90" aria-hidden="true">
                                         <circle cx="50" cy="50" r="42" fill="none" stroke="currentColor" strokeWidth="9" className="text-gray-100 dark:text-gray-700" />
                                         <circle cx="50" cy="50" r="42" fill="none" stroke={RING} strokeWidth="9" strokeLinecap="round"
@@ -134,7 +134,7 @@ export function MobileGoals() {
 
                         {/* Other goals — compact cards with progress bars */}
                         {model.rest.length > 0 && (
-                            <section className="space-y-2.5">
+                            <section data-tour="goals-m-list" className="space-y-2.5">
                                 <p className="px-1 text-sm font-extrabold tracking-tight text-gray-900 dark:text-white">{t('goals:sections.otherGoals', 'Other goals')}</p>
                                 {model.rest.map((g) => {
                                     const p = pct(g);

@@ -277,7 +277,7 @@ function DesktopGoalsPage() {
 
                 {/* ── Portfolio-Linked Retirement Goal ─────────────────────────── */}
                 {!isLoading && (
-                    <div className="rounded-xl border border-primary-200 dark:border-primary-800/40 bg-gradient-to-br from-primary-50 via-white to-primary-50/40 dark:from-primary-900/20 dark:via-indigo-900/20 dark:to-primary-900/10 overflow-hidden shadow-sm">
+                    <div data-tour="goals-retire" className="rounded-xl border border-primary-200 dark:border-primary-800/40 bg-gradient-to-br from-primary-50 via-white to-primary-50/40 dark:from-primary-900/20 dark:via-indigo-900/20 dark:to-primary-900/10 overflow-hidden shadow-sm">
                         {/* Header bar */}
                         <div className="flex items-center justify-between px-4 py-3 border-b border-primary-200 dark:border-primary-700/40 bg-primary-50 dark:bg-primary-900/20 gap-2">
                             <div className="flex items-center gap-2 min-w-0 flex-wrap">
@@ -405,7 +405,7 @@ function DesktopGoalsPage() {
                 )}
 
                 {/* Filters */}
-                <div className="grid grid-cols-2 gap-2 sm:flex sm:flex-wrap sm:gap-3 bg-white dark:bg-gray-800 p-3 sm:p-4 rounded-lg border border-gray-200 dark:border-gray-700">
+                <div data-tour="goals-filters" className="grid grid-cols-2 gap-2 sm:flex sm:flex-wrap sm:gap-3 bg-white dark:bg-gray-800 p-3 sm:p-4 rounded-lg border border-gray-200 dark:border-gray-700">
                     <select
                         aria-label={t('goals:filters.statusLabel')}
                         value={filterStatus || ''}
