@@ -1,5 +1,6 @@
 'use client';
 
+import { RelatedMoneyLinks } from '@/components/layout/RelatedMoneyLinks';
 import { useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { PlusIcon } from '@heroicons/react/24/outline';
@@ -153,6 +154,9 @@ export function MobileLoans() {
                     </>
                 )}
 
+                <div className="px-4 text-center">
+                    <RelatedMoneyLinks current="loans" />
+                </div>
                 <p className="text-center px-4 pt-1 text-xs font-semibold leading-relaxed text-gray-500 dark:text-gray-500">
                     {t('dashboard:mobile.fullLoans', 'Edit, delete & paid-off history')}
                     <br />
