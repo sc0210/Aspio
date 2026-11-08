@@ -304,7 +304,7 @@
       },
       "recordIncome": {
         "cta": "新增收入",
-        "desc": "新增您的薪資或收入來源",
+        "desc": "你的薪資，或今天銀行裡的存款作為起始餘額",
         "title": "記錄收入"
       },
       "setGoal": {
@@ -338,7 +338,7 @@
     "allocation": "配置",
     "allocationTab": "配置",
     "annualIncome": "預估年收入",
-    "annualisedReturn": "CAGR",
+    "annualisedReturn": "時間加權年化",
     "bySector": "依產業",
     "cagr": "年化報酬",
     "calendarView": "月曆檢視 — 每日損益熱圖",
@@ -522,7 +522,8 @@
     "portfolioChangeHint": "本期投資組合價值的變化。包含你期間內的買進與賣出，不只是市場漲跌 — 想看成本報酬率請到投資組合頁。",
     "saved": "已儲蓄",
     "savingsRate": "儲蓄率 {{rate}}%",
-    "totalAssets": "總資產"
+    "totalAssets": "總資產",
+    "noIncome": "本期沒有收入"
   },
   "view": {
     "compact": "精簡",

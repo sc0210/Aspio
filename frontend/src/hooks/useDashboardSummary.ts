@@ -106,6 +106,8 @@ interface DashboardSummary {
     } | undefined;
     isLoading: boolean;
     isDemo: boolean;
+    /** Nothing recorded yet: no assets or debt, no activity this month, no goals. */
+    isNewUser: boolean;
 }
 
 export function useDashboardSummary(): DashboardSummary {
@@ -120,7 +122,7 @@ export function useDashboardSummary(): DashboardSummary {
     // 1st's movement is dropped, which is the same defect the desktop strip had.
     const { data: trend = [] } = useWalletTrends('month');
     const { data: trendBaseline } = useWalletTrendBaseline('month');
-    const { data: goals = [] } = useGoals();
+    const { data: goals = [], isLoading: goalsLoading } = useGoals();
 
     return useMemo(() => {
         const s = stats;
@@ -155,10 +157,16 @@ export function useDashboardSummary(): DashboardSummary {
 
         const { primaryGoal, goalPct } = selectPrimaryGoal(goals, portfolioValue);
 
+        // Goals load separately: until they do, "no goals" isn't known yet, and
+        // judging early flashed the getting-started card at people with goals.
+        const isNewUser = !isLoading && !goalsLoading && !isDemo && !!s
+            && (s.total_asset ?? 0) === 0 && (s.total_debt ?? 0) === 0
+            && income === 0 && expenses === 0 && goals.length === 0;
+
         return {
             netWorth, changeAbs, changePct, income, expenses, net, expenseShare,
             pnl, pnlPct, portfolioValue, primaryGoal, goalPct,
-            spark: buildSpark(nwSeries), stats: s, isLoading, isDemo,
+            spark: buildSpark(nwSeries), stats: s, isLoading, isDemo, isNewUser,
         };
-    }, [stats, portfolio, trend, trendBaseline, goals, isDemo, isLoading]);
+    }, [stats, portfolio, trend, trendBaseline, goals, goalsLoading, isDemo, isLoading]);
 }

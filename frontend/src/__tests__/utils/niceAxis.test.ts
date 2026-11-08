@@ -34,4 +34,9 @@ describe('niceAxis', () => {
         expect(new Set(ticks).size).toBe(ticks.length);
         expect(ticks.length).toBeGreaterThan(1);
     });
+
+    // A new account: every point is 0. Ticks at 0, 0.5 and 1 printed "NT$0, NT$1, NT$1".
+    it('gives an all-zero series a single baseline tick', () => {
+        expect(niceAxis(0, 0)).toEqual({ domain: [0, 1], ticks: [0] });
+    });
 });

@@ -1,5 +1,6 @@
 'use client';
 
+import { GetStarted } from './GetStarted';
 import { SharedBalanceNote } from './SharedBalanceNote';
 import { useState, useMemo } from 'react';
 import Link from 'next/link';
@@ -66,7 +67,6 @@ import { cn } from '@/utils/cn';
 import { DashboardTodayStrip } from './DashboardTodayStrip';
 import { periodChange, netWorthOf } from '@/lib/dashboard/periodChange';
 import { PERIOD_FALLBACKS, periodLabelKey } from '@/lib/dashboard/periodLabels';
-import { Card } from '@/components/ui/Card';
 
 const PERIOD_OPTIONS = [
   { value: '7d',    label: '7D' },
@@ -321,41 +321,7 @@ export function ComprehensiveDashboard() {
         </div>
 
         {/* ========== NEW USER ONBOARDING ========== */}
-        {isNewUser && (
-          <section aria-label="Get Started" className="animate-fade-in-up animation-delay-150">
-            <div className="rounded-2xl border border-primary-200 dark:border-primary-800/50 bg-gradient-to-br from-primary-50 to-indigo-50 dark:from-primary-900/10 dark:to-indigo-900/10 p-5">
-              <h2 className="text-base font-semibold text-gray-900 dark:text-white mb-1">{t('dashboard:onboarding.title')}</h2>
-              <p className="text-sm text-gray-500 dark:text-gray-400 mb-4">{t('dashboard:onboarding.subtitle')}</p>
-              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
-                {([
-                  { step: 1, key: 'recordIncome',   href: '/transactions/add' },
-                  { step: 2, key: 'trackExpenses',  href: '/transactions/add' },
-                  { step: 3, key: 'addInvestments', href: '/portfolio/add'    },
-                  { step: 4, key: 'setGoal',        href: '/goals'            },
-                  // The link wraps the card rather than being one: a surface is
-                  // not a control, and `Card` has no business rendering an anchor.
-                  // `h-full` keeps it filling the grid cell as it did before.
-                ] as const).map(({ step, key, href }) => (
-                  <Link key={step} href={href} className="group block">
-                    <Card
-                      radius="xl"
-                      shadow="none"
-                      padding="sm"
-                      className="h-full flex flex-col gap-2 hover:border-primary-300 dark:hover:border-primary-600 hover:shadow-sm transition-all"
-                    >
-                    <div className="flex items-center gap-2">
-                      <span className="w-6 h-6 rounded-full bg-primary-100 dark:bg-primary-900/40 text-primary-700 dark:text-primary-300 text-xs font-bold flex items-center justify-center flex-shrink-0">{step}</span>
-                      <p className="text-sm font-semibold text-gray-800 dark:text-gray-100">{t(`dashboard:onboarding.steps.${key}.title`)}</p>
-                    </div>
-                    <p className="text-xs text-gray-500 dark:text-gray-400 leading-snug">{t(`dashboard:onboarding.steps.${key}.desc`)}</p>
-                    <span className="mt-auto text-xs font-medium text-primary-700 dark:text-primary-400 group-hover:underline">{t(`dashboard:onboarding.steps.${key}.cta`)} &rarr;</span>
-                    </Card>
-                  </Link>
-                ))}
-              </div>
-            </div>
-          </section>
-        )}
+        {isNewUser && <GetStarted />}
 
         {/* ========== WALLET NET WORTH CARD ========== */}
         <section aria-label="Wallet Overview" data-tour="dash-wallets" className="animate-fade-in-up animation-delay-200">
@@ -386,7 +352,7 @@ export function ComprehensiveDashboard() {
         <section aria-label="This period" data-tour="dash-flow" className="animate-fade-in-up animation-delay-200">
           <DashboardTodayStrip
             netSaved={memoizedDashboardData.stats.monthlyIncome - memoizedDashboardData.stats.monthlyExpenses}
-            savingsRate={memoizedDashboardData.stats.savingsRate}
+            savingsRate={memoizedDashboardData.stats.monthlyIncome > 0 ? memoizedDashboardData.stats.savingsRate : null}
             portfolioValue={memoizedDashboardData.stats.portfolio_wallet}
             portfolioChangePercent={portfolioChange.percent}
             portfolioChangeAmount={portfolioChange.amount}

@@ -99,6 +99,8 @@ export function formatCurrency(amount: number, currency: string = DEFAULT_CURREN
   showSymbol?: boolean;
   precision?: number;
   compact?: boolean;
+  /** Decimals in compact form (default 1). Chart axes raise it so close ticks don't print alike. */
+  compactDigits?: number;
   locale?: string;
 } = {}): string {
   // Handle invalid input values
@@ -110,6 +112,7 @@ export function formatCurrency(amount: number, currency: string = DEFAULT_CURREN
     showSymbol = true,
     precision = 2, // Always show 2 decimal places for stock prices
     compact = false,
+    compactDigits = 1,
     locale = currency === 'TWD' ? 'zh-TW' : 'en-US',
   } = options;
 
@@ -144,7 +147,7 @@ export function formatCurrency(amount: number, currency: string = DEFAULT_CURREN
         const sign = amount < 0 ? '-' : '';
         const num = new Intl.NumberFormat('en-US', {
           notation: 'compact',
-          maximumFractionDigits: 1,
+          maximumFractionDigits: compactDigits,
         }).format(Math.abs(amount));
         return showSymbol ? `${sign}${currencySymbolFor(currency)}${num}` : `${sign}${num}`;
       }
@@ -155,8 +158,8 @@ export function formatCurrency(amount: number, currency: string = DEFAULT_CURREN
         // Both bounds, or the result depends on the JS engine: with only a maximum,
         // V8 in Node 22 printed "NT$15.0萬" and Node 26 prints "NT$15萬", so a
         // server-rendered page could disagree with the browser that hydrates it.
-        minimumFractionDigits: 1,
-        maximumFractionDigits: 1,
+        minimumFractionDigits: compactDigits,
+        maximumFractionDigits: compactDigits,
       });
       return formatWithSymbolFix(formatter, amount, currency);
     }
@@ -307,15 +310,38 @@ export function formatTWD(amount: number, options: {
   showSymbol?: boolean;
   precision?: number;
   compact?: boolean;
+  compactDigits?: number;
 } = {}): string {
-  const { showSymbol = true, precision = 0, compact = false } = options;
+  const { showSymbol = true, precision = 0, compact = false, compactDigits } = options;
 
   return formatCurrency(amount, 'TWD', {
     showSymbol,
     precision,
     compact,
+    compactDigits,
     locale: 'zh-TW',
   });
+}
+
+/**
+ * A tick formatter for a chart's value axis, in compact form ("1.95M") with the
+ * fewest decimals (1–3) that keep every tick's label distinct.
+ *
+ * One fixed decimal printed a 1.9M–2.1M axis as "2M, 2M, 2M, 1.9M, 1.9M…",
+ * which reads as a broken chart.
+ */
+export function compactAxisFormatter(
+  ticks: readonly number[] | undefined,
+  format: (value: number, compactDigits: number) => string,
+): (value: number) => string {
+  let digits = 1;
+  if (ticks && ticks.length > 1) {
+    for (digits = 1; digits < 3; digits++) {
+      const labels = ticks.map((v) => format(v, digits));
+      if (new Set(labels).size === labels.length) break;
+    }
+  }
+  return (value: number) => format(value, digits);
 }
 
 /**

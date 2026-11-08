@@ -21,6 +21,8 @@ jest.mock('@/contexts/PrivacyContext', () => ({
 }));
 
 jest.mock('@/utils/formatters', () => ({
+  // Pure, and it formats through the mocked formatTWD below.
+  compactAxisFormatter: jest.requireActual('@/utils/formatters').compactAxisFormatter,
   // The compact branch emits 萬, as the real zh-TW formatter does. A mock that
   // returned "NT$400K" made the "no compact outside the axis" guard unfailable:
   // reverting the breakdown to the compact helper still produced no 萬, so the
