@@ -20,6 +20,7 @@ it shrinks to the payer's share, and on decline it stays whole (they carry it).
 
 from __future__ import annotations
 
+import logging
 import uuid
 from collections import defaultdict
 from datetime import datetime, timezone
@@ -60,6 +61,8 @@ from app.modules.peers.schemas import (
     SettlementCreate,
     SettlementOut,
     AmendmentOut,
+    RecurringSplitCreate,
+    RecurringSplitOut,
     SplitAmend,
     SplitCreate,
     SplitFromTransaction,
@@ -67,6 +70,8 @@ from app.modules.peers.schemas import (
 )
 from app.modules.transactions.models import (
     CategoryType,
+    RecurringFrequency,
+    RecurringTransaction,
     Transaction,
     TransactionCategory,
     TransactionStatus,
@@ -76,6 +81,8 @@ from app.modules.transactions.models import (
 from app.modules.transactions.repositories import TransactionRepository
 from app.modules.users.models import User
 from app.utils.datetime_helpers import business_today
+
+logger = logging.getLogger(__name__)
 
 CENT = Decimal("0.01")
 SPLITS_URL = "/savings?tab=splits"
@@ -456,6 +463,79 @@ class SplitService:
                 split.status = SplitStatus.DECLINED.value
             await self._detach_rows(split)
             await self._drop_open_amendment(split)
+        # Repeating bills with them post on as ordinary expenses from now on.
+        for rule in (await self.session.execute(select(RecurringTransaction).where(
+                RecurringTransaction.split_connection_id == connection_id))).scalars().all():
+            rule.split_connection_id = None
+
+    # ------------------------------------------------------------------
+    # Repeating bills
+    # ------------------------------------------------------------------
+
+    async def _recurring_out(self, rule: RecurringTransaction, user_id: UUID) -> RecurringSplitOut:
+        conn = await self.session.get(PeerConnection, rule.split_connection_id)
+        mine, theirs = split_amounts(rule.amount, rule.split_method or "equal", True,
+                                     rule.split_my_percent, rule.split_my_amount)
+        return RecurringSplitOut(
+            id=str(rule.id), connection_id=str(rule.split_connection_id),
+            partner_name=await self._name(self._partner(conn, user_id)),
+            description=rule.description, total_amount=float(rule.amount), currency=rule.currency,
+            frequency=rule.frequency.value, next_occurrence=rule.next_occurrence.isoformat(),
+            method=rule.split_method or "equal", my_share=float(mine), partner_share=float(theirs),
+        )
+
+    async def create_recurring(self, user_id: UUID, data: RecurringSplitCreate) -> RecurringSplitOut:
+        """A recurring expense of yours (you pay it) that is split with this partner
+        each time it posts, by the same rules as splitting one by hand."""
+        conn = await self._connection(data.connection_id, user_id)
+        if await self._policy(conn.id, self._partner(conn, user_id)) == SplitPolicy.OFF.value:
+            raise HTTPException(status.HTTP_403_FORBIDDEN, "Your partner has turned off bill splitting with you")
+        await self._expense_category(data.category_id)
+        split_amounts(data.total_amount, data.method, True, data.my_percent, data.my_amount)  # validates
+        frequency = RecurringFrequency(data.frequency)
+        first = data.start_date
+        if data.skip_first:
+            from app.modules.transactions.services import RecurringTransactionService
+            first = RecurringTransactionService._calculate_next_occurrence(
+                data.start_date, frequency, 1, data.start_date.day)
+        rule = RecurringTransaction(
+            id=uuid.uuid4(), user_id=user_id, type=TransactionType.EXPENSE,
+            amount=Decimal(data.total_amount).quantize(CENT), currency=data.currency.upper(),
+            category_id=data.category_id, description=data.description,
+            frequency=frequency, interval=1,
+            start_date=data.start_date, next_occurrence=first, occurrence_count=0,
+            is_active=True, is_paused=False, auto_create=True, requires_approval=False,
+            split_connection_id=conn.id, split_method=data.method,
+            split_my_percent=data.my_percent if data.method == "percent" else None,
+            split_my_amount=data.my_amount if data.method == "fixed" else None,
+        )
+        self.session.add(rule)
+        await self.session.commit()
+        return await self._recurring_out(rule, user_id)
+
+    async def list_recurring(self, user_id: UUID) -> list[RecurringSplitOut]:
+        rules = (await self.session.execute(select(RecurringTransaction).where(and_(
+            RecurringTransaction.user_id == user_id,
+            RecurringTransaction.is_active == True,  # noqa: E712
+            RecurringTransaction.split_connection_id.isnot(None),
+        )).order_by(RecurringTransaction.next_occurrence))).scalars().all()
+        out = []
+        for rule in rules:
+            try:
+                out.append(await self._recurring_out(rule, user_id))
+            except HTTPException:
+                # Edited elsewhere so its saved share no longer fits the amount:
+                # show the rest rather than fail the whole list.
+                logger.warning("Repeating bill %s no longer splits as saved", rule.id)
+        return out
+
+    async def stop_recurring(self, user_id: UUID, rule_id: UUID) -> None:
+        """Stop the bill repeating. What it already posted (and split) stays."""
+        rule = await self.session.get(RecurringTransaction, rule_id)
+        if rule is None or rule.user_id != user_id or rule.split_connection_id is None:
+            raise HTTPException(status.HTTP_404_NOT_FOUND, "Repeating bill not found")
+        rule.is_active = False
+        await self.session.commit()
 
     # ------------------------------------------------------------------
     # Changing an accepted split
@@ -487,6 +567,11 @@ class SplitService:
         i_pay = split.payer_id == user_id
         mine, theirs = split_amounts(data.total_amount, data.method, i_pay, data.my_percent, data.my_amount)
         payer_share, other_share = (mine, theirs) if i_pay else (theirs, mine)
+        if split.source_transaction_id is not None and payer_share <= 0:
+            # That row is the expense the payer recorded themselves: a 0 share
+            # would delete it, and it must never be deleted by a split.
+            raise HTTPException(status.HTTP_422_UNPROCESSABLE_ENTITY,
+                                "This bill was split from an expense the payer recorded, so their share can't be 0")
         description = (data.description or split.description).strip()
         current = {s.user_id == split.payer_id: s.share_amount for s in split.shares}
         if (mine + theirs, payer_share, other_share, description) == (

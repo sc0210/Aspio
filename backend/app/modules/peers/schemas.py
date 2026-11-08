@@ -279,6 +279,48 @@ class SplitRespond(BaseModel):
     wallet_type: Literal["life", "emergency"] = "life"
 
 
+class RecurringSplitCreate(BaseModel):
+    """Body for POST /peers/splits/recurring: a bill you pay every month (or
+    week/year), split with a partner each time it comes round. The first
+    occurrence is posted on start_date."""
+
+    connection_id: UUID
+    description: str = Field(..., min_length=1, max_length=200)
+    total_amount: Decimal = Field(..., gt=0, decimal_places=2)
+    currency: str = Field("TWD", pattern=r"^[A-Za-z]{3}$")
+    category_id: UUID
+    start_date: date
+    frequency: Literal["weekly", "monthly", "yearly"] = "monthly"
+    method: Literal["equal", "percent", "fixed"] = "equal"
+    my_percent: Optional[Decimal] = Field(None, ge=0, le=100)
+    my_amount: Optional[Decimal] = Field(None, ge=0, decimal_places=2)
+    # The bill on start_date was already split by hand: post from the next
+    # period on. start_date still sets the day it comes round (the 31st stays
+    # the 31st, clamped only in short months).
+    skip_first: bool = False
+
+    @field_validator("description")
+    @classmethod
+    def _not_blank(cls, v: str) -> str:
+        if not v.strip():
+            raise ValueError("Describe the bill")
+        return v.strip()
+
+
+class RecurringSplitOut(BaseModel):
+    id: str
+    connection_id: str
+    partner_name: str
+    description: str
+    total_amount: float
+    currency: str
+    frequency: str
+    next_occurrence: str
+    method: str
+    my_share: float
+    partner_share: float
+
+
 class SplitAmend(BaseModel):
     """Body for POST /peers/splits/{id}/amend: a change to an accepted split that
     your partner must accept. my_percent / my_amount are yours, as when splitting."""
@@ -288,6 +330,13 @@ class SplitAmend(BaseModel):
     my_percent: Optional[Decimal] = Field(None, ge=0, le=100)
     my_amount: Optional[Decimal] = Field(None, ge=0, decimal_places=2)
     description: Optional[str] = Field(None, min_length=1, max_length=200)
+
+    @field_validator("description")
+    @classmethod
+    def _not_blank(cls, v: Optional[str]) -> Optional[str]:
+        if v is not None and not v.strip():
+            raise ValueError("Describe the bill")
+        return v.strip() if v is not None else v
 
 
 class AmendmentRespond(BaseModel):

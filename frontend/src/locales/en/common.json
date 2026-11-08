@@ -901,6 +901,19 @@
         "prompt": "{{name}} wants to change “{{description}}”",
         "sent": "Change sent: {{total}} · you {{mine}} / {{name}} {{theirs}}",
         "withdraw": "Withdraw change"
+      },
+      "repeat": {
+        "label": "Repeat every month",
+        "hint": "From {{date}}, this bill is added and split the same way each month. Stop it any time.",
+        "failed": "The bill was split, but it couldn’t be set to repeat: {{reason}}",
+        "section": "Repeating bills",
+        "line": "{{amount}} {{frequency}} with {{name}} · you {{mine}} / {{name}} {{theirs}} · next {{next}}",
+        "stop": "Stop",
+        "frequency": {
+          "weekly": "weekly",
+          "monthly": "monthly",
+          "yearly": "yearly"
+        }
       }
     },
     "summary": {

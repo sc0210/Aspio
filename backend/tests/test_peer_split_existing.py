@@ -171,3 +171,20 @@ async def test_an_open_split_row_cannot_be_linked_to_a_loan(async_session, coupl
     # Resending no loan (as an edit form does) is not a change.
     await txs.update_transaction(str(txn_id), alice, TransactionUpdate(loan_id=None, description="Weekly groceries"))
     assert (await _row(async_session, txn_id)).description == "Weekly groceries"
+
+
+
+async def test_your_own_expense_cant_be_changed_to_a_zero_share(async_session, couple):
+    """It's the expense you recorded: a 0 share would delete it."""
+    from app.modules.peers.schemas import SplitAmend
+
+    c = couple
+    txn_id = await _expense(async_session, c)
+    sid = uuid.UUID((await c["svc"].split_transaction(c["alice"].id, _body(c, txn_id))).id)
+    await c["svc"].respond(c["bob"].id, sid, "accept", None, "life")
+    with pytest.raises(HTTPException) as err:  # Bob: "you take none of it"
+        await c["svc"].propose_amendment(c["bob"].id, sid, SplitAmend(
+            total_amount=Decimal("1000"), method="fixed", my_amount=Decimal("1000")))
+    assert err.value.status_code == 422
+    row = await _row(async_session, txn_id)
+    assert (row.is_deleted, row.amount) == (False, Decimal("500"))

@@ -1757,6 +1757,8 @@ class RecurringTransactionRepository:
                 RecurringTransaction.interval,
                 RecurringTransaction.end_date,
                 RecurringTransaction.max_occurrences,
+                # Its day is the one the rule comes round on (the 31st stays the 31st).
+                RecurringTransaction.start_date,
             )
             .where(RecurringTransaction.id == recurring_id)
             .with_for_update(skip_locked=True)

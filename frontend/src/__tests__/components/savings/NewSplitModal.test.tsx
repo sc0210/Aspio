@@ -18,7 +18,7 @@ jest.mock('react-i18next', () => {
     useTranslation: () => ({ t }),
   };
 });
-jest.mock('@/lib/api-client', () => ({ apiClient: { createSplit: jest.fn() } }));
+jest.mock('@/lib/api-client', () => ({ apiClient: { createSplit: jest.fn(), createRecurringSplit: jest.fn() } }));
 jest.mock('@/services/transactionService', () => ({ transactionService: { getCategories: jest.fn() } }));
 
 const conn: PeerConnectionOut = {
@@ -67,4 +67,52 @@ it('blocks a share larger than the total', async () => {
 
   expect(screen.getByText('Your share has to be between 0 and the total.')).toBeInTheDocument();
   expect(screen.getByRole('button', { name: 'Split the bill' })).toBeDisabled();
+});
+
+describe('repeat every month', () => {
+  async function fill() {
+    await waitFor(() => expect(screen.getByRole('option', { name: 'Food' })).toBeInTheDocument());
+    fireEvent.change(screen.getByLabelText('What was it?'), { target: { value: 'Rent' } });
+    fireEvent.change(screen.getByLabelText('Total'), { target: { value: '30000' } });
+    fireEvent.change(screen.getByLabelText('Date'), { target: { value: '2026-01-31' } });
+  }
+
+  it('splits this month and repeats from the same day next month', async () => {
+    (apiClient.createSplit as jest.Mock).mockResolvedValue({ data: {} });
+    (apiClient.createRecurringSplit as jest.Mock).mockResolvedValue({ data: {} });
+    const onClose = jest.fn();
+    render(<NewSplitModal isOpen onClose={onClose} onSuccess={jest.fn()} connections={[conn]} />);
+    await fill();
+    fireEvent.click(screen.getByRole('checkbox', { name: /Repeat every month/ }));
+    fireEvent.click(screen.getByRole('button', { name: 'Split the bill' }));
+    await waitFor(() => expect(apiClient.createRecurringSplit).toHaveBeenCalledWith(expect.objectContaining({
+      connection_id: 'conn-1', description: 'Rent', total_amount: 30000, category_id: 'food',
+      start_date: '2026-01-31', skip_first: true, frequency: 'monthly', method: 'equal',
+    })));
+    expect(apiClient.createSplit).toHaveBeenCalledWith(expect.objectContaining({ split_date: '2026-01-31' }));
+    expect(onClose).toHaveBeenCalled();
+  });
+
+  it('is only offered when you paid', async () => {
+    render(<NewSplitModal isOpen onClose={jest.fn()} onSuccess={jest.fn()} connections={[conn]} />);
+    await fill();
+    fireEvent.click(screen.getByRole('button', { name: 'Bob paid' }));
+    expect(screen.queryByRole('checkbox', { name: /Repeat every month/ })).not.toBeInTheDocument();
+  });
+
+  it('says so when only the repeating failed, and clears the form so it is not split twice', async () => {
+    (apiClient.createSplit as jest.Mock).mockResolvedValue({ data: {} });
+    (apiClient.createRecurringSplit as jest.Mock).mockRejectedValue(new Error('Your partner has turned off bill splitting'));
+    const onSuccess = jest.fn();
+    const onClose = jest.fn();
+    render(<NewSplitModal isOpen onClose={onClose} onSuccess={onSuccess} connections={[conn]} />);
+    await fill();
+    fireEvent.click(screen.getByRole('checkbox', { name: /Repeat every month/ }));
+    fireEvent.click(screen.getByRole('button', { name: 'Split the bill' }));
+    expect(await screen.findByText(/The bill was split, but it couldn’t be set to repeat/)).toBeInTheDocument();
+    expect(onSuccess).toHaveBeenCalled();
+    expect(onClose).not.toHaveBeenCalled();
+    expect(screen.getByLabelText('What was it?')).toHaveValue('');
+    expect(screen.getByRole('button', { name: 'Split the bill' })).toBeDisabled();
+  });
 });

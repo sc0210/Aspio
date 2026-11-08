@@ -8,6 +8,7 @@ from decimal import Decimal
 from typing import Optional, List, Dict, Any, Tuple
 import logging
 import re
+import uuid
 
 from sqlalchemy.exc import IntegrityError
 
@@ -1618,6 +1619,12 @@ class RecurringTransactionService:
                 tags=recurring.tags,
                 notes=recurring.notes,
             ),
+            split=dict(
+                connection_id=recurring.split_connection_id,
+                method=recurring.split_method or "equal",
+                my_percent=recurring.split_my_percent,
+                my_amount=recurring.split_my_amount,
+            ) if recurring.split_connection_id else None,
         )
 
     async def _post_due_occurrences(self, rule: Dict[str, Any], max_date: date) -> int:
@@ -1637,22 +1644,27 @@ class RecurringTransactionService:
             if row is None or not row.is_active or row.is_paused:
                 break  # another run holds it, or the user paused/removed it
             occurrence, count = row.next_occurrence, row.occurrence_count or 0
+            # Read now: a failed split below rolls back, which expires `row`.
+            frequency, interval = row.frequency, row.interval
+            anchor_day = row.start_date.day if row.start_date else None
             finished = bool((row.end_date and occurrence > row.end_date)
                             or (row.max_occurrences and count >= row.max_occurrences))
             if finished or occurrence > max_date:
                 break
 
             if not await self.recurring_repo.has_posted(rule_id, occurrence):
-                await self.transaction_service.create_transaction(
+                created = await self.transaction_service.create_transaction(
                     TransactionCreate(**transaction_template, transaction_date=occurrence),
                     user_id,
                 )
                 posted += 1
+                if rule.get("split"):
+                    await self._split_occurrence(rule, created["transaction"].id)
 
             # Posting committed and released the lock, so advance only if the
             # rule still sits on this occurrence; otherwise another run already
             # counted it and we stop rather than count it twice.
-            next_date = self._calculate_next_occurrence(occurrence, row.frequency, row.interval)
+            next_date = self._calculate_next_occurrence(occurrence, frequency, interval, anchor_day)
             if not await self.recurring_repo.update_next_occurrence(
                 rule_id, next_date, expected_current=occurrence
             ):
@@ -1674,10 +1686,45 @@ class RecurringTransactionService:
                 logger.error(f"Could not retire finished recurring rule {rule_id}: {e}")
         return posted
 
+    async def _split_occurrence(self, rule: Dict[str, Any], transaction_id) -> None:
+        """Split an occurrence just posted, as "Split with partner" would. If it
+        can't be (the partner turned splitting off, or too many bills wait for
+        them), it stays an ordinary expense of the payer's: posting the bill
+        matters more than splitting it, and they can still split it by hand."""
+        from fastapi import HTTPException
+
+        from app.modules.peers.schemas import SplitFromTransaction
+        from app.modules.peers.splits import SplitService
+
+        split = rule["split"]
+        try:
+            await SplitService(self.recurring_repo.db).split_transaction(
+                uuid.UUID(rule["user_id"]),
+                SplitFromTransaction(
+                    transaction_id=transaction_id, connection_id=split["connection_id"],
+                    method=split["method"], my_percent=split["my_percent"], my_amount=split["my_amount"],
+                ),
+            )
+        except HTTPException as e:
+            await self.recurring_repo.db.rollback()
+            logger.warning(f"Recurring rule {rule['id']}: occurrence {transaction_id} not split: {e.detail}")
+        except Exception:
+            # Anything else: the expense is already posted, so let the rule move
+            # on (a retry would skip the posted occurrence anyway) and say why.
+            await self.recurring_repo.db.rollback()
+            logger.exception(f"Recurring rule {rule['id']}: splitting occurrence {transaction_id} failed")
+
+    @staticmethod
     def _calculate_next_occurrence(
-        self, current_date: date, frequency: RecurringFrequency, interval: int
+        current_date: date, frequency: RecurringFrequency, interval: int,
+        anchor_day: Optional[int] = None,
     ) -> date:
-        """Calculate the next occurrence date"""
+        """Calculate the next occurrence date.
+
+        anchor_day is the day of month the rule is for (its start date's day).
+        Without it a bill due on the 31st, clamped to the 28th in February,
+        stayed on the 28th for good: each step started from the clamped date.
+        """
 
         if frequency == RecurringFrequency.DAILY:
             return current_date + timedelta(days=interval)
@@ -1692,22 +1739,26 @@ class RecurringTransactionService:
                 year += 1
                 month -= 12
 
-            # Handle day overflow (e.g., Jan 31 -> Feb 28/29)
-            day = min(current_date.day, self._get_days_in_month(year, month))
+            # Handle day overflow (e.g., Jan 31 -> Feb 28/29), back to the
+            # anchor day once the month allows it again (Feb 28 -> Mar 31).
+            day = min(anchor_day or current_date.day, RecurringTransactionService._get_days_in_month(year, month))
 
             return date(year, month, day)
         elif frequency == RecurringFrequency.QUARTERLY:
-            return self._calculate_next_occurrence(
-                current_date, RecurringFrequency.MONTHLY, interval * 3
+            return RecurringTransactionService._calculate_next_occurrence(
+                current_date, RecurringFrequency.MONTHLY, interval * 3, anchor_day
             )
         elif frequency == RecurringFrequency.YEARLY:
-            return date(
-                current_date.year + interval, current_date.month, current_date.day
-            )
+            # 29 Feb has no date in most years: clamp, as months do.
+            year = current_date.year + interval
+            day = min(anchor_day or current_date.day,
+                      RecurringTransactionService._get_days_in_month(year, current_date.month))
+            return date(year, current_date.month, day)
         else:
             return current_date + timedelta(days=1)  # Fallback
 
-    def _get_days_in_month(self, year: int, month: int) -> int:
+    @staticmethod
+    def _get_days_in_month(year: int, month: int) -> int:
         """Get number of days in a month"""
         if month == 2:
             return (

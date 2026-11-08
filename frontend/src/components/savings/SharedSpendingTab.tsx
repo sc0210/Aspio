@@ -12,7 +12,7 @@ import { ConfirmDialog } from '@/components/ui/ConfirmDialog';
 import NewSplitModal from './NewSplitModal';
 import SettleUpModal, { type SettleTarget } from './SettleUpModal';
 import AmendSplitModal from './AmendSplitModal';
-import type { PeerBalanceOut, PeerConnectionOut, SettlementOut, SplitOut, SplitPolicy } from '@/shared/types';
+import type { PeerBalanceOut, PeerConnectionOut, RecurringSplitOut, SettlementOut, SplitOut, SplitPolicy } from '@/shared/types';
 
 const money = (value: number, currency: string) =>
   formatCurrency(Math.abs(value), currency, currency === 'TWD' ? { precision: 0 } : {});
@@ -64,6 +64,7 @@ export default function SharedSpendingTab({ connections, demo }: { connections: 
   const [settlements, setSettlements] = useState<SettlementOut[]>([]);
   const [settleTarget, setSettleTarget] = useState<SettleTarget | null>(null);
   const [amendTarget, setAmendTarget] = useState<SplitOut | null>(null);
+  const [recurring, setRecurring] = useState<RecurringSplitOut[]>([]);
   // Per partner: ring the bell for their bills and repayments. undefined: not loaded.
   const [notify, setNotifyState] = useState<Record<string, boolean | undefined>>({});
 
@@ -76,12 +77,14 @@ export default function SharedSpendingTab({ connections, demo }: { connections: 
       return;
     }
     try {
-      const [s, b, p] = await Promise.all([
+      const [s, b, p, r] = await Promise.all([
         apiClient.listSplits(), apiClient.getSplitBalances(), apiClient.listSettlements(),
+        apiClient.listRecurringSplits(),
       ]);
       setSplits(s.data ?? []);
       setBalances(b.data ?? []);
       setSettlements(p.data ?? []);
+      setRecurring(r.data ?? []);
       setError('');
     } catch (err) {
       setError(err instanceof Error ? err.message : t('savings.splits.errors.loadFailed', 'Failed to load shared bills'));
@@ -359,6 +362,32 @@ export default function SharedSpendingTab({ connections, demo }: { connections: 
                   {t('savings.splits.settle.undo', 'Undo')}
                 </button>
               )}
+            </div>
+          ))}
+        </section>
+      )}
+
+      {/* Repeating bills (mine: I pay them) */}
+      {recurring.length > 0 && (
+        <section aria-label={t('savings.splits.repeat.section', 'Repeating bills')} className="space-y-2">
+          <h3 className="text-sm font-semibold text-gray-900 dark:text-white">{t('savings.splits.repeat.section', 'Repeating bills')}</h3>
+          {recurring.map((r) => (
+            <div key={r.id} className="bg-white dark:bg-gray-800 rounded-xl p-4 shadow-sm flex flex-col sm:flex-row sm:items-center gap-2">
+              <div className="flex-1 min-w-0">
+                <p className="text-sm font-semibold text-gray-900 dark:text-white truncate">{r.description}</p>
+                <p className="text-xs text-gray-600 dark:text-gray-400">
+                  {t('savings.splits.repeat.line', '{{amount}} {{frequency}} with {{name}} · you {{mine}} / {{name}} {{theirs}} · next {{next}}', {
+                    amount: money(r.total_amount, r.currency),
+                    frequency: t(`savings.splits.repeat.frequency.${r.frequency}`, r.frequency),
+                    name: r.partner_name, mine: money(r.my_share, r.currency), theirs: money(r.partner_share, r.currency),
+                    next: r.next_occurrence,
+                  })}
+                </p>
+              </div>
+              <button type="button" disabled={busyId === r.id} onClick={() => act(r, () => apiClient.stopRecurringSplit(r.id), false)}
+                className="min-h-[44px] px-3 rounded-lg text-sm font-medium text-error-700 dark:text-error-400 hover:bg-error-50 dark:hover:bg-error-900/20 disabled:opacity-50">
+                {t('savings.splits.repeat.stop', 'Stop')}
+              </button>
             </div>
           ))}
         </section>
