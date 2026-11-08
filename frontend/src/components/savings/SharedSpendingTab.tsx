@@ -1,11 +1,12 @@
 'use client';
 
+import { RelatedMoneyLinks } from '@/components/layout/RelatedMoneyLinks';
 import { useCallback, useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useQueryClient } from '@tanstack/react-query';
 import { PlusIcon } from '@heroicons/react/24/outline';
 import { apiClient } from '@/lib/api-client';
-import { invalidateAllFinancialData } from '@/hooks/useDataSynchronization';
+import { invalidateAllFinancialData, QUERY_KEYS } from '@/hooks/useDataSynchronization';
 import { formatCurrency } from '@/utils/formatters';
 import { ConfirmDialog } from '@/components/ui/ConfirmDialog';
 import NewSplitModal from './NewSplitModal';
@@ -115,12 +116,19 @@ export default function SharedSpendingTab({ connections, demo }: { connections: 
     invalidateAllFinancialData(queryClient);
   }, [load, queryClient]);
 
+  // Repayments write no ledger rows: refresh this tab and the balance the
+  // dashboard shows, nothing else.
+  const repaid = useCallback(async () => {
+    await load();
+    void queryClient.invalidateQueries({ queryKey: [QUERY_KEYS.SPLIT_BALANCES] });
+  }, [load, queryClient]);
+
   // ledger: whether the action writes ledger rows (splits do; repayments don't).
   const act = async (item: { id: string }, run: () => Promise<unknown>, ledger = true) => {
     setBusyId(item.id);
     try {
       await run();
-      await (ledger ? changed() : load());
+      await (ledger ? changed() : repaid());
     } catch (err) {
       setError(err instanceof Error ? err.message : t('savings.splits.errors.actionFailed', 'That didn’t work'));
     } finally {
@@ -182,6 +190,8 @@ export default function SharedSpendingTab({ connections, demo }: { connections: 
           {t('savings.splits.demoSample', 'Sample shared bills. Sign in to split real bills with a partner and settle up.')}
         </p>
       )}
+
+      <RelatedMoneyLinks current="splits" />
 
       {error && <p role="alert" className="text-sm text-error-700 dark:text-error-400">{error}</p>}
 
@@ -443,7 +453,7 @@ export default function SharedSpendingTab({ connections, demo }: { connections: 
 
       <NewSplitModal isOpen={isNewOpen} onClose={() => setIsNewOpen(false)} onSuccess={() => void changed()} connections={connections} />
       <AmendSplitModal split={amendTarget} onClose={() => setAmendTarget(null)} onSuccess={() => void load()} />
-      <SettleUpModal target={settleTarget} onClose={() => setSettleTarget(null)} onSuccess={() => void load()} />
+      <SettleUpModal target={settleTarget} onClose={() => setSettleTarget(null)} onSuccess={() => void repaid()} />
       <ConfirmDialog
         isOpen={confirmCancel !== null}
         title={t('savings.splits.confirmCancelTitle', 'Cancel this split?')}

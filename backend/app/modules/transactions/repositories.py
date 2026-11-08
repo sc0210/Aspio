@@ -309,6 +309,9 @@ class TransactionRepository:
         if filters.wallet_type:
             conditions.append(Transaction.wallet_type == filters.wallet_type)
 
+        if filters.shared_only:
+            conditions.append(Transaction.peer_split_share_id.isnot(None))
+
         if filters.status:
             conditions.append(Transaction.status == filters.status)
 

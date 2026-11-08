@@ -435,6 +435,9 @@ async def get_transactions(
     wallet_type: Optional[TransactionWalletType] = Query(
         None, description="Wallet type filter (life/emergency)"
     ),
+    shared_only: bool = Query(
+        False, description="Only your share of bills split with a partner (open splits)"
+    ),
     date_from: Optional[date] = Query(None, description="Start date"),
     date_to: Optional[date] = Query(None, description="End date"),
     amount_min: Optional[float] = Query(None, ge=0, description="Minimum amount"),
@@ -493,6 +496,7 @@ async def get_transactions(
             payment_methods=parse_csv(payment_methods),
             currencies=parse_csv(currencies),
             wallet_type=wallet_type,
+            shared_only=shared_only,
             date_from=date_from,
             date_to=date_to,
             amount_min=amount_min,
@@ -514,6 +518,7 @@ async def get_transactions(
                 payment_methods,
                 currencies,
                 wallet_type,
+                shared_only,
                 date_from,
                 date_to,
                 amount_min,
@@ -672,6 +677,9 @@ async def get_transaction_page_stats(
     wallet_type: Optional[TransactionWalletType] = Query(
         None, description="Wallet type filter (life/emergency)"
     ),
+    shared_only: bool = Query(
+        False, description="Only your share of bills split with a partner (open splits)"
+    ),
     date_from: Optional[date] = Query(None, description="Start date"),
     date_to: Optional[date] = Query(None, description="End date"),
     search: Optional[str] = Query(None, description="General search term"),
@@ -727,6 +735,7 @@ async def get_transaction_page_stats(
         type=type,
         category_ids=final_category_ids,
         wallet_type=wallet_type,
+        shared_only=shared_only,
         date_from=date_from,
         date_to=date_to,
         search=search,

@@ -982,6 +982,31 @@ class SplitService:
         return self._prefs_out(connection_id, pref)
 
 
+async def shared_bill_context(session: AsyncSession, user_id: UUID,
+                              share_ids: list[UUID]) -> dict[UUID, tuple[Decimal, str, str]]:
+    """For ledger rows that are a share of an open split: share id -> (the
+    bill's total, its currency, the partner's name). An export shows a row's
+    amount as the user's share; this is what lets it be read against the bank,
+    which saw the whole bill go (or none of it, if the partner paid)."""
+    if not share_ids:
+        return {}
+    bills = (await session.execute(
+        select(PeerSplitShare.id, PeerSplit.id, PeerSplit.total_amount, PeerSplit.currency)
+        .join(PeerSplit, PeerSplit.id == PeerSplitShare.split_id)
+        .where(PeerSplitShare.id.in_(share_ids))
+    )).all()
+    split_ids = [split_id for _, split_id, _, _ in bills]
+    # A split is two people (create_split makes exactly two shares), so the one
+    # share that isn't the user's is the partner.
+    partners = dict((await session.execute(
+        select(PeerSplitShare.split_id, User.name)
+        .join(User, User.id == PeerSplitShare.user_id)
+        .where(and_(PeerSplitShare.split_id.in_(split_ids), PeerSplitShare.user_id != user_id))
+    )).all()) if split_ids else {}
+    return {share_id: (Decimal(total), currency, partners.get(split_id) or "")
+            for share_id, split_id, total, currency in bills}
+
+
 def _unsplittable(row: Transaction) -> Optional[str]:
     """Why this ledger row can't become a split, or None if it can."""
     if row.type != TransactionType.EXPENSE:

@@ -114,7 +114,8 @@
       "emergency": "Emergency",
       "life": "Life"
     },
-    "walletType": "Wallet Type"
+    "walletType": "Wallet Type",
+    "sharedOnly": "Shared bills only"
   },
   "form": {
     "addTag": "Add",

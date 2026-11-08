@@ -18,6 +18,7 @@ interface UseTransactionsOptions extends PaginationParams {
   category?: string;
   type?: 'income' | 'expense' | 'transfer';
   walletType?: string;
+  sharedOnly?: boolean;
   dateRange?: {
     start: Date;
     end: Date;
@@ -120,6 +121,10 @@ export function useTransactions(options: UseTransactionsOptions = {}) {
 
       if (options.walletType) {
         filteredTransactions = filteredTransactions.filter(t => t.walletType === options.walletType);
+      }
+
+      if (options.sharedOnly) {
+        filteredTransactions = filteredTransactions.filter(t => Boolean(t.peerSplitShareId));
       }
 
       if (options.dateRange) {

@@ -547,6 +547,17 @@ export function ExpenseGroupSummary({
             </div>
           </div>
 
+          {/* Your share of bills split with a partner (open splits). */}
+          <label className="flex items-center gap-2 text-sm text-gray-700 dark:text-gray-300 min-h-[44px] cursor-pointer">
+            <input
+              type="checkbox"
+              checked={filters.shared === 'shared'}
+              onChange={(e) => handleFilterChange('shared', e.target.checked ? 'shared' : 'all')}
+              className="w-4 h-4 rounded border-gray-300 dark:border-gray-600 text-primary-600 focus-visible:ring-2 focus-visible:ring-primary-500"
+            />
+            {t('transactions:filters.sharedOnly', 'Shared bills only')}
+          </label>
+
           {/* Date Range */}
           <div>
             <label htmlFor={`${uid}-daterange`} className="block text-xs font-medium text-gray-600 dark:text-gray-400 mb-1">

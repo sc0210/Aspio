@@ -20,7 +20,7 @@ const mockUseTransactions = useTransactions as jest.Mock;
 const getPageStats = transactionService.getPageStats as jest.Mock;
 
 const filters: TransactionFilters = {
-  type: 'all', category: 'all', walletType: 'all', dateRange: 'all',
+  type: 'all', category: 'all', walletType: 'all', shared: 'all', dateRange: 'all',
   sortBy: 'date', sortOrder: 'desc', startDate: '', endDate: '',
 };
 

@@ -11,6 +11,9 @@ import { MobileGroups } from '@/components/groups/MobileGroups';
 const mockVisible = { value: true };
 
 const mockMode: { isDemo: boolean; user: { id: string } | null } = { isDemo: true, user: null };
+// RelatedMoneyLinks asks which add-ons this instance has (a query); not under test here.
+jest.mock('@/hooks/useFeatures', () => ({ useFeatures: () => ({ lineBot: true, isLoading: false, isError: false }) }));
+
 jest.mock('@/hooks/useAppMode', () => ({
   useAppMode: () => mockMode,
 }));
