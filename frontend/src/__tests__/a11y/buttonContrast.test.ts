@@ -27,6 +27,8 @@ const DARK_500 = /(^|\s)dark:bg-(primary|prosperity|green|success|warning|error)
 /**
  * Comments and in-word apostrophes ("don't", JSX "You're") would pair with the
  * next real quote and shift every literal after them, so drop them first.
+ * A heuristic, not a tokenizer: a " //" inside a multi-line class string would
+ * cut it short, which no class list here does.
  */
 function stripNoise(source: string): string {
   return source

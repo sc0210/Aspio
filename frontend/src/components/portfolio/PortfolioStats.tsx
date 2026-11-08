@@ -160,8 +160,9 @@ export function PortfolioStats({ portfolio, performance, isValueVisible, apiStat
   // Calculate today's P/L (use performance.oneDay if todayGainLoss not provided)
   const todayChange = portfolio.todayGainLoss ?? (portfolio.totalValue * (performance.oneDay / 100));
   // Zero is flat (grey, no sign), not a gain: a quiet day read "+NT$0" in green.
-  // Rounded as displayed (whole units), so +0.4 isn't a green "+NT$0".
-  const todayDir = direction(Math.round(todayChange));
+  // Rounded as displayed (whole units), so ±0.4 isn't a "+NT$0" or "-NT$0"; `|| 0` drops −0.
+  const todayShown = Math.round(todayChange) || 0;
+  const todayDir = direction(todayShown);
   const tone = (up: string, down: string, flat: string) =>
     todayDir === 'up' ? up : todayDir === 'down' ? down : flat;
   const todayChangePercent = portfolio.todayGainLossPercentage ?? performance.oneDay;
@@ -397,7 +398,7 @@ export function PortfolioStats({ portfolio, performance, isValueVisible, apiStat
                           tone('text-success-700 dark:text-success-400', 'text-error-700 dark:text-error-400', 'text-gray-500 dark:text-gray-400')
                         )}>
                           {isValueVisible
-                            ? `${todayDir === 'up' ? '+' : ''}${formatCurrency(todayChange, portfolio.currency, { precision: 0 })}`
+                            ? `${todayDir === 'up' ? '+' : ''}${formatCurrency(todayShown, portfolio.currency, { precision: 0 })}`
                             : '•••••••'
                           }
                         </p>
