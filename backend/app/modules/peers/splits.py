@@ -209,8 +209,13 @@ class SplitService:
                 row.peer_split_share_id = None
         await self.session.flush()
 
-    def _notify(self, user_id: UUID, title: str, message: str, action: str,
-                obj: PeerSplit | PeerSettlement) -> None:
+    async def _notify(self, user_id: UUID, title: str, message: str, action: str,
+                      obj: PeerSplit | PeerSettlement) -> None:
+        # The recipient may have muted this partner: the bill or repayment still
+        # waits in their Shared spending tab, only the bell stays quiet.
+        pref = await self.session.get(PeerConnectionPref, (obj.connection_id, user_id))
+        if pref is not None and not pref.split_notifications:
+            return
         self.session.add(Notification(
             id=uuid.uuid4(), user_id=user_id, type=NotificationType.SYSTEM_UPDATE,
             priority=NotificationPriority.MEDIUM, status=NotificationStatus.PENDING,
@@ -308,11 +313,11 @@ class SplitService:
         my_name = await self._name(user_id)
         if partner_policy == SplitPolicy.AUTO_ACCEPT.value:
             await self._accept(split, their_share, category_id, "life")
-            self._notify(partner_id, "Shared bill added",
+            await self._notify(partner_id, "Shared bill added",
                          f"{my_name} split \"{split.description}\" with you; your share is in your ledger.",
                          "peer_split_added", split)
         else:
-            self._notify(partner_id, "New shared bill",
+            await self._notify(partner_id, "New shared bill",
                          f"{my_name} wants to split \"{split.description}\" with you.",
                          "peer_split_proposed", split)
         await self.session.commit()
@@ -351,7 +356,7 @@ class SplitService:
                     raise
                 await self.session.rollback()
                 raise HTTPException(status.HTTP_409_CONFLICT, "This split was already answered")
-            self._notify(split.created_by, "Shared bill accepted",
+            await self._notify(split.created_by, "Shared bill accepted",
                          f"{name} accepted \"{split.description}\".", "peer_split_accepted", split)
         else:
             share.status = ShareStatus.DECLINED.value
@@ -362,7 +367,7 @@ class SplitService:
                 creator_share = next(s for s in split.shares if s.user_id == split.created_by)
                 await self._set_row_amount(creator_share, Decimal("0"))
             await self._detach_rows(split)
-            self._notify(split.created_by, "Shared bill declined",
+            await self._notify(split.created_by, "Shared bill declined",
                          f"{name} declined \"{split.description}\".", "peer_split_declined", split)
         await self.session.commit()
         return await self.get_split(user_id, split.id)
@@ -382,7 +387,7 @@ class SplitService:
         await self._detach_rows(split)
         split.status = SplitStatus.VOIDED.value
         partner_id = next(s.user_id for s in split.shares if s.user_id != user_id)
-        self._notify(partner_id, "Shared bill withdrawn",
+        await self._notify(partner_id, "Shared bill withdrawn",
                      f"{await self._name(user_id)} withdrew \"{split.description}\".", "peer_split_voided", split)
         await self.session.commit()
         return await self.get_split(user_id, split.id)
@@ -407,7 +412,7 @@ class SplitService:
             # re-accepted since. Rewriting them would count the bill twice;
             # closing the split only clears the balance.
             split.status = SplitStatus.VOIDED.value
-            self._notify(other_share.user_id, "Shared bill closed",
+            await self._notify(other_share.user_id, "Shared bill closed",
                          f"{await self._name(user_id)} closed \"{split.description}\"; nothing is owed on it now.",
                          "peer_split_cancelled", split)
             await self.session.commit()
@@ -419,7 +424,7 @@ class SplitService:
         await self._set_row_amount(other_share, Decimal("0"))
         await self._detach_rows(split)
         split.status = SplitStatus.VOIDED.value
-        self._notify(other_share.user_id, "Shared bill cancelled",
+        await self._notify(other_share.user_id, "Shared bill cancelled",
                      f"{await self._name(user_id)} cancelled \"{split.description}\"; your share was removed.",
                      "peer_split_cancelled", split)
         await self.session.commit()
@@ -638,10 +643,10 @@ class SplitService:
         me = await self._name(user_id)
         amount = f"{st.amount:,.2f} {st.currency}"
         if received:
-            self._notify(partner_id, "Repayment recorded",
+            await self._notify(partner_id, "Repayment recorded",
                          f"{me} recorded that you paid back {amount}.", "peer_settlement_recorded", st)
         else:
-            self._notify(partner_id, "Did this arrive?",
+            await self._notify(partner_id, "Did this arrive?",
                          f"{me} says they paid you back {amount}. Confirm it to clear it from what they owe.",
                          "peer_settlement_proposed", st)
         await self.session.commit()
@@ -660,7 +665,7 @@ class SplitService:
         else:
             st.status = SettlementStatus.DECLINED.value
         amount = f"{st.amount:,.2f} {st.currency}"
-        self._notify(st.from_user_id,
+        await self._notify(st.from_user_id,
                      "Repayment confirmed" if action == "confirm" else "Repayment not confirmed",
                      f"{await self._name(user_id)} {'confirmed' if action == 'confirm' else 'did not confirm'}"
                      f" your repayment of {amount}.", "peer_settlement_confirmed" if action == "confirm" else "peer_settlement_declined", st)
@@ -685,7 +690,7 @@ class SplitService:
         st.status = SettlementStatus.VOIDED.value
         other = st.from_user_id if st.to_user_id == user_id else st.to_user_id
         amount = f"{st.amount:,.2f} {st.currency}"
-        self._notify(other, "Repayment undone" if was_confirmed else "Repayment withdrawn",
+        await self._notify(other, "Repayment undone" if was_confirmed else "Repayment withdrawn",
                      f"{await self._name(user_id)} {'undid' if was_confirmed else 'withdrew'} the repayment of {amount}.",
                      "peer_settlement_voided", st)
         await self.session.commit()
@@ -707,16 +712,34 @@ class SplitService:
     # Preferences
     # ------------------------------------------------------------------
 
+    @staticmethod
+    def _prefs_out(connection_id: UUID, pref: Optional[PeerConnectionPref]) -> PeerPrefsOut:
+        return PeerPrefsOut(
+            connection_id=str(connection_id),
+            split_policy=pref.split_policy if pref else SplitPolicy.APPROVE_EACH.value,
+            notify=pref.split_notifications if pref else True,
+        )
+
     async def get_prefs(self, user_id: UUID, connection_id: UUID) -> PeerPrefsOut:
         await self._connection(connection_id, user_id)
-        return PeerPrefsOut(connection_id=str(connection_id),
-                            split_policy=await self._policy(connection_id, user_id))
+        return self._prefs_out(connection_id, await self.session.get(PeerConnectionPref, (connection_id, user_id)))
 
-    async def set_prefs(self, user_id: UUID, connection_id: UUID, split_policy: str) -> PeerPrefsOut:
+    async def set_prefs(self, user_id: UUID, connection_id: UUID, split_policy: Optional[str] = None,
+                        notify: Optional[bool] = None) -> PeerPrefsOut:
+        """Change either setting; one left as None keeps its value."""
         await self._connection(connection_id, user_id)
+
+        def apply(pref: PeerConnectionPref) -> None:
+            if split_policy is not None:
+                pref.split_policy = split_policy
+            if notify is not None:
+                pref.split_notifications = notify
+
         pref = await self.session.get(PeerConnectionPref, (connection_id, user_id))
         if pref is None:
-            pref = PeerConnectionPref(connection_id=connection_id, user_id=user_id, split_policy=split_policy)
+            pref = PeerConnectionPref(connection_id=connection_id, user_id=user_id,
+                                      split_policy=SplitPolicy.APPROVE_EACH.value, split_notifications=True)
+            apply(pref)
             self.session.add(pref)
             try:
                 await self.session.commit()
@@ -726,12 +749,12 @@ class SplitService:
                 pref = await self.session.get(PeerConnectionPref, (connection_id, user_id))
                 if pref is None:  # not the insert race: a real failure
                     raise
-                pref.split_policy = split_policy
+                apply(pref)
                 await self.session.commit()
         else:
-            pref.split_policy = split_policy
+            apply(pref)
             await self.session.commit()
-        return PeerPrefsOut(connection_id=str(connection_id), split_policy=split_policy)
+        return self._prefs_out(connection_id, pref)
 
 
 def _unsplittable(row: Transaction) -> Optional[str]:

@@ -890,7 +890,8 @@
         "goToSavings": "Go to Savings",
         "note": "This expense stays whole until {{name}} accepts, then holds only your share. Withdraw it and it’s yours again, unchanged."
       },
-      "demoSample": "Sample shared bills. Sign in to split real bills with a partner and settle up."
+      "demoSample": "Sample shared bills. Sign in to split real bills with a partner and settle up.",
+      "notifyLabel": "Notify me about {{name}}’s bills and repayments"
     },
     "summary": {
       "active": "active",

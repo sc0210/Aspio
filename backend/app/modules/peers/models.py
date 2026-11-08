@@ -17,6 +17,7 @@ from decimal import Decimal
 from typing import Optional
 
 from sqlalchemy import (
+    Boolean,
     CheckConstraint,
     Date,
     ForeignKey,
@@ -24,6 +25,7 @@ from sqlalchemy import (
     Numeric,
     String,
     UniqueConstraint,
+    text,
 )
 from sqlalchemy.dialects.postgresql import UUID
 from sqlalchemy.orm import Mapped, mapped_column, relationship
@@ -252,6 +254,11 @@ class PeerConnectionPref(BaseModel):
     )
     split_policy: Mapped[str] = mapped_column(
         String(16), nullable=False, default=SplitPolicy.APPROVE_EACH.value
+    )
+    # Bell notifications about bills and repayments with this partner. Off mutes
+    # them only: proposals still wait in the Shared spending inbox.
+    split_notifications: Mapped[bool] = mapped_column(
+        Boolean, nullable=False, default=True, server_default=text("true")
     )
 
 

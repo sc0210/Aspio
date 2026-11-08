@@ -61,6 +61,8 @@ export default function SharedSpendingTab({ connections, demo }: { connections: 
   const [confirmCancel, setConfirmCancel] = useState<SplitOut | null>(null);
   const [settlements, setSettlements] = useState<SettlementOut[]>([]);
   const [settleTarget, setSettleTarget] = useState<SettleTarget | null>(null);
+  // Per partner: ring the bell for their bills and repayments. undefined: not loaded.
+  const [notify, setNotifyState] = useState<Record<string, boolean | undefined>>({});
 
   const load = useCallback(async () => {
     if (demo) {
@@ -92,11 +94,14 @@ export default function SharedSpendingTab({ connections, demo }: { connections: 
     void Promise.all(connections.map(async (c) => {
       try {
         const res = await apiClient.getPeerPrefs(c.id);
-        return [c.id, res.data?.split_policy] as const;
+        return [c.id, res.data] as const;
       } catch {
         return [c.id, undefined] as const;
       }
-    })).then((pairs) => setPolicies(Object.fromEntries(pairs)));
+    })).then((pairs) => {
+      setPolicies(Object.fromEntries(pairs.map(([id, p]) => [id, p?.split_policy])));
+      setNotifyState(Object.fromEntries(pairs.map(([id, p]) => [id, p?.notify])));
+    });
   }, [connections, readOnly]);
 
   // Every split change writes ledger rows: refresh transactions, wallets, review.
@@ -122,10 +127,21 @@ export default function SharedSpendingTab({ connections, demo }: { connections: 
     const previous = policies[connectionId];
     setPolicies((p) => ({ ...p, [connectionId]: policy }));
     try {
-      await apiClient.setPeerPrefs(connectionId, policy);
+      await apiClient.setPeerPrefs(connectionId, { split_policy: policy });
     } catch (err) {
       // Show what the server still holds, not the choice that didn't save.
       setPolicies((p) => ({ ...p, [connectionId]: previous }));
+      setError(err instanceof Error ? err.message : t('savings.splits.errors.actionFailed', 'That didn’t work'));
+    }
+  };
+
+  const setNotify = async (connectionId: string, on: boolean) => {
+    const previous = notify[connectionId];
+    setNotifyState((n) => ({ ...n, [connectionId]: on }));
+    try {
+      await apiClient.setPeerPrefs(connectionId, { notify: on });
+    } catch (err) {
+      setNotifyState((n) => ({ ...n, [connectionId]: previous }));
       setError(err instanceof Error ? err.message : t('savings.splits.errors.actionFailed', 'That didn’t work'));
     }
   };
@@ -201,6 +217,18 @@ export default function SharedSpendingTab({ connections, demo }: { connections: 
                 <option value="auto_accept">{t('savings.splits.policy.auto_accept', 'Add to my account automatically')}</option>
                 <option value="off">{t('savings.splits.policy.off', 'Don’t allow')}</option>
               </select>
+            </label>
+            )}
+            {!readOnly && connections.some((c) => c.id === b.connection_id) && (
+            <label className="mt-2 flex items-center gap-2 min-h-[44px] text-xs text-gray-600 dark:text-gray-400 cursor-pointer">
+              <input
+                type="checkbox"
+                checked={notify[b.connection_id] ?? true}
+                disabled={notify[b.connection_id] === undefined}
+                onChange={(e) => void setNotify(b.connection_id, e.target.checked)}
+                className="w-4 h-4 rounded border-gray-300 dark:border-gray-600 text-primary-600 focus-visible:ring-2 focus-visible:ring-primary-500"
+              />
+              {t('savings.splits.notifyLabel', 'Notify me about {{name}}’s bills and repayments', { name: b.partner_name })}
             </label>
             )}
           </div>

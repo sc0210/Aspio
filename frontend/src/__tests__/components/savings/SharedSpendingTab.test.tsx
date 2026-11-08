@@ -62,7 +62,7 @@ function renderTab() {
 beforeEach(() => {
   jest.clearAllMocks();
   api.listSettlements.mockResolvedValue({ data: [] });
-  api.getPeerPrefs.mockResolvedValue({ data: { connection_id: 'conn-1', split_policy: 'approve_each' } });
+  api.getPeerPrefs.mockResolvedValue({ data: { connection_id: 'conn-1', split_policy: 'approve_each', notify: true } });
   api.getSplitBalances.mockResolvedValue({ data: [
     { connection_id: 'conn-1', partner_name: 'Bob', balances: [{ currency: 'TWD', net: 500 }] },
   ] });
@@ -119,7 +119,7 @@ describe('SharedSpendingTab', () => {
     renderTab();
     const select = await screen.findByRole('combobox');
     fireEvent.change(select, { target: { value: 'auto_accept' } });
-    await waitFor(() => expect(api.setPeerPrefs).toHaveBeenCalledWith('conn-1', 'auto_accept'));
+    await waitFor(() => expect(api.setPeerPrefs).toHaveBeenCalledWith('conn-1', { split_policy: 'auto_accept' }));
   });
 });
 
@@ -224,5 +224,25 @@ describe('SharedSpendingTab settling up', () => {
     expect(undo).toHaveLength(1);
     fireEvent.click(undo[0]);
     await waitFor(() => expect(api.voidSettlement).toHaveBeenCalledWith('mine-received'));
+  });
+});
+
+describe('SharedSpendingTab notifications', () => {
+  it('mutes a partner, and rolls back if saving fails', async () => {
+    api.listSplits.mockResolvedValue({ data: [] });
+    api.setPeerPrefs.mockResolvedValueOnce({ data: {} }).mockRejectedValueOnce(new Error('down'));
+    renderTab();
+    const box = await screen.findByRole('checkbox', { name: /Notify me about Bob/ });
+    await waitFor(() => expect(box).toBeEnabled());
+    expect(box).toBeChecked();
+
+    fireEvent.click(box);
+    await waitFor(() => expect(api.setPeerPrefs).toHaveBeenCalledWith('conn-1', { notify: false }));
+    expect(box).not.toBeChecked();
+
+    fireEvent.click(box);  // turning it back on fails: keep what the server holds
+    await waitFor(() => expect(api.setPeerPrefs).toHaveBeenLastCalledWith('conn-1', { notify: true }));
+    await waitFor(() => expect(box).not.toBeChecked());
+    expect(await screen.findByRole('alert')).toHaveTextContent('down');
   });
 });

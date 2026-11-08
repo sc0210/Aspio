@@ -472,7 +472,7 @@ async def get_prefs(connection_id: UUID, current_user: CurrentUser, session: Asy
               summary="Change how you handle splits from this partner")
 async def set_prefs(connection_id: UUID, body: PeerPrefsUpdate, current_user: CurrentUser,
                     session: AsyncSession = Depends(get_db)):
-    prefs = await SplitService(session).set_prefs(current_user.id, connection_id, body.split_policy)
+    prefs = await SplitService(session).set_prefs(current_user.id, connection_id, body.split_policy, body.notify)
     return ApiResponse.success_response(data=prefs)
 
 
