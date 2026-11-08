@@ -237,6 +237,7 @@ export function MobileBottomNav() {
     <>
       {/* Bottom tab bar — mobile only */}
       <nav
+        data-tour="nav-mobile"
         aria-label="Mobile navigation"
         className={cn(
           'md:hidden',

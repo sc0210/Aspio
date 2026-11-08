@@ -164,6 +164,15 @@ only name it has.
 - `main` is the scroll container, not `body` — anything that measures or pins to scroll position
   must attach there.
 
+## Page tours
+
+The "?" in the top bar runs a short tour of the current page (`src/components/tour/ProductTour.tsx`). The tours are defined in `src/lib/tour/tours.ts`.
+
+- **Markers:** a step points at an element marked `data-tour="<name>"`. A step whose marker isn't on screen in the current layout is skipped. That's how one tour serves desktop and phone: phone layouts carry their own markers (`tx-m-*`, `pf-m-*`, …).
+- **Adding a page section:** when you add a major section to a page, mark it and add a step, with the English copy in `tours.ts` and both locales under `common.tour.*`. `tours.test.ts` fails if a step's text is missing from either locale.
+- **The invitation:** the first dashboard visit in a browser shows a small, dismissible invitation (`localStorage` key `aspiro-tour`). Nothing opens over the page unasked.
+- **Automation:** for screenshots or tests that load the dashboard, set `aspiro-tour` to `{"prompted":true}` first, as `capture-readme-screenshots.mjs` does.
+
 ## Previewing
 
 Set the `demo-mode=true` cookie to view authenticated pages in a browser without logging in.

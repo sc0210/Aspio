@@ -77,6 +77,8 @@ async function capture(browser, pages, contextOptions, theme) {
       localStorage.setItem('aspiro-language', 'en');
       localStorage.setItem('aspiro_analytics_consent', 'denied');
       localStorage.setItem('aspiro-theme', theme);
+      // The one-time tour invitation would sit over the dashboard shot.
+      localStorage.setItem('aspiro-tour', JSON.stringify({ prompted: true, done: [] }));
     },
     { version: CURRENT_VERSION, theme },
   );

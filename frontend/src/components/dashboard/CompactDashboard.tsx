@@ -106,7 +106,7 @@ export function CompactDashboard() {
                 </section>
 
                 {/* THREE WALLETS */}
-                <section className="grid grid-cols-3 gap-4">
+                <section data-tour="dash-wallets" className="grid grid-cols-3 gap-4">
                     {wallets.map(({ label, value, color, Icon }) => (
                         <Card key={label} padding="none" shadow="none" className="flex items-center gap-3.5 px-5 py-4">
                             <span className="grid place-items-center w-11 h-11 rounded-xl flex-shrink-0" style={{ background: `color-mix(in srgb, ${color} 16%, transparent)` }}>
@@ -126,7 +126,7 @@ export function CompactDashboard() {
                 <SharedBalanceNote />
 
                 {/* THREE INSIGHTS — all visible, no swipe */}
-                <section>
+                <section data-tour="dash-flow">
                     <p className="mb-3 text-base font-extrabold tracking-tight text-gray-900 dark:text-white">{t('mobile.highlights', "Today's highlights")}</p>
                     <div className="grid grid-cols-3 gap-4">
                         {/* Cash flow */}

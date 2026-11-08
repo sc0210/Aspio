@@ -89,7 +89,7 @@ export function MobileLoans() {
                 ) : (
                     <>
                         {/* HERO — what I owe, and what is due next */}
-                        <section className="rounded-3xl bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 shadow-sm p-5">
+                        <section data-tour="loans-m-hero" className="rounded-3xl bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 shadow-sm p-5">
                             <p className="text-sm font-bold text-gray-500 dark:text-gray-400">{t('loans:summary.totalDebt')}</p>
                             <p className="mt-1 text-[32px] leading-none font-extrabold tracking-tight tabular-nums text-gray-900 dark:text-white">
                                 {hide(fmt(summary?.total_debt ?? 0))}
@@ -120,7 +120,7 @@ export function MobileLoans() {
                         <UpcomingPayments loans={active} />
 
                         {/* Each active loan — progress, and the one action a phone needs */}
-                        <section className="space-y-2.5">
+                        <section data-tour="loans-m-list" className="space-y-2.5">
                             <p className="px-1 text-sm font-extrabold tracking-tight text-gray-900 dark:text-white">
                                 {t('loans:sections.active', { count: active.length })}
                             </p>

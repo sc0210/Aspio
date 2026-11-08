@@ -324,7 +324,7 @@ export function ComprehensiveDashboard() {
         {isNewUser && <GetStarted />}
 
         {/* ========== WALLET NET WORTH CARD ========== */}
-        <section aria-label="Wallet Overview" className="animate-fade-in-up animation-delay-200">
+        <section aria-label="Wallet Overview" data-tour="dash-wallets" className="animate-fade-in-up animation-delay-200">
           <WalletNetWorthCard
             stats={memoizedDashboardData.stats}
             netWorthChangePercent={netWorthChange.percent}
@@ -349,7 +349,7 @@ export function ComprehensiveDashboard() {
             above them. The portfolio delta comes from walletTrendsData so it
             shares the hero's time base — stats.portfolioGrowth is avoided
             because the backend computes it over a different holding set. */}
-        <section aria-label="This period" className="animate-fade-in-up animation-delay-200">
+        <section aria-label="This period" data-tour="dash-flow" className="animate-fade-in-up animation-delay-200">
           <DashboardTodayStrip
             netSaved={memoizedDashboardData.stats.monthlyIncome - memoizedDashboardData.stats.monthlyExpenses}
             savingsRate={memoizedDashboardData.stats.monthlyIncome > 0 ? memoizedDashboardData.stats.savingsRate : null}

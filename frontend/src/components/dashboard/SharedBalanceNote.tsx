@@ -38,7 +38,7 @@ export function SharedBalanceNote() {
   const show = (value: number, currency: string) => (isValueVisible ? money(value, currency) : hidden);
 
   return (
-    <section aria-label={t('sharedBalance.label', 'Shared bills')}>
+    <section aria-label={t('sharedBalance.label', 'Shared bills')} data-tour="dash-shared">
       <Card padding="none" shadow="none" className="px-4 py-3 flex flex-col sm:flex-row sm:items-center gap-3">
       <div className="flex items-start gap-3 flex-1 min-w-0">
         <span className="grid place-items-center w-9 h-9 rounded-lg bg-sky-50 dark:bg-sky-900/30 flex-shrink-0">

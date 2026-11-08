@@ -150,7 +150,7 @@ export function MobilePortfolio() {
                 <BiggerScreenHint />
 
                 {/* HERO — total value + gain, with the allocation donut */}
-                <section className="rounded-3xl bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 shadow-sm p-5">
+                <section data-tour="pf-m-hero" className="rounded-3xl bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 shadow-sm p-5">
                     <div className="flex items-center gap-4">
                         <div className="min-w-0 flex-1">
                             <p className="text-xs font-bold tracking-wide text-gray-500 dark:text-gray-500">{t('portfolio:stats.totalValue', 'Portfolio Value')}</p>
@@ -216,7 +216,7 @@ export function MobilePortfolio() {
                 </Card>
 
                 {/* Top holdings — compact rows */}
-                <section>
+                <section data-tour="pf-m-holdings">
                     <p className="px-1 mb-2.5 text-sm font-extrabold tracking-tight text-gray-900 dark:text-white">{t('portfolio:holdingsList', 'Holdings')}</p>
                     <Card padding="none" shadow="none" clip className="divide-y divide-gray-100 dark:divide-gray-700">
                         {model.holdings.slice(0, 8).map((h) => {

@@ -9,6 +9,8 @@ import { WhatsNewButton } from '@/components/whatsnew/WhatsNewButton';
 import { DashboardSidebar } from './DashboardSidebar';
 import { MobileBottomNav } from './MobileBottomNav';
 import { CommandPalette } from './CommandPalette';
+import { ProductTour } from '@/components/tour/ProductTour';
+import { TourButton } from '@/components/tour/TourButton';
 import { PageTitle } from './PageTitle';
 import { cn } from '@/utils/cn';
 import { SidebarProvider } from '@/contexts/SidebarContext';
@@ -108,8 +110,11 @@ export function DashboardLayout({ children, rightSidebar, topBarActions }: Dashb
             </Link>
 
             <div className="flex items-center gap-1">
-              <WhatsNewButton />
-              <NotificationBell />
+              <TourButton />
+              <div className="flex items-center gap-1" data-tour="updates">
+                <WhatsNewButton />
+                <NotificationBell />
+              </div>
             </div>
           </div>
 
@@ -118,11 +123,14 @@ export function DashboardLayout({ children, rightSidebar, topBarActions }: Dashb
             <PageTitle />
             <div className="flex-1" />
             {topBarActions && (
-              <div className="flex items-center gap-2 mr-3">{topBarActions}</div>
+              <div className="flex items-center gap-2 mr-3" data-tour="page-actions">{topBarActions}</div>
             )}
             <div className="flex items-center gap-1">
-              <WhatsNewButton />
-              <NotificationBell />
+              <TourButton />
+              <div className="flex items-center gap-1" data-tour="updates">
+                <WhatsNewButton />
+                <NotificationBell />
+              </div>
             </div>
           </div>
 
@@ -169,6 +177,9 @@ export function DashboardLayout({ children, rightSidebar, topBarActions }: Dashb
 
       {/* App-wide "What's New" — auto-opens once after a new release */}
       <WhatsNewModal />
+
+      {/* Page tours: the "?" in the top bar, and a one-time invitation */}
+      <ProductTour />
     </SidebarProvider>
   );
 }

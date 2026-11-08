@@ -34,6 +34,10 @@ setup('authenticate', async ({ page }) => {
     await page.waitForURL('/', { timeout: 10000 });
   }
   
+  // The one-time tour invitation would otherwise appear over the dashboard in
+  // every spec that loads it.
+  await page.evaluate(() => localStorage.setItem('aspiro-tour', JSON.stringify({ prompted: true, done: [] })));
+
   // Save signed-in state to 'authFile'
   await page.context().storageState({ path: authFile });
 });
