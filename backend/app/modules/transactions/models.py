@@ -241,6 +241,15 @@ class RecurringTransaction(BaseModel):
     tags: Mapped[Optional[List[str]]] = mapped_column(JSON)
     notes: Mapped[Optional[str]] = mapped_column(Text)
 
+    # A repeating bill split with a partner: each occurrence posted is split as
+    # "Split with partner" would split it. Cleared when the partner is removed.
+    split_connection_id: Mapped[Optional[uuid.UUID]] = mapped_column(
+        UUID(as_uuid=True), ForeignKey("peer_connections.id", ondelete="SET NULL"), nullable=True
+    )
+    split_method: Mapped[Optional[str]] = mapped_column(String(10), nullable=True)
+    split_my_percent: Mapped[Optional[Decimal]] = mapped_column(Numeric(5, 2), nullable=True)
+    split_my_amount: Mapped[Optional[Decimal]] = mapped_column(Numeric(15, 2), nullable=True)
+
     # Relationships
     transactions: Mapped[List["Transaction"]] = relationship(
         "Transaction", back_populates="recurring_transaction"

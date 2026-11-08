@@ -901,6 +901,19 @@
         "prompt": "{{name}} 想修改「{{description}}」",
         "sent": "已送出修改：{{total}} · 你 {{mine}} / {{name}} {{theirs}}",
         "withdraw": "撤回修改"
+      },
+      "repeat": {
+        "label": "每月重複",
+        "hint": "從 {{date}} 起，每個月都會以相同方式新增並分攤這筆帳單，可隨時停止。",
+        "failed": "帳單已分攤，但無法設定為每月重複：{{reason}}",
+        "section": "重複的帳單",
+        "line": "{{amount}}，{{frequency}}與 {{name}} 分攤 · 你 {{mine}} / {{name}} {{theirs}} · 下次 {{next}}",
+        "stop": "停止",
+        "frequency": {
+          "weekly": "每週",
+          "monthly": "每月",
+          "yearly": "每年"
+        }
       }
     },
     "summary": {

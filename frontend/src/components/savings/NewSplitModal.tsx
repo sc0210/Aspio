@@ -7,6 +7,7 @@ import { apiClient } from '@/lib/api-client';
 import { transactionService } from '@/services/transactionService';
 import { useDialog } from '@/hooks/useDialog';
 import { businessToday } from '@/lib/portfolio/businessDate';
+import { sameDayNextMonth } from '@/lib/savings/nextMonth';
 import type { PeerConnectionOut, SplitMethod, TransactionCategory } from '@/shared/types';
 
 interface NewSplitModalProps {
@@ -35,6 +36,8 @@ export default function NewSplitModal({ isOpen, onClose, onSuccess, connections 
   const [payer, setPayer] = useState<'me' | 'partner'>('me');
   const [method, setMethod] = useState<SplitMethod>('equal');
   const [myValue, setMyValue] = useState('');
+  // Repeat monthly from next month (you pay it, so only when you paid).
+  const [repeat, setRepeat] = useState(false);
   const [categories, setCategories] = useState<TransactionCategory[]>([]);
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState('');
@@ -72,6 +75,11 @@ export default function NewSplitModal({ isOpen, onClose, onSuccess, connections 
     if (!connectionId || !description.trim() || totalNum <= 0 || !categoryId || invalidShare) return;
     setSubmitting(true);
     setError('');
+    const shares = {
+      method,
+      my_percent: method === 'percent' ? parseFloat(myValue) : null,
+      my_amount: method === 'fixed' ? parseFloat(myValue) : null,
+    };
     try {
       await apiClient.createSplit({
         connection_id: connectionId,
@@ -81,17 +89,42 @@ export default function NewSplitModal({ isOpen, onClose, onSuccess, connections 
         split_date: date,
         category_id: categoryId,
         payer,
-        method,
-        my_percent: method === 'percent' ? parseFloat(myValue) : null,
-        my_amount: method === 'fixed' ? parseFloat(myValue) : null,
+        ...shares,
       });
+    } catch (err) {
+      setError(err instanceof Error ? err.message : t('savings.splits.errors.createFailed', 'Failed to split the bill'));
+      setSubmitting(false);
+      return;
+    }
+    try {
+      if (repeat && payer === 'me') {
+        await apiClient.createRecurringSplit({
+          connection_id: connectionId,
+          description: description.trim(),
+          total_amount: totalNum,
+          currency,
+          category_id: categoryId,
+          start_date: sameDayNextMonth(date),
+          frequency: 'monthly',
+          ...shares,
+        });
+      }
       onSuccess();
       onClose();
       setDescription('');
       setTotal('');
       setMyValue('');
+      setRepeat(false);
     } catch (err) {
-      setError(err instanceof Error ? err.message : t('savings.splits.errors.createFailed', 'Failed to split the bill'));
+      // This month's bill is split; only the repeating failed. Say exactly that,
+      // and clear the form so sending it again can't split the bill twice.
+      onSuccess();
+      setDescription('');
+      setTotal('');
+      setMyValue('');
+      setRepeat(false);
+      setError(t('savings.splits.repeat.failed', 'The bill was split, but it couldn’t be set to repeat: {{reason}}',
+        { reason: err instanceof Error ? err.message : '' }));
     } finally {
       setSubmitting(false);
     }
@@ -217,6 +250,19 @@ export default function NewSplitModal({ isOpen, onClose, onSuccess, connections 
               </p>
             )}
           </fieldset>
+
+          {payer === 'me' && (
+            <label className="flex items-start gap-2 min-h-[44px] text-sm text-gray-700 dark:text-gray-300 cursor-pointer">
+              <input type="checkbox" checked={repeat} onChange={(e) => setRepeat(e.target.checked)}
+                className="mt-0.5 w-4 h-4 rounded border-gray-300 dark:border-gray-600 text-primary-600 focus-visible:ring-2 focus-visible:ring-primary-500" />
+              <span>
+                {t('savings.splits.repeat.label', 'Repeat every month')}
+                <span className="block text-xs text-gray-600 dark:text-gray-400">
+                  {t('savings.splits.repeat.hint', 'From {{date}}, this bill is added and split the same way each month. Stop it any time.', { date: date ? sameDayNextMonth(date) : '' })}
+                </span>
+              </span>
+            </label>
+          )}
 
           <p className="text-xs text-gray-600 dark:text-gray-400">
             {t('savings.splits.consentNote', '{{name}} accepts before anything is added to their account.', { name: partnerName })}

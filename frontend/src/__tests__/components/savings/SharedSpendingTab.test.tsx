@@ -36,6 +36,8 @@ jest.mock('@/lib/api-client', () => ({
     amendSplit: jest.fn(),
     respondToAmendment: jest.fn(),
     withdrawAmendment: jest.fn(),
+    listRecurringSplits: jest.fn(),
+    stopRecurringSplit: jest.fn(),
   },
 }));
 
@@ -65,6 +67,7 @@ function renderTab() {
 beforeEach(() => {
   jest.clearAllMocks();
   api.listSettlements.mockResolvedValue({ data: [] });
+  api.listRecurringSplits.mockResolvedValue({ data: [] });
   api.getPeerPrefs.mockResolvedValue({ data: { connection_id: 'conn-1', split_policy: 'approve_each', notify: true } });
   api.getSplitBalances.mockResolvedValue({ data: [
     { connection_id: 'conn-1', partner_name: 'Bob', balances: [{ currency: 'TWD', net: 500 }] },
@@ -286,5 +289,22 @@ describe('SharedSpendingTab changes to an accepted split', () => {
     await waitFor(() => expect(api.amendSplit).toHaveBeenCalledWith('s1', {
       total_amount: 1200, method: 'equal', my_percent: null, my_amount: null, description: 'Dinner',
     }));
+  });
+});
+
+describe('SharedSpendingTab repeating bills', () => {
+  it('lists a repeating bill and stops it', async () => {
+    api.listSplits.mockResolvedValue({ data: [] });
+    api.listRecurringSplits.mockResolvedValue({ data: [{
+      id: 'r1', connection_id: 'conn-1', partner_name: 'Bob', description: 'Rent', total_amount: 30000,
+      currency: 'TWD', frequency: 'monthly', next_occurrence: '2026-12-07', method: 'equal',
+      my_share: 15000, partner_share: 15000,
+    }] });
+    api.stopRecurringSplit.mockResolvedValue({ data: null });
+    renderTab();
+    expect(await screen.findByText('Rent')).toBeInTheDocument();
+    expect(screen.getByText(/monthly with Bob .* next 2026-12-07/)).toBeInTheDocument();
+    fireEvent.click(screen.getByRole('button', { name: 'Stop' }));
+    await waitFor(() => expect(api.stopRecurringSplit).toHaveBeenCalledWith('r1'));
   });
 });

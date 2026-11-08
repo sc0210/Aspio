@@ -162,7 +162,10 @@ WITH checks(sort, object, source_file, present) AS (
         EXISTS (SELECT 1 FROM pg_class WHERE oid = to_regclass('public.peer_split_amendments')
                 AND relrowsecurity)),
     (32, 'index uq_peer_split_amendments_open', '2026_11_08_peer_split_amendments.sql',
-        to_regclass('public.uq_peer_split_amendments_open') IS NOT NULL)
+        to_regclass('public.uq_peer_split_amendments_open') IS NOT NULL),
+    (33, 'column recurring_transactions.split_connection_id', '2026_11_08_recurring_splits.sql',
+        EXISTS (SELECT 1 FROM information_schema.columns
+                 WHERE table_name = 'recurring_transactions' AND column_name = 'split_connection_id'))
 )
 SELECT
     CASE WHEN present THEN 'OK     ' ELSE 'MISSING' END AS status,

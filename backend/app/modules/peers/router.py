@@ -56,6 +56,8 @@ from app.modules.peers.schemas import (
     PeerPrefsOut,
     PeerPrefsUpdate,
     AmendmentRespond,
+    RecurringSplitCreate,
+    RecurringSplitOut,
     SettlementCreate,
     SettlementOut,
     SplitAmend,
@@ -436,6 +438,28 @@ async def respond_to_settlement(settlement_id: UUID, body: SettlementRespond, cu
              summary="Withdraw your unconfirmed repayment, or undo one you were paid")
 async def void_settlement(settlement_id: UUID, current_user: CurrentUser, session: AsyncSession = Depends(get_db)):
     return ApiResponse.success_response(data=await SplitService(session).void_settlement(current_user.id, settlement_id))
+
+
+# Repeating bills. Registered before /splits/{split_id} so "recurring" isn't read as an id.
+@router.post("/splits/recurring", response_model=ApiResponse[RecurringSplitOut],
+             status_code=status.HTTP_201_CREATED, summary="A bill you pay regularly, split each time it posts")
+async def create_recurring_split(body: RecurringSplitCreate, current_user: CurrentUser,
+                                 session: AsyncSession = Depends(get_db)):
+    rule = await SplitService(session).create_recurring(current_user.id, body)
+    return ApiResponse.success_response(data=rule, message="Repeating bill set up")
+
+
+@router.get("/splits/recurring", response_model=ApiResponse[list[RecurringSplitOut]],
+            summary="Your repeating bills split with a partner")
+async def list_recurring_splits(current_user: CurrentUser, session: AsyncSession = Depends(get_db)):
+    return ApiResponse.success_response(data=await SplitService(session).list_recurring(current_user.id))
+
+
+@router.post("/splits/recurring/{rule_id}/stop", response_model=ApiResponse[None],
+             summary="Stop a bill repeating; what it already posted stays")
+async def stop_recurring_split(rule_id: UUID, current_user: CurrentUser, session: AsyncSession = Depends(get_db)):
+    await SplitService(session).stop_recurring(current_user.id, rule_id)
+    return ApiResponse.success_response(data=None, message="Stopped")
 
 
 @router.get("/splits/{split_id}", response_model=ApiResponse[SplitOut], summary="Get one split")

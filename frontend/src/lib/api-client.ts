@@ -14,7 +14,7 @@ import {
   SharedGoalOut,
   SharedGoalCreate,
   SavingRecord, SharedGoalUpdate,
-  SplitCreate, SplitOut, PeerBalanceOut, PeerPrefsOut, SplitPolicy, SettlementCreate, SettlementOut, SplitFromTransaction, PeerPrefsUpdate, SplitAmend } from '@/shared/types';
+  SplitCreate, SplitOut, PeerBalanceOut, PeerPrefsOut, SplitPolicy, SettlementCreate, SettlementOut, SplitFromTransaction, PeerPrefsUpdate, SplitAmend, RecurringSplitCreate, RecurringSplitOut } from '@/shared/types';
 import { getSession } from 'next-auth/react';
 import { getPublicApiUrl, getServerApiUrl } from '@/lib/api-url';
 export interface GamificationStats {
@@ -610,6 +610,18 @@ class ApiClient {
 
   async splitTransaction(body: SplitFromTransaction): Promise<ApiResponse<SplitOut>> {
     return this.post<SplitOut>('/peers/splits/from-transaction', body);
+  }
+
+  async createRecurringSplit(body: RecurringSplitCreate): Promise<ApiResponse<RecurringSplitOut>> {
+    return this.post<RecurringSplitOut>('/peers/splits/recurring', body);
+  }
+
+  async listRecurringSplits(): Promise<ApiResponse<RecurringSplitOut[]>> {
+    return this.get<RecurringSplitOut[]>('/peers/splits/recurring');
+  }
+
+  async stopRecurringSplit(ruleId: string): Promise<ApiResponse<null>> {
+    return this.post<null>(`/peers/splits/recurring/${ruleId}/stop`, {});
   }
 
   async amendSplit(splitId: string, body: SplitAmend): Promise<ApiResponse<SplitOut>> {

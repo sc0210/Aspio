@@ -934,6 +934,9 @@ def _due_rule():
         id=uuid4(), user_id=uuid4(), next_occurrence=business_today(), occurrence_count=0,
         type=TransactionType.EXPENSE, amount=Decimal("100"), currency="TWD",
         description="Rent", category_id=uuid4(), payment_method=None, tags=None, notes=None,
+        # An ordinary rule: an unset MagicMock attribute is truthy, so leaving
+        # this out made every rule look split with a partner.
+        split_connection_id=None,
     )
 
 
@@ -1009,6 +1012,7 @@ class TestRecurringTransactionService:
         mock_recurring.occurrence_count = 0
         mock_recurring.frequency = RecurringFrequency.MONTHLY
         mock_recurring.interval = 1
+        mock_recurring.split_connection_id = None  # an ordinary, unsplit rule
 
         svc = self.make_service()
         svc.recurring_repo.get_due_transactions = AsyncMock(return_value=[mock_recurring])

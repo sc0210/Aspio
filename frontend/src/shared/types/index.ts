@@ -541,6 +541,34 @@ export interface SplitCreate {
 }
 
 /** A bill split with a partner, as the viewer sees it. */
+/** A bill you pay regularly, split with a partner each time it posts. */
+export interface RecurringSplitCreate {
+  connection_id: string;
+  description: string;
+  total_amount: number;
+  currency: string;
+  category_id: string;
+  start_date: string;
+  frequency?: 'weekly' | 'monthly' | 'yearly';
+  method: SplitMethod;
+  my_percent?: number | null;
+  my_amount?: number | null;
+}
+
+export interface RecurringSplitOut {
+  id: string;
+  connection_id: string;
+  partner_name: string;
+  description: string;
+  total_amount: number;
+  currency: string;
+  frequency: string;
+  next_occurrence: string;
+  method: SplitMethod;
+  my_share: number;
+  partner_share: number;
+}
+
 /** A proposed change to an accepted split, as one participant sees it. */
 export interface AmendmentOut {
   id: string;
