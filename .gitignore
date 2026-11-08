@@ -186,6 +186,9 @@ frontend/.next.bak/
 backend/.coverage
 backend/.coverage.*
 backend/test-results/
+# Playwright run output (screenshots, traces, reports)
+frontend/test-results/
+frontend/playwright-report/
 backend/htmlcov/
 # Jest JSON report produced by the dead-suite check in CI
 frontend/jest-results.json

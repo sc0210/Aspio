@@ -1,5 +1,6 @@
 'use client';
 
+import { SharedBalanceNote } from './SharedBalanceNote';
 import { useTranslation } from 'react-i18next';
 import {
     BanknotesIcon,
@@ -116,6 +117,9 @@ export function CompactDashboard() {
                         </Card>
                     ))}
                 </section>
+
+                {/* Open shared bills: why the wallets differ from the bank */}
+                <SharedBalanceNote />
 
                 {/* THREE INSIGHTS — all visible, no swipe */}
                 <section>

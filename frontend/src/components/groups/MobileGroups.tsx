@@ -1,5 +1,6 @@
 'use client';
 
+import { RelatedMoneyLinks } from '@/components/layout/RelatedMoneyLinks';
 import { useEffect, useMemo, useState } from 'react';
 import Link from 'next/link';
 import { useTranslation } from 'react-i18next';
@@ -232,6 +233,9 @@ export function MobileGroups() {
                         </section>
                     </>
                 )}
+                <div className="px-4 text-center">
+                    <RelatedMoneyLinks current="groups" />
+                </div>
             </div>
         </DashboardLayout>
     );

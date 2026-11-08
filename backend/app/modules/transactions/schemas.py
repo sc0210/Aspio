@@ -442,6 +442,8 @@ class TransactionFilter(BaseModel):
     payment_methods: Optional[List[PaymentMethod]] = Field(None, max_length=20)
     currencies: Optional[List[str]] = Field(None, max_length=10)
     wallet_type: Optional[TransactionWalletType] = None
+    # Only your share of bills split with a partner (rows linked to an open split).
+    shared_only: bool = False
     status: Optional[TransactionStatus] = None
     date_from: Optional[date] = None
     date_to: Optional[date] = None

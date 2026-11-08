@@ -8,6 +8,8 @@ interface TransactionFilters extends PaginationParams {
   category?: string;
   type?: 'income' | 'expense' | 'transfer';
   walletType?: string;
+  /** Only your share of bills split with a partner. */
+  sharedOnly?: boolean;
   dateRange?: {
     start: Date;
     end: Date;
@@ -138,6 +140,7 @@ class TransactionService {
       if (filters.category) queryParams.append('category', filters.category);
       if (filters.type) queryParams.append('type', filters.type);
       if (filters.walletType) queryParams.append('wallet_type', filters.walletType);
+      if (filters.sharedOnly) queryParams.append('shared_only', 'true');
       if (filters.search) queryParams.append('search', filters.search);
       if (filters.minAmount) queryParams.append('amount_min', filters.minAmount.toString());
       if (filters.maxAmount) queryParams.append('amount_max', filters.maxAmount.toString());
@@ -242,6 +245,7 @@ class TransactionService {
       if (filters.type) queryParams.append('type', filters.type);
       if (filters.category) queryParams.append('category', filters.category);
       if (filters.walletType) queryParams.append('wallet_type', filters.walletType);
+      if (filters.sharedOnly) queryParams.append('shared_only', 'true');
       if (filters.search) queryParams.append('search', filters.search);
       // Both legs of a wallet transfer, left out of the totals when asked. The
       // aggregate has to do it: subtracting client-side would go wrong the moment

@@ -1,0 +1,130 @@
+"""
+Shared bills on the Transactions page: the "shared bills only" filter, and the
+export columns that let a split row (your share) be read against the bank,
+which saw the whole bill.
+"""
+
+import csv
+import io
+import uuid
+from datetime import date
+from decimal import Decimal
+
+import pytest
+
+from app.modules.transactions.attachment_service import ImportExportService
+from app.modules.transactions.models import TransactionType, TransactionWalletType
+from app.modules.transactions.repositories import (
+    RecurringTransactionRepository, TransactionCategoryRepository, TransactionRepository,
+)
+from app.modules.transactions.schemas import TransactionFilter
+from app.modules.transactions.services import TransactionService
+from test_peer_splits import _bill, couple  # noqa: F401  (fixture)
+
+pytestmark = [pytest.mark.asyncio, pytest.mark.database]
+
+
+async def _setup(session, c):
+    """Alice: an ordinary 300 expense, and a 1000 dinner split 50/50 that Bob accepted."""
+    await TransactionRepository(session).create({
+        "type": TransactionType.EXPENSE, "wallet_type": TransactionWalletType.LIFE,
+        "amount": Decimal("300"), "currency": "TWD", "description": "Groceries",
+        "transaction_date": date(2026, 11, 4), "category_id": c["food"].id,
+    }, str(c["alice"].id))
+    sid = uuid.UUID((await c["svc"].create_split(c["alice"].id, _bill(c))).id)
+    await c["svc"].respond(c["bob"].id, sid, "accept", None, "life")
+
+
+async def test_shared_only_lists_just_the_split_rows(async_session, couple):
+    c = couple
+    await _setup(async_session, c)
+    repo = TransactionRepository(async_session)
+    rows, total = await repo.get_all(user_id=str(c["alice"].id), filter_params=TransactionFilter(shared_only=True))
+    assert (total, [r.description for r in rows], [r.amount for r in rows]) == (1, ["Dinner"], [Decimal("500")])
+    everything, total_all = await repo.get_all(user_id=str(c["alice"].id), filter_params=TransactionFilter())
+    assert total_all == 2
+
+
+async def test_export_marks_split_rows_with_the_bill_and_partner(async_session, couple):
+    c = couple
+    await _setup(async_session, c)
+    txs = TransactionService(TransactionRepository(async_session), TransactionCategoryRepository(async_session),
+                             RecurringTransactionRepository(async_session))
+    content = await ImportExportService(async_session, txs).export_csv(str(c["alice"].id))
+    rows = {r["Description"]: r for r in csv.DictReader(io.StringIO(content))}
+    assert (rows["Dinner"]["Amount"], rows["Dinner"]["Shared Bill Total"], rows["Dinner"]["Shared With"]) == (
+        "500.00", "1000.00", "bob")
+    assert (rows["Groceries"]["Shared Bill Total"], rows["Groceries"]["Shared With"]) == ("", "")
+
+
+async def test_excel_export_has_the_same_columns(async_session, couple):
+    import openpyxl
+
+    c = couple
+    await _setup(async_session, c)
+    txs = TransactionService(TransactionRepository(async_session), TransactionCategoryRepository(async_session),
+                             RecurringTransactionRepository(async_session))
+    data = await ImportExportService(async_session, txs).export_excel(str(c["alice"].id))
+    ws = openpyxl.load_workbook(io.BytesIO(data)).active
+    header = [cell.value for cell in ws[1]]
+    assert header[-2:] == ["Shared Bill Total", "Shared With"]
+    by_desc = {row[4]: row for row in ws.iter_rows(min_row=2, values_only=True)}
+    assert by_desc["Dinner"][-2:] == (1000.0, "bob")
+
+
+async def test_list_route_takes_the_filter(authenticated_client):
+    r = authenticated_client.get("/api/v1/transactions/?shared_only=true")
+    assert r.status_code == 200, r.text[:200]
+
+
+async def test_page_stats_follow_the_filter(async_session, couple):
+    c = couple
+    await _setup(async_session, c)
+    txs = TransactionService(TransactionRepository(async_session), TransactionCategoryRepository(async_session),
+                             RecurringTransactionRepository(async_session))
+    shared = await txs.get_page_stats(str(c["alice"].id), TransactionFilter(shared_only=True))
+    everything = await txs.get_page_stats(str(c["alice"].id), TransactionFilter())
+    assert (shared["stats"]["total_expenses"], everything["stats"]["total_expenses"]) == (500, 800)
+
+
+@pytest.mark.parametrize("name", ["=1+1", "+cmd", "-2", "@SUM(A1)", "\tx"])
+async def test_a_formula_like_partner_name_is_exported_as_text(async_session, couple, name):
+    """The partner chooses their name; in your export it must not run as a formula."""
+    import openpyxl
+
+    c = couple
+    c["bob"].name = name
+    await async_session.commit()
+    await _setup(async_session, c)
+    txs = TransactionService(TransactionRepository(async_session), TransactionCategoryRepository(async_session),
+                             RecurringTransactionRepository(async_session))
+    svc = ImportExportService(async_session, txs)
+    rows = {r["Description"]: r for r in csv.DictReader(io.StringIO(await svc.export_csv(str(c["alice"].id))))}
+    assert rows["Dinner"]["Shared With"] == "'" + name
+    ws = openpyxl.load_workbook(io.BytesIO(await svc.export_excel(str(c["alice"].id)))).active
+    dinner = next(r for r in ws.iter_rows(min_row=2) if r[4].value == "Dinner")
+    # Excel types the cell as text, so the name is stored exactly, never as a formula.
+    assert dinner[11].value == name and dinner[11].data_type == "s"
+    assert float(dinner[10].value) == 1000.0 and dinner[10].number_format == "0.00"
+
+
+async def test_formula_like_free_text_is_exported_as_text(async_session, couple):
+    """A description from an import or the LINE bot is someone else's text too."""
+    import openpyxl
+
+    c = couple
+    await TransactionRepository(async_session).create({
+        "type": TransactionType.EXPENSE, "wallet_type": TransactionWalletType.LIFE,
+        "amount": Decimal("10"), "currency": "TWD", "description": "=HYPERLINK(\"http://x\",\"y\")",
+        "merchant_name": "@cmd", "notes": "+1", "transaction_date": date(2026, 11, 4),
+        "category_id": c["food"].id,
+    }, str(c["alice"].id))
+    txs = TransactionService(TransactionRepository(async_session), TransactionCategoryRepository(async_session),
+                             RecurringTransactionRepository(async_session))
+    svc = ImportExportService(async_session, txs)
+    [row] = list(csv.DictReader(io.StringIO(await svc.export_csv(str(c["alice"].id)))))
+    assert (row["Description"][0], row["Merchant"], row["Notes"]) == ("'", "'@cmd", "'+1")
+    ws = openpyxl.load_workbook(io.BytesIO(await svc.export_excel(str(c["alice"].id)))).active
+    cells = list(ws.iter_rows(min_row=2))[0]
+    assert cells[4].value.startswith("=HYPERLINK") and cells[4].data_type == "s"
+    assert (cells[6].value, cells[9].value) == ("@cmd", "+1")
