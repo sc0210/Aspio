@@ -16,6 +16,9 @@ const DEFAULT_LOANS = [
     ];
 const mockLoans: { value: Array<Record<string, unknown>> } = { value: DEFAULT_LOANS };
 
+// RelatedMoneyLinks asks which add-ons this instance has (a query); not under test here.
+jest.mock('@/hooks/useFeatures', () => ({ useFeatures: () => ({ lineBot: true, isLoading: false, isError: false }) }));
+
 jest.mock('@/hooks/useLoans', () => ({
   useLoans: () => ({
     isLoading: false,

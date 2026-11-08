@@ -1213,5 +1213,13 @@
     "changeLater": "你隨時可以在「設定 → 隱私與顯示」中變更。",
     "accept": "同意分析",
     "decline": "拒絕"
+  },
+  "relatedMoney": {
+    "splits": "和一位夥伴分帳？",
+    "splitsLink": "共同支出",
+    "groups": "在 LINE 群組分帳？",
+    "groupsLink": "群組",
+    "loans": "借出或借入的錢？",
+    "loansLink": "貸款"
   }
 }

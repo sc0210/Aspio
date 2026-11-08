@@ -5,23 +5,24 @@ GitHub theme. The newest release is first; every earlier one is kept below as a 
 
 <table>
   <tr>
-    <td width="50%"><b>Dashboard</b><br><picture><source media="(prefers-color-scheme: dark)" srcset="2026.09.3/dashboard-dark.png"><img src="2026.09.3/dashboard.png" alt="Dashboard"></picture></td>
-    <td width="50%"><b>Transactions</b><br><picture><source media="(prefers-color-scheme: dark)" srcset="2026.09.3/transactions-dark.png"><img src="2026.09.3/transactions.png" alt="Transactions"></picture></td>
+    <td width="50%"><b>Dashboard</b><br><picture><source media="(prefers-color-scheme: dark)" srcset="2026.11/dashboard-dark.png"><img src="2026.11/dashboard.png" alt="Dashboard"></picture></td>
+    <td width="50%"><b>Transactions</b><br><picture><source media="(prefers-color-scheme: dark)" srcset="2026.11/transactions-dark.png"><img src="2026.11/transactions.png" alt="Transactions"></picture></td>
   </tr>
   <tr>
-    <td width="50%"><b>Portfolio</b><br><picture><source media="(prefers-color-scheme: dark)" srcset="2026.09.3/portfolio-dark.png"><img src="2026.09.3/portfolio.png" alt="Portfolio"></picture></td>
-    <td width="50%"><b>Rebalancing</b><br><picture><source media="(prefers-color-scheme: dark)" srcset="2026.09.3/rebalancing-dark.png"><img src="2026.09.3/rebalancing.png" alt="Rebalancing"></picture></td>
+    <td width="50%"><b>Portfolio</b><br><picture><source media="(prefers-color-scheme: dark)" srcset="2026.11/portfolio-dark.png"><img src="2026.11/portfolio.png" alt="Portfolio"></picture></td>
+    <td width="50%"><b>Rebalancing</b><br><picture><source media="(prefers-color-scheme: dark)" srcset="2026.11/rebalancing-dark.png"><img src="2026.11/rebalancing.png" alt="Rebalancing"></picture></td>
   </tr>
   <tr>
-    <td width="50%"><b>Goals</b><br><picture><source media="(prefers-color-scheme: dark)" srcset="2026.09.3/goals-dark.png"><img src="2026.09.3/goals.png" alt="Goals"></picture></td>
-    <td width="50%"><b>Month in Review</b><br><picture><source media="(prefers-color-scheme: dark)" srcset="2026.09.3/review-dark.png"><img src="2026.09.3/review.png" alt="Month in Review"></picture></td>
+    <td width="50%"><b>Goals</b><br><picture><source media="(prefers-color-scheme: dark)" srcset="2026.11/goals-dark.png"><img src="2026.11/goals.png" alt="Goals"></picture></td>
+    <td width="50%"><b>Shared spending</b><br><picture><source media="(prefers-color-scheme: dark)" srcset="2026.11/shared-spending-dark.png"><img src="2026.11/shared-spending.png" alt="Shared spending"></picture></td>
   </tr>
   <tr>
-    <td width="50%"><b>Lifecycle</b><br><picture><source media="(prefers-color-scheme: dark)" srcset="2026.09.3/lifecycle-dark.png"><img src="2026.09.3/lifecycle.png" alt="Lifecycle"></picture></td>
+    <td width="50%"><b>Month in Review</b><br><picture><source media="(prefers-color-scheme: dark)" srcset="2026.11/review-dark.png"><img src="2026.11/review.png" alt="Month in Review"></picture></td>
+    <td width="50%"><b>Lifecycle</b><br><picture><source media="(prefers-color-scheme: dark)" srcset="2026.11/lifecycle-dark.png"><img src="2026.11/lifecycle.png" alt="Lifecycle"></picture></td>
   </tr>
 </table>
 
-<b>Mobile dashboard</b><br><picture><source media="(prefers-color-scheme: dark)" srcset="2026.09.3/dashboard-mobile-dark.png"><img width="280" src="2026.09.3/dashboard-mobile.png" alt="Mobile dashboard"></picture>
+<b>Mobile dashboard</b><br><picture><source media="(prefers-color-scheme: dark)" srcset="2026.11/dashboard-mobile-dark.png"><img width="280" src="2026.11/dashboard-mobile.png" alt="Mobile dashboard"></picture>
 
 ## History
 
@@ -35,6 +36,27 @@ Versions before 2026.09.2 were backfilled on 2026-09-24. Each one's frontend ran
 its release, but it ran against the backend of that day, so layout and features match the version
 while a few figures may differ from what it showed at the time. A page that did not exist yet is
 simply missing from that version.
+
+### 2026.11 · 2026-11-07 · Split bills with your partner
+
+<a href="2026.11/dashboard.png"><img src="2026.11/dashboard.png" alt="Dashboard, 2026.11" width="240"></a>
+<a href="2026.11/transactions.png"><img src="2026.11/transactions.png" alt="Transactions, 2026.11" width="240"></a>
+<a href="2026.11/portfolio.png"><img src="2026.11/portfolio.png" alt="Portfolio, 2026.11" width="240"></a>
+<a href="2026.11/rebalancing.png"><img src="2026.11/rebalancing.png" alt="Rebalancing, 2026.11" width="240"></a>
+<a href="2026.11/goals.png"><img src="2026.11/goals.png" alt="Goals, 2026.11" width="240"></a>
+<a href="2026.11/shared-spending.png"><img src="2026.11/shared-spending.png" alt="Shared spending, 2026.11" width="240"></a>
+<a href="2026.11/review.png"><img src="2026.11/review.png" alt="Month in Review, 2026.11" width="240"></a>
+<a href="2026.11/lifecycle.png"><img src="2026.11/lifecycle.png" alt="Lifecycle, 2026.11" width="240"></a>
+<a href="2026.11/dashboard-mobile.png"><img src="2026.11/dashboard-mobile.png" alt="Mobile dashboard, 2026.11" width="90"></a>
+<a href="2026.11/dashboard-dark.png"><img src="2026.11/dashboard-dark.png" alt="Dashboard (dark), 2026.11" width="240"></a>
+<a href="2026.11/transactions-dark.png"><img src="2026.11/transactions-dark.png" alt="Transactions (dark), 2026.11" width="240"></a>
+<a href="2026.11/portfolio-dark.png"><img src="2026.11/portfolio-dark.png" alt="Portfolio (dark), 2026.11" width="240"></a>
+<a href="2026.11/rebalancing-dark.png"><img src="2026.11/rebalancing-dark.png" alt="Rebalancing (dark), 2026.11" width="240"></a>
+<a href="2026.11/goals-dark.png"><img src="2026.11/goals-dark.png" alt="Goals (dark), 2026.11" width="240"></a>
+<a href="2026.11/shared-spending-dark.png"><img src="2026.11/shared-spending-dark.png" alt="Shared spending (dark), 2026.11" width="240"></a>
+<a href="2026.11/review-dark.png"><img src="2026.11/review-dark.png" alt="Month in Review (dark), 2026.11" width="240"></a>
+<a href="2026.11/lifecycle-dark.png"><img src="2026.11/lifecycle-dark.png" alt="Lifecycle (dark), 2026.11" width="240"></a>
+<a href="2026.11/dashboard-mobile-dark.png"><img src="2026.11/dashboard-mobile-dark.png" alt="Mobile dashboard (dark), 2026.11" width="90"></a>
 
 ### 2026.09.3 · 2026-09-24 · Debt repayments get their own column
 

@@ -1,5 +1,6 @@
 'use client';
 
+import { SharedBalanceNote } from './SharedBalanceNote';
 import Link from 'next/link';
 import { useTranslation } from 'react-i18next';
 import {
@@ -124,6 +125,9 @@ export function MobileDashboard() {
                         </Card>
                     ))}
                 </section>
+
+                {/* Open shared bills: why the wallets differ from the bank */}
+                <SharedBalanceNote />
 
                 {/* TODAY'S HIGHLIGHTS — swipeable */}
                 <section>

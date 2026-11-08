@@ -39,7 +39,10 @@ jest.mock('@/lib/api-client', () => ({
   },
 }));
 
-jest.mock('@/hooks/useDataSynchronization', () => ({ invalidateAllFinancialData: jest.fn() }));
+jest.mock('@/hooks/useDataSynchronization', () => ({
+  invalidateAllFinancialData: jest.fn(),
+  QUERY_KEYS: { SPLIT_BALANCES: 'split-balances' },
+}));
 jest.mock('@/components/savings/NewSplitModal', () => () => null);
 
 const api = apiClient as unknown as Record<string, jest.Mock>;
@@ -57,8 +60,9 @@ const split = (over: Partial<SplitOut>): SplitOut => ({
   my_share_status: 'accepted', partner_share_status: 'accepted', my_transaction_id: 't1', ...over,
 });
 
+let client: QueryClient;
 function renderTab() {
-  const client = new QueryClient();
+  client = new QueryClient();
   return render(<QueryClientProvider client={client}><SharedSpendingTab connections={[conn]} /></QueryClientProvider>);
 }
 
@@ -177,6 +181,7 @@ describe('SharedSpendingTab settling up', () => {
     api.listSplits.mockResolvedValue({ data: [] });
     api.createSettlement.mockResolvedValue({ data: {} });
     renderTab();
+    const invalidate = jest.spyOn(client, 'invalidateQueries');
     fireEvent.click(await screen.findByRole('button', { name: 'Settle up' }));
     expect(screen.getByLabelText('Amount (TWD)')).toHaveValue(500);
     fireEvent.change(screen.getByLabelText('Amount (TWD)'), { target: { value: '200' } });
@@ -185,6 +190,8 @@ describe('SharedSpendingTab settling up', () => {
       connection_id: 'conn-1', direction: 'they_paid_me', amount: 200, currency: 'TWD', note: null,
     }));
     await waitFor(() => expect(api.listSettlements).toHaveBeenCalledTimes(2));
+    // Only the balance the dashboard shows: a repayment writes no ledger rows.
+    await waitFor(() => expect(invalidate).toHaveBeenCalledWith({ queryKey: ['split-balances'] }));
     expect(invalidateAllFinancialData).not.toHaveBeenCalled();
   });
 

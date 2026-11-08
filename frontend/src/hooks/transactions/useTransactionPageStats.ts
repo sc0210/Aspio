@@ -131,6 +131,7 @@ function filterDemoTransactions(
     if (filters.walletType && filters.walletType !== 'all') {
       if (t.walletType !== filters.walletType) return false;
     }
+    if (filters.shared === 'shared' && !t.peerSplitShareId) return false;
     return true;
   });
 
@@ -160,6 +161,7 @@ export function useTransactionPageStats(
       filters.type,
       filters.category,
       filters.walletType,
+      filters.shared,
       debouncedSearch,
       dateRange?.start?.toISOString(),
       dateRange?.end?.toISOString(),
@@ -171,6 +173,7 @@ export function useTransactionPageStats(
         type: filters.type !== 'all' ? (filters.type as 'income' | 'expense' | 'transfer') : undefined,
         category: filters.category !== 'all' ? filters.category : undefined,
         walletType: filters.walletType !== 'all' ? filters.walletType : undefined,
+        sharedOnly: filters.shared === 'shared' || undefined,
         search: debouncedSearch || undefined,
         dateRange,
         excludeTransfers,
