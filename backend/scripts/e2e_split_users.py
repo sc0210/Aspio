@@ -41,7 +41,7 @@ from app.modules.notifications.models import Notification  # noqa: E402
 from app.modules.peers.models import (  # noqa: E402
     PeerConnection, PeerConnectionPref, PeerSettlement, PeerSplit, PeerStatus,
 )
-from app.modules.transactions.models import Transaction  # noqa: E402
+from app.modules.transactions.models import RecurringTransaction, Transaction  # noqa: E402
 from app.modules.users.models import User, UserStatus  # noqa: E402
 from app.modules.users.security import security_utils  # noqa: E402
 
@@ -88,6 +88,8 @@ async def setup() -> dict:
                 await session.delete(split)  # shares go with it (ORM cascade)
             await session.execute(delete(PeerConnectionPref).where(PeerConnectionPref.connection_id.in_(conn_ids)))
         await session.execute(delete(Transaction).where(Transaction.user_id.in_(ids)))
+        # Repeating bills too, or a rule from an earlier run posts into this one.
+        await session.execute(delete(RecurringTransaction).where(RecurringTransaction.user_id.in_(ids)))
         await session.execute(delete(Notification).where(Notification.user_id.in_(ids)))
 
         # Exactly one connection, accepted, between the two; any other removed.
