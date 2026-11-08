@@ -154,7 +154,10 @@ WITH checks(sort, object, source_file, present) AS (
                 AND relrowsecurity)),
     (29, 'column peer_splits.source_transaction_id', '2026_11_07_split_source_transaction.sql',
         EXISTS (SELECT 1 FROM information_schema.columns
-                 WHERE table_name = 'peer_splits' AND column_name = 'source_transaction_id'))
+                 WHERE table_name = 'peer_splits' AND column_name = 'source_transaction_id')),
+    (30, 'column peer_connection_prefs.split_notifications', '2026_11_08_peer_prefs_notifications.sql',
+        EXISTS (SELECT 1 FROM information_schema.columns
+                 WHERE table_name = 'peer_connection_prefs' AND column_name = 'split_notifications'))
 )
 SELECT
     CASE WHEN present THEN 'OK     ' ELSE 'MISSING' END AS status,

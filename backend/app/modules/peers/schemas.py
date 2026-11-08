@@ -14,7 +14,7 @@ from decimal import Decimal
 from typing import List, Literal, Optional
 from uuid import UUID
 
-from pydantic import BaseModel, ConfigDict, Field, field_validator
+from pydantic import BaseModel, ConfigDict, Field, field_validator, model_validator
 
 
 # ---------------------------------------------------------------------------
@@ -347,7 +347,18 @@ class PeerBalanceOut(BaseModel):
 class PeerPrefsOut(BaseModel):
     connection_id: str
     split_policy: Literal["off", "approve_each", "auto_accept"]
+    # Bell notifications about bills and repayments with this partner.
+    notify: bool = True
 
 
 class PeerPrefsUpdate(BaseModel):
-    split_policy: Literal["off", "approve_each", "auto_accept"]
+    """Either or both; a field left out keeps its value."""
+
+    split_policy: Optional[Literal["off", "approve_each", "auto_accept"]] = None
+    notify: Optional[bool] = None
+
+    @model_validator(mode="after")
+    def _something(self) -> "PeerPrefsUpdate":
+        if self.split_policy is None and self.notify is None:
+            raise ValueError("Send split_policy, notify, or both")
+        return self

@@ -14,7 +14,7 @@ import {
   SharedGoalOut,
   SharedGoalCreate,
   SavingRecord, SharedGoalUpdate,
-  SplitCreate, SplitOut, PeerBalanceOut, PeerPrefsOut, SplitPolicy, SettlementCreate, SettlementOut, SplitFromTransaction } from '@/shared/types';
+  SplitCreate, SplitOut, PeerBalanceOut, PeerPrefsOut, SplitPolicy, SettlementCreate, SettlementOut, SplitFromTransaction, PeerPrefsUpdate } from '@/shared/types';
 import { getSession } from 'next-auth/react';
 import { getPublicApiUrl, getServerApiUrl } from '@/lib/api-url';
 export interface GamificationStats {
@@ -632,8 +632,8 @@ class ApiClient {
     return this.get<PeerPrefsOut>(`/peers/${connectionId}/prefs`);
   }
 
-  async setPeerPrefs(connectionId: string, splitPolicy: SplitPolicy): Promise<ApiResponse<PeerPrefsOut>> {
-    return this.patch<PeerPrefsOut>(`/peers/${connectionId}/prefs`, { split_policy: splitPolicy });
+  async setPeerPrefs(connectionId: string, update: PeerPrefsUpdate): Promise<ApiResponse<PeerPrefsOut>> {
+    return this.patch<PeerPrefsOut>(`/peers/${connectionId}/prefs`, update);
   }
 
   async deleteSharedGoal(goalId: string): Promise<ApiResponse<null>> {

@@ -603,6 +603,14 @@ export interface SettlementOut {
 export interface PeerPrefsOut {
   connection_id: string;
   split_policy: SplitPolicy;
+  /** Bell notifications about bills and repayments with this partner. */
+  notify: boolean;
+}
+
+/** Either or both; a field left out keeps its value. */
+export interface PeerPrefsUpdate {
+  split_policy?: SplitPolicy;
+  notify?: boolean;
 }
 
 export interface SharedGoalUpdate {
