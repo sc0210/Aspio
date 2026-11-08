@@ -157,7 +157,12 @@ WITH checks(sort, object, source_file, present) AS (
                  WHERE table_name = 'peer_splits' AND column_name = 'source_transaction_id')),
     (30, 'column peer_connection_prefs.split_notifications', '2026_11_08_peer_prefs_notifications.sql',
         EXISTS (SELECT 1 FROM information_schema.columns
-                 WHERE table_name = 'peer_connection_prefs' AND column_name = 'split_notifications'))
+                 WHERE table_name = 'peer_connection_prefs' AND column_name = 'split_notifications')),
+    (31, 'table peer_split_amendments (RLS on)', '2026_11_08_peer_split_amendments.sql',
+        EXISTS (SELECT 1 FROM pg_class WHERE oid = to_regclass('public.peer_split_amendments')
+                AND relrowsecurity)),
+    (32, 'index uq_peer_split_amendments_open', '2026_11_08_peer_split_amendments.sql',
+        to_regclass('public.uq_peer_split_amendments_open') IS NOT NULL)
 )
 SELECT
     CASE WHEN present THEN 'OK     ' ELSE 'MISSING' END AS status,

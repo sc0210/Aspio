@@ -279,6 +279,33 @@ class SplitRespond(BaseModel):
     wallet_type: Literal["life", "emergency"] = "life"
 
 
+class SplitAmend(BaseModel):
+    """Body for POST /peers/splits/{id}/amend: a change to an accepted split that
+    your partner must accept. my_percent / my_amount are yours, as when splitting."""
+
+    total_amount: Decimal = Field(..., gt=0, decimal_places=2)
+    method: Literal["equal", "percent", "fixed"] = "equal"
+    my_percent: Optional[Decimal] = Field(None, ge=0, le=100)
+    my_amount: Optional[Decimal] = Field(None, ge=0, decimal_places=2)
+    description: Optional[str] = Field(None, min_length=1, max_length=200)
+
+
+class AmendmentRespond(BaseModel):
+    action: Literal["accept", "decline"]
+
+
+class AmendmentOut(BaseModel):
+    """A proposed change, as one participant sees it."""
+
+    id: str
+    proposed_by_me: bool
+    total_amount: float
+    my_share: float
+    partner_share: float
+    method: str
+    description: str
+
+
 class SplitOut(BaseModel):
     """A split as one participant sees it."""
 
@@ -299,6 +326,8 @@ class SplitOut(BaseModel):
     my_share_status: str
     partner_share_status: str
     my_transaction_id: Optional[str]
+    # An open proposed change to this (accepted) split, if any.
+    pending_amendment: Optional[AmendmentOut] = None
 
 
 class SettlementCreate(BaseModel):

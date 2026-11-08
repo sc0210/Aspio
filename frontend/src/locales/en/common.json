@@ -891,7 +891,17 @@
         "note": "This expense stays whole until {{name}} accepts, then holds only your share. Withdraw it and it’s yours again, unchanged."
       },
       "demoSample": "Sample shared bills. Sign in to split real bills with a partner and settle up.",
-      "notifyLabel": "Notify me about {{name}}’s bills and repayments"
+      "notifyLabel": "Notify me about {{name}}’s bills and repayments",
+      "amend": {
+        "button": "Change",
+        "title": "Change this split",
+        "total": "Total ({{currency}})",
+        "note": "Nothing changes until {{name}} accepts. Then both of your accounts take the new shares.",
+        "submit": "Send the change",
+        "prompt": "{{name}} wants to change “{{description}}”",
+        "sent": "Change sent: {{total}} · you {{mine}} / {{name}} {{theirs}}",
+        "withdraw": "Withdraw change"
+      }
     },
     "summary": {
       "active": "active",
