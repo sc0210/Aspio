@@ -55,11 +55,14 @@ export function ProductTour() {
   const [cardHeight, setCardHeight] = useState(180);
   const [invite, setInvite] = useState(false);
   const cardRef = useRef<HTMLDivElement>(null);
+  // Where focus was when the tour began, to hand it back afterwards.
+  const returnFocus = useRef<HTMLElement | null>(null);
 
   const start = useCallback(() => {
-    if (!tour) return;
-    setInvite(false);
+    setInvite(false);  // even where there's no tour: the invitation is answered
     writeTourMemory({ prompted: true });
+    if (!tour) return;
+    returnFocus.current = document.activeElement as HTMLElement | null;
     setSteps(visibleSteps(tour));
     setIndex(0);
   }, [tour]);
@@ -68,6 +71,8 @@ export function ProductTour() {
     if (tour) writeTourMemory({ prompted: true, done: [...new Set([...readTourMemory().done, tour.id])] });
     setSteps(null);
     setRect(null);
+    returnFocus.current?.focus?.();
+    returnFocus.current = null;
   }, [tour]);
 
   // The "?" button (and anything else) starts the tour through an event.
@@ -76,10 +81,12 @@ export function ProductTour() {
     return () => window.removeEventListener(TOUR_EVENT, start);
   }, [start]);
 
-  // A new page ends a running tour; its own tour is one press away.
+  // A new page ends a running tour (its own is one press away) and drops the
+  // invitation, which was about the dashboard.
   useEffect(() => {
     setSteps(null);
     setRect(null);
+    setInvite(false);
   }, [pathname]);
 
   // First dashboard visit in this browser: invite, once the page has settled and
@@ -89,6 +96,11 @@ export function ProductTour() {
     let tries = 0;
     const timer = window.setInterval(() => {
       tries += 1;
+      if (readTourMemory().prompted) {
+        // Answered meanwhile: the "?" was pressed, or another tab said Not now.
+        window.clearInterval(timer);
+        return;
+      }
       if (!anotherDialogOpen()) {
         setInvite(true);
         window.clearInterval(timer);
@@ -145,8 +157,22 @@ export function ProductTour() {
   useEffect(() => {
     if (!step) return;
     const onKey = (e: KeyboardEvent) => {
-      if (e.key === 'Escape') { e.preventDefault(); finish(); }
-      else if (e.key === 'ArrowRight') { e.preventDefault(); next(); }
+      if (e.key === 'Escape') { e.preventDefault(); finish(); return; }
+      if (e.key === 'Tab') {
+        // Keep focus in the card: the page behind is dimmed, not usable.
+        const card = cardRef.current;
+        const focusable = card ? [...card.querySelectorAll<HTMLElement>('button')] : [];
+        if (focusable.length === 0) return;
+        const first = focusable[0], last = focusable[focusable.length - 1];
+        const active = document.activeElement;
+        if (!card?.contains(active)) { e.preventDefault(); first.focus(); }
+        else if (e.shiftKey && active === first) { e.preventDefault(); last.focus(); }
+        else if (!e.shiftKey && active === last) { e.preventDefault(); first.focus(); }
+        return;
+      }
+      const el = e.target as HTMLElement | null;
+      if (el && (el.isContentEditable || ['INPUT', 'TEXTAREA', 'SELECT'].includes(el.tagName))) return;
+      if (e.key === 'ArrowRight') { e.preventDefault(); next(); }
       else if (e.key === 'ArrowLeft') { e.preventDefault(); back(); }
     };
     document.addEventListener('keydown', onKey);
@@ -193,10 +219,22 @@ export function ProductTour() {
   let cardStyle: React.CSSProperties;
   if (rect) {
     const below = rect.bottom + PAD + GAP;
-    const fitsBelow = below + cardHeight <= vh - EDGE;
-    const top = fitsBelow ? below : Math.max(EDGE, rect.top - PAD - GAP - cardHeight);
-    const left = Math.min(Math.max(EDGE, rect.left), vw - width - EDGE);
-    cardStyle = { top, left, width };
+    const above = rect.top - PAD - GAP - cardHeight;
+    const clampLeft = (x: number) => Math.min(Math.max(EDGE, x), vw - width - EDGE);
+    const clampTop = (y: number) => Math.min(Math.max(EDGE, y), vh - cardHeight - EDGE);
+    if (below + cardHeight <= vh - EDGE) {
+      cardStyle = { top: below, left: clampLeft(rect.left), width };
+    } else if (above >= EDGE) {
+      cardStyle = { top: above, left: clampLeft(rect.left), width };
+    } else if (vw - rect.right - PAD - GAP >= width + EDGE) {
+      // Too tall for above or below (the sidebar, a long list): beside it.
+      cardStyle = { top: clampTop(rect.top), left: rect.right + PAD + GAP, width };
+    } else if (rect.left - PAD - GAP >= width + EDGE) {
+      cardStyle = { top: clampTop(rect.top), left: rect.left - PAD - GAP - width, width };
+    } else {
+      // No room around it (a phone): pin to the bottom of the screen.
+      cardStyle = { top: vh - cardHeight - EDGE, left: clampLeft(EDGE), width };
+    }
   } else {
     cardStyle = { top: '50%', left: '50%', width, transform: 'translate(-50%, -50%)' };
   }

@@ -126,3 +126,42 @@ it('picks up a part of the page that finished loading after the tour started', (
   expect(screen.getByRole('heading', { name: 'At a glance' })).toBeInTheDocument();
   expect(screen.getByText('2 of 3')).toBeInTheDocument();
 });
+
+
+it('drops the invitation when you leave the dashboard', () => {
+  jest.useFakeTimers();
+  mockPath = '/dashboard';
+  const view = render(<Page markers={['dash-wallets']} />);
+  act(() => { jest.advanceTimersByTime(1600); });
+  expect(screen.getByRole('region', { name: 'Take a tour' })).toBeInTheDocument();
+  mockPath = '/settings';
+  view.rerender(<Page markers={[]} />);
+  expect(screen.queryByRole('region', { name: 'Take a tour' })).not.toBeInTheDocument();
+  jest.useRealTimers();
+});
+
+it('does not invite after the tour was started from the ? button', () => {
+  jest.useFakeTimers();
+  mockPath = '/dashboard';
+  render(<Page markers={['dash-wallets']} />);
+  act(() => startTour());  // before the first tick
+  fireEvent.keyDown(document, { key: 'Escape' });
+  act(() => { jest.advanceTimersByTime(5000); });
+  expect(screen.queryByRole('region', { name: 'Take a tour' })).not.toBeInTheDocument();
+  jest.useRealTimers();
+});
+
+it('keeps Tab inside the card and leaves arrow keys alone in a text field', () => {
+  render(<><input aria-label="Search" /><Page markers={['tx-stats', 'tx-list']} /></>);
+  act(() => startTour());
+  fireEvent.click(screen.getByRole('button', { name: 'Next' }));  // step 2: Skip, Back, Next…
+  const card = screen.getByRole('dialog');
+  const buttons = Array.from(card.querySelectorAll('button'));
+  buttons[buttons.length - 1].focus();
+  fireEvent.keyDown(document, { key: 'Tab' });
+  expect(document.activeElement).toBe(buttons[0]);
+
+  const input = screen.getByLabelText('Search');
+  fireEvent.keyDown(input, { key: 'ArrowRight' });
+  expect(screen.getByText('2 of 3')).toBeInTheDocument();
+});
