@@ -766,7 +766,7 @@ export default function EditTransactionPage() {
             {isSaleMode && (
               <>
                 <p className={NOTE}>
-                  <InformationCircleIcon className="w-5 h-5 shrink-0 text-gray-400 dark:text-gray-400" aria-hidden="true" />
+                  <InformationCircleIcon className="w-5 h-5 shrink-0 text-gray-500 dark:text-gray-400" aria-hidden="true" />
                   <span>
                     <strong className="font-semibold text-gray-900 dark:text-white">{t('transactions:form.saleEdit.title', 'Sale proceeds')}</strong>{' · '}
                     {t('transactions:form.saleEdit.note', 'The amount, date and wallet follow the sale. To change them, edit or reverse the sale on Portfolio.')}{' '}
@@ -811,7 +811,7 @@ export default function EditTransactionPage() {
             {isInvestMode && (
               <>
                 <p className={NOTE}>
-                  <InformationCircleIcon className="w-5 h-5 shrink-0 text-gray-400 dark:text-gray-400" aria-hidden="true" />
+                  <InformationCircleIcon className="w-5 h-5 shrink-0 text-gray-500 dark:text-gray-400" aria-hidden="true" />
                   <span>
                     <strong className={cn('font-semibold', TYPE_TONE.investment.text)}>{t('transactions:form.investEdit.title', 'Investment purchase')}</strong>{' · '}
                     {investLink === 'holding'

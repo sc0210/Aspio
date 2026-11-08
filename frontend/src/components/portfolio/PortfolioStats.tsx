@@ -12,6 +12,7 @@ import {
   ScaleIcon
 } from '@heroicons/react/24/outline';
 import { cn } from '@/utils/cn';
+import { direction } from '@/components/dashboard/direction';
 import { areRatesLive, formatCurrency, getUnconvertedCurrencies } from '@/utils/formatters';
 import { lastSessionWeekday } from '@/utils/marketStatus';
 import type { PortfolioHolding } from '@/shared/types';
@@ -158,6 +159,10 @@ export function PortfolioStats({ portfolio, performance, isValueVisible, apiStat
 
   // Calculate today's P/L (use performance.oneDay if todayGainLoss not provided)
   const todayChange = portfolio.todayGainLoss ?? (portfolio.totalValue * (performance.oneDay / 100));
+  // Zero is flat (grey, no sign), not a gain: a quiet day read "+NT$0" in green.
+  const todayDir = direction(todayChange);
+  const tone = (up: string, down: string, flat: string) =>
+    todayDir === 'up' ? up : todayDir === 'down' ? down : flat;
   const todayChangePercent = portfolio.todayGainLossPercentage ?? performance.oneDay;
   const _hasTodayData = todayChange !== 0 || todayChangePercent !== 0;
 
@@ -346,9 +351,7 @@ export function PortfolioStats({ portfolio, performance, isValueVisible, apiStat
                   className={cn(
                     "w-full relative overflow-hidden rounded-xl p-4 border shadow-sm transition-all duration-300 group min-h-[110px]",
                     onTodayChangeClick ? "cursor-pointer hover:shadow-lg hover:scale-[1.02] active:scale-[0.98]" : "cursor-help hover:shadow-md",
-                    todayChange >= 0
-                      ? 'bg-gradient-to-br from-success-50 via-white to-success-50/30 dark:from-success-900/10 dark:via-gray-800/50 dark:to-success-900/5 border-success-200/50 dark:border-success-800/30'
-                      : 'bg-gradient-to-br from-error-50 via-white to-error-50/30 dark:from-error-900/10 dark:via-gray-800/50 dark:to-error-900/5 border-error-200/50 dark:border-error-800/30'
+                    tone('bg-gradient-to-br from-success-50 via-white to-success-50/30 dark:from-success-900/10 dark:via-gray-800/50 dark:to-success-900/5 border-success-200/50 dark:border-success-800/30', 'bg-gradient-to-br from-error-50 via-white to-error-50/30 dark:from-error-900/10 dark:via-gray-800/50 dark:to-error-900/5 border-error-200/50 dark:border-error-800/30', 'bg-gradient-to-br from-gray-50 via-white to-gray-50/30 dark:from-gray-800/40 dark:via-gray-800/50 dark:to-gray-800/20 border-gray-200 dark:border-gray-700')
                   )}>
                   {/* View Trend quick link */}
                   {onViewTrendClick && (
@@ -358,9 +361,7 @@ export function PortfolioStats({ portfolio, performance, isValueVisible, apiStat
                         'absolute top-2.5 right-2.5 z-10 flex items-center gap-1 px-2 py-1 rounded-lg text-xs sm:text-xs font-semibold',
                         'transition-all duration-200 opacity-0 group-hover:opacity-100 focus:opacity-100',
                         'backdrop-blur-sm shadow-sm border',
-                        todayChange >= 0
-                          ? 'bg-success-100/80 dark:bg-success-900/40 text-success-700 dark:text-success-300 border-success-200/60 dark:border-success-700/40 hover:bg-success-200/80 dark:hover:bg-success-800/50'
-                          : 'bg-rose-100/80 dark:bg-rose-900/40 text-error-700 dark:text-error-300 border-rose-200/60 dark:border-rose-700/40 hover:bg-rose-200/80 dark:hover:bg-rose-800/50'
+                        tone('bg-success-100/80 dark:bg-success-900/40 text-success-700 dark:text-success-300 border-success-200/60 dark:border-success-700/40 hover:bg-success-200/80 dark:hover:bg-success-800/50', 'bg-rose-100/80 dark:bg-rose-900/40 text-error-700 dark:text-error-300 border-rose-200/60 dark:border-rose-700/40 hover:bg-rose-200/80 dark:hover:bg-rose-800/50', 'bg-gray-100/80 dark:bg-gray-800/60 text-gray-700 dark:text-gray-300 border-gray-200/60 dark:border-gray-700/40 hover:bg-gray-200/80 dark:hover:bg-gray-700/50')
                       )}
                       title={t('portfolio:stats.viewTrendTooltip')}
                     >
@@ -370,41 +371,39 @@ export function PortfolioStats({ portfolio, performance, isValueVisible, apiStat
                   )}
                   <div className={cn(
                     "absolute top-0 right-0 w-20 h-20 rounded-full -mr-10 -mt-10 group-hover:scale-150 transition-transform duration-500",
-                    todayChange >= 0 ? 'bg-success-500/8 dark:bg-success-500/15' : 'bg-error-500/8 dark:bg-error-500/15'
+                    tone('bg-success-500/8 dark:bg-success-500/15', 'bg-error-500/8 dark:bg-error-500/15', 'bg-gray-500/8 dark:bg-gray-500/15')
                   )}></div>
                   <div className="relative flex items-center gap-2 sm:gap-2.5 md:gap-3">
                     <div className={cn(
                       'flex-shrink-0 p-2.5 rounded-lg shadow-sm group-hover:scale-110 transition-transform duration-300',
-                      todayChange >= 0
-                        ? 'bg-success-100 dark:bg-success-900/30'
-                        : 'bg-error-100 dark:bg-error-900/30'
+                      tone('bg-success-100 dark:bg-success-900/30', 'bg-error-100 dark:bg-error-900/30', 'bg-gray-100 dark:bg-gray-700/40')
                     )}>
                       <CalendarIcon className={cn(
                         'w-6 h-6',
-                        todayChange >= 0 ? 'text-success-700 dark:text-success-400' : 'text-error-700 dark:text-error-400'
+                        tone('text-success-700 dark:text-success-400', 'text-error-700 dark:text-error-400', 'text-gray-500 dark:text-gray-400')
                       )} />
                     </div>
                     <div className="flex-1">
                       <p className={cn(
                         "text-xs md:text-sm font-semibold mb-1 uppercase tracking-wider",
-                        todayChange >= 0 ? 'text-success-700 dark:text-success-300' : 'text-error-700 dark:text-error-300'
+                        tone('text-success-700 dark:text-success-300', 'text-error-700 dark:text-error-300', 'text-gray-600 dark:text-gray-300')
                       )}>{lastSessionDay
                         ? t('portfolio:stats.lastSessionChange', { day: lastSessionDay, defaultValue: 'Change · {{day}}' })
                         : t('portfolio:stats.todayChange')}</p>
                       <div className="flex items-center gap-2 transition-all duration-200">
                         <p className={cn(
                           'text-xl sm:text-2xl md:text-2xl font-bold tabular-nums',
-                          todayChange >= 0 ? 'text-success-700 dark:text-success-400' : 'text-error-700 dark:text-error-400'
+                          tone('text-success-700 dark:text-success-400', 'text-error-700 dark:text-error-400', 'text-gray-500 dark:text-gray-400')
                         )}>
                           {isValueVisible
-                            ? `${todayChange >= 0 ? '+' : ''}${formatCurrency(todayChange, portfolio.currency, { precision: 0 })}`
+                            ? `${todayDir === 'up' ? '+' : ''}${formatCurrency(todayChange, portfolio.currency, { precision: 0 })}`
                             : '•••••••'
                           }
                         </p>
                       </div>
                       <p className={cn(
                         'text-xs mt-0.5 font-semibold',
-                        todayChange >= 0 ? 'text-success-700 dark:text-success-400' : 'text-error-700 dark:text-error-400'
+                        tone('text-success-700 dark:text-success-400', 'text-error-700 dark:text-error-400', 'text-gray-500 dark:text-gray-400')
                       )}>
                         {isValueVisible
                           ? `${formatPercentage(todayChangePercent)}`

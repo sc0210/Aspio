@@ -84,7 +84,7 @@ function DesktopPortfolioPage() {
   // ============================================================
   // Mode awareness and Privacy
   // ============================================================
-  const { getModeIndicator, getModeMessage, isDemo } = useModeAwareUI();
+  const { getModeMessage, isDemo } = useModeAwareUI();
   const { isValueVisible, toggleValueVisibility } = usePrivacy();
   const { t } = useTranslation(['portfolio']);
 
@@ -296,7 +296,7 @@ function DesktopPortfolioPage() {
       {isDemo && (
         <div className="mb-4 p-3 bg-amber-50 border border-amber-200 rounded-lg dark:bg-amber-900/20 dark:border-amber-800">
           <p className="text-sm text-amber-800 dark:text-amber-200">
-            {getModeIndicator().text} {getModeMessage('general')}
+            {getModeMessage('general')}
           </p>
         </div>
       )}
