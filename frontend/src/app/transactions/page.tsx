@@ -142,9 +142,12 @@ function DesktopTransactionsPage() {
   // five-query aggregate twice on every visit and painted the wrong totals first.
   const [excludeTransfers, setExcludeTransfers] = useState(() => {
     try {
-      return localStorage.getItem(HIDE_TRANSFERS_KEY) === 'true';
+      // Hidden unless the reader turned it off. Counting both legs of a move
+      // between one's own wallets put the same money in Income and in Expenses,
+      // and the phone view's totals already leave transfers out.
+      return localStorage.getItem(HIDE_TRANSFERS_KEY) !== 'false';
     } catch {
-      return false; // private window or blocked storage: the default stands
+      return true; // private window or blocked storage: the default stands
     }
   });
   const toggleTransfers = useCallback((next: boolean) => {
