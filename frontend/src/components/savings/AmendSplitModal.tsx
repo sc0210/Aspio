@@ -49,7 +49,10 @@ export default function AmendSplitModal({ split, onClose, onSuccess }: AmendSpli
     const v = parseFloat(myValue) || 0;
     return method === 'percent' ? (totalNum * v) / 100 : v;
   }, [method, totalNum, myValue]);
-  const invalidShare = method !== 'equal' && (myValue === '' || myShare < 0 || myShare > totalNum);
+  // A split of an expense the payer recorded keeps a payer share above 0: 0 would delete that expense.
+  const payerShare = split?.payer_is_me ? myShare : totalNum - myShare;
+  const invalidShare = (method !== 'equal' && (myValue === '' || myShare < 0 || myShare > totalNum))
+    || (split?.from_recorded_expense === true && payerShare <= 0);
 
   const { panelRef, dialogProps } = useDialog({ isOpen, onClose });
   if (!split) return null;

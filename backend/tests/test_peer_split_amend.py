@@ -269,3 +269,20 @@ async def test_the_payer_cancelling_drops_an_open_cancel_request(async_session, 
     out = await c["svc"].cancel(c["alice"].id, sid)
     assert (out.status, out.pending_amendment) == ("voided", None)
     assert await _rows(async_session, c["alice"]) == [Decimal("1000")]
+
+
+async def test_an_accept_from_a_stale_view_is_refused(async_session, couple):
+    c = couple
+    sid = uuid.UUID((await c["svc"].create_split(c["alice"].id, _bill(c))).id)
+    # Bob's screen shows 1000, his 500; Alice edits before he taps Accept.
+    await c["svc"].propose_amendment(c["alice"].id, sid, SplitAmend(
+        total_amount=Decimal("3000"), method="fixed", my_amount=Decimal("500")))
+    with pytest.raises(HTTPException) as err:
+        await c["svc"].respond(c["bob"].id, sid, "accept", None, "life",
+                               seen_total=Decimal("1000"), seen_my_share=Decimal("500"))
+    assert err.value.status_code == 409
+    assert await _rows(async_session, c["bob"]) == []
+    # Accepting what is now there works; declining never needs the figures.
+    await c["svc"].respond(c["bob"].id, sid, "accept", None, "life",
+                           seen_total=Decimal("3000"), seen_my_share=Decimal("2500"))
+    assert await _rows(async_session, c["bob"]) == [Decimal("2500")]

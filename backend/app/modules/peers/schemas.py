@@ -277,6 +277,10 @@ class SplitRespond(BaseModel):
     # Your own row: pick your category and wallet (Life or Emergency only).
     category_id: Optional[UUID] = None
     wallet_type: Literal["life", "emergency"] = "life"
+    # The figures you saw. The creator may edit an unanswered split, so an accept
+    # that carries them is refused (409) if they've changed since.
+    seen_total: Optional[Decimal] = Field(None, gt=0, decimal_places=2)
+    seen_my_share: Optional[Decimal] = Field(None, ge=0, decimal_places=2)
 
 
 class RecurringSplitCreate(BaseModel):

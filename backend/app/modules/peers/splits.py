@@ -270,6 +270,7 @@ class SplitService:
         if reason:
             raise HTTPException(status.HTTP_409_CONFLICT, reason)
         mine, theirs = split_amounts(row.amount, data.method, True, data.my_percent, data.my_amount)
+        self._keep_recorded_expense(True, mine)
         return await self._propose(
             user_id, conn, payer_is_me=True, mine=mine, theirs=theirs,
             description=(row.description or "Shared bill")[:200], currency=row.currency.upper(),
@@ -348,7 +349,9 @@ class SplitService:
         split.status = SplitStatus.ACTIVE.value
 
     async def respond(self, user_id: UUID, split_id: UUID, action: str,
-                      category_id: Optional[UUID], wallet_type: str) -> SplitOut:
+                      category_id: Optional[UUID], wallet_type: str, *,
+                      seen_total: Optional[Decimal] = None,
+                      seen_my_share: Optional[Decimal] = None) -> SplitOut:
         split = await self._split_for(split_id, user_id, lock=True)
         # A removed partner can't answer an old proposal.
         await self._connection(split.connection_id, user_id)
@@ -357,6 +360,11 @@ class SplitService:
             raise HTTPException(status.HTTP_409_CONFLICT, "This split is not waiting for your answer")
 
         name = await self._name(user_id)
+        if action == "accept" and (
+                (seen_total is not None and Decimal(seen_total) != split.total_amount)
+                or (seen_my_share is not None and Decimal(seen_my_share) != share.share_amount)):
+            # The creator edited it after this view loaded: accept what you saw, or nothing.
+            raise HTTPException(status.HTTP_409_CONFLICT, "This bill was changed; check the new figures")
         if action == "accept":
             try:
                 await self._accept(split, share, category_id, wallet_type)
@@ -459,19 +467,9 @@ class SplitService:
         split = await self._amendable(split_id, user_id)
         if split.payer_id == user_id:
             raise HTTPException(status.HTTP_403_FORBIDDEN, "You paid, so you can cancel it yourself")
-        if await self._open_amendment(split.id, lock=True) is not None:
-            raise HTTPException(status.HTTP_409_CONFLICT, "A change to this split is already waiting for an answer")
-        self.session.add(PeerSplitAmendment(
-            id=uuid.uuid4(), split_id=split.id, proposed_by=user_id, total_amount=split.total_amount,
-            payer_share=split.total_amount, other_share=Decimal("0"), method="fixed",
-            description=split.description, status=AmendmentStatus.PROPOSED.value,
-            kind=AmendmentKind.CANCEL.value,
-        ))
-        try:
-            await self.session.flush()
-        except IntegrityError:
-            await self.session.rollback()
-            raise HTTPException(status.HTTP_409_CONFLICT, "A change to this split is already waiting for an answer")
+        await self._add_amendment(split, user_id, total_amount=split.total_amount,
+                                  payer_share=split.total_amount, other_share=Decimal("0"), method="fixed",
+                                  description=split.description, kind=AmendmentKind.CANCEL.value)
         await self._notify(split.payer_id, "Asked to cancel a shared bill",
                            f"{await self._name(user_id)} asks to cancel \"{split.description}\".",
                            "peer_split_cancel_requested", split)
@@ -582,8 +580,32 @@ class SplitService:
         if amendment is not None:
             amendment.status = AmendmentStatus.WITHDRAWN.value
 
-    async def _amendable(self, split_id: UUID, user_id: UUID) -> PeerSplit:
-        split = await self._split_for(split_id, user_id, lock=True)
+    @staticmethod
+    def _keep_recorded_expense(split_from_expense: bool, payer_share: Decimal) -> None:
+        if split_from_expense and payer_share <= 0:
+            # That row is the expense the payer recorded themselves: a 0 share
+            # would delete it, and it must never be deleted by a split.
+            raise HTTPException(status.HTTP_422_UNPROCESSABLE_ENTITY,
+                                "This bill was split from an expense the payer recorded, so their share can't be 0")
+
+    async def _add_amendment(self, split: PeerSplit, user_id: UUID, **fields) -> None:
+        """The one open change a split may have (a change or a cancel request)."""
+        if await self._open_amendment(split.id, lock=True) is not None:
+            raise HTTPException(status.HTTP_409_CONFLICT, "A change to this split is already waiting for an answer")
+        self.session.add(PeerSplitAmendment(
+            id=uuid.uuid4(), split_id=split.id, proposed_by=user_id,
+            status=AmendmentStatus.PROPOSED.value, **fields))
+        try:
+            await self.session.flush()
+        except IntegrityError:
+            # Backstop for the lock (SQLite has none): another proposal won.
+            await self.session.rollback()
+            raise HTTPException(status.HTTP_409_CONFLICT, "A change to this split is already waiting for an answer")
+
+    async def _amendable(self, split_id: UUID, user_id: UUID, split: Optional[PeerSplit] = None) -> PeerSplit:
+        """split: one this request already loaded under lock."""
+        if split is None:
+            split = await self._split_for(split_id, user_id, lock=True)
         if split.status != SplitStatus.ACTIVE.value:
             raise HTTPException(status.HTTP_409_CONFLICT, "Only an accepted split can be changed")
         await self._connection(split.connection_id, user_id)  # not with a former partner
@@ -599,37 +621,21 @@ class SplitService:
 
         A split still waiting for its first answer is the creator's to edit
         directly: the partner hasn't agreed to anything yet."""
-        proposed = await self._split_for(split_id, user_id, lock=True)
-        if proposed.status == SplitStatus.PROPOSED.value:
-            return await self._edit_proposal(user_id, proposed, data)
-        split = await self._amendable(split_id, user_id)
-        if await self._open_amendment(split.id, lock=True) is not None:
-            raise HTTPException(status.HTTP_409_CONFLICT, "A change to this split is already waiting for an answer")
+        split = await self._split_for(split_id, user_id, lock=True)
+        if split.status == SplitStatus.PROPOSED.value:
+            return await self._edit_proposal(user_id, split, data)
+        await self._amendable(split_id, user_id, split)
         i_pay = split.payer_id == user_id
         mine, theirs = split_amounts(data.total_amount, data.method, i_pay, data.my_percent, data.my_amount)
         payer_share, other_share = (mine, theirs) if i_pay else (theirs, mine)
-        if split.source_transaction_id is not None and payer_share <= 0:
-            # That row is the expense the payer recorded themselves: a 0 share
-            # would delete it, and it must never be deleted by a split.
-            raise HTTPException(status.HTTP_422_UNPROCESSABLE_ENTITY,
-                                "This bill was split from an expense the payer recorded, so their share can't be 0")
+        self._keep_recorded_expense(split.source_transaction_id is not None, payer_share)
         description = (data.description or split.description).strip()
         current = {s.user_id == split.payer_id: s.share_amount for s in split.shares}
         if (mine + theirs, payer_share, other_share, description) == (
                 split.total_amount, current[True], current[False], split.description):
             raise HTTPException(status.HTTP_422_UNPROCESSABLE_ENTITY, "That's the split as it is")
-        amendment = PeerSplitAmendment(
-            id=uuid.uuid4(), split_id=split.id, proposed_by=user_id, total_amount=mine + theirs,
-            payer_share=payer_share, other_share=other_share, method=data.method,
-            description=description, status=AmendmentStatus.PROPOSED.value,
-        )
-        self.session.add(amendment)
-        try:
-            await self.session.flush()
-        except IntegrityError:
-            # Backstop for the lock (SQLite has none): another proposal won.
-            await self.session.rollback()
-            raise HTTPException(status.HTTP_409_CONFLICT, "A change to this split is already waiting for an answer")
+        await self._add_amendment(split, user_id, total_amount=mine + theirs, payer_share=payer_share,
+                                  other_share=other_share, method=data.method, description=description)
         partner_id = next(s.user_id for s in split.shares if s.user_id != user_id)
         await self._notify(partner_id, "Change to a shared bill",
                            f"{await self._name(user_id)} wants to change \"{split.description}\".",
@@ -652,6 +658,7 @@ class SplitService:
             # That row is an expense they recorded; a withdraw must hand it back as it was.
             raise HTTPException(status.HTTP_422_UNPROCESSABLE_ENTITY,
                                 "This bill is an expense you recorded, so its total can't change here")
+        self._keep_recorded_expense(split.source_transaction_id is not None, mine if i_pay else theirs)
         description = (data.description or split.description).strip()
         my_share = next(s for s in split.shares if s.user_id == user_id)
         their_share = next(s for s in split.shares if s.user_id != user_id)

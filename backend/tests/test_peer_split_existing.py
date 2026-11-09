@@ -204,3 +204,19 @@ async def test_an_unanswered_split_of_an_expense_keeps_its_total(async_session, 
     await c["svc"].void(c["alice"].id, sid)
     row = await _row(async_session, txn_id)
     assert (row.amount, row.peer_split_share_id, row.description) == (Decimal("1000"), None, "Groceries")
+
+
+async def test_the_payer_share_of_a_recorded_expense_is_never_zero(async_session, couple):
+    """Accepted, a 0 share would soft-delete the expense the payer recorded."""
+    c = couple
+    txn_id = await _expense(async_session, c)
+    with pytest.raises(HTTPException) as err:
+        await c["svc"].split_transaction(c["alice"].id, _body(c, txn_id, method="fixed", my_amount=Decimal("0")))
+    assert err.value.status_code == 422
+    sid = uuid.UUID((await c["svc"].split_transaction(c["alice"].id, _body(c, txn_id))).id)
+    with pytest.raises(HTTPException) as err:  # nor by editing it before Bob answers
+        await c["svc"].propose_amendment(c["alice"].id, sid, SplitAmend(
+            total_amount=Decimal("1000"), method="fixed", my_amount=Decimal("0")))
+    assert err.value.status_code == 422
+    await c["svc"].respond(c["bob"].id, sid, "accept", None, "life")
+    assert (await _row(async_session, txn_id)).amount == Decimal("500")

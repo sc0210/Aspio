@@ -92,7 +92,10 @@ describe('SharedSpendingTab', () => {
     renderTab();
 
     fireEvent.click(await screen.findByRole('button', { name: 'Accept' }));
-    await waitFor(() => expect(api.respondToSplit).toHaveBeenCalledWith('s1', { action: 'accept' }));
+    // With the figures shown, so an edit since then is refused rather than accepted unseen.
+    await waitFor(() => expect(api.respondToSplit).toHaveBeenCalledWith('s1', {
+      action: 'accept', seen_total: 1000, seen_my_share: 500,
+    }));
     await waitFor(() => expect(invalidateAllFinancialData).toHaveBeenCalled());
   });
 
@@ -317,6 +320,19 @@ describe('SharedSpendingTab changes to an accepted split', () => {
     fireEvent.click(await screen.findByRole('button', { name: 'Change' }));
     expect(screen.getByLabelText('Total (TWD)')).toHaveAttribute('readonly');
     expect(screen.getByText(/its total stays/)).toBeInTheDocument();
+    // Nor can the payer's share go to 0: accepted, that would delete the expense.
+    fireEvent.click(screen.getByRole('button', { name: 'Amount' }));
+    fireEvent.change(screen.getByLabelText('My share'), { target: { value: '0' } });
+    expect(screen.getByRole('button', { name: 'Update the bill' })).toBeDisabled();
+  });
+
+  it('shows the bill as it is now when an action is refused', async () => {
+    api.listSplits.mockResolvedValue({ data: [split({ status: 'proposed', created_by_me: false, payer_is_me: false })] });
+    api.respondToSplit.mockRejectedValue(new Error('This bill was changed; check the new figures'));
+    renderTab();
+    fireEvent.click(await screen.findByRole('button', { name: 'Accept' }));
+    expect(await screen.findByText('This bill was changed; check the new figures')).toBeInTheDocument();
+    await waitFor(() => expect(api.listSplits).toHaveBeenCalledTimes(2));
   });
 
   it('offers no Change to the partner answering an unanswered split', async () => {
@@ -348,13 +364,17 @@ describe('SharedSpendingTab cancel requests', () => {
     expect(screen.queryByRole('button', { name: 'Ask to cancel' })).not.toBeInTheDocument();
   });
 
-  it('shows the payer the request and accepting it refreshes the ledger', async () => {
+  it('shows the payer the request, asks before accepting, and refreshes the ledger', async () => {
     api.listSplits.mockResolvedValue({ data: [split({ pending_amendment: cancelAsk(false) })] });
     api.respondToAmendment.mockResolvedValue({ data: {} });
     renderTab();
     expect(await screen.findByText('Bob asks to cancel “Dinner”')).toBeInTheDocument();
     expect(screen.getByText(/you carry the whole/)).toBeInTheDocument();
     fireEvent.click(screen.getByRole('button', { name: 'Accept' }));
+    expect(await screen.findByText('Cancel this split?')).toBeInTheDocument();
+    expect(api.respondToAmendment).not.toHaveBeenCalled();
+    const confirm = screen.getAllByRole('button', { name: 'Cancel split' });
+    fireEvent.click(confirm[confirm.length - 1]);
     await waitFor(() => expect(api.respondToAmendment).toHaveBeenCalledWith('s1', 'accept'));
     await waitFor(() => expect(invalidateAllFinancialData).toHaveBeenCalled());
   });

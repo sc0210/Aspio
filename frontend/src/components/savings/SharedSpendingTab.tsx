@@ -60,7 +60,8 @@ export default function SharedSpendingTab({ connections, demo }: { connections: 
   const [error, setError] = useState('');
   const [busyId, setBusyId] = useState<string | null>(null);
   const [isNewOpen, setIsNewOpen] = useState(false);
-  const [confirmCancel, setConfirmCancel] = useState<SplitOut | null>(null);
+  // Cancelling, directly (the payer) or by accepting the partner's request: both ask first.
+  const [confirmCancel, setConfirmCancel] = useState<{ split: SplitOut; viaRequest: boolean } | null>(null);
   const [settlements, setSettlements] = useState<SettlementOut[]>([]);
   const [settleTarget, setSettleTarget] = useState<SettleTarget | null>(null);
   const [amendTarget, setAmendTarget] = useState<SplitOut | null>(null);
@@ -130,7 +131,11 @@ export default function SharedSpendingTab({ connections, demo }: { connections: 
       await run();
       await (ledger ? changed() : repaid());
     } catch (err) {
-      setError(err instanceof Error ? err.message : t('savings.splits.errors.actionFailed', 'That didn’t work'));
+      const message = err instanceof Error ? err.message : t('savings.splits.errors.actionFailed', 'That didn’t work');
+      // A refusal often means the bill moved under this view (409): show it as it is
+      // now. The reload clears errors on success, so the message goes after it.
+      await load();
+      setError(message);
     } finally {
       setBusyId(null);
     }
@@ -282,7 +287,9 @@ export default function SharedSpendingTab({ connections, demo }: { connections: 
                 </div>
                 {!readOnly && <div className="flex gap-2">
                   <button type="button" disabled={busyId === s.id}
-                    onClick={() => act(s, () => apiClient.respondToAmendment(s.id, 'accept'))}
+                    onClick={() => (asksCancel
+                      ? setConfirmCancel({ split: s, viaRequest: true })
+                      : act(s, () => apiClient.respondToAmendment(s.id, 'accept')))}
                     className="min-h-[44px] px-4 rounded-lg bg-green-700 hover:bg-green-800 text-white text-sm font-medium disabled:opacity-50">
                     {t('savings.accept', 'Accept')}
                   </button>
@@ -305,7 +312,10 @@ export default function SharedSpendingTab({ connections, demo }: { connections: 
               </div>
               {!readOnly && <div className="flex gap-2">
                 <button type="button" disabled={busyId === s.id}
-                  onClick={() => act(s, () => apiClient.respondToSplit(s.id, { action: 'accept' }))}
+                  onClick={() => act(s, () => apiClient.respondToSplit(s.id, {
+                    // What this card shows: refused if the creator has edited it since.
+                    action: 'accept', seen_total: s.total_amount, seen_my_share: s.my_share,
+                  }))}
                   className="min-h-[44px] px-4 rounded-lg bg-green-700 hover:bg-green-800 text-white text-sm font-medium disabled:opacity-50">
                   {t('savings.accept', 'Accept')}
                 </button>
@@ -464,7 +474,7 @@ export default function SharedSpendingTab({ connections, demo }: { connections: 
               </button>
             )}
             {!readOnly && s.status === 'active' && s.payer_is_me && (
-              <button type="button" disabled={busyId === s.id} onClick={() => setConfirmCancel(s)}
+              <button type="button" disabled={busyId === s.id} onClick={() => setConfirmCancel({ split: s, viaRequest: false })}
                 className="min-h-[44px] px-3 rounded-lg text-sm font-medium text-error-700 dark:text-error-400 hover:bg-error-50 dark:hover:bg-error-900/20 disabled:opacity-50">
                 {t('savings.splits.cancel', 'Cancel split')}
               </button>
@@ -479,13 +489,15 @@ export default function SharedSpendingTab({ connections, demo }: { connections: 
       <ConfirmDialog
         isOpen={confirmCancel !== null}
         title={t('savings.splits.confirmCancelTitle', 'Cancel this split?')}
-        message={t('savings.splits.confirmCancelMessage', 'You’ll carry the whole bill again and {{name}}’s share is removed from their account.', { name: confirmCancel?.partner_name ?? '' })}
+        message={t('savings.splits.confirmCancelMessage', 'You’ll carry the whole bill again and {{name}}’s share is removed from their account.', { name: confirmCancel?.split.partner_name ?? '' })}
         confirmLabel={t('savings.splits.cancel', 'Cancel split')}
         onCancel={() => setConfirmCancel(null)}
         onConfirm={() => {
-          const s = confirmCancel;
+          const pending = confirmCancel;
           setConfirmCancel(null);
-          if (s) void act(s, () => apiClient.cancelSplit(s.id));
+          if (!pending) return;
+          const { split: s, viaRequest } = pending;
+          void act(s, () => (viaRequest ? apiClient.respondToAmendment(s.id, 'accept') : apiClient.cancelSplit(s.id)));
         }}
       />
     </div>

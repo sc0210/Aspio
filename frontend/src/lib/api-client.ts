@@ -595,7 +595,11 @@ class ApiClient {
 
   async respondToSplit(
     splitId: string,
-    body: { action: 'accept' | 'decline'; category_id?: string | null; wallet_type?: 'life' | 'emergency' },
+    body: {
+      action: 'accept' | 'decline'; category_id?: string | null; wallet_type?: 'life' | 'emergency';
+      /** The figures the accept was made on; the server refuses it if they've changed. */
+      seen_total?: number; seen_my_share?: number;
+    },
   ): Promise<ApiResponse<SplitOut>> {
     return this.post<SplitOut>(`/peers/splits/${splitId}/respond`, body);
   }

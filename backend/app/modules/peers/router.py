@@ -472,7 +472,8 @@ async def get_split(split_id: UUID, current_user: CurrentUser, session: AsyncSes
 async def respond_to_split(split_id: UUID, body: SplitRespond, current_user: CurrentUser,
                            session: AsyncSession = Depends(get_db)):
     split = await SplitService(session).respond(current_user.id, split_id, body.action,
-                                                body.category_id, body.wallet_type)
+                                                body.category_id, body.wallet_type,
+                                                seen_total=body.seen_total, seen_my_share=body.seen_my_share)
     return ApiResponse.success_response(data=split)
 
 
