@@ -142,6 +142,9 @@ function asShown(value: number, digits = 0): number {
 const toneOf = (d: Direction) => (up: string, down: string, flat: string) =>
   d === 'up' ? up : d === 'down' ? down : flat;
 
+/** A percentage line takes its own sign as shown (2 dp), not its money figure's. */
+const pctTone = (pct: number) => toneOf(direction(asShown(pct, 2)));
+
 export function PortfolioStats({ portfolio, performance, isValueVisible, apiStatus: _apiStatus = 'connected', showPerformancePeriods = false, onTodayChangeClick, onViewTrendClick, isLoading = false, riskMetrics, dividendIncome, realizedPnl }: PortfolioStatsProps) {
   // Get sidebar state to determine if we should show compact numbers
   const { sidebarCollapsed: _sidebarCollapsed } = useSidebar();
@@ -241,7 +244,7 @@ export function PortfolioStats({ portfolio, performance, isValueVisible, apiStat
           </h4>
           <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-5 gap-2 sm:gap-3">
             {performancePeriods.map((period) => (
-              <Tooltip key={period.key} content={`${period.percentValue >= 0 ? '+' : ''}${period.percentValue.toFixed(2)}%`}>
+              <Tooltip key={period.key} content={formatPercentage(period.percentValue)}>
                 <div className="text-center p-3 rounded-lg bg-gray-50 dark:bg-gray-700/50 hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors cursor-help">
                   <p className="text-xs font-medium text-gray-500 dark:text-gray-400 mb-2">
                     {period.label}
@@ -347,7 +350,7 @@ export function PortfolioStats({ portfolio, performance, isValueVisible, apiStat
                       </div>
                       <p className={cn(
                         'text-xs mt-0.5 font-semibold',
-                        totalTone('text-success-700 dark:text-success-400', 'text-error-700 dark:text-error-400', 'text-gray-500 dark:text-gray-400')
+                        pctTone(portfolio.gainLossPercentage)('text-success-700 dark:text-success-400', 'text-error-700 dark:text-error-400', 'text-gray-500 dark:text-gray-400')
                       )}>
                         {isValueVisible
                           ? `${formatPercentage(portfolio.gainLossPercentage)} ${t('portfolio:stats.roi')}`
@@ -420,7 +423,7 @@ export function PortfolioStats({ portfolio, performance, isValueVisible, apiStat
                       </div>
                       <p className={cn(
                         'text-xs mt-0.5 font-semibold',
-                        tone('text-success-700 dark:text-success-400', 'text-error-700 dark:text-error-400', 'text-gray-500 dark:text-gray-400')
+                        pctTone(todayChangePercent)('text-success-700 dark:text-success-400', 'text-error-700 dark:text-error-400', 'text-gray-500 dark:text-gray-400')
                       )}>
                         {isValueVisible
                           ? `${formatPercentage(todayChangePercent)}`
@@ -540,10 +543,10 @@ export function PortfolioStats({ portfolio, performance, isValueVisible, apiStat
                         <p className="text-xs md:text-sm font-semibold text-amber-700 dark:text-amber-300 mb-1 uppercase tracking-wider">{t('portfolio:stats.cagrLabel')}</p>
                         <p className={cn(
                           'text-xl sm:text-2xl font-bold tabular-nums',
-                          (riskMetrics!.cagr! >= 0) ? 'text-success-700 dark:text-success-400' : 'text-error-700 dark:text-error-400'
+                          toneOf(direction(asShown(riskMetrics!.cagr!, 1)))('text-success-700 dark:text-success-400', 'text-error-700 dark:text-error-400', 'text-gray-500 dark:text-gray-400')
                         )}>
                           {isValueVisible
-                            ? `${riskMetrics!.cagr! >= 0 ? '+' : ''}${riskMetrics!.cagr!.toFixed(1)}%`
+                            ? `${asShown(riskMetrics!.cagr!, 1) > 0 ? '+' : ''}${asShown(riskMetrics!.cagr!, 1).toFixed(1)}%`
                             : '•••%'
                           }
                         </p>
@@ -694,10 +697,10 @@ export function PortfolioStats({ portfolio, performance, isValueVisible, apiStat
                         </p>
                         <p className={cn(
                           'text-xl sm:text-2xl font-bold tabular-nums',
-                          riskMetrics!.alpha! >= 0 ? 'text-success-700 dark:text-success-400' : 'text-error-700 dark:text-error-400'
+                          toneOf(direction(asShown(riskMetrics!.alpha!, 2)))('text-success-700 dark:text-success-400', 'text-error-700 dark:text-error-400', 'text-gray-500 dark:text-gray-400')
                         )}>
                           {isValueVisible
-                            ? `${riskMetrics!.alpha! >= 0 ? '+' : ''}${riskMetrics!.alpha!.toFixed(2)}%`
+                            ? `${asShown(riskMetrics!.alpha!, 2) > 0 ? '+' : ''}${asShown(riskMetrics!.alpha!, 2).toFixed(2)}%`
                             : '•••%'
                           }
                         </p>
