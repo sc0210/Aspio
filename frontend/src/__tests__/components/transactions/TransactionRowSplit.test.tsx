@@ -8,6 +8,8 @@ import { render, screen, fireEvent } from '@testing-library/react';
 import '@testing-library/jest-dom';
 import { Transaction } from '@/shared/types';
 import { TransactionRow } from '@/components/transactions/TransactionRow';
+import en from '@/locales/en/transactions.json';
+import zhTW from '@/locales/zh-TW/transactions.json';
 
 jest.mock('react-i18next', () => ({
     initReactI18next: { type: '3rdParty', init: jest.fn() },
@@ -66,5 +68,15 @@ describe('TransactionRow split share', () => {
 
         expect(screen.queryByRole('menuitem', { name: 'Manage split' })).not.toBeInTheDocument();
         expect(screen.getByRole('menuitem', { name: 'Split with partner' })).toBeInTheDocument();
+    });
+});
+
+// The t() stub above echoes the inline fallback, so a mistyped key would still
+// pass the render tests; check the keys the row uses exist in both locales.
+describe('TransactionRow split text', () => {
+    it.each([['en', en], ['zh-TW', zhTW]])('%s has the split badge and Manage split', (_locale, json) => {
+        expect(json.splitBadge).toEqual(expect.any(String));
+        expect(json.list.manageSplit).toEqual(expect.any(String));
+        expect(json.list.manageSplit).not.toBe('');
     });
 });
