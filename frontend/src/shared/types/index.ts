@@ -600,7 +600,7 @@ export interface SplitOut {
   currency: string;
   split_date: string;
   category_id: string | null;
-  /** The bill's category by name (the partner may not see the creator's own categories). */
+  /** The bill's category by its (English) name; translate it with transactions:form.categories. */
   category_name?: string | null;
   method: SplitMethod;
   status: SplitStatus;

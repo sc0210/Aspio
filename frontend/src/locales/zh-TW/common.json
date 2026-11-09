@@ -923,7 +923,7 @@
         "allTime": "全部期間",
         "currency": "幣別",
         "total": "共同支出",
-        "bills": "{{count}} 筆帳單",
+        "bills_other": "{{count}} 筆帳單",
         "mine": "你的份額",
         "minePct": "占 {{pct}}%",
         "iFronted": "你先付的",

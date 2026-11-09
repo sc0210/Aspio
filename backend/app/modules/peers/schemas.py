@@ -365,7 +365,7 @@ class SplitOut(BaseModel):
     currency: str
     split_date: str
     category_id: Optional[str]
-    # Named here: the partner may not be able to look up the creator's own category.
+    # Named here so a list can show it without a category lookup per id.
     category_name: Optional[str] = None
     method: str
     status: str

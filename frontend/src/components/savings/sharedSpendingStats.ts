@@ -19,6 +19,14 @@ export function shiftMonth(month: string, delta: number): string {
   return `${d.getUTCFullYear()}-${String(d.getUTCMonth() + 1).padStart(2, '0')}`;
 }
 
+/** 'YYYY-MM' as a month name in `locale`, e.g. "November 2026" or "Nov". */
+export function monthLabel(month: string, locale: string, style: 'long' | 'short' = 'long'): string {
+  const [y, m] = month.split('-').map(Number);
+  return new Intl.DateTimeFormat(locale, {
+    year: style === 'long' ? 'numeric' : undefined, month: style, timeZone: 'UTC',
+  }).format(new Date(Date.UTC(y, m - 1, 1)));
+}
+
 export const accepted = (splits: SplitOut[]): SplitOut[] => splits.filter((s) => s.status === 'active');
 
 /** Currencies with accepted splits, most-used first (ties: alphabetical). */
@@ -134,32 +142,49 @@ export function filterSplits(splits: SplitOut[], f: SplitFilter): SplitOut[] {
   );
 }
 
-/** The distinct months and category names in a list, for the filter menus. */
-export function filterOptions(splits: SplitOut[]): { months: string[]; categories: string[]; uncategorised: boolean } {
-  const months = [...new Set(splits.map((s) => monthOf(s.split_date)))].sort().reverse();
-  const names = splits.map((s) => s.category_name).filter((n): n is string => !!n);
+/**
+ * The distinct months and category names in a list, for the filter menus.
+ * `keep` holds the current choices: a bill that changed or left the list must
+ * not leave its filter selected but missing from the menu, hiding everything.
+ */
+export function filterOptions(splits: SplitOut[], keep: Pick<SplitFilter, 'month' | 'category'> = EMPTY_FILTER):
+  { months: string[]; categories: string[]; uncategorised: boolean } {
+  const months = [...new Set([...splits.map((s) => monthOf(s.split_date)), ...(keep.month ? [keep.month] : [])])].sort().reverse();
+  const names = [...splits.map((s) => s.category_name), keep.category === NO_CATEGORY ? null : keep.category]
+    .filter((n): n is string => !!n);
   return {
     months,
     categories: [...new Set(names)].sort((a, b) => a.localeCompare(b)),
-    uncategorised: splits.some((s) => !s.category_name),
+    uncategorised: keep.category === NO_CATEGORY || splits.some((s) => !s.category_name),
   };
 }
 
 function csvCell(value: string | number): string {
   const text = String(value);
-  // Quote anything with a delimiter, quote or line break; a leading =, +, - or @
-  // is prefixed so a spreadsheet reads it as text, not a formula.
-  const safe = /^[=+\-@]/.test(text) && typeof value === 'string' ? `'${text}` : text;
+  // Quote anything with a delimiter, quote or line break. Text a spreadsheet
+  // could run as a formula (=, +, - or @ first, even after spaces, or a leading
+  // tab or carriage return) is prefixed so it reads as text. A partner writes
+  // descriptions, so this is someone else's input.
+  const safe = typeof value === 'string' && /^(?:[\t\r]|[ ]*[=+\-@])/.test(text) ? `'${text}` : text;
   return /[",\n\r]/.test(safe) ? `"${safe.replace(/"/g, '""')}"` : safe;
 }
 
 export const CSV_HEADER = ['Date', 'Description', 'Category', 'Partner', 'Paid by', 'Status', 'Currency', 'Total', 'My share', 'Partner share'];
 
-/** One row per bill; the header is passed in so it can be translated. */
-export function splitsCsv(splits: SplitOut[], header: string[] = CSV_HEADER, paidBy = { me: 'Me', partner: 'Partner' }): string {
+export interface CsvLabels {
+  me: string;
+  partner: string;
+  status: (status: SplitStatus) => string;
+  category: (name: string) => string;
+}
+
+const RAW_LABELS: CsvLabels = { me: 'Me', partner: 'Partner', status: (s) => s, category: (n) => n };
+
+/** One row per bill; the header and labels are passed in so they can be translated. */
+export function splitsCsv(splits: SplitOut[], header: string[] = CSV_HEADER, labels: CsvLabels = RAW_LABELS): string {
   const rows = splits.map((s) => [
-    s.split_date, s.description, s.category_name ?? '', s.partner_name, s.payer_is_me ? paidBy.me : paidBy.partner,
-    s.status, s.currency, s.total_amount, s.my_share, s.partner_share,
+    s.split_date, s.description, s.category_name ? labels.category(s.category_name) : '', s.partner_name,
+    s.payer_is_me ? labels.me : labels.partner, labels.status(s.status), s.currency, s.total_amount, s.my_share, s.partner_share,
   ]);
   return [header, ...rows].map((r) => r.map(csvCell).join(',')).join('\n');
 }

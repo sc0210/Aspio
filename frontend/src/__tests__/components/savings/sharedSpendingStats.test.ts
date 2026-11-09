@@ -1,7 +1,7 @@
 import type { SplitOut } from '@/shared/types';
 import {
   EMPTY_FILTER, NO_CATEGORY, byCategory, byMonth, currenciesByUse, filterOptions, filterSplits, shiftMonth,
-  splitsCsv, summarize,
+  monthLabel, splitsCsv, summarize,
 } from '@/components/savings/sharedSpendingStats';
 
 let n = 0;
@@ -81,4 +81,32 @@ describe('sharedSpendingStats', () => {
     expect(header).toBe('Date,Description,Category,Partner,Paid by,Status,Currency,Total,My share,Partner share');
     expect(row).toBe(`2026-11-06,"'=HYPERLINK(""x""), dinner",Dining,小明,Me,active,TWD,1000,500,500`);
   });
+
+  it('defuses formulas hidden behind spaces, tabs or a carriage return', () => {
+    for (const description of ['  =1+1', '\t=1+1', '\rcmd', '@SUM(A1)', '-2+3']) {
+      const cell = splitsCsv([split({ description })]).split('\n')[1].split(',')[1];
+      expect(cell.replace(/^"/, '').startsWith("'")).toBe(true);
+    }
+    expect(splitsCsv([split({ description: 'Dinner - Tokyo' })]).split('\n')[1]).toContain(',Dinner - Tokyo,');
+  });
+
+  it('writes the status and category through the labels it is given', () => {
+    const row = splitsCsv([split({ status: 'voided' })], undefined, {
+      me: '我', partner: '夥伴', status: (s) => (s === 'voided' ? '已取消' : s), category: (n) => (n === 'Dining' ? '餐飲' : n),
+    }).split('\n')[1];
+    expect(row).toBe('2026-11-06,Dinner,餐飲,Bob,我,已取消,TWD,1000,500,500');
+  });
+
+  it('keeps a chosen month and category in the menus after their bills are gone', () => {
+    const opts = filterOptions([split({})], { month: '2025-01', category: 'Utilities' });
+    expect(opts.months).toEqual(['2026-11', '2025-01']);
+    expect(opts.categories).toEqual(['Dining', 'Utilities']);
+    expect(filterOptions([split({})], { month: '', category: NO_CATEGORY }).uncategorised).toBe(true);
+  });
+
+  it('names a month in the reader\'s language', () => {
+    expect(monthLabel('2026-11', 'en')).toBe('November 2026');
+    expect(monthLabel('2026-11', 'en', 'short')).toBe('Nov');
+  });
 });
+

@@ -4,7 +4,7 @@ import { useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
 import { ArrowDownTrayIcon, MagnifyingGlassIcon } from '@heroicons/react/24/outline';
 import type { SplitOut, SplitStatus } from '@/shared/types';
-import { CSV_HEADER, EMPTY_FILTER, NO_CATEGORY, filterOptions, isFiltered, splitsCsv, type SplitFilter } from './sharedSpendingStats';
+import { CSV_HEADER, EMPTY_FILTER, NO_CATEGORY, filterOptions, isFiltered, monthLabel as formatMonth, splitsCsv, type SplitFilter } from './sharedSpendingStats';
 
 const STATUSES: SplitStatus[] = ['proposed', 'active', 'declined', 'voided'];
 const FIELD = 'min-h-[44px] rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-sm text-gray-900 dark:text-white px-2';
@@ -20,20 +20,18 @@ interface SharedBillsFilterProps {
 
 /** Filter the Shared bills list and export what it shows as CSV. */
 export default function SharedBillsFilter({ splits, shown, filter, onChange }: SharedBillsFilterProps) {
-  const { t, i18n } = useTranslation('common');
-  const options = useMemo(() => filterOptions(splits), [splits]);
+  const { t, i18n } = useTranslation(['common', 'transactions']);
+  const options = useMemo(() => filterOptions(splits, filter), [splits, filter]);
   const set = (patch: Partial<SplitFilter>) => onChange({ ...filter, ...patch });
 
-  const monthLabel = (m: string) => {
-    const [y, mo] = m.split('-').map(Number);
-    return new Intl.DateTimeFormat(i18n?.language || 'en', { year: 'numeric', month: 'long', timeZone: 'UTC' })
-      .format(new Date(Date.UTC(y, mo - 1, 1)));
-  };
+  const monthLabel = (m: string) => formatMonth(m, i18n?.language || 'en');
+  const categoryLabel = (name: string) => t(`transactions:form.categories.${name}`, name);
 
   const exportCsv = () => {
     const header = CSV_HEADER.map((h) => t(`savings.splits.export.columns.${h.replace(/ /g, '')}`, h));
     const csv = splitsCsv(shown, header, {
       me: t('savings.splits.export.me', 'Me'), partner: t('savings.splits.export.partner', 'Partner'),
+      status: (s) => t(`savings.splits.status.${s}`, s), category: categoryLabel,
     });
     // The BOM lets Excel read the file as UTF-8, so Chinese descriptions survive.
     const url = URL.createObjectURL(new Blob(['﻿', csv], { type: 'text/csv;charset=utf-8' }));
@@ -64,7 +62,7 @@ export default function SharedBillsFilter({ splits, shown, filter, onChange }: S
         <select value={filter.category} onChange={(e) => set({ category: e.target.value })} className={FIELD}
           aria-label={t('savings.splits.category', 'Category')}>
           <option value="">{t('savings.splits.filter.anyCategory', 'Any category')}</option>
-          {options.categories.map((c) => <option key={c} value={c}>{c}</option>)}
+          {options.categories.map((c) => <option key={c} value={c}>{categoryLabel(c)}</option>)}
           {options.uncategorised && <option value={NO_CATEGORY}>{t('savings.splits.insights.uncategorised', 'No category')}</option>}
         </select>
         <select value={filter.status} onChange={(e) => set({ status: e.target.value as SplitStatus | '' })} className={FIELD}

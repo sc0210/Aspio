@@ -1,7 +1,7 @@
 'use client';
 
 import { RelatedMoneyLinks } from '@/components/layout/RelatedMoneyLinks';
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useQueryClient } from '@tanstack/react-query';
 import { PlusIcon } from '@heroicons/react/24/outline';
@@ -52,7 +52,7 @@ export interface SharedSpendingDemo {
  */
 export default function SharedSpendingTab({ connections, demo }: { connections: PeerConnectionOut[]; demo?: SharedSpendingDemo }) {
   const readOnly = demo !== undefined;
-  const { t } = useTranslation('common');
+  const { t } = useTranslation(['common', 'transactions']);
   const queryClient = useQueryClient();
   const [splits, setSplits] = useState<SplitOut[]>([]);
   const [balances, setBalances] = useState<PeerBalanceOut[]>([]);
@@ -166,11 +166,11 @@ export default function SharedSpendingTab({ connections, demo }: { connections: 
   const inbox = splits.filter((s) => s.status === 'proposed' && !s.created_by_me);
   // Changes my partner proposed to an accepted split: mine to answer.
   const changesForMe = splits.filter((s) => s.status === 'active' && s.pending_amendment && !s.pending_amendment.proposed_by_me);
-  const others = splits.filter((s) => !(s.status === 'proposed' && !s.created_by_me));
+  const others = useMemo(() => splits.filter((s) => !(s.status === 'proposed' && !s.created_by_me)), [splits]);
   // Repayments my partner says they sent me: I confirm they arrived.
   const toConfirm = settlements.filter((p) => p.status === 'proposed' && !p.created_by_me);
   const repayments = settlements.filter((p) => !(p.status === 'proposed' && !p.created_by_me));
-  const shownBills = filterSplits(others, billFilter);
+  const shownBills = useMemo(() => filterSplits(others, billFilter), [others, billFilter]);
 
   return (
     <div className="space-y-6">
@@ -423,7 +423,7 @@ export default function SharedSpendingTab({ connections, demo }: { connections: 
                 </span>
               </p>
               <p className="text-xs text-gray-600 dark:text-gray-400">
-                {s.split_date}{s.category_name ? ` · ${s.category_name}` : ''} · {money(s.total_amount, s.currency)} · {t('savings.splits.shares', 'you {{mine}} / {{name}} {{theirs}}', {
+                {s.split_date}{s.category_name ? ` · ${t(`transactions:form.categories.${s.category_name}`, s.category_name)}` : ''} · {money(s.total_amount, s.currency)} · {t('savings.splits.shares', 'you {{mine}} / {{name}} {{theirs}}', {
                   mine: money(s.my_share, s.currency), theirs: money(s.partner_share, s.currency), name: s.partner_name,
                 })}
               </p>

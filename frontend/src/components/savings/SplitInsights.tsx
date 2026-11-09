@@ -8,7 +8,7 @@ import { useIsDark } from '@/contexts/ThemeContext';
 import { businessToday } from '@/lib/portfolio/businessDate';
 import { formatCurrency } from '@/utils/formatters';
 import type { SplitOut } from '@/shared/types';
-import { byCategory, byMonth, currenciesByUse, monthOf, shiftMonth, summarize } from './sharedSpendingStats';
+import { accepted, byCategory, byMonth, currenciesByUse, monthLabel as formatMonth, monthOf, shiftMonth, summarize } from './sharedSpendingStats';
 
 // As the rest of the tab: whole dollars for TWD.
 const money = (value: number, currency: string) =>
@@ -32,7 +32,7 @@ interface SplitInsightsProps {
  * went, and how it moved over the last six months. See `sharedSpendingStats.ts`.
  */
 export default function SplitInsights({ splits }: SplitInsightsProps) {
-  const { t, i18n } = useTranslation('common');
+  const { t, i18n } = useTranslation(['common', 'transactions']);
   const isDark = useIsDark();
   const colors = isDark ? SERIES.dark : SERIES.light;
   const thisMonth = monthOf(businessToday());
@@ -52,13 +52,10 @@ export default function SplitInsights({ splits }: SplitInsightsProps) {
 
   if (!currency || !summary) return null;
 
-  const monthLabel = (m: string, style: 'long' | 'short' = 'long') => {
-    const [y, mo] = m.split('-').map(Number);
-    return new Intl.DateTimeFormat(i18n?.language || 'en', {
-      year: style === 'long' ? 'numeric' : undefined, month: style, timeZone: 'UTC',
-    }).format(new Date(Date.UTC(y, mo - 1, 1)));
-  };
-  const partners = new Set(splits.map((s) => s.partner_name));
+  const monthLabel = (m: string, style: 'long' | 'short' = 'long') => formatMonth(m, i18n?.language || 'en', style);
+  const categoryLabel = (name: string) => t(`transactions:form.categories.${name}`, name);
+  // Named after the partners behind these figures, not every bill on the list.
+  const partners = new Set(accepted(splits).filter((s) => s.currency === currency).map((s) => s.partner_name));
   const partnerLabel = partners.size === 1 ? [...partners][0] : t('savings.splits.insights.partners', 'Partners');
   const minePct = summary.total > 0 ? Math.round((summary.mine / summary.total) * 100) : 0;
   const largest = categories[0]?.total ?? 0;
@@ -149,7 +146,7 @@ export default function SplitInsights({ splits }: SplitInsightsProps) {
               {categories.map((c) => (
                 <li key={c.name ?? '—'} className="text-sm">
                   <div className="flex items-baseline justify-between gap-2">
-                    <span className="truncate text-gray-900 dark:text-white">{c.name ?? uncategorised}</span>
+                    <span className="truncate text-gray-900 dark:text-white">{c.name ? categoryLabel(c.name) : uncategorised}</span>
                     <span className="tabular-nums text-gray-900 dark:text-white whitespace-nowrap">
                       {money(c.total, currency)}
                       <span className="ml-1 text-xs text-gray-600 dark:text-gray-400">

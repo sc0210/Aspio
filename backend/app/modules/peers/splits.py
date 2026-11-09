@@ -743,7 +743,7 @@ class SplitService:
                 PeerSplitAmendment.status == AmendmentStatus.PROPOSED.value,
             ))
         )).scalars().all()} if active_ids else {}
-        # And the category names: the partner may not see a creator's own category.
+        # And the category names (categories are global), in one query too.
         category_ids = {s.category_id for s in splits if s.category_id is not None}
         categories = dict((await self.session.execute(
             select(TransactionCategory.id, TransactionCategory.name)

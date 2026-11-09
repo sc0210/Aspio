@@ -350,6 +350,14 @@ describe('SharedSpendingTab insights', () => {
     expect(tile('Shared spending')).toHaveTextContent('4,600');
   });
 
+  it('names only the partners behind the figures', async () => {
+    // A declined bill with Carol is on the list but in none of the numbers.
+    api.listSplits.mockResolvedValue({ data: [...bills, split({ id: 'e', status: 'declined', partner_name: 'Carol' })] });
+    renderTab();
+    const insights = await screen.findByRole('region', { name: 'Insights' });
+    expect(within(insights).getByText('Bob paid up front')).toBeInTheDocument();
+  });
+
   it('shows no insights without an accepted bill', async () => {
     api.listSplits.mockResolvedValue({ data: [bills[3]] });
     renderTab();
