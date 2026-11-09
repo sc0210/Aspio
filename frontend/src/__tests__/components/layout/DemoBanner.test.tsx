@@ -3,6 +3,7 @@ import { render, screen, fireEvent } from '@testing-library/react';
 import i18n from 'i18next';
 import { initReactI18next } from 'react-i18next';
 import authEn from '@/locales/en/auth.json';
+import authZh from '@/locales/zh-TW/auth.json';
 import commonEn from '@/locales/en/common.json';
 import { DemoBanner } from '@/components/layout/DemoBanner';
 import { useDemo } from '@/contexts/DemoContext';
@@ -41,6 +42,19 @@ describe('DemoBanner', () => {
     mockUseDemo.mockReturnValue({ isDemoMode: true, exitDemo: jest.fn() });
     render(<DemoBanner />);
     expect(screen.getByText(/Demo Mode/)).toBeInTheDocument();
+  });
+
+  it('shows the short title on phones, the full one from sm up', () => {
+    mockUseDemo.mockReturnValue({ isDemoMode: true, exitDemo: jest.fn() });
+    render(<DemoBanner />);
+    expect(screen.getByText('Demo')).toHaveClass('sm:hidden');
+    expect(screen.getByText('Demo Mode')).toHaveClass('hidden', 'sm:inline');
+  });
+
+  it('reads the short title from both locales, not the inline English fallback', () => {
+    // A renamed key would fall back to 'Demo' silently, and a zh-TW phone would show English.
+    expect(authEn.demo.titleShort).toBe('Demo');
+    expect(authZh.demo.titleShort).toBe('示範');
   });
 
   it('shows a link to create a real account', () => {
