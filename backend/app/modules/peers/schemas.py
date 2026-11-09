@@ -365,6 +365,8 @@ class SplitOut(BaseModel):
     currency: str
     split_date: str
     category_id: Optional[str]
+    # Named here: the partner may not be able to look up the creator's own category.
+    category_name: Optional[str] = None
     method: str
     status: str
     payer_is_me: bool

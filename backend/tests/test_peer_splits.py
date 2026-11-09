@@ -527,3 +527,11 @@ async def test_demo_reset_closes_open_splits(async_session, couple):
     rows = (await async_session.execute(select(Transaction).where(
         Transaction.user_id == alice_id))).scalars().all()
     assert [(r.amount, r.peer_split_share_id) for r in rows] == [(Decimal("1000"), None)]
+
+
+async def test_both_partners_see_the_category_by_name(async_session, couple):
+    c = couple
+    sid = uuid.UUID((await c["svc"].create_split(c["alice"].id, _bill(c))).id)
+    assert (await c["svc"].get_split(c["bob"].id, sid)).category_name == "Food"
+    listed = await c["svc"].list_splits(c["bob"].id)
+    assert [s.category_name for s in listed] == ["Food"]
