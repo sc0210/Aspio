@@ -914,6 +914,63 @@
           "monthly": "每月",
           "yearly": "每年"
         }
+      },
+      "insights": {
+        "title": "分析",
+        "period": "期間",
+        "prevMonth": "上個月",
+        "nextMonth": "下個月",
+        "allTime": "全部期間",
+        "currency": "幣別",
+        "total": "共同支出",
+        "bills": "{{count}} 筆帳單",
+        "mine": "你的份額",
+        "minePct": "占 {{pct}}%",
+        "iFronted": "你先付的",
+        "partnerFronted": "{{name}} 先付的",
+        "partners": "夥伴",
+        "byCategory": "依類別",
+        "none": "這段期間沒有共同帳單。",
+        "uncategorised": "未分類",
+        "youPart": "你 {{amount}}",
+        "trend": "近 {{count}} 個月",
+        "legend": "圖例",
+        "you": "你",
+        "trendAlt": "每月共同支出，你與 {{name}} 的部分",
+        "month": "月份"
+      },
+      "filter": {
+        "search": "搜尋共同帳單",
+        "searchPlaceholder": "搜尋帳單或夥伴",
+        "month": "月份",
+        "anyMonth": "所有月份",
+        "anyCategory": "所有類別",
+        "status": "狀態",
+        "anyStatus": "所有狀態",
+        "paidBy": "付款人",
+        "anyPayer": "任何人付款",
+        "iPaid": "我付的",
+        "partnerPaid": "夥伴付的",
+        "showing": "顯示 {{shown}} / {{total}} 筆",
+        "clear": "清除篩選",
+        "noMatch": "沒有符合篩選條件的帳單。"
+      },
+      "export": {
+        "button": "匯出 CSV",
+        "me": "我",
+        "partner": "夥伴",
+        "columns": {
+          "Date": "日期",
+          "Description": "說明",
+          "Category": "類別",
+          "Partner": "夥伴",
+          "Paidby": "付款人",
+          "Status": "狀態",
+          "Currency": "幣別",
+          "Total": "總額",
+          "Myshare": "我的份額",
+          "Partnershare": "夥伴份額"
+        }
       }
     },
     "summary": {
