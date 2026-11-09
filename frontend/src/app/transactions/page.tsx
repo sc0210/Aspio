@@ -57,6 +57,11 @@ import {
 /** Remembers the totals' transfer preference across visits. */
 const HIDE_TRANSFERS_KEY = 'aspiro-txn-hide-transfers';
 
+/** The bar holds a search and four buttons; at 1280px with the sidebar open the
+ * labels wrapped and squeezed the title to "Transact…". The secondary buttons go
+ * icon-only (named for screen readers and by tooltip) until there is room. */
+const TOP_BAR_LABEL = 'sr-only 2xl:not-sr-only';
+
 /**
  * Prev / next pager for the transaction list. Rendered both above and below
  * the list so the user can switch pages without scrolling. Only the bottom
@@ -233,7 +238,7 @@ function DesktopTransactionsPage() {
               onChange={(e) => setSearchQuery(e.target.value)}
               placeholder={t('transactions:filters.searchPlaceholder')}
               aria-label={t('transactions:filters.searchPlaceholder')}
-              className="w-48 xl:w-64 pl-8 pr-8 py-1.5 text-sm bg-white dark:bg-gray-800 text-gray-700 dark:text-gray-200 border border-gray-300 dark:border-gray-600 rounded-lg focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-400 transition-shadow"
+              className="w-48 2xl:w-64 pl-8 pr-8 py-1.5 text-sm bg-white dark:bg-gray-800 text-gray-700 dark:text-gray-200 border border-gray-300 dark:border-gray-600 rounded-lg focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-400 transition-shadow"
             />
             {searchQuery && (
               <button
@@ -249,26 +254,29 @@ function DesktopTransactionsPage() {
           <button
             type="button"
             onClick={openImportExport}
+            title={t('transactions:importExport.button')}
             className={TOP_BAR_BUTTON}
           >
             <ArrowDownTrayIcon className="w-4 h-4" />
-            {t('transactions:importExport.button')}
+            <span className={TOP_BAR_LABEL}>{t('transactions:importExport.button')}</span>
           </button>
         </div>
         <Link
           href="/transactions/monthly-summary"
+          title={t('transactions:monthlySummary')}
           className={TOP_BAR_BUTTON}
         >
           <ChartBarIcon className="w-4 h-4" />
-          {t('transactions:monthlySummary')}
+          <span className={TOP_BAR_LABEL}>{t('transactions:monthlySummary')}</span>
         </Link>
         {/* Receipt scan — the page existed with no link to it from anywhere. */}
         <Link
           href="/transactions/scan"
+          title={t('transactions:scan.title')}
           className={TOP_BAR_BUTTON}
         >
           <CameraIcon className="w-4 h-4" />
-          {t('transactions:scan.title')}
+          <span className={TOP_BAR_LABEL}>{t('transactions:scan.title')}</span>
         </Link>
         <Link
           href={addHref}
