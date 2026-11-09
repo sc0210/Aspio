@@ -21,9 +21,6 @@ import { Transaction } from '@/shared/types';
 import { getPaymentMethodColor, getWalletTypeBadge } from './transactionRowStyles';
 import { canSplit } from './SplitExpenseModal';
 
-/** Change the ratio, withdraw or cancel a split: the Shared Spending tab. */
-const SPLITS_HREF = '/savings?tab=splits';
-
 interface TransactionRowProps {
   transaction: Transaction;
   /** Position within its day group, for the stagger animation only. */
@@ -103,13 +100,9 @@ function TransactionRowBase({
                 <div className="flex flex-wrap items-center gap-1 text-xs text-gray-500 dark:text-gray-400 min-w-0">
                   <span className="flex-shrink-0">{searchQuery ? highlight(transaction.category, searchQuery) : transaction.category}</span>
                   {transaction.peerSplitShareId && (
-                    <Link
-                      href={SPLITS_HREF}
-                      title={t('transactions:list.manageSplit', 'Manage split')}
-                      className="flex-shrink-0 px-1.5 py-0.5 rounded-full font-medium whitespace-nowrap bg-indigo-50 text-indigo-700 hover:bg-indigo-100 dark:bg-indigo-900/30 dark:text-indigo-300 dark:hover:bg-indigo-900/50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500"
-                    >
+                    <span className="flex-shrink-0 px-1.5 py-0.5 rounded-full font-medium whitespace-nowrap bg-indigo-50 text-indigo-700 dark:bg-indigo-900/30 dark:text-indigo-300">
                       {t('transactions:splitBadge', 'Split')}
-                    </Link>
+                    </span>
                   )}
                   {/* Wallet Type Badge - Always visible */}
                   <>
@@ -220,23 +213,6 @@ function TransactionRowBase({
                                 <UsersIcon className="w-4 h-4 mr-3" />
                                 {t('transactions:list.split', 'Split with partner')}
                               </button>
-                            )}
-                          </MenuItem>
-                          )}
-                          {/* A split's shares, ratio and cancel live with the split, not the row. */}
-                          {transaction.peerSplitShareId && (
-                          <MenuItem>
-                            {({ active }) => (
-                              <Link
-                                href={SPLITS_HREF}
-                                className={cn(
-                                  'flex items-center w-full px-4 py-2 text-sm',
-                                  active ? 'bg-gray-100 dark:bg-gray-700 text-gray-900 dark:text-white' : 'text-gray-700 dark:text-gray-300'
-                                )}
-                              >
-                                <UsersIcon className="w-4 h-4 mr-3" />
-                                {t('transactions:list.manageSplit', 'Manage split')}
-                              </Link>
                             )}
                           </MenuItem>
                           )}
