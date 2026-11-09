@@ -27,7 +27,9 @@ export function DemoBanner() {
               The description is desktop-only so the phone banner stays one row. */}
           <div className="min-w-0 flex items-center gap-2 text-sm text-primary-700 dark:text-primary-300">
             <p className="min-w-0 truncate">
-              <span className="font-semibold">{t('auth:demo.title')}</span>
+              {/* "Demo Mode" didn't fit beside both actions at 375px and showed as "Demo Mo…". */}
+              <span className="font-semibold sm:hidden">{t('auth:demo.titleShort', 'Demo')}</span>
+              <span className="font-semibold hidden sm:inline">{t('auth:demo.title')}</span>
               <span className="hidden sm:inline">: {t('auth:demo.description')}</span>
             </p>
             <a
