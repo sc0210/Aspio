@@ -401,6 +401,11 @@ class AmendmentStatus(str, enum.Enum):
     WITHDRAWN = "withdrawn"  # by the proposer, or because the split closed
 
 
+class AmendmentKind(str, enum.Enum):
+    CHANGE = "change"  # new total, division and/or description
+    CANCEL = "cancel"  # the non-payer asks the payer to cancel; accepted, it closes the split
+
+
 class PeerSplitAmendment(BaseModel):
     """A change to an accepted split that one person proposes and the other must
     accept: a new total, how it divides, and/or the description. The payer stays.
@@ -422,6 +427,9 @@ class PeerSplitAmendment(BaseModel):
     method: Mapped[str] = mapped_column(String(10), nullable=False, default=SplitMethod.EQUAL.value)
     description: Mapped[str] = mapped_column(String(200), nullable=False)
     status: Mapped[str] = mapped_column(String(10), nullable=False, default=AmendmentStatus.PROPOSED.value)
+    # A cancel request stores the figures cancelling leaves: the payer carries the whole bill.
+    kind: Mapped[str] = mapped_column(String(10), nullable=False, default=AmendmentKind.CHANGE.value,
+                                      server_default=AmendmentKind.CHANGE.value)
 
     __table_args__ = (
         CheckConstraint("total_amount > 0", name="peer_split_amendment_positive_total"),

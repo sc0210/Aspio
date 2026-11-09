@@ -488,8 +488,15 @@ async def cancel_split(split_id: UUID, current_user: CurrentUser, session: Async
     return ApiResponse.success_response(data=await SplitService(session).cancel(current_user.id, split_id))
 
 
+@router.post("/splits/{split_id}/cancel-request", response_model=ApiResponse[SplitOut],
+             summary="Ask the payer to cancel an accepted split (the non-payer); it closes if they accept")
+async def request_cancel_split(split_id: UUID, current_user: CurrentUser, session: AsyncSession = Depends(get_db)):
+    split = await SplitService(session).request_cancel(current_user.id, split_id)
+    return ApiResponse.success_response(data=split, message="Request sent")
+
+
 @router.post("/splits/{split_id}/amend", response_model=ApiResponse[SplitOut],
-             summary="Propose a change to an accepted split; your partner must accept it")
+             summary="Change a split: an accepted one waits for your partner; one they haven't answered changes now")
 async def amend_split(split_id: UUID, body: SplitAmend, current_user: CurrentUser,
                       session: AsyncSession = Depends(get_db)):
     split = await SplitService(session).propose_amendment(current_user.id, split_id, body)

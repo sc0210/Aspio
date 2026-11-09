@@ -896,11 +896,21 @@
         "button": "修改",
         "title": "修改這筆分帳",
         "total": "總額（{{currency}}）",
+        "totalLocked": "這是你記錄的支出，總額維持不變。",
         "note": "在 {{name}} 接受前不會有任何變動；接受後，雙方帳戶都會改成新的份額。",
+        "noteUnanswered": "{{name}} 還沒回覆，所以會立即更新，對方會看到修改後的帳單。",
         "submit": "送出修改",
+        "submitUnanswered": "更新帳單",
         "prompt": "{{name}} 想修改「{{description}}」",
         "sent": "已送出修改：{{total}} · 你 {{mine}} / {{name}} {{theirs}}",
         "withdraw": "撤回修改"
+      },
+      "cancelRequest": {
+        "button": "請對方取消",
+        "prompt": "{{name}} 請你取消「{{description}}」",
+        "detail": "接受後，整筆 {{total}} 都由你負擔，{{name}} 的份額會被移除。",
+        "sent": "已請 {{name}} 取消這筆分帳",
+        "withdraw": "撤回請求"
       },
       "repeat": {
         "label": "每月重複",

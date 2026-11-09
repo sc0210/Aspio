@@ -628,6 +628,10 @@ class ApiClient {
     return this.post<SplitOut>(`/peers/splits/${splitId}/amend`, body);
   }
 
+  async requestCancelSplit(splitId: string): Promise<ApiResponse<SplitOut>> {
+    return this.post<SplitOut>(`/peers/splits/${splitId}/cancel-request`, {});
+  }
+
   async respondToAmendment(splitId: string, action: 'accept' | 'decline'): Promise<ApiResponse<SplitOut>> {
     return this.post<SplitOut>(`/peers/splits/${splitId}/amendment/respond`, { action });
   }

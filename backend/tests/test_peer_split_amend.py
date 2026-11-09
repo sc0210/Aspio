@@ -83,12 +83,9 @@ async def test_one_open_change_at_a_time_and_not_a_no_op(async_session, couple):
     assert err.value.status_code == 409
 
 
-async def test_only_an_accepted_split_with_a_current_partner(async_session, couple):
+async def test_only_a_split_you_are_on(async_session, couple):
     c = couple
     proposed = uuid.UUID((await c["svc"].create_split(c["alice"].id, _bill(c))).id)
-    with pytest.raises(HTTPException) as err:
-        await c["svc"].propose_amendment(c["alice"].id, proposed, SplitAmend(total_amount=Decimal("900")))
-    assert err.value.status_code == 409
     with pytest.raises(HTTPException) as err:  # not on the split
         await c["svc"].propose_amendment(c["eve"].id, proposed, SplitAmend(total_amount=Decimal("900")))
     assert err.value.status_code == 404
@@ -155,3 +152,120 @@ async def test_amend_routes_resolve_over_http(authenticated_client):
     sid = uuid.uuid4()
     assert authenticated_client.post(f"/api/v1/peers/splits/{sid}/amend", json={"total_amount": 10}).status_code == 404
     assert authenticated_client.post(f"/api/v1/peers/splits/{sid}/amendment/withdraw").status_code == 404
+    assert authenticated_client.post(f"/api/v1/peers/splits/{sid}/cancel-request").status_code == 404
+
+
+# ---------------------------------------------------------------------------
+# A split not yet answered: the creator edits it directly
+# ---------------------------------------------------------------------------
+
+async def test_the_creator_edits_an_unanswered_split_and_the_accept_uses_it(async_session, couple):
+    c = couple
+    sid = uuid.UUID((await c["svc"].create_split(c["alice"].id, _bill(c))).id)
+    out = await c["svc"].propose_amendment(c["alice"].id, sid, SplitAmend(
+        total_amount=Decimal("1200"), method="fixed", my_amount=Decimal("900"), description="Dinner + drinks"))
+    assert (out.status, out.total_amount, out.my_share, out.partner_share, out.description,
+            out.pending_amendment) == ("proposed", 1200.0, 900.0, 300.0, "Dinner + drinks", None)
+    # She paid: her row carries the whole (new) bill until Bob answers.
+    assert await _rows(async_session, c["alice"]) == [Decimal("1200")]
+    assert await _rows(async_session, c["bob"]) == []
+
+    await c["svc"].respond(c["bob"].id, sid, "accept", None, "life")
+    assert await _rows(async_session, c["alice"]) == [Decimal("900")]
+    assert await _rows(async_session, c["bob"]) == [Decimal("300")]
+    assert (await _owed(c, c["alice"]))["bob"] == {"TWD": 300}
+
+
+async def test_a_non_payer_creators_row_follows_their_share(async_session, couple):
+    c = couple
+    # Bob paid; Alice records it and owes her half, which is already in her ledger.
+    sid = uuid.UUID((await c["svc"].create_split(c["alice"].id, _bill(c, payer="partner"))).id)
+    assert await _rows(async_session, c["alice"]) == [Decimal("500")]
+    await c["svc"].propose_amendment(c["alice"].id, sid, SplitAmend(
+        total_amount=Decimal("1000"), method="fixed", my_amount=Decimal("0")))
+    assert await _rows(async_session, c["alice"]) == []
+    await c["svc"].propose_amendment(c["alice"].id, sid, SplitAmend(
+        total_amount=Decimal("1000"), method="fixed", my_amount=Decimal("400")))
+    assert await _rows(async_session, c["alice"]) == [Decimal("400")]
+
+
+async def test_only_the_creator_edits_and_not_a_no_op(async_session, couple):
+    c = couple
+    sid = uuid.UUID((await c["svc"].create_split(c["alice"].id, _bill(c))).id)
+    with pytest.raises(HTTPException) as err:  # Bob answers it instead
+        await c["svc"].propose_amendment(c["bob"].id, sid, SplitAmend(total_amount=Decimal("900")))
+    assert err.value.status_code == 403
+    with pytest.raises(HTTPException) as err:
+        await c["svc"].propose_amendment(c["alice"].id, sid, SplitAmend(total_amount=Decimal("1000")))
+    assert err.value.status_code == 422
+
+
+async def test_a_withdrawn_or_declined_split_cannot_be_edited(async_session, couple):
+    c = couple
+    sid = uuid.UUID((await c["svc"].create_split(c["alice"].id, _bill(c))).id)
+    await c["svc"].respond(c["bob"].id, sid, "decline", None, "life")
+    with pytest.raises(HTTPException) as err:
+        await c["svc"].propose_amendment(c["alice"].id, sid, SplitAmend(total_amount=Decimal("900")))
+    assert err.value.status_code == 409
+
+
+# ---------------------------------------------------------------------------
+# The non-payer asks the payer to cancel
+# ---------------------------------------------------------------------------
+
+async def test_the_payer_accepting_a_cancel_request_closes_the_split(async_session, couple):
+    c = couple
+    sid = await _active(c)
+    out = await c["svc"].request_cancel(c["bob"].id, sid)
+    assert (out.pending_amendment.kind, out.pending_amendment.proposed_by_me) == ("cancel", True)
+    # Nothing moves until Alice answers.
+    assert await _rows(async_session, c["alice"]) == [Decimal("500")]
+    assert await _rows(async_session, c["bob"]) == [Decimal("500")]
+
+    done = await c["svc"].respond_amendment(c["alice"].id, sid, "accept")
+    assert (done.status, done.pending_amendment) == ("voided", None)
+    # Alice carries the whole bill again, Bob's share is gone, nothing is owed.
+    assert await _rows(async_session, c["alice"]) == [Decimal("1000")]
+    assert await _rows(async_session, c["bob"]) == []
+    assert (await _owed(c, c["alice"]))["bob"] == {}
+    statuses = (await async_session.execute(
+        PeerSplitAmendment.__table__.select().where(PeerSplitAmendment.split_id == sid))).all()
+    assert [r.status for r in statuses] == ["accepted"]
+
+
+async def test_a_declined_or_withdrawn_cancel_request_changes_nothing(async_session, couple):
+    c = couple
+    sid = await _active(c)
+    await c["svc"].request_cancel(c["bob"].id, sid)
+    out = await c["svc"].respond_amendment(c["alice"].id, sid, "decline")
+    assert (out.status, out.pending_amendment) == ("active", None)
+
+    await c["svc"].request_cancel(c["bob"].id, sid)
+    assert (await c["svc"].withdraw_amendment(c["bob"].id, sid)).pending_amendment is None
+    assert await _rows(async_session, c["alice"]) == [Decimal("500")]
+    assert (await _owed(c, c["alice"]))["bob"] == {"TWD": 500}
+
+
+async def test_only_the_non_payer_asks_and_one_open_at_a_time(async_session, couple):
+    c = couple
+    sid = await _active(c)
+    with pytest.raises(HTTPException) as err:  # Alice paid: she cancels herself
+        await c["svc"].request_cancel(c["alice"].id, sid)
+    assert err.value.status_code == 403
+    await c["svc"].propose_amendment(c["bob"].id, sid, SplitAmend(total_amount=Decimal("1100")))
+    with pytest.raises(HTTPException) as err:
+        await c["svc"].request_cancel(c["bob"].id, sid)
+    assert err.value.status_code == 409
+    proposed = uuid.UUID((await c["svc"].create_split(c["alice"].id, _bill(c))).id)
+    with pytest.raises(HTTPException) as err:  # not accepted yet: Bob declines instead
+        await c["svc"].request_cancel(c["bob"].id, proposed)
+    assert err.value.status_code == 409
+
+
+async def test_the_payer_cancelling_drops_an_open_cancel_request(async_session, couple):
+    c = couple
+    sid = await _active(c)
+    await c["svc"].request_cancel(c["bob"].id, sid)
+    out = await c["svc"].cancel(c["alice"].id, sid)
+    assert (out.status, out.pending_amendment) == ("voided", None)
+    assert await _rows(async_session, c["alice"]) == [Decimal("1000")]

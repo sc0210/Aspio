@@ -36,6 +36,7 @@ jest.mock('@/lib/api-client', () => ({
     amendSplit: jest.fn(),
     respondToAmendment: jest.fn(),
     withdrawAmendment: jest.fn(),
+    requestCancelSplit: jest.fn(),
     listRecurringSplits: jest.fn(),
     stopRecurringSplit: jest.fn(),
   },
@@ -296,6 +297,76 @@ describe('SharedSpendingTab changes to an accepted split', () => {
     await waitFor(() => expect(api.amendSplit).toHaveBeenCalledWith('s1', {
       total_amount: 1200, method: 'equal', my_percent: null, my_amount: null, description: 'Dinner',
     }));
+  });
+
+  it('lets the creator update an unanswered split, which changes the ledger now', async () => {
+    api.listSplits.mockResolvedValue({ data: [split({ status: 'proposed' })] });
+    api.amendSplit.mockResolvedValue({ data: {} });
+    renderTab();
+    fireEvent.click(await screen.findByRole('button', { name: 'Change' }));
+    expect(screen.getByText(/hasn’t answered yet, so this changes now/)).toBeInTheDocument();
+    fireEvent.change(screen.getByLabelText('Total (TWD)'), { target: { value: '1200' } });
+    fireEvent.click(screen.getByRole('button', { name: 'Update the bill' }));
+    await waitFor(() => expect(api.amendSplit).toHaveBeenCalledWith('s1', expect.objectContaining({ total_amount: 1200 })));
+    await waitFor(() => expect(invalidateAllFinancialData).toHaveBeenCalled());
+  });
+
+  it('keeps the total of an unanswered split made from a recorded expense', async () => {
+    api.listSplits.mockResolvedValue({ data: [split({ status: 'proposed', from_recorded_expense: true })] });
+    renderTab();
+    fireEvent.click(await screen.findByRole('button', { name: 'Change' }));
+    expect(screen.getByLabelText('Total (TWD)')).toHaveAttribute('readonly');
+    expect(screen.getByText(/its total stays/)).toBeInTheDocument();
+  });
+
+  it('offers no Change to the partner answering an unanswered split', async () => {
+    api.listSplits.mockResolvedValue({ data: [split({ status: 'proposed', created_by_me: false, payer_is_me: false })] });
+    renderTab();
+    await screen.findByRole('button', { name: 'Accept' });
+    expect(screen.queryByRole('button', { name: 'Change' })).not.toBeInTheDocument();
+  });
+});
+
+describe('SharedSpendingTab cancel requests', () => {
+  const cancelAsk = (byMe: boolean) => ({
+    id: 'a1', proposed_by_me: byMe, total_amount: 1000, my_share: byMe ? 0 : 1000, partner_share: byMe ? 1000 : 0,
+    method: 'fixed' as const, description: 'Dinner', kind: 'cancel' as const,
+  });
+
+  it('lets the partner who did not pay ask to cancel', async () => {
+    api.listSplits.mockResolvedValue({ data: [split({ payer_is_me: false, created_by_me: false })] });
+    api.requestCancelSplit.mockResolvedValue({ data: {} });
+    renderTab();
+    fireEvent.click(await screen.findByRole('button', { name: 'Ask to cancel' }));
+    await waitFor(() => expect(api.requestCancelSplit).toHaveBeenCalledWith('s1'));
+  });
+
+  it('offers the payer no Ask to cancel: they cancel directly', async () => {
+    api.listSplits.mockResolvedValue({ data: [split({})] });
+    renderTab();
+    await screen.findByRole('button', { name: 'Cancel split' });
+    expect(screen.queryByRole('button', { name: 'Ask to cancel' })).not.toBeInTheDocument();
+  });
+
+  it('shows the payer the request and accepting it refreshes the ledger', async () => {
+    api.listSplits.mockResolvedValue({ data: [split({ pending_amendment: cancelAsk(false) })] });
+    api.respondToAmendment.mockResolvedValue({ data: {} });
+    renderTab();
+    expect(await screen.findByText('Bob asks to cancel “Dinner”')).toBeInTheDocument();
+    expect(screen.getByText(/you carry the whole/)).toBeInTheDocument();
+    fireEvent.click(screen.getByRole('button', { name: 'Accept' }));
+    await waitFor(() => expect(api.respondToAmendment).toHaveBeenCalledWith('s1', 'accept'));
+    await waitFor(() => expect(invalidateAllFinancialData).toHaveBeenCalled());
+  });
+
+  it('shows my own request as sent, with Withdraw request', async () => {
+    api.listSplits.mockResolvedValue({ data: [split({ payer_is_me: false, created_by_me: false, pending_amendment: cancelAsk(true) })] });
+    api.withdrawAmendment.mockResolvedValue({ data: {} });
+    renderTab();
+    expect(await screen.findByText('You asked Bob to cancel this split')).toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: 'Ask to cancel' })).not.toBeInTheDocument();
+    fireEvent.click(screen.getByRole('button', { name: 'Withdraw request' }));
+    await waitFor(() => expect(api.withdrawAmendment).toHaveBeenCalledWith('s1'));
   });
 });
 

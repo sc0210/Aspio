@@ -165,7 +165,10 @@ WITH checks(sort, object, source_file, present) AS (
         to_regclass('public.uq_peer_split_amendments_open') IS NOT NULL),
     (33, 'column recurring_transactions.split_connection_id', '2026_11_08_recurring_splits.sql',
         EXISTS (SELECT 1 FROM information_schema.columns
-                 WHERE table_name = 'recurring_transactions' AND column_name = 'split_connection_id'))
+                 WHERE table_name = 'recurring_transactions' AND column_name = 'split_connection_id')),
+    (34, 'column peer_split_amendments.kind', '2026_11_09_split_cancel_request.sql',
+        EXISTS (SELECT 1 FROM information_schema.columns
+                 WHERE table_name = 'peer_split_amendments' AND column_name = 'kind'))
 )
 SELECT
     CASE WHEN present THEN 'OK     ' ELSE 'MISSING' END AS status,
