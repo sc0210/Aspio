@@ -84,11 +84,11 @@ export function PageTitle() {
               whose own PageHeader (and its back arrow) is phone-only. */}
           <Link
             href={entry.parentHref}
-            className="text-sm text-gray-500 dark:text-gray-500 truncate rounded hover:text-gray-800 dark:hover:text-gray-200 hover:underline focus:outline-none focus-visible:ring-2 focus-visible:ring-primary-500"
+            className="text-sm text-gray-500 dark:text-gray-400 truncate rounded hover:text-gray-800 dark:hover:text-gray-200 hover:underline focus:outline-none focus-visible:ring-2 focus-visible:ring-primary-500"
           >
             {t(parentKey)}
           </Link>
-          <span className="text-sm text-gray-500 dark:text-gray-500" aria-hidden="true">/</span>
+          <span className="text-sm text-gray-500 dark:text-gray-400" aria-hidden="true">/</span>
         </>
       )}
       <h1 className="text-sm font-semibold text-gray-800 dark:text-gray-100 truncate">

@@ -45,9 +45,9 @@ export function LoanPaymentHistory({ loanId, currency }: Props) {
       {open && (
         <div className="mt-1">
           {isLoading ? (
-            <p className="text-xs text-gray-500 dark:text-gray-500 text-center py-3">{t('paymentHistory.loading')}</p>
+            <p className="text-xs text-gray-500 dark:text-gray-400 text-center py-3">{t('paymentHistory.loading')}</p>
           ) : payments.length === 0 ? (
-            <p className="text-xs text-gray-500 dark:text-gray-500 text-center py-3">{t('paymentHistory.empty')}</p>
+            <p className="text-xs text-gray-500 dark:text-gray-400 text-center py-3">{t('paymentHistory.empty')}</p>
           ) : (
             <div className="overflow-x-auto rounded-lg border border-gray-100 dark:border-gray-700">
               <table className="w-full text-xs">

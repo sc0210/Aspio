@@ -47,7 +47,7 @@ export function WealthMoveCard({
 
     if (loading && !hasAny) {
         return (
-            <Card className="h-full">
+            <Card>
                 <h2 className="text-base font-semibold text-gray-900 dark:text-white">
                     {t('review.balances', 'Balances')}
                 </h2>
@@ -63,7 +63,7 @@ export function WealthMoveCard({
 
     if (!hasAny) {
         return (
-            <Card className="h-full">
+            <Card>
                 <h2 className="text-base font-semibold text-gray-900 dark:text-white">
                     {t('review.balances', 'Balances')}
                 </h2>
@@ -89,7 +89,7 @@ export function WealthMoveCard({
     const short = moves.find((move) => move?.openedInside);
 
     return (
-        <Card className="h-full">
+        <Card>
             <h2 className="text-base font-semibold text-gray-900 dark:text-white">
                 {t('review.balances', 'Balances')}
             </h2>
@@ -156,7 +156,7 @@ function MoveRow({
             >
                 {maskValue(formatTWD(move.close))}
             </p>
-            <p className="text-xs text-gray-500 dark:text-gray-500">
+            <p className="text-xs text-gray-500 dark:text-gray-400">
                 {t('review.openedAt', 'opened at {{amount}}', {
                     amount: maskValue(formatTWD(move.open)),
                 })}

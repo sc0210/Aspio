@@ -32,7 +32,7 @@ export function GoalsTodayCard({ goals, loading, error }: GoalsTodayCardProps) {
             <h2 className="text-base font-semibold text-gray-900 dark:text-white">
                 {t('review.goals', 'Goals')}
             </h2>
-            <span className="text-xs text-gray-500 dark:text-gray-500">
+            <span className="text-xs text-gray-500 dark:text-gray-400">
                 {t('review.asOfToday', 'as of today')}
             </span>
         </div>
@@ -40,7 +40,7 @@ export function GoalsTodayCard({ goals, loading, error }: GoalsTodayCardProps) {
 
     if (loading && !goals) {
         return (
-            <Card className="h-full">
+            <Card>
                 {heading}
                 <div className="mt-4 space-y-3" aria-hidden="true">
                     <div className="h-7 w-16 rounded bg-gray-100 dark:bg-gray-800 animate-pulse" />
@@ -53,7 +53,7 @@ export function GoalsTodayCard({ goals, loading, error }: GoalsTodayCardProps) {
 
     if (error && !goals) {
         return (
-            <Card className="h-full">
+            <Card>
                 {heading}
                 <p className="mt-3 text-sm text-gray-500 dark:text-gray-400">
                     {t('review.goalsUnavailable', "Your goals couldn't be loaded just now.")}
@@ -64,7 +64,7 @@ export function GoalsTodayCard({ goals, loading, error }: GoalsTodayCardProps) {
 
     if (!goals || goals.totalGoals === 0) {
         return (
-            <Card className="h-full">
+            <Card>
                 {heading}
                 <p className="mt-3 text-sm text-gray-500 dark:text-gray-400">
                     {t('review.noGoals', 'No goals set yet.')}
@@ -82,7 +82,7 @@ export function GoalsTodayCard({ goals, loading, error }: GoalsTodayCardProps) {
     const progress = Math.max(0, Math.min(100, goals.overallProgress ?? 0));
 
     return (
-        <Card className="h-full">
+        <Card>
             {heading}
 
             <p className="mt-3 text-2xl font-bold text-gray-900 dark:text-white">

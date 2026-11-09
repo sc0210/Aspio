@@ -155,7 +155,7 @@ function MoreSheet({ open, onClose, isDemoMode, onExitDemo }: MoreSheetProps) {
               >
                 <Icon className={cn(
                   'w-5 h-5 mr-3 flex-shrink-0',
-                  isActive ? 'text-primary-500 dark:text-primary-400' : 'text-gray-500 dark:text-gray-500'
+                  isActive ? 'text-primary-500 dark:text-primary-400' : 'text-gray-500 dark:text-gray-400'
                 )} />
                 {t(labelKey)}
               </Link>
@@ -167,7 +167,7 @@ function MoreSheet({ open, onClose, isDemoMode, onExitDemo }: MoreSheetProps) {
         <div className="mx-2 px-4 py-3 rounded-xl border border-gray-100 dark:border-gray-700 mb-1">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-2.5">
-              <GlobeAltIcon className="w-5 h-5 text-gray-500 dark:text-gray-500 flex-shrink-0" />
+              <GlobeAltIcon className="w-5 h-5 text-gray-500 dark:text-gray-400 flex-shrink-0" />
               <span className="text-sm font-medium text-gray-700 dark:text-gray-200">
                 {t('navigation.language', 'Language')}
               </span>

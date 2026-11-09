@@ -737,7 +737,7 @@ export default function SettingsPage() {
               <Toggle checked={notif.transactionSummary} onChange={v => setNotif('transactionSummary', v)} label={t('settings.notifTransactions', 'Weekly transaction summary')} />
             </SettingRow>
           </div>
-          <p className="text-xs text-gray-500 dark:text-gray-500 pt-1">
+          <p className="text-xs text-gray-500 dark:text-gray-400 pt-1">
             {t('settings.notifNote', 'Push notifications require browser permission. In-app alerts are always on.')}
           </p>
         </SectionCard>

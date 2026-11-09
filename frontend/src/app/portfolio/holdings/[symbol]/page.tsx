@@ -482,7 +482,7 @@ export default function AssetDetailPage() {
                                     {prevSymbol ?? '—'}
                                 </button>
 
-                                <span className="text-xs text-gray-500 dark:text-gray-500 px-1 tabular-nums">
+                                <span className="text-xs text-gray-500 dark:text-gray-400 px-1 tabular-nums">
                                     {currentIndex + 1} / {tradableSymbols.length}
                                 </span>
 
@@ -531,7 +531,7 @@ export default function AssetDetailPage() {
                                     </div>
                                     {holding
                                         ? <p className="mt-1 text-sm text-gray-500 dark:text-gray-400">{holding.name}</p>
-                                        : <p className="mt-1 text-sm text-gray-500 dark:text-gray-500">{t('portfolio:holdingDetail.notInPortfolio')}</p>
+                                        : <p className="mt-1 text-sm text-gray-500 dark:text-gray-400">{t('portfolio:holdingDetail.notInPortfolio')}</p>
                                     }
                                 </>
                             )}
@@ -639,7 +639,7 @@ export default function AssetDetailPage() {
                                         </p>
                                     </>
                                 ) : (
-                                    <p className="text-lg font-bold text-gray-500 dark:text-gray-500">—</p>
+                                    <p className="text-lg font-bold text-gray-500 dark:text-gray-400">—</p>
                                 )}
                             </div>
                         </div>
@@ -765,7 +765,7 @@ export default function AssetDetailPage() {
                             <div className="px-4 sm:px-6 py-4 border-b border-gray-200 dark:border-gray-700">
                                 <h2 className="text-sm font-semibold text-gray-900 dark:text-white">
                                     {t('portfolio:holdingDetail.purchaseLots')}
-                                    <span className="ml-2 text-xs font-normal text-gray-500 dark:text-gray-500">
+                                    <span className="ml-2 text-xs font-normal text-gray-500 dark:text-gray-400">
                                         {t('portfolio:holdingDetail.lotCount', { count: lots.length, defaultValue: '{{count}} lots' })}
                                     </span>
                                 </h2>
@@ -846,7 +846,7 @@ export default function AssetDetailPage() {
                                                             {baseRate !== undefined && (
                                                                 // Same rule as the holdings list: absent when the
                                                                 // pair cannot be priced, never a guess.
-                                                                <div className="text-xs font-normal text-gray-500 dark:text-gray-500 tabular-nums">
+                                                                <div className="text-xs font-normal text-gray-500 dark:text-gray-400 tabular-nums">
                                                                     ≈ {formatCurrency(holding.totalValue * baseRate, BASE_CURRENCY)}
                                                                 </div>
                                                             )}

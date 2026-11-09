@@ -32,7 +32,7 @@ export function LifecyclePrinciples() {
                 <ChevronDownIcon className={cn('w-4 h-4 text-gray-500 dark:text-gray-400 transition-transform', open && 'rotate-180')} />
             </button>
 
-            <p className="text-sm text-gray-500 dark:text-gray-500 mt-1">
+            <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">
                 {t('lifecycle.principles.subtitle', 'Leverage is only defensible with guardrails. These are the ones that keep a bad market from becoming a permanent loss.')}
             </p>
 

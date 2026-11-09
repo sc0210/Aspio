@@ -130,7 +130,7 @@ export default function ForgotPasswordPage() {
             </Button>
           </div>
 
-          <p className="mt-5 text-xs text-gray-500 dark:text-gray-500">
+          <p className="mt-5 text-xs text-gray-500 dark:text-gray-400">
             {t('auth:forgotPassword.didntReceive')}{' '}
             <button
               onClick={handleResendEmail}

@@ -523,7 +523,11 @@ export function TransactionList({ transactions, isLoading, isFetching, isSearchi
         .sort(([a], [b]) => new Date(b).getTime() - new Date(a).getTime())
         .map(([dateString, dayTransactions]) => {
           const date = new Date(dateString);
-          const dayTotal = dayTotals?.[dateString] ?? sumDayNet(dayTransactions);
+          // Rounded as displayed, so a day netting to zero (a transfer's two legs)
+          // reads flat — grey "NT$0" — not a green "+NT$0". Halves round away from
+          // zero as the formatter does (Math.round takes −25.5 to −25); `|| 0` drops −0.
+          const rawDayTotal = dayTotals?.[dateString] ?? sumDayNet(dayTransactions);
+          const dayTotal = Math.sign(rawDayTotal) * Math.round(Math.abs(rawDayTotal)) || 0;
           const isExpanded = expandedDays.has(dateString);
           const transactionCount = dayTransactions.length;
 
@@ -556,11 +560,13 @@ export function TransactionList({ transactions, isLoading, isFetching, isSearchi
                 </div>
                 <div className={cn(
                   'text-base font-bold px-3 py-1 rounded-lg transition-all duration-200',
-                  dayTotal >= 0
+                  dayTotal > 0
                     ? 'text-success-700 dark:text-success-400 bg-success-50 dark:bg-success-900/20'
-                    : 'text-error-700 dark:text-error-400 bg-error-50 dark:bg-error-900/20'
+                    : dayTotal < 0
+                      ? 'text-error-700 dark:text-error-400 bg-error-50 dark:bg-error-900/20'
+                      : 'text-gray-600 dark:text-gray-300 bg-gray-100 dark:bg-gray-700'
                 )}>
-                  {isValueVisible ? `${dayTotal >= 0 ? '+' : ''}${formatTWD(dayTotal)}` : '•••••'}
+                  {isValueVisible ? `${dayTotal > 0 ? '+' : ''}${formatTWD(dayTotal)}` : '•••••'}
                 </div>
               </button>
 

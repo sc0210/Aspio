@@ -103,7 +103,7 @@ export function BuyVsRentChart({ data, colors, breakEvenYear, isValueVisible, la
                         <ReferenceLine
                             x={breakEvenYear}
                             stroke="currentColor"
-                            className="text-gray-500 dark:text-gray-500"
+                            className="text-gray-500 dark:text-gray-400"
                             strokeDasharray="4 4"
                             label={{
                                 value: `${labels.breakEven} · ${labels.yearWord}${breakEvenYear}`,

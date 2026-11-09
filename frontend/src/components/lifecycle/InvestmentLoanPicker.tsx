@@ -56,11 +56,11 @@ export function InvestmentLoanPicker({ loans, selectedIds, onToggle, configured 
                     <BanknotesIcon className="w-4 h-4 text-indigo-500" />
                     {t('lifecycle.loans.title', 'Which loans funded the portfolio?')}
                 </h3>
-                <span className="text-sm text-gray-500 dark:text-gray-500 shrink-0">
+                <span className="text-sm text-gray-500 dark:text-gray-400 shrink-0">
                     {t('lifecycle.loans.count', '{{n}} selected', { n: selectedIds.length })}
                 </span>
             </div>
-            <p className="text-sm text-gray-500 dark:text-gray-500 mb-3">
+            <p className="text-sm text-gray-500 dark:text-gray-400 mb-3">
                 {t('lifecycle.loans.hint', 'Only these count as investment debt. A mortgage or car loan affects net worth but is not part of the strategy.')}
             </p>
 

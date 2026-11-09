@@ -3,6 +3,7 @@ import { render, screen, fireEvent } from '@testing-library/react';
 import i18n from 'i18next';
 import { initReactI18next } from 'react-i18next';
 import authEn from '@/locales/en/auth.json';
+import authZh from '@/locales/zh-TW/auth.json';
 import commonEn from '@/locales/en/common.json';
 import { DemoBanner } from '@/components/layout/DemoBanner';
 import { useDemo } from '@/contexts/DemoContext';
@@ -41,6 +42,27 @@ describe('DemoBanner', () => {
     mockUseDemo.mockReturnValue({ isDemoMode: true, exitDemo: jest.fn() });
     render(<DemoBanner />);
     expect(screen.getByText(/Demo Mode/)).toBeInTheDocument();
+  });
+
+  it('shows the short title on phones, the full one from sm up', () => {
+    mockUseDemo.mockReturnValue({ isDemoMode: true, exitDemo: jest.fn() });
+    render(<DemoBanner />);
+    expect(screen.getByText('Demo')).toHaveClass('sm:hidden');
+    expect(screen.getByText('Demo Mode')).toHaveClass('hidden', 'sm:inline');
+  });
+
+  it('reads the short title from the locale, not the inline English fallback', async () => {
+    // Rendered in zh-TW: a renamed or mistyped key would fall back to 'Demo' and fail here.
+    i18n.addResourceBundle('zh-TW', 'auth', authZh);
+    await i18n.changeLanguage('zh-TW');
+    try {
+      mockUseDemo.mockReturnValue({ isDemoMode: true, exitDemo: jest.fn() });
+      render(<DemoBanner />);
+      expect(screen.getByText('示範')).toHaveClass('sm:hidden');
+      expect(screen.queryByText('Demo')).toBeNull();
+    } finally {
+      await i18n.changeLanguage('en');
+    }
   });
 
   it('shows a link to create a real account', () => {

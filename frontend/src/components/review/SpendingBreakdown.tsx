@@ -180,7 +180,7 @@ function Row({
                         }}
                     />
                 </div>
-                <span className="text-xs text-gray-500 dark:text-gray-500 w-10 text-right">
+                <span className="text-xs text-gray-500 dark:text-gray-400 w-10 text-right">
                     {line.share.toFixed(0)}%
                 </span>
             </div>

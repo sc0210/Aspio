@@ -46,7 +46,7 @@ export function ChangeChip({ change, moreIsBetter, neutral, unavailable, classNa
 
     if (unavailable) {
         return (
-            <span className={cn('text-xs text-gray-500 dark:text-gray-500', className)}>
+            <span className={cn('text-xs text-gray-500 dark:text-gray-400', className)}>
                 {t('review.noComparison', 'no comparison')}
             </span>
         );
@@ -54,7 +54,7 @@ export function ChangeChip({ change, moreIsBetter, neutral, unavailable, classNa
 
     if (change.amount === 0) {
         return (
-            <span className={cn('text-xs text-gray-500 dark:text-gray-500', className)}>
+            <span className={cn('text-xs text-gray-500 dark:text-gray-400', className)}>
                 {t('review.unchanged', 'flat')}
             </span>
         );
@@ -73,7 +73,8 @@ export function ChangeChip({ change, moreIsBetter, neutral, unavailable, classNa
             className={cn(
                 'inline-flex items-center gap-1 text-xs font-semibold px-1.5 py-0.5 rounded-full whitespace-nowrap',
                 tone === 'good' && 'bg-prosperity-50 text-prosperity-700 dark:bg-prosperity-900/30 dark:text-prosperity-300',
-                tone === 'bad' && 'bg-error-50 text-error-700 dark:bg-error-900/30 dark:text-error-300',
+                // error-800: the 700 measured 4.34:1 on error-50, under the 4.5:1 minimum.
+                tone === 'bad' && 'bg-error-50 text-error-800 dark:bg-error-900/30 dark:text-error-300',
                 tone === 'neutral' && 'bg-gray-100 text-gray-700 dark:bg-gray-800 dark:text-gray-300',
                 className,
             )}

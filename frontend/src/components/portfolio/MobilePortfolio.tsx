@@ -22,6 +22,13 @@ import { Card } from '@/components/ui/Card';
 
 
 // Fixed categorical order — colors follow the entity, never rank.
+/** Hero value size for its length. 26px fits "NT$99,999,999" (13 chars) beside the 88px donut at 375px. */
+export function heroValueSize(text: string): string {
+    if (text.length <= 10) return 'text-[32px]';
+    if (text.length <= 13) return 'text-[26px]';
+    return 'text-[22px]';
+}
+
 const SLICE_COLORS = ['#6366f1', '#10b981', '#f59e0b', '#0ea5e9', '#ec4899', '#8b5cf6', '#94a3b8'];
 
 interface Slice { label: string; value: number; color: string; pct: number }
@@ -111,7 +118,16 @@ export function MobilePortfolio() {
     }
 
     const totalUp = model.totalGain >= 0;
-    const todayUp = model.todayGain >= 0;
+    // A day rounding to zero is flat (grey, no arrow), not a gain: a closed market
+    // read "▲ NT$0 · +0.00%" in green. The percentage takes its own shown sign.
+    // Halves round away from zero, as the currency formatter does.
+    const todayShown = Math.sign(model.todayGain) * Math.round(Math.abs(model.todayGain)) || 0;
+    const todayTone = todayShown > 0
+        ? 'text-prosperity-700 dark:text-prosperity-400'
+        : todayShown < 0 ? 'text-error-700 dark:text-error-500' : 'text-gray-500 dark:text-gray-400';
+    const todayArrow = todayShown > 0 ? '▲ ' : todayShown < 0 ? '▼ ' : '';
+    const todayPct = Math.abs(model.todayGainPct).toFixed(2);
+    const todayPctSign = Number(todayPct) === 0 ? '' : model.todayGainPct > 0 ? '+' : '−';
     // On a Saturday the move shown is Friday's: say so instead of "today".
     const lastSessionDay = lastSessionWeekday(data?.holdings ?? [], i18n?.language || 'en');
     const hidden = '••••';
@@ -153,19 +169,24 @@ export function MobilePortfolio() {
                 <section data-tour="pf-m-hero" className="rounded-3xl bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 shadow-sm p-5">
                     <div className="flex items-center gap-4">
                         <div className="min-w-0 flex-1">
-                            <p className="text-xs font-bold tracking-wide text-gray-500 dark:text-gray-500">{t('portfolio:stats.totalValue', 'Portfolio Value')}</p>
-                            <p className="mt-1.5 text-[32px] leading-none font-extrabold tracking-tight tabular-nums text-gray-900 dark:text-white">
+                            <p className="text-xs font-bold tracking-wide text-gray-500 dark:text-gray-400">{t('portfolio:stats.totalValue', 'Portfolio Value')}</p>
+                            {/* Sized by length: the column beside the donut is ~200px on a 375px
+                                phone, and "NT$2,000,000" at 32px ran under the donut. */}
+                            <p className={cn(
+                                'mt-1.5 leading-none font-extrabold tracking-tight tabular-nums text-gray-900 dark:text-white',
+                                heroValueSize(isValueVisible ? formatTWD(model.totalValue) : hidden),
+                            )}>
                                 {isValueVisible ? formatTWD(model.totalValue) : hidden}
                             </p>
                             <p className={cn('mt-2 text-sm font-bold tabular-nums', totalUp ? 'text-prosperity-700 dark:text-prosperity-400' : 'text-error-700 dark:text-error-500')}>
                                 {totalUp ? '▲' : '▼'} {isValueVisible ? formatTWDCompact(Math.abs(model.totalGain)) : '•••'}
-                                <span className="text-gray-500 dark:text-gray-500 font-semibold ml-1">
+                                <span className="text-gray-500 dark:text-gray-400 font-semibold ml-1">
                                     {totalUp ? '+' : '−'}{Math.abs(model.totalGainPct).toFixed(1)}%
                                 </span>
                             </p>
                         </div>
                         {/* Donut */}
-                        <svg viewBox="0 0 42 42" className="w-[104px] h-[104px] flex-shrink-0" aria-hidden="true">
+                        <svg viewBox="0 0 42 42" className="w-[88px] h-[88px] flex-shrink-0" aria-hidden="true">
                             <circle cx="21" cy="21" r="15.9" fill="none" stroke="currentColor" strokeWidth="5" className="text-gray-100 dark:text-gray-700" />
                             {arcs.map(({ s, start, end }) => (
                                 <path key={s.label} d={arc(start, end)} fill="none" stroke={s.color} strokeWidth="5" strokeLinecap="butt" />
@@ -179,18 +200,18 @@ export function MobilePortfolio() {
 
                     {/* Today's change */}
                     <div className="mt-4 pt-3 border-t border-gray-100 dark:border-gray-700 flex items-center justify-between">
-                        <span className="text-xs font-semibold text-gray-500 dark:text-gray-500">
+                        <span className="text-xs font-semibold text-gray-500 dark:text-gray-400">
                             {lastSessionDay
                                 ? t('portfolio:lastSessionShort', { day: lastSessionDay, defaultValue: '{{day}}' })
                                 : t('portfolio:todayChange', "Today")}
                         </span>
-                        <span className={cn('text-sm font-bold tabular-nums', todayUp ? 'text-prosperity-700 dark:text-prosperity-400' : 'text-error-700 dark:text-error-500')}>
-                            {todayUp ? '▲' : '▼'} {isValueVisible ? formatTWDCompact(Math.abs(model.todayGain)) : '•••'} · {todayUp ? '+' : '−'}{Math.abs(model.todayGainPct).toFixed(2)}%
+                        <span className={cn('text-sm font-bold tabular-nums', todayTone)}>
+                            {todayArrow}{isValueVisible ? formatTWDCompact(Math.abs(todayShown)) : '•••'} · {todayPctSign}{todayPct}%
                         </span>
                     </div>
                     {annualPct !== null && (
                         <div className="mt-2 flex items-center justify-between">
-                            <span className="text-xs font-semibold text-gray-500 dark:text-gray-500">
+                            <span className="text-xs font-semibold text-gray-500 dark:text-gray-400">
                                 {t('portfolio:stats.cagrLabel', 'Annual return')}
                                 <span className="ml-1 font-normal">· {t('portfolio:stats.cagrCaption', 'Time-weighted, per year')}</span>
                             </span>
@@ -203,7 +224,7 @@ export function MobilePortfolio() {
 
                 {/* Allocation legend */}
                 <Card as="section" padding="sm" shadow="none">
-                    <p className="text-xs font-bold text-gray-500 dark:text-gray-500 mb-3">{t('portfolio:allocation', 'Allocation')}</p>
+                    <p className="text-xs font-bold text-gray-500 dark:text-gray-400 mb-3">{t('portfolio:allocation', 'Allocation')}</p>
                     <div className="grid grid-cols-2 gap-x-4 gap-y-2.5">
                         {model.slices.map((s) => (
                             <div key={s.label} className="flex items-center gap-2 min-w-0">
@@ -225,7 +246,7 @@ export function MobilePortfolio() {
                                 <div key={h.id} className="flex items-center gap-3 px-4 py-3">
                                     <div className="min-w-0 flex-1">
                                         <p className="text-sm font-extrabold tracking-tight text-gray-900 dark:text-white truncate">{h.symbol}</p>
-                                        <p className="text-xs font-medium text-gray-500 dark:text-gray-500 truncate">{h.name || h.type}</p>
+                                        <p className="text-xs font-medium text-gray-500 dark:text-gray-400 truncate">{h.name || h.type}</p>
                                     </div>
                                     <div className="text-right flex-shrink-0">
                                         <p className="text-[13.5px] font-bold tabular-nums text-gray-900 dark:text-white">
@@ -240,13 +261,13 @@ export function MobilePortfolio() {
                         })}
                     </Card>
                     {model.count > 8 && (
-                        <p className="text-center mt-2 text-xs font-semibold text-gray-500 dark:text-gray-500">
+                        <p className="text-center mt-2 text-xs font-semibold text-gray-500 dark:text-gray-400">
                             {t('portfolio:andMore', '+{{n}} more', { n: model.count - 8 })}
                         </p>
                     )}
                 </section>
 
-                <p className="text-center px-4 pt-1 text-xs font-semibold leading-relaxed text-gray-500 dark:text-gray-500">
+                <p className="text-center px-4 pt-1 text-xs font-semibold leading-relaxed text-gray-500 dark:text-gray-400">
                     {t('dashboard:mobile.fullPortfolio', 'Performance charts, IRR & rebalancing')}
                     <br />
                     <span className="text-primary-700 dark:text-primary-400">→ {t('dashboard:mobile.onLargerScreen', 'on tablet / desktop')}</span>

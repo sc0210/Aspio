@@ -216,7 +216,7 @@ function HoldingRowBase({
                 {holding.dayChangePercentage != null && (
                   <span className="ml-1">({holding.dayChangePercentage >= 0 ? '+' : ''}{holding.dayChangePercentage.toFixed(2)}%)</span>
                 )}
-                <span className="ml-1 text-gray-500 dark:text-gray-500">{t('portfolio:holdings.today')}</span>
+                <span className="ml-1 text-gray-500 dark:text-gray-400">{t('portfolio:holdings.today')}</span>
               </div>
             )}
           </div>
@@ -254,7 +254,7 @@ function HoldingRowBase({
               // trades in. The converted figure is secondary and marked
               // approximate, because it moves with the rate and the rate is a
               // snapshot.
-              <div className="text-xs font-normal text-gray-500 dark:text-gray-500 tabular-nums">
+              <div className="text-xs font-normal text-gray-500 dark:text-gray-400 tabular-nums">
                 ≈ {formatCurrency(holding.totalValue * baseRate, baseCurrency)}
               </div>
             )}

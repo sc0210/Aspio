@@ -33,7 +33,7 @@ function Slider({
                 className="w-full h-11 sm:h-6 cursor-pointer accent-amber-500 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-400"
                 aria-label={label}
             />
-            {hint && <p className="mt-1 text-sm text-gray-500 dark:text-gray-500">{hint}</p>}
+            {hint && <p className="mt-1 text-sm text-gray-500 dark:text-gray-400">{hint}</p>}
         </div>
     );
 }
@@ -70,7 +70,7 @@ export function CarImpactPanel({ context }: Props) {
                 </h3>
                 <ChevronDownIcon className={cn('w-4 h-4 text-gray-500 dark:text-gray-400 transition-transform', open && 'rotate-180')} />
             </button>
-            <p className="text-sm text-gray-500 dark:text-gray-500 mt-1">
+            <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">
                 {t('housing.car.subtitle', 'See how many years a car — and its loan — pushes back your house.')}
             </p>
 
@@ -138,7 +138,7 @@ export function CarImpactPanel({ context }: Props) {
                             <Stat label={t('housing.car.debtAfter', 'Debt after car')} value={isValueVisible ? formatTWDCompact(impact.debtAfterCar) : '•••'} tone="warn" />
                         </div>
 
-                        <p className="text-sm text-gray-500 dark:text-gray-500">
+                        <p className="text-sm text-gray-500 dark:text-gray-400">
                             {t('housing.car.valueAtEnd', 'A depreciating asset — worth about {{amount}} after {{n}} years (not counted toward house liquidity).', {
                                 amount: isValueVisible ? formatTWDCompact(impact.carValueAtLoanEnd) : '•••',
                                 n: car.loanTermYears,
@@ -180,7 +180,7 @@ export function CarImpactPanel({ context }: Props) {
                                     className="w-full text-right tabular-nums bg-transparent border-b border-gray-200 dark:border-gray-600 focus-visible:border-amber-500 focus-visible:outline-none px-1 py-0.5 text-sm"
                                     aria-label={t('housing.car.running', 'Running cost / mo')}
                                 />
-                                <p className="mt-1 text-sm text-gray-500 dark:text-gray-500">{t('housing.car.runningHint', 'insurance, fuel, upkeep, parking')}</p>
+                                <p className="mt-1 text-sm text-gray-500 dark:text-gray-400">{t('housing.car.runningHint', 'insurance, fuel, upkeep, parking')}</p>
                             </div>
                         </div>
                     </div>

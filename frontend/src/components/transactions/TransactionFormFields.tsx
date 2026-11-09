@@ -515,7 +515,7 @@ export function CashFields({ idPrefix: p, formData, errors, onChange, onTagsChan
 
       {formData.type === 'transfer' && showInvestmentHint && (
         <p className={NOTE}>
-          <InformationCircleIcon className="w-5 h-5 shrink-0 text-gray-400 dark:text-gray-500" aria-hidden="true" />
+          <InformationCircleIcon className="w-5 h-5 shrink-0 text-gray-500 dark:text-gray-400" aria-hidden="true" />
           <span>{t('transactions:form.transferHint.use', 'Use')} <strong>{t('transactions:form.types.transfer', 'Transfer')}</strong> {t('transactions:form.transferHint.mid', 'to move cash between wallets. To buy or sell assets, use the')} <strong>{t('transactions:form.types.investment', 'Investment')}</strong> {t('transactions:form.transferHint.end', 'tab instead.')}</span>
         </p>
       )}
@@ -790,7 +790,7 @@ export function TagsField({ idPrefix: p, tags, onChange }: TagsFieldProps) {
           type="button"
           onClick={addTag}
           disabled={!tagInput.trim()}
-          className={cn('px-4 py-2.5 sm:py-2 min-h-11 lg:min-h-0 rounded-lg border text-sm font-medium transition-colors motion-reduce:transition-none focus:outline-none focus-visible:ring-2 focus-visible:ring-primary-500', tagInput.trim() ? 'border-primary-600 text-primary-700 dark:border-primary-400 dark:text-primary-300 hover:bg-primary-50 dark:hover:bg-primary-900/30' : 'border-gray-200 dark:border-gray-700 text-gray-400 dark:text-gray-500 cursor-not-allowed')}
+          className={cn('px-4 py-2.5 sm:py-2 min-h-11 lg:min-h-0 rounded-lg border text-sm font-medium transition-colors motion-reduce:transition-none focus:outline-none focus-visible:ring-2 focus-visible:ring-primary-500', tagInput.trim() ? 'border-primary-600 text-primary-700 dark:border-primary-400 dark:text-primary-300 hover:bg-primary-50 dark:hover:bg-primary-900/30' : 'border-gray-200 dark:border-gray-700 text-gray-500 dark:text-gray-400 cursor-not-allowed')}
         >{t('transactions:form.addTag', 'Add')}</button>
       </div>
       {tags.length > 0 && (

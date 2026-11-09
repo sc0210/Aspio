@@ -12,7 +12,7 @@ import { cn } from '@/utils/cn';
  */
 
 const base =
-    'flex items-center gap-2 min-h-[34px] px-3 py-1.5 rounded-lg border text-sm font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 disabled:opacity-50 disabled:cursor-not-allowed';
+    'flex items-center gap-2 whitespace-nowrap min-h-[34px] px-3 py-1.5 rounded-lg border text-sm font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 disabled:opacity-50 disabled:cursor-not-allowed';
 
 /** The default top-bar button. */
 export const TOP_BAR_BUTTON = cn(

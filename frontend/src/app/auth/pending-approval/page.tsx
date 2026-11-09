@@ -63,7 +63,7 @@ export default function PendingApprovalPage() {
             <h1 className="text-xl font-bold text-gray-900 dark:text-white text-center mb-1">
               {t('auth:pendingApproval.title')}
             </h1>
-            <p className="text-sm text-gray-500 dark:text-gray-500 text-center mb-5">
+            <p className="text-sm text-gray-500 dark:text-gray-400 text-center mb-5">
               {t('auth:pendingApproval.waiting')}<span className="inline-block w-5 text-left">{dots}</span>
             </p>
 
@@ -72,7 +72,7 @@ export default function PendingApprovalPage() {
             <p className="text-sm text-gray-600 dark:text-gray-300 leading-relaxed text-center mb-1">
               {t('auth:pendingApproval.line1')}
             </p>
-            <p className="text-xs text-gray-500 dark:text-gray-500 leading-relaxed text-center">
+            <p className="text-xs text-gray-500 dark:text-gray-400 leading-relaxed text-center">
               {t('auth:pendingApproval.line2')}
             </p>
 
@@ -96,7 +96,7 @@ export default function PendingApprovalPage() {
                 <div className="flex-shrink-0 w-7 h-7 rounded-full bg-gray-100 dark:bg-gray-700 flex items-center justify-center">
                   <span className="w-2 h-2 rounded-full bg-gray-300 dark:bg-gray-500" />
                 </div>
-                <span className="text-sm text-gray-500 dark:text-gray-500">{t('auth:pendingApproval.steps.granted')}</span>
+                <span className="text-sm text-gray-500 dark:text-gray-400">{t('auth:pendingApproval.steps.granted')}</span>
               </div>
             </div>
           </div>

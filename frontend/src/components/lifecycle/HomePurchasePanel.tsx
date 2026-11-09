@@ -80,7 +80,7 @@ export function HomePurchasePanel({ position, spendableCash, maxLeverage }: Prop
                 </p>
             ) : (
                 <>
-                    <p className="mt-1 mb-4 text-sm text-gray-500 dark:text-gray-500">
+                    <p className="mt-1 mb-4 text-sm text-gray-500 dark:text-gray-400">
                         {t('lifecycle.home.subtitle', '{{name}}: {{amount}} leaves at closing, from Life cash then investments; the Emergency fund stays a reserve. The house is not a financial asset, so net financial assets fall by all of it.', {
                             name: scenario!.name, amount: money(impact.upfrontCash),
                         })}
@@ -120,7 +120,7 @@ function Stat({ label, value, sub, tone }: { label: string; value: string; sub?:
                     : tone === 'warn' ? 'text-amber-700 dark:text-amber-400' : 'text-gray-900 dark:text-white')}>
                 {value}
             </p>
-            {sub && <p className="mt-0.5 text-xs text-gray-500 dark:text-gray-500">{sub}</p>}
+            {sub && <p className="mt-0.5 text-xs text-gray-500 dark:text-gray-400">{sub}</p>}
         </div>
     );
 }

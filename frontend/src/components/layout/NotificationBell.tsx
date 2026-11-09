@@ -132,7 +132,7 @@ function NotifItem({ n, onRead }: { n: NotifData; onRead: (id: string) => void }
         <span className="mt-0.5 block text-xs text-gray-500 dark:text-gray-400 line-clamp-2">
           {n.message}
         </span>
-        <span className="mt-1 block text-xs text-gray-400 dark:text-gray-500">
+        <span className="mt-1 block text-xs text-gray-500 dark:text-gray-400">
           {relativeTime(n.created_at)}
         </span>
       </span>
@@ -146,7 +146,7 @@ function EmptyState() {
     <div className="flex flex-col items-center justify-center py-10 px-4 text-center">
       <span className="mb-3 flex h-12 w-12 items-center justify-center rounded-full bg-gray-100 dark:bg-gray-700 text-2xl" aria-hidden="true">🔔</span>
       <p className="text-sm font-medium text-gray-700 dark:text-gray-300">{t('notifications.allCaughtUp', "You're all caught up!")}</p>
-      <p className="mt-1 text-xs text-gray-400 dark:text-gray-500">{t('notifications.noNew', 'No new notifications.')}</p>
+      <p className="mt-1 text-xs text-gray-500 dark:text-gray-400">{t('notifications.noNew', 'No new notifications.')}</p>
     </div>
   );
 }
@@ -215,7 +215,7 @@ export function NotificationBell() {
         </svg>
         {unread > 0 && (
           <span
-            className="absolute -right-0.5 -top-0.5 flex h-[1.1rem] min-w-[1.1rem] items-center justify-center rounded-full bg-error-600 dark:bg-error-500 px-0.5 text-[10px] font-bold leading-none text-white"
+            className="absolute -right-0.5 -top-0.5 flex h-[1.1rem] min-w-[1.1rem] items-center justify-center rounded-full bg-error-600 px-0.5 text-[10px] font-bold leading-none text-white"
             aria-hidden="true"
           >
             {unread > 99 ? '99+' : unread}
