@@ -22,6 +22,13 @@ import { Card } from '@/components/ui/Card';
 
 
 // Fixed categorical order — colors follow the entity, never rank.
+/** Hero value size for its length. 26px fits "NT$99,999,999" (13 chars) beside the 88px donut at 375px. */
+export function heroValueSize(text: string): string {
+    if (text.length <= 10) return 'text-[32px]';
+    if (text.length <= 13) return 'text-[26px]';
+    return 'text-[22px]';
+}
+
 const SLICE_COLORS = ['#6366f1', '#10b981', '#f59e0b', '#0ea5e9', '#ec4899', '#8b5cf6', '#94a3b8'];
 
 interface Slice { label: string; value: number; color: string; pct: number }
@@ -111,7 +118,16 @@ export function MobilePortfolio() {
     }
 
     const totalUp = model.totalGain >= 0;
-    const todayUp = model.todayGain >= 0;
+    // A day rounding to zero is flat (grey, no arrow), not a gain: a closed market
+    // read "▲ NT$0 · +0.00%" in green. The percentage takes its own shown sign.
+    // Halves round away from zero, as the currency formatter does.
+    const todayShown = Math.sign(model.todayGain) * Math.round(Math.abs(model.todayGain)) || 0;
+    const todayTone = todayShown > 0
+        ? 'text-prosperity-700 dark:text-prosperity-400'
+        : todayShown < 0 ? 'text-error-700 dark:text-error-500' : 'text-gray-500 dark:text-gray-400';
+    const todayArrow = todayShown > 0 ? '▲ ' : todayShown < 0 ? '▼ ' : '';
+    const todayPct = Math.abs(model.todayGainPct).toFixed(2);
+    const todayPctSign = Number(todayPct) === 0 ? '' : model.todayGainPct > 0 ? '+' : '−';
     // On a Saturday the move shown is Friday's: say so instead of "today".
     const lastSessionDay = lastSessionWeekday(data?.holdings ?? [], i18n?.language || 'en');
     const hidden = '••••';
@@ -154,7 +170,12 @@ export function MobilePortfolio() {
                     <div className="flex items-center gap-4">
                         <div className="min-w-0 flex-1">
                             <p className="text-xs font-bold tracking-wide text-gray-500 dark:text-gray-400">{t('portfolio:stats.totalValue', 'Portfolio Value')}</p>
-                            <p className="mt-1.5 text-[32px] leading-none font-extrabold tracking-tight tabular-nums text-gray-900 dark:text-white">
+                            {/* Sized by length: the column beside the donut is ~200px on a 375px
+                                phone, and "NT$2,000,000" at 32px ran under the donut. */}
+                            <p className={cn(
+                                'mt-1.5 leading-none font-extrabold tracking-tight tabular-nums text-gray-900 dark:text-white',
+                                heroValueSize(isValueVisible ? formatTWD(model.totalValue) : hidden),
+                            )}>
                                 {isValueVisible ? formatTWD(model.totalValue) : hidden}
                             </p>
                             <p className={cn('mt-2 text-sm font-bold tabular-nums', totalUp ? 'text-prosperity-700 dark:text-prosperity-400' : 'text-error-700 dark:text-error-500')}>
@@ -165,7 +186,7 @@ export function MobilePortfolio() {
                             </p>
                         </div>
                         {/* Donut */}
-                        <svg viewBox="0 0 42 42" className="w-[104px] h-[104px] flex-shrink-0" aria-hidden="true">
+                        <svg viewBox="0 0 42 42" className="w-[88px] h-[88px] flex-shrink-0" aria-hidden="true">
                             <circle cx="21" cy="21" r="15.9" fill="none" stroke="currentColor" strokeWidth="5" className="text-gray-100 dark:text-gray-700" />
                             {arcs.map(({ s, start, end }) => (
                                 <path key={s.label} d={arc(start, end)} fill="none" stroke={s.color} strokeWidth="5" strokeLinecap="butt" />
@@ -184,8 +205,8 @@ export function MobilePortfolio() {
                                 ? t('portfolio:lastSessionShort', { day: lastSessionDay, defaultValue: '{{day}}' })
                                 : t('portfolio:todayChange', "Today")}
                         </span>
-                        <span className={cn('text-sm font-bold tabular-nums', todayUp ? 'text-prosperity-700 dark:text-prosperity-400' : 'text-error-700 dark:text-error-500')}>
-                            {todayUp ? '▲' : '▼'} {isValueVisible ? formatTWDCompact(Math.abs(model.todayGain)) : '•••'} · {todayUp ? '+' : '−'}{Math.abs(model.todayGainPct).toFixed(2)}%
+                        <span className={cn('text-sm font-bold tabular-nums', todayTone)}>
+                            {todayArrow}{isValueVisible ? formatTWDCompact(Math.abs(todayShown)) : '•••'} · {todayPctSign}{todayPct}%
                         </span>
                     </div>
                     {annualPct !== null && (
