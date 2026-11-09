@@ -51,10 +51,18 @@ describe('DemoBanner', () => {
     expect(screen.getByText('Demo Mode')).toHaveClass('hidden', 'sm:inline');
   });
 
-  it('reads the short title from both locales, not the inline English fallback', () => {
-    // A renamed key would fall back to 'Demo' silently, and a zh-TW phone would show English.
-    expect(authEn.demo.titleShort).toBe('Demo');
-    expect(authZh.demo.titleShort).toBe('示範');
+  it('reads the short title from the locale, not the inline English fallback', async () => {
+    // Rendered in zh-TW: a renamed or mistyped key would fall back to 'Demo' and fail here.
+    i18n.addResourceBundle('zh-TW', 'auth', authZh);
+    await i18n.changeLanguage('zh-TW');
+    try {
+      mockUseDemo.mockReturnValue({ isDemoMode: true, exitDemo: jest.fn() });
+      render(<DemoBanner />);
+      expect(screen.getByText('示範')).toHaveClass('sm:hidden');
+      expect(screen.queryByText('Demo')).toBeNull();
+    } finally {
+      await i18n.changeLanguage('en');
+    }
   });
 
   it('shows a link to create a real account', () => {
