@@ -915,7 +915,7 @@
         "withdraw": "撤回請求"
       },
       "repeat": {
-        "failed": "帳單已分攤，但無法設定為每月重複：{{reason}}",
+        "failed": "帳單已分攤，但無法設定為重複：{{reason}}",
         "section": "重複的帳單",
         "stop": "停止",
         "labelAny": "重複這筆帳單",
