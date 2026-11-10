@@ -724,6 +724,9 @@ describe('EditTransactionPage — split with a partner', () => {
       { ...expenseTx, type: 'income', category: 'Salary' },
       { ...expenseTx, holdingId: 'holding-1' },
       { ...expenseTx, loan_id: 'loan-1' },
+      // An investment purchase with no holding link passes canSplit, but is not a bill to share.
+      investTx,
+      { ...expenseTx, category: 'Transfer', description: 'Old transfer' },
     ]) {
       await renderAndLoad(tx);
       expect(screen.queryByRole('button', { name: /Split with partner/ })).not.toBeInTheDocument();

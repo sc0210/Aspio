@@ -687,7 +687,9 @@ export default function EditTransactionPage() {
     transferGroupId: loaded.transferGroupId, loanId: loaded.loanId,
     walletType: loaded.walletType, paymentMethod: loaded.paymentMethod, tags: loaded.tags,
   } as Transaction) : null;
-  const canSplitHere = !isDemo && !!savedRow && canSplit(savedRow);
+  // Only a plain expense: an investment purchase, a sale or a transfer is not a bill to share, and
+  // only the plain branch of the load records the baseline the save-first check below reads.
+  const canSplitHere = !isDemo && !!savedRow && canSplit(savedRow) && !isInvestMode && !isSaleMode && !isTransferRow && !!baseline;
   // A split takes the saved amount and reloads the row, so unsaved edits would be split wrong, then lost.
   // Every field the form saves, against the form as loaded; text compared as '' when missing.
   const same = (a?: string | null, b?: string | null) => (a ?? '') === (b ?? '');
