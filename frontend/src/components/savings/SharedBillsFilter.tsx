@@ -37,7 +37,9 @@ export default function SharedBillsFilter({ splits, shown, filter, onChange }: S
     const url = URL.createObjectURL(new Blob(['﻿', csv], { type: 'text/csv;charset=utf-8' }));
     const link = document.createElement('a');
     link.href = url;
-    const partnerName = options.partners.find((p) => p.connectionId === filter.partner)?.name;
+    // A partner's name is theirs to choose: keep letters and digits (Chinese too), short.
+    const partnerName = options.partners.find((p) => p.connectionId === filter.partner)?.name
+      ?.replace(/[^\p{L}\p{N}_-]+/gu, '_').slice(0, 30);
     link.download = `shared-bills${partnerName ? `-${partnerName}` : ''}${filter.month ? `-${filter.month}` : ''}.csv`;
     document.body.appendChild(link);
     link.click();

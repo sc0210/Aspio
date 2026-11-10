@@ -14,7 +14,7 @@ import SettleUpModal, { type SettleTarget } from './SettleUpModal';
 import AmendSplitModal from './AmendSplitModal';
 import SplitInsights from './SplitInsights';
 import SharedBillsFilter from './SharedBillsFilter';
-import { EMPTY_FILTER, filterSplits, type SplitFilter } from './sharedSpendingStats';
+import { EMPTY_FILTER, filterSplits, type SplitFilter, partnerLabels } from './sharedSpendingStats';
 import type { PeerBalanceOut, PeerConnectionOut, RecurringSplitOut, SettlementOut, SplitOut, SplitPolicy } from '@/shared/types';
 
 const money = (value: number, currency: string) =>
@@ -424,7 +424,7 @@ export default function SharedSpendingTab({ connections, demo }: { connections: 
 
       {/* What the accepted bills add up to */}
       <SplitInsights splits={insightSplits}
-        partnerName={billFilter.partner ? splits.find((s) => s.connection_id === billFilter.partner)?.partner_name : undefined} />
+        partnerName={billFilter.partner ? partnerLabels(splits).get(billFilter.partner) : undefined} />
 
       {/* History */}
       <section aria-label={t('savings.splits.history', 'Shared bills')} className="space-y-2">

@@ -134,7 +134,7 @@ describe('sharedSpendingStats', () => {
 
     it('lists each partner once, by name, and keeps a chosen one whose bills are gone', () => {
       expect(filterOptions(MIXED).partners).toEqual([
-        { connectionId: 'c2', name: 'Amy' }, { connectionId: 'c1', name: 'Bob' }, { connectionId: 'c3', name: 'Bob' },
+        { connectionId: 'c2', name: 'Amy' }, { connectionId: 'c1', name: 'Bob' }, { connectionId: 'c3', name: 'Bob (2)' },
       ]);
       expect(filterOptions([split(BOB)], { ...EMPTY_FILTER, partner: 'gone' }).partners)
         .toEqual([{ connectionId: 'c1', name: 'Bob' }, { connectionId: 'gone', name: null }]);
@@ -144,7 +144,7 @@ describe('sharedSpendingStats', () => {
       expect(frontedByPartner(MIXED, 'TWD', '2026-11')).toEqual([
         { connectionId: 'c1', name: 'Bob', amount: 1000 },
         { connectionId: 'c2', name: 'Amy', amount: 400 },
-        { connectionId: 'c3', name: 'Bob', amount: 80 },
+        { connectionId: 'c3', name: 'Bob (2)', amount: 80 },
       ]);
       expect(frontedByPartner(MIXED, 'TWD', '2026-10')).toEqual([]);
     });

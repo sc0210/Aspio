@@ -77,7 +77,23 @@ export interface CategoryTotal {
   mine: number;
 }
 
-/** Shared spending per category, largest first. */
+/**
+ * One label per partner connection: the name, or "Bob (2)" when two partners
+ * share it, numbered in connection order so the menu and the insights agree.
+ */
+export function partnerLabels(splits: SplitOut[]): Map<string, string> {
+  const names = new Map<string, string>();
+  for (const s of splits) names.set(s.connection_id, s.partner_name);
+  const seen = new Map<string, number>();
+  const labels = new Map<string, string>();
+  for (const [id, name] of [...names].sort(([a], [b]) => a.localeCompare(b))) {
+    const n = (seen.get(name) ?? 0) + 1;
+    seen.set(name, n);
+    labels.set(id, n === 1 ? name : `${name} (${n})`);
+  }
+  return labels;
+}
+
 export interface PartnerFronted {
   connectionId: string;
   name: string;
@@ -87,15 +103,18 @@ export interface PartnerFronted {
 /** Whole bills each partner paid up front, largest first: who is behind "partners paid". */
 export function frontedByPartner(splits: SplitOut[], currency: string, month: string | null): PartnerFronted[] {
   const by = new Map<string, PartnerFronted>();
+  const labels = partnerLabels(splits);
   for (const s of scoped(splits, currency, month)) {
     if (s.payer_is_me) continue;
-    const row = by.get(s.connection_id) ?? { connectionId: s.connection_id, name: s.partner_name, amount: 0 };
+    const row = by.get(s.connection_id)
+      ?? { connectionId: s.connection_id, name: labels.get(s.connection_id) ?? s.partner_name, amount: 0 };
     row.amount += s.total_amount;
     by.set(s.connection_id, row);
   }
   return [...by.values()].map((r) => ({ ...r, amount: cents(r.amount) })).sort((a, b) => b.amount - a.amount);
 }
 
+/** Shared spending per category, largest first. */
 export function byCategory(splits: SplitOut[], currency: string, month: string | null): CategoryTotal[] {
   const totals = new Map<string | null, CategoryTotal>();
   for (const s of scoped(splits, currency, month)) {
@@ -189,8 +208,7 @@ export interface PartnerOption {
 
 /** One entry per partner on the list, by name; a kept choice stays even with no bill left. */
 function partnerOptions(splits: SplitOut[], keep: string): PartnerOption[] {
-  const names = new Map<string, string>();
-  for (const s of splits) names.set(s.connection_id, s.partner_name);
+  const names = partnerLabels(splits);
   const out: PartnerOption[] = [...names].map(([connectionId, name]) => ({ connectionId, name }))
     .sort((a, b) => (a.name ?? '').localeCompare(b.name ?? ''));
   if (keep && !names.has(keep)) out.push({ connectionId: keep, name: null });
