@@ -688,6 +688,14 @@ describe('EditTransactionPage — split with a partner', () => {
     expect(split).toHaveAccessibleDescription(/Save your changes first/);
   });
 
+  it('counts a changed wallet as unsaved too, and a row with no description as saved', async () => {
+    await renderAndLoad({ ...expenseTx, description: null });
+    const split = screen.getByRole('button', { name: /Split with partner/ });
+    expect(split).toBeEnabled();
+    fireEvent.click(screen.getByRole('button', { name: /Emergency/ }));
+    expect(split).toBeDisabled();
+  });
+
   it('links an already split row to where the split is managed, with no second split', async () => {
     await renderAndLoad({ ...expenseTx, peerSplitShareId: 'share-1' });
     expect(screen.getByRole('link', { name: /Manage split/ })).toHaveAttribute('href', '/savings?tab=splits');

@@ -679,14 +679,19 @@ export default function EditTransactionPage() {
     description: loaded.description, category: loaded.category, date: loaded.date,
     peerSplitShareId: loaded.peerSplitShareId, holdingId: loaded.holdingId,
     transferGroupId: loaded.transferGroupId, loanId: loaded.loanId,
+    walletType: loaded.walletType, paymentMethod: loaded.paymentMethod, tags: loaded.tags,
   } as Transaction) : null;
   const canSplitHere = !isDemo && !!savedRow && canSplit(savedRow);
   // A split takes the saved amount and reloads the row, so unsaved edits would be split wrong, then lost.
+  // Every field the form saves; text compared as '' when missing, so a row with no description isn't "changed".
+  const same = (a?: string | null, b?: string | null) => (a ?? '') === (b ?? '');
   const unsaved = !!loaded && (
-    Number(formData.amount) !== loaded.amount || formData.description !== loaded.description
-    || formData.category !== loaded.category || formData.currency !== loaded.currency
+    Number(formData.amount) !== loaded.amount || !same(formData.description, loaded.description)
+    || !same(formData.category, loaded.category) || !same(formData.currency, loaded.currency)
     || formData.type !== loaded.type || formData.date !== loaded.date
-    || (formData.loanId || '') !== (loaded.loanId || '')
+    || !same(formData.loanId, loaded.loanId) || !same(formData.paymentMethod, loaded.paymentMethod)
+    || !same(formData.walletType, loaded.walletType)
+    || (formData.tags ?? []).join('\u0000') !== (loaded.tags ?? []).join('\u0000')
   );
 
   // "Duplicate": the add form, started from this row's saved values, dated today.
