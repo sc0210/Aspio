@@ -10,7 +10,11 @@ export const PERSON_COLORS = [
   { hex: '#3b82f6', avatar: 'bg-primary-600' }, // blue (you)
   { hex: '#10b981', avatar: 'bg-success-600' }, // green
   { hex: '#f97316', avatar: 'bg-orange-500' }, // orange
+  { hex: '#a855f7', avatar: 'bg-purple-600' }, // purple
+  { hex: '#ec4899', avatar: 'bg-pink-600' }, // pink
 ] as const;
+
+const PARTNER_COLORS = PERSON_COLORS.length - 1;
 
 export type PersonColor = (typeof PERSON_COLORS)[number];
 
@@ -19,6 +23,7 @@ export function personColors(userIds: string[], selfId?: string): Map<string, Pe
   const peers = [...new Set(userIds)].filter((id) => id !== selfId).sort();
   const out = new Map<string, PersonColor>();
   if (selfId) out.set(selfId, PERSON_COLORS[0]);
-  peers.forEach((id, i) => out.set(id, PERSON_COLORS[(i + 1) % PERSON_COLORS.length]));
+  // Partners cycle through the partner colours only: never back onto yours.
+  peers.forEach((id, i) => out.set(id, PERSON_COLORS[1 + (i % PARTNER_COLORS)]));
   return out;
 }
