@@ -1,5 +1,5 @@
 import React from 'react';
-import { render, screen, fireEvent, waitFor } from '@testing-library/react';
+import { render, screen, fireEvent, waitFor, within } from '@testing-library/react';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import SharedSpendingTab from '@/components/savings/SharedSpendingTab';
 import { apiClient } from '@/lib/api-client';
@@ -47,6 +47,8 @@ jest.mock('@/hooks/useDataSynchronization', () => ({
   QUERY_KEYS: { SPLIT_BALANCES: 'split-balances' },
 }));
 jest.mock('@/components/savings/NewSplitModal', () => () => null);
+// The insights open on the current month: pin it so the fixtures' dates stay in it.
+jest.mock('@/lib/portfolio/businessDate', () => ({ businessToday: () => '2026-11-09' }));
 
 const api = apiClient as unknown as Record<string, jest.Mock>;
 const { invalidateAllFinancialData } = jest.requireMock('@/hooks/useDataSynchronization');
@@ -404,5 +406,94 @@ describe('SharedSpendingTab repeating bills', () => {
     expect(screen.getByText(/monthly with Bob .* next 2026-12-07/)).toBeInTheDocument();
     fireEvent.click(screen.getByRole('button', { name: 'Stop' }));
     await waitFor(() => expect(api.stopRecurringSplit).toHaveBeenCalledWith('r1'));
+  });
+});
+
+describe('SharedSpendingTab insights', () => {
+  const bills = [
+    split({ id: 'a', category_name: 'Dining' }),
+    split({ id: 'b', description: 'Costco', total_amount: 3000, my_share: 1000, partner_share: 2000, category_name: 'Groceries', payer_is_me: false }),
+    split({ id: 'c', description: 'Taxi', split_date: '2026-10-02', total_amount: 600, my_share: 300, partner_share: 300, category_name: 'Transport' }),
+    split({ id: 'd', description: 'Movie', status: 'proposed', total_amount: 640, my_share: 320, partner_share: 320 }),
+  ];
+
+  it('sums the accepted bills of the month, and steps to the one before', async () => {
+    api.listSplits.mockResolvedValue({ data: bills });
+    renderTab();
+    const insights = await screen.findByRole('region', { name: 'Insights' });
+    const tile = (label: string) => within(insights).getByText(label).parentElement!;
+    // November: Dinner 1000 (you paid) + Costco 3000 (Bob paid); the proposal isn't counted.
+    expect(within(insights).getByText('November 2026', { selector: 'span' })).toBeInTheDocument();
+    expect(tile('Shared spending')).toHaveTextContent('4,000');
+    expect(tile('Your share')).toHaveTextContent('1,500');
+    expect(tile('You paid up front')).toHaveTextContent('1,000');
+    expect(tile('Bob paid up front')).toHaveTextContent('3,000');
+    expect(within(insights).getByText('Groceries')).toBeInTheDocument();
+    expect(within(insights).queryByText('Transport')).not.toBeInTheDocument();
+    expect(within(insights).getByRole('button', { name: 'Next month' })).toBeDisabled();
+
+    fireEvent.click(within(insights).getByRole('button', { name: 'Previous month' }));
+    expect(within(insights).getByText('October 2026', { selector: 'span' })).toBeInTheDocument();
+    expect(tile('Shared spending')).toHaveTextContent('600');
+    expect(within(insights).getByText('Transport')).toBeInTheDocument();
+
+    fireEvent.click(within(insights).getByRole('button', { name: 'All time' }));
+    expect(tile('Shared spending')).toHaveTextContent('4,600');
+  });
+
+  it('names only the partners behind the figures', async () => {
+    // A declined bill with Carol is on the list but in none of the numbers.
+    api.listSplits.mockResolvedValue({ data: [...bills, split({ id: 'e', status: 'declined', partner_name: 'Carol' })] });
+    renderTab();
+    const insights = await screen.findByRole('region', { name: 'Insights' });
+    expect(within(insights).getByText('Bob paid up front')).toBeInTheDocument();
+  });
+
+  it('shows no insights without an accepted bill', async () => {
+    api.listSplits.mockResolvedValue({ data: [bills[3]] });
+    renderTab();
+    await screen.findByText(/Movie/);
+    expect(screen.queryByRole('region', { name: 'Insights' })).not.toBeInTheDocument();
+  });
+
+  it('filters the bill list and clears the filters', async () => {
+    api.listSplits.mockResolvedValue({ data: bills });
+    renderTab();
+    const list = await screen.findByRole('region', { name: 'Shared bills' });
+    await within(list).findByText(/Costco/); // the region renders before the bills load
+    fireEvent.change(within(list).getByRole('combobox', { name: 'Category' }), { target: { value: 'Groceries' } });
+    expect(within(list).getByText(/Costco/)).toBeInTheDocument();
+    expect(within(list).queryByText(/Taxi/)).not.toBeInTheDocument();
+    expect(within(list).getByText(/Showing 1 of 4/)).toBeInTheDocument();
+
+    fireEvent.change(within(list).getByRole('searchbox', { name: 'Search shared bills' }), { target: { value: 'nothing like it' } });
+    expect(within(list).getByText('No bills match these filters.')).toBeInTheDocument();
+    fireEvent.click(within(list).getByRole('button', { name: 'Clear filters' }));
+    expect(within(list).getByText(/Taxi/)).toBeInTheDocument();
+  });
+
+  it('exports the bills the list shows as CSV', async () => {
+    api.listSplits.mockResolvedValue({ data: bills });
+    const created: Blob[] = [];
+    URL.createObjectURL = jest.fn((b: Blob) => { created.push(b); return 'blob:x'; });
+    URL.revokeObjectURL = jest.fn();
+    const click = jest.spyOn(HTMLAnchorElement.prototype, 'click').mockImplementation(() => {});
+    renderTab();
+    const list = await screen.findByRole('region', { name: 'Shared bills' });
+    await within(list).findByText(/Costco/); // the region renders before the bills load
+    fireEvent.change(within(list).getByRole('combobox', { name: 'Paid by' }), { target: { value: 'partner' } });
+    fireEvent.click(within(list).getByRole('button', { name: 'Export CSV' }));
+
+    expect(click).toHaveBeenCalled();
+    // jsdom's Blob has no text(); read it the way a browser without it would.
+    const text = await new Promise<string>((resolve) => {
+      const reader = new FileReader();
+      reader.onload = () => resolve(String(reader.result));
+      reader.readAsText(created[0]);
+    });
+    const rows = text.replace(/^\uFEFF/, '').split('\n');
+    expect(rows[0]).toBe('Date,Description,Category,Partner,Paid by,Status,Currency,Total,My share,Partner share');
+    expect(rows.slice(1)).toEqual(['2026-11-06,Costco,Groceries,Bob,Partner,active,TWD,3000,1000,2000']);
+    click.mockRestore();
   });
 });

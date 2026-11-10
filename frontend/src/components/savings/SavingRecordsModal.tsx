@@ -331,7 +331,7 @@ export default function SavingRecordsModal({
               <p className="text-gray-600 dark:text-gray-400 font-medium">
                 {t('savings.records.emptyTitle', 'No records yet')}
               </p>
-              <p className="text-gray-500 dark:text-gray-500 text-sm mt-1">
+              <p className="text-gray-500 dark:text-gray-400 text-sm mt-1">
                 {t('savings.records.emptyHint', 'Use “Add” to record your first saving deposit.')}
               </p>
             </div>
@@ -454,7 +454,7 @@ export default function SavingRecordsModal({
                         <td className="py-2.5 pr-3 text-right font-semibold text-gray-900 dark:text-white whitespace-nowrap">
                           {fmt(rec.amount)}
                         </td>
-                        <td className="py-2.5 pr-3 text-gray-500 dark:text-gray-500 text-xs hidden sm:table-cell">
+                        <td className="py-2.5 pr-3 text-gray-500 dark:text-gray-400 text-xs hidden sm:table-cell">
                           {rec.note ?? '—'}
                         </td>
                         <td className="py-2.5 text-right whitespace-nowrap">

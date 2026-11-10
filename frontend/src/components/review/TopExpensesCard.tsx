@@ -65,7 +65,7 @@ export function TopExpensesCard({ range }: Props) {
                     ))}
                 </ol>
             )}
-            <p className="mt-2 text-xs text-gray-500 dark:text-gray-500">
+            <p className="mt-2 text-xs text-gray-500 dark:text-gray-400">
                 {t('review.topExpenses.note', 'Transfers between your own wallets are left out.')}
             </p>
         </Card>

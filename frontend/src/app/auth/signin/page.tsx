@@ -310,7 +310,7 @@ function SignInForm() {
                   {isDemoLoading ? <LoadingSpinner size="sm" /> : <span>✦</span>}
                   {t('auth:signIn.tryDemoAccount')}
                 </button>
-                <p className="mt-1.5 text-center text-xs text-gray-500 dark:text-gray-500">
+                <p className="mt-1.5 text-center text-xs text-gray-500 dark:text-gray-400">
                   {t('auth:signIn.demoSignsInAs')} <code className="text-xs bg-gray-100 dark:bg-gray-700 px-1 py-0.5 rounded font-mono text-gray-700 dark:text-inherit">demo@aspiro.dev</code>
                 </p>
               </div>

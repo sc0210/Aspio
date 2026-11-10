@@ -176,7 +176,9 @@ describe('/savings — goals and compare as tabs over one roster', () => {
     for (const name of ['Split a bill', 'Settle up', 'Accept', 'Withdraw', 'Cancel split']) {
       expect(screen.queryByRole('button', { name })).not.toBeInTheDocument();
     }
-    expect(screen.queryByRole('combobox')).not.toBeInTheDocument();
+    // No split setting either; the bill list's filters save nothing, so they stay.
+    expect(screen.queryByRole('combobox', { name: /Bills from/ })).not.toBeInTheDocument();
+    expect(screen.getByRole('region', { name: 'Insights' })).toBeInTheDocument();
   });
 
   it("moves a goal's totals when a deposit is recorded in demo mode", async () => {

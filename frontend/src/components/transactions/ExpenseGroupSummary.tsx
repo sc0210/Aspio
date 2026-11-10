@@ -428,9 +428,13 @@ export function ExpenseGroupSummary({
                   aria-label={`${t('transactions:filters.expenseAnalysis')}: ${pieData.map(g => `${t(g.labelKey)} ${g.percentage.toFixed(0)}%`).join(', ')}`}
                   className="relative"
                 >
+                  {/* The label above describes the chart; its slices stay out of
+                      the accessibility tree and the tab order. */}
+                  <div aria-hidden="true">
                   <ResponsiveContainer width="100%" height={200}>
-                    <PieChart>
+                    <PieChart accessibilityLayer={false}>
                       <Pie
+                        rootTabIndex={-1}
                         data={pieData}
                         cx="50%"
                         cy="50%"
@@ -454,6 +458,7 @@ export function ExpenseGroupSummary({
                       />
                     </PieChart>
                   </ResponsiveContainer>
+                  </div>
                   {/* Center label */}
                   <div className="absolute inset-0 flex flex-col items-center justify-center pointer-events-none">
                     <span className="text-xs text-gray-500 dark:text-gray-400 font-medium">{t('transactions:stats.totalExpenses')}</span>
@@ -725,7 +730,7 @@ export function ExpenseGroupSummary({
                     className={cn(
                       'flex-shrink-0 inline-flex items-center justify-center w-5 h-5 rounded-full text-xs font-bold tabular-nums',
                       index === 0
-                        ? 'bg-prosperity-700 dark:bg-prosperity-500 text-white shadow-sm'
+                        ? 'bg-prosperity-700 text-white shadow-sm'
                         : 'bg-gray-200 dark:bg-gray-700 text-gray-600 dark:text-gray-300'
                     )}
                   >

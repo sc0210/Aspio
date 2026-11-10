@@ -617,7 +617,7 @@ function AddTransactionForm() {
                   {investSide === 'sell' && (
                     <>
                       <p className={NOTE}>
-                        <InformationCircleIcon className="w-5 h-5 shrink-0 text-gray-400 dark:text-gray-500" aria-hidden="true" />
+                        <InformationCircleIcon className="w-5 h-5 shrink-0 text-gray-500 dark:text-gray-400" aria-hidden="true" />
                         <span>{t('transactions:form.invest.sellHintPrefix', 'Sells units from your portfolio (oldest lots first), records the realized gain/loss, and returns the net proceeds to your')} <strong>{t('transactions:form.wallets.life', 'Life Wallet')}</strong>.</span>
                       </p>
 

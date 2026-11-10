@@ -402,7 +402,7 @@ export function TransactionImportExportModal({ transactions, onClose, onImport }
               </div>
               <button
                 onClick={onClose}
-                className="p-2 text-gray-500 dark:text-gray-500 hover:text-gray-600 dark:hover:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-800 rounded-lg transition-all"
+                className="p-2 text-gray-500 dark:text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-800 rounded-lg transition-all"
                 aria-label="Close"
               >
                 <XMarkIcon className="w-6 h-6" />

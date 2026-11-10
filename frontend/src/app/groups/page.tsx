@@ -153,7 +153,7 @@ function GroupCard({ group, isDemo, selfId }: { group: Group; isDemo: boolean; s
                       ) : (
                         <>
                           <span className="font-medium text-gray-900 dark:text-white">{name(b.owed_by)}</span>
-                          <span className="text-gray-500 dark:text-gray-500 mx-1.5">{t('owes')}</span>
+                          <span className="text-gray-500 dark:text-gray-400 mx-1.5">{t('owes')}</span>
                           <span className="font-medium text-gray-900 dark:text-white">{name(b.owed_to)}</span>
                         </>
                       )}

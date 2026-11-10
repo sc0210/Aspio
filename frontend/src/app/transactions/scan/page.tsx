@@ -310,7 +310,7 @@ export default function ScanReceiptPage() {
           <div className="text-center py-8">
             <LoadingSpinner size="lg" />
             <p className="mt-4 text-gray-600 dark:text-gray-400">{t('transactions:scan.processing')}</p>
-            <p className="text-sm text-gray-500 dark:text-gray-500">{t('transactions:scan.processingHint')}</p>
+            <p className="text-sm text-gray-500 dark:text-gray-400">{t('transactions:scan.processingHint')}</p>
           </div>
         )}
 

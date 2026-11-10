@@ -246,7 +246,7 @@ export function HoldingsList({
     return (
       <div className="py-12 text-center">
         <div className="mx-auto mb-3 flex h-12 w-12 items-center justify-center rounded-full bg-gray-100 dark:bg-gray-700">
-          <ChartBarIcon className="h-6 w-6 text-gray-500 dark:text-gray-500" />
+          <ChartBarIcon className="h-6 w-6 text-gray-500 dark:text-gray-400" />
         </div>
         <p className="text-sm font-medium text-gray-700 dark:text-gray-300">
           {t('portfolio:holdings.noHoldingsInWallet', 'No holdings in this wallet')}
@@ -318,7 +318,7 @@ export function HoldingsList({
                 {onAddInvestment && (
                   <button
                     onClick={onAddInvestment}
-                    className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-primary-700 hover:bg-primary-800 dark:bg-primary-500 dark:hover:bg-primary-600 text-white text-xs font-semibold rounded-lg shadow-sm hover:shadow-md transition-all duration-200 active:scale-[0.98]"
+                    className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-primary-700 hover:bg-primary-800 text-white text-xs font-semibold rounded-lg shadow-sm hover:shadow-md transition-all duration-200 active:scale-[0.98]"
                     title="Buy Investment"
                   >
                     <PlusIcon className="w-3.5 h-3.5" />
@@ -328,7 +328,7 @@ export function HoldingsList({
                 {onSellFromWallet && (
                   <button
                     onClick={onSellFromWallet}
-                    className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-green-700 hover:bg-green-800 dark:bg-green-500 dark:hover:bg-green-600 text-white text-xs font-semibold rounded-lg shadow-sm hover:shadow-md transition-all duration-200 active:scale-[0.98]"
+                    className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-green-700 hover:bg-green-800 text-white text-xs font-semibold rounded-lg shadow-sm hover:shadow-md transition-all duration-200 active:scale-[0.98]"
                     title="Sell Investment"
                   >
                     <ArrowDownTrayIcon className="w-3.5 h-3.5" />

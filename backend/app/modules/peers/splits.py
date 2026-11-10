@@ -764,7 +764,8 @@ class SplitService:
 
     async def _out(self, split: PeerSplit, user_id: UUID,
                    rows: Optional[dict[UUID, UUID]] = None,
-                   amendments: Optional[dict[UUID, PeerSplitAmendment]] = None) -> SplitOut:
+                   amendments: Optional[dict[UUID, PeerSplitAmendment]] = None,
+                   categories: Optional[dict[UUID, str]] = None) -> SplitOut:
         mine = next(s for s in split.shares if s.user_id == user_id)
         theirs = next(s for s in split.shares if s.user_id != user_id)
         amendment = (amendments.get(split.id) if amendments is not None
@@ -775,11 +776,19 @@ class SplitService:
             row_id = row.id if row else None
         else:
             row_id = rows.get(mine.id)
+        if split.category_id is None:
+            category_name = None
+        elif categories is not None:
+            category_name = categories.get(split.category_id)
+        else:
+            category = await self.session.get(TransactionCategory, split.category_id)
+            category_name = category.name if category else None
         return SplitOut(
             id=str(split.id), connection_id=str(split.connection_id), description=split.description,
             total_amount=float(split.total_amount), currency=split.currency,
             split_date=split.split_date.isoformat(),
             category_id=str(split.category_id) if split.category_id else None,
+            category_name=category_name,
             method=split.method, status=split.status, payer_is_me=split.payer_id == user_id,
             created_by_me=split.created_by == user_id, partner_name=await self._name(theirs.user_id),
             my_share=float(mine.share_amount), partner_share=float(theirs.share_amount),
@@ -831,7 +840,13 @@ class SplitService:
                 PeerSplitAmendment.status == AmendmentStatus.PROPOSED.value,
             ))
         )).scalars().all()} if active_ids else {}
-        return [await self._out(s, user_id, rows, amendments) for s in splits]
+        # And the category names (categories are global), in one query too.
+        category_ids = {s.category_id for s in splits if s.category_id is not None}
+        categories = dict((await self.session.execute(
+            select(TransactionCategory.id, TransactionCategory.name)
+            .where(TransactionCategory.id.in_(category_ids))
+        )).all()) if category_ids else {}
+        return [await self._out(s, user_id, rows, amendments, categories) for s in splits]
 
     async def balances(self, user_id: UUID) -> list[PeerBalanceOut]:
         """Per partner and currency: > 0 they owe you, < 0 you owe them.

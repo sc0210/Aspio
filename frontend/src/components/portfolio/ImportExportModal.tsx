@@ -294,7 +294,7 @@ export function ImportExportModal({ holdings = [], onClose, onImport, onImportSu
               </div>
               <button
                 onClick={onClose}
-                className="p-2 text-gray-500 dark:text-gray-500 hover:text-gray-600 dark:hover:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-800 rounded-lg transition-all"
+                className="p-2 text-gray-500 dark:text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-800 rounded-lg transition-all"
                 aria-label="Close"
               >
                 <XMarkIcon className="w-6 h-6" />
@@ -498,7 +498,7 @@ export function ImportExportModal({ holdings = [], onClose, onImport, onImportSu
                       <span className="text-gray-600 dark:text-gray-400">• Shares</span>
                       <span className="text-gray-600 dark:text-gray-400">• Price per shares <span className="text-gray-500 dark:text-gray-400">(plain number)</span></span>
                     </div>
-                    <p className="text-xs text-gray-500 dark:text-gray-500">Net income is optional and ignored on import. Sell rows are skipped.</p>
+                    <p className="text-xs text-gray-500 dark:text-gray-400">Net income is optional and ignored on import. Sell rows are skipped.</p>
                   </div>
                 </div>
               </div>

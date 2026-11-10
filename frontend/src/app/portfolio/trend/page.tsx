@@ -409,7 +409,7 @@ function HoldingsTable({ rows, currency, isValueVisible, isLoading }: HoldingsTa
                                         {row.isPartialPeriod ? (
                                             <span
                                                 title="Not held at period start"
-                                                className="text-gray-500 dark:text-gray-500 text-xs italic"
+                                                className="text-gray-500 dark:text-gray-400 text-xs italic"
                                             >
                                                 n/a
                                             </span>
@@ -449,7 +449,7 @@ function HoldingsTable({ rows, currency, isValueVisible, isLoading }: HoldingsTa
                                                     : '•••'}
                                             </span>
                                         ) : (
-                                            <span className="text-gray-500 dark:text-gray-500 text-sm">—</span>
+                                            <span className="text-gray-500 dark:text-gray-400 text-sm">—</span>
                                         )}
                                     </td>
                                     {/* Change % */}
@@ -474,7 +474,7 @@ function HoldingsTable({ rows, currency, isValueVisible, isLoading }: HoldingsTa
                                                 {row.isPartialPeriod && <span className="opacity-60 font-normal">*</span>}
                                             </span>
                                         ) : (
-                                            <span className="text-gray-500 dark:text-gray-500 text-sm">—</span>
+                                            <span className="text-gray-500 dark:text-gray-400 text-sm">—</span>
                                         )}
                                     </td>
                                     {/* Weight */}
@@ -506,7 +506,7 @@ function HoldingsTable({ rows, currency, isValueVisible, isLoading }: HoldingsTa
                                         <span className="text-xs font-bold uppercase tracking-wide text-gray-500 dark:text-gray-400">
                                             Cash &amp; Equivalents
                                         </span>
-                                        <span className="text-[10px] text-gray-500 dark:text-gray-500">
+                                        <span className="text-[10px] text-gray-500 dark:text-gray-400">
                                             — no market P&amp;L
                                         </span>
                                         <span className="ml-auto text-[10px] font-semibold text-gray-500 dark:text-gray-400 tabular-nums">
@@ -557,7 +557,7 @@ function HoldingsTable({ rows, currency, isValueVisible, isLoading }: HoldingsTa
                                     </td>
                                     {/* Avg Cost — always $1 for cash, not meaningful */}
                                     <td className="px-4 py-3 text-right">
-                                        <span className="text-gray-500 dark:text-gray-500 text-sm">—</span>
+                                        <span className="text-gray-500 dark:text-gray-400 text-sm">—</span>
                                     </td>
                                     {/* Period Start Balance */}
                                     <td className="px-4 py-3 text-right">
@@ -577,7 +577,7 @@ function HoldingsTable({ rows, currency, isValueVisible, isLoading }: HoldingsTa
                                     </td>
                                     {/* Change — cash doesn't generate market P&L */}
                                     <td className="px-4 py-3 text-right" colSpan={2}>
-                                        <span className="text-gray-500 dark:text-gray-500 text-xs italic">no market P&amp;L</span>
+                                        <span className="text-gray-500 dark:text-gray-400 text-xs italic">no market P&amp;L</span>
                                     </td>
                                     {/* Weight */}
                                     <td className="px-4 py-3 text-right">

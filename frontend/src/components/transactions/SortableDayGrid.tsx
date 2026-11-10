@@ -24,7 +24,9 @@ import { cn } from '@/utils/cn';
 import type { Transaction } from '@/shared/types';
 import { moveId } from './dayOrder';
 
-const GRID = 'grid grid-cols-1 lg:grid-cols-2 gap-2 animate-fade-in';
+// Two columns only at 2xl: beside the 320px filter panel a 1280px screen left each
+// card ~300px, enough for one character of the description.
+const GRID = 'grid grid-cols-1 2xl:grid-cols-2 gap-2 animate-fade-in';
 
 interface SortableDayGridProps {
   rows: Transaction[];

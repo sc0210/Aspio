@@ -139,4 +139,47 @@ describe('PortfolioStats', () => {
         expect(container.querySelector('details')).toBeInTheDocument();
         expect(screen.getAllByText('•••••••').length).toBeGreaterThan(0);
     });
+
+    it.each([0.4, -0.4])('shows a day of %s, which rounds to nothing, as flat', (todayGainLoss) => {
+        show({ portfolio: { ...portfolio, todayGainLoss, todayGainLossPercentage: 0 } });
+
+        const figure = screen.getByText('NT$0');
+        expect(screen.queryByText(/[+-]NT\$0/)).not.toBeInTheDocument();
+        expect(figure.className).toContain('text-gray-500');
+        expect(figure.className).not.toMatch(/success/);
+    });
+
+    it('rounds a negative half away from zero, as the figure is formatted', () => {
+        show({ portfolio: { ...portfolio, todayGainLoss: -2.5 } });
+
+        expect(screen.getByText('-NT$3')).toBeInTheDocument();
+    });
+
+    it('shows a total and realized result that round to nothing as flat', () => {
+        show({
+            portfolio: { ...portfolio, totalGainLoss: -0.3, gainLossPercentage: -0.001 },
+            realizedPnl: { realizedGainLoss: 0.2, realizedCount: 1, currency: 'TWD' },
+        });
+
+        expect(screen.queryByText(/[+-]NT\$0$/)).not.toBeInTheDocument();
+        const flat = screen.getAllByText('NT$0');
+        expect(flat.length).toBeGreaterThanOrEqual(2);
+        flat.forEach((el) => expect(el.className).not.toMatch(/success|error/));
+        expect(screen.getByText(/^0\.00% /)).toBeInTheDocument();
+    });
+
+    it('shows a period that rounds to nothing as flat', () => {
+        show({ showPerformancePeriods: true, performance: { ...performance, oneWeek: 0 } });
+
+        const flat = screen.getByText('NT$0.00');
+        expect(flat.closest('p')!.textContent).not.toMatch(/^[+-]/);
+        expect(flat.closest('p')!.className).toContain('text-gray-500');
+    });
+
+    it('colours the ROI line by its own sign when the money rounds flat', () => {
+        show({ portfolio: { ...portfolio, totalGainLoss: 0.4, gainLossPercentage: 0.5 } });
+
+        const roi = screen.getByText(/^\+0\.50% /);
+        expect(roi.className).toContain('text-success-700');
+    });
 });

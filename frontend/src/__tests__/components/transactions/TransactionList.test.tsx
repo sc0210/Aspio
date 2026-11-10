@@ -1,5 +1,5 @@
 import React from 'react';
-import { act, render, screen, fireEvent, waitFor } from '@testing-library/react';
+import { act, render, screen, fireEvent, waitFor, within } from '@testing-library/react';
 import { TransactionList } from '@/components/transactions/TransactionList';
 import toast from 'react-hot-toast';
 import type { Transaction } from '@/shared/types';
@@ -429,6 +429,28 @@ describe('TransactionList', () => {
       // → '' + 'TWD-500' = 'TWD-500'
       // The old inline formatCurrency(en-SG) would have returned 'S$-500' or similar.
       expect(screen.getByText('TWD-500')).toBeInTheDocument();
+    });
+
+    it('shows a day netting to zero flat: grey, no "+" (a transfer\'s two legs)', () => {
+      const today = new Date().toISOString();
+      render(
+        <TransactionList
+          transactions={[
+            makeTransaction({ id: 'out', date: today, amount: 50000, type: 'expense' }),
+            makeTransaction({ id: 'in', date: today, amount: 50000, type: 'income' }),
+          ]}
+        />,
+      );
+      const badge = screen.getByText('TWD0');
+      expect(badge.className).toContain('text-gray-600');
+      expect(screen.queryByText('+TWD0')).toBeNull();
+    });
+
+    it('still signs and colours a gain', () => {
+      const today = new Date().toISOString();
+      render(<TransactionList transactions={[makeTransaction({ date: today, amount: 800, type: 'income' })]} />);
+      const header = screen.getByRole('button', { name: /Collapse|Expand/i });
+      expect(within(header).getByText('+TWD800').className).toContain('text-success-700');
     });
 
     it('uses formatCurrency for per-transaction amounts', () => {

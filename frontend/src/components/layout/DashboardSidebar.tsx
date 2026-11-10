@@ -184,7 +184,7 @@ export function DashboardSidebar({ open, collapsed, onToggleCollapsed, onClose }
           >
             <Icon className={cn(
               'w-5 h-5 flex-shrink-0',
-              isActive ? 'text-primary-500 dark:text-primary-400' : 'text-gray-500 dark:text-gray-500',
+              isActive ? 'text-primary-500 dark:text-primary-400' : 'text-gray-500 dark:text-gray-400',
             )} />
             {!isCollapsed && <span className="truncate">{label}</span>}
           </Link>
@@ -284,7 +284,7 @@ export function DashboardSidebar({ open, collapsed, onToggleCollapsed, onClose }
                   type="button"
                   onClick={() => setSectionOpen(section.titleKey!, !sectionOpen)}
                   aria-expanded={sectionOpen}
-                  className="flex w-full items-center gap-1.5 rounded-md px-3 py-1 text-xs font-semibold uppercase tracking-wider text-gray-500 transition-colors hover:text-gray-600 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-400 dark:text-gray-500 dark:hover:text-gray-300"
+                  className="flex w-full items-center gap-1.5 rounded-md px-3 py-1 text-xs font-semibold uppercase tracking-wider text-gray-500 transition-colors hover:text-gray-600 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-400 dark:text-gray-400 dark:hover:text-gray-300"
                 >
                   <ChevronDownIcon
                     className={cn('w-3.5 h-3.5 flex-shrink-0 transition-transform duration-150', !sectionOpen && '-rotate-90')}

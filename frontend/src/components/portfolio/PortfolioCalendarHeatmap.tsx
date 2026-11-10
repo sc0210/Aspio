@@ -56,7 +56,7 @@ export function PortfolioCalendarHeatmap({ data, isValueVisible }: Props) {
 
     if (blocks.length === 0) {
         return (
-            <div className="flex items-center justify-center py-20 text-sm text-gray-500 dark:text-gray-500">
+            <div className="flex items-center justify-center py-20 text-sm text-gray-500 dark:text-gray-400">
                 No data available for this period.
             </div>
         );
@@ -111,7 +111,7 @@ export function PortfolioCalendarHeatmap({ data, isValueVisible }: Props) {
                     {invertColors ? '🇹🇼 TW mode' : 'TW mode'}
                 </button>
 
-                <span className="ml-auto text-[11px] text-gray-500 dark:text-gray-500">
+                <span className="ml-auto text-[11px] text-gray-500 dark:text-gray-400">
                     Max daily: {isValueVisible ? formatCurrency(maxAbs) : '•••'}
                 </span>
             </div>
@@ -144,12 +144,12 @@ export function PortfolioCalendarHeatmap({ data, isValueVisible }: Props) {
                             {WEEKDAY_LABELS.map((d) => (
                                 <div
                                     key={d}
-                                    className="text-center text-xs font-semibold text-gray-500 dark:text-gray-500 py-0.5 uppercase"
+                                    className="text-center text-xs font-semibold text-gray-500 dark:text-gray-400 py-0.5 uppercase"
                                 >
                                     {d}
                                 </div>
                             ))}
-                            <div className="text-center text-[11px] font-semibold text-gray-500 dark:text-gray-500 py-0.5">
+                            <div className="text-center text-[11px] font-semibold text-gray-500 dark:text-gray-400 py-0.5">
                                 Σ wk
                             </div>
                         </div>

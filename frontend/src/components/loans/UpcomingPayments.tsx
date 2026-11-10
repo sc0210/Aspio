@@ -45,7 +45,7 @@ export function UpcomingPayments({ loans }: { loans: DebtAccount[] }) {
                     </span>
                 ) : (
                     // Amounts in different currencies don't add up to one figure.
-                    <span className="text-xs text-gray-500 dark:text-gray-500">{t('upcoming.mixedCurrencies')}</span>
+                    <span className="text-xs text-gray-500 dark:text-gray-400">{t('upcoming.mixedCurrencies')}</span>
                 ))}
             </div>
             {items.length === 0 ? (

@@ -110,7 +110,7 @@ export function LeverageHistoryPanel({
                         <ChartBarIcon className="w-4 h-4 text-indigo-500" />
                         {t('lifecycle.history.title', 'Leverage over time')}
                     </h3>
-                    <p className="text-sm text-gray-500 dark:text-gray-500 mt-1">
+                    <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">
                         {t('lifecycle.history.subtitle', 'Today’s ratio cannot tell you whether you are deleveraging. The direction can.')}
                     </p>
                 </div>
@@ -224,7 +224,7 @@ export function LeverageHistoryPanel({
                         </p>
                     )}
 
-                    <p className="mt-2 text-xs text-gray-500 dark:text-gray-500 leading-relaxed">
+                    <p className="mt-2 text-xs text-gray-500 dark:text-gray-400 leading-relaxed">
                         {t('lifecycle.history.basis', 'Both halves are measured, not projected: balances are replayed from your transactions and holdings, and past debt from the payments recorded against each loan — the same payments that set the balance shown today.')}
                     </p>
                 </>

@@ -97,7 +97,7 @@ export default function SharedGoalCard({ goal, onViewRecords, onDelete, onEdit, 
         <div className="flex justify-between items-baseline text-xs mb-1.5">
           <span className="font-semibold text-gray-700 dark:text-gray-200">
             {formatCurrency(goal.total_amount)}
-            <span className="font-normal text-gray-500 dark:text-gray-500"> / {formatCurrency(goal.target_amount)}</span>
+            <span className="font-normal text-gray-500 dark:text-gray-400"> / {formatCurrency(goal.target_amount)}</span>
           </span>
           <span className={`font-bold text-sm ${isCompleted ? 'text-prosperity-700 dark:text-prosperity-400' : 'text-primary-700 dark:text-primary-400'}`}>
             {goal.progress_pct.toFixed(1)}%
@@ -128,7 +128,7 @@ export default function SharedGoalCard({ goal, onViewRecords, onDelete, onEdit, 
 
         {/* Motivational text + deadline */}
         <div className="flex items-center justify-between mt-1.5">
-          <span className="text-xs text-gray-500 dark:text-gray-500 leading-tight">
+          <span className="text-xs text-gray-500 dark:text-gray-400 leading-tight">
             {motivation}
           </span>
           {daysLeft !== null && !isCompleted && (
@@ -138,7 +138,7 @@ export default function SharedGoalCard({ goal, onViewRecords, onDelete, onEdit, 
                   ? 'text-error-700 dark:text-error-400'
                   : daysLeft <= 14
                   ? 'text-amber-500 dark:text-amber-400'
-                  : 'text-gray-500 dark:text-gray-500'
+                  : 'text-gray-500 dark:text-gray-400'
               }`}
             >
               {daysLeft < 0
@@ -177,7 +177,7 @@ export default function SharedGoalCard({ goal, onViewRecords, onDelete, onEdit, 
         {/* Contribution split bar */}
         {totalContributed > 0 && (
           <div>
-            <div className="flex justify-between text-xs text-gray-500 dark:text-gray-500 mb-1">
+            <div className="flex justify-between text-xs text-gray-500 dark:text-gray-400 mb-1">
               <span>{goal.your_name}: {yourSplitPct.toFixed(0)}%</span>
               <span>{peerSplitPct.toFixed(0)}%: {goal.peer_name}</span>
             </div>

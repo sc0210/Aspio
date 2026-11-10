@@ -39,7 +39,7 @@ export function PeerRoster({ accepted, sentPending, removingId, onRemove }: Peer
 
   return (
     <div className="bg-white dark:bg-gray-800 rounded-xl p-4 shadow-sm">
-      <p className="text-xs font-semibold text-gray-500 dark:text-gray-500 uppercase tracking-wide mb-3">
+      <p className="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wide mb-3">
         {t('savings.peersLabel', 'Members')}
       </p>
       <ul className="flex flex-wrap gap-5">
@@ -83,7 +83,7 @@ export function PeerRoster({ accepted, sentPending, removingId, onRemove }: Peer
                 t('savings.cancelInvite', 'Cancel invite to {{name}}', { name: conn.other_user.name }),
               )}
             </div>
-            <span className="text-xs text-gray-500 dark:text-gray-500 max-w-[64px] truncate text-center">
+            <span className="text-xs text-gray-500 dark:text-gray-400 max-w-[64px] truncate text-center">
               {conn.other_user.name}
             </span>
             <span className="text-xs text-amber-700 dark:text-amber-400 font-medium">

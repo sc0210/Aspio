@@ -67,7 +67,7 @@ function Slider({
                 className="w-full h-11 sm:h-6 cursor-pointer accent-indigo-600 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-400"
                 aria-label={label}
             />
-            {hint && <p className="mt-1 text-sm text-gray-500 dark:text-gray-500">{hint}</p>}
+            {hint && <p className="mt-1 text-sm text-gray-500 dark:text-gray-400">{hint}</p>}
         </div>
     );
 }
@@ -155,7 +155,7 @@ export function BuyVsRentSimulator({ defaults, onDerivedChange }: Props) {
                 <div className="lg:col-span-2 flex flex-col min-w-0">
                     {/* Headline */}
                     <div className="flex flex-wrap items-end gap-x-3 gap-y-1 mb-1">
-                        <span className="text-xs text-gray-500 dark:text-gray-500 font-medium">
+                        <span className="text-xs text-gray-500 dark:text-gray-400 font-medium">
                             {t('housing.sim.after', 'After {{n}} years', { n: inputs.holdingYears })}
                         </span>
                         <span className={cn('text-xl sm:text-2xl font-bold tabular-nums', buyWins ? 'text-indigo-600 dark:text-indigo-300' : 'text-amber-700 dark:text-amber-400')}>
@@ -170,7 +170,7 @@ export function BuyVsRentSimulator({ defaults, onDerivedChange }: Props) {
                             {t('housing.sim.by', 'by {{amount}}', { amount: isValueVisible ? formatTWDCompact(Math.abs(result.finalAdvantage)) : '•••' })}
                         </span>
                     </div>
-                    <p className="text-sm text-gray-500 dark:text-gray-500 mb-2">
+                    <p className="text-sm text-gray-500 dark:text-gray-400 mb-2">
                         {result.breakEvenYear !== null
                             ? t('housing.sim.breakEvenLine', 'Buying overtakes renting in year {{y}}.', { y: result.breakEvenYear })
                             : t('housing.sim.noBreakEven', 'Renting stays ahead for the whole period.')}
@@ -201,7 +201,7 @@ export function BuyVsRentSimulator({ defaults, onDerivedChange }: Props) {
                             yearWord: t('housing.sim.yearShort', 'Y'),
                         }}
                     />
-                    <p className="text-center text-sm text-gray-500 dark:text-gray-500 mt-1">
+                    <p className="text-center text-sm text-gray-500 dark:text-gray-400 mt-1">
                         {t('housing.sim.xAxis', 'Years from today · net worth if liquidated')}
                     </p>
 
@@ -296,7 +296,7 @@ export function BuyVsRentSimulator({ defaults, onDerivedChange }: Props) {
                             type="button"
                             onClick={() => setShowAdvanced((s) => !s)}
                             aria-expanded={showAdvanced}
-                            className="flex items-center gap-1 text-sm text-gray-500 dark:text-gray-500 hover:text-gray-600 dark:hover:text-gray-300 rounded focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-400"
+                            className="flex items-center gap-1 text-sm text-gray-500 dark:text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 rounded focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-400"
                         >
                             <AdjustmentsHorizontalIcon className="w-3.5 h-3.5" />
                             {showAdvanced ? t('housing.sim.hideAdvanced', 'Hide advanced') : t('housing.sim.showAdvanced', 'Advanced')}
@@ -318,7 +318,7 @@ export function BuyVsRentSimulator({ defaults, onDerivedChange }: Props) {
 
             {/* Disclaimer */}
             {open && (
-                <div className="mt-4 flex items-start gap-1.5 text-sm text-gray-500 dark:text-gray-500">
+                <div className="mt-4 flex items-start gap-1.5 text-sm text-gray-500 dark:text-gray-400">
                     <InformationCircleIcon className="w-3.5 h-3.5 flex-shrink-0 mt-px" />
                     <p>{t('housing.sim.disclaimer', 'A model, not advice. It assumes steady returns and rents; real markets vary. Net worth is measured as if you sold today (selling costs deducted).')}</p>
                 </div>

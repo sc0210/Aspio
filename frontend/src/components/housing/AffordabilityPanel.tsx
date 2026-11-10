@@ -91,9 +91,9 @@ function WanField({
                         aria-label={label}
                     />
                 ) : (
-                    <span className="w-full text-right tabular-nums text-gray-500 dark:text-gray-500 text-sm">•••</span>
+                    <span className="w-full text-right tabular-nums text-gray-500 dark:text-gray-400 text-sm">•••</span>
                 )}
-                <span className="text-xs text-gray-500 dark:text-gray-500">{t('housing.unitWan')}</span>
+                <span className="text-xs text-gray-500 dark:text-gray-400">{t('housing.unitWan')}</span>
             </div>
         </div>
     );
@@ -115,7 +115,7 @@ function RawField({
                     aria-label={label}
                 />
             ) : (
-                <span className="w-full block text-right tabular-nums text-gray-500 dark:text-gray-500 text-sm">•••</span>
+                <span className="w-full block text-right tabular-nums text-gray-500 dark:text-gray-400 text-sm">•••</span>
             )}
         </div>
     );
@@ -293,7 +293,7 @@ export function AffordabilityPanel({ inputs, cashFlowBasisMonths }: Props) {
                         <BanknotesIcon className="w-4 h-4 text-emerald-500" />
                         {t('housing.afford.title', 'What can you afford right now?')}
                     </h3>
-                    <p className="text-sm text-gray-500 dark:text-gray-500 mt-1">
+                    <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">
                         {dirty
                             ? t('housing.afford.subtitleAdjusted', 'Showing an adjusted scenario — not your live figures.')
                             : cashFlowBasisMonths > 0
@@ -397,7 +397,7 @@ export function AffordabilityPanel({ inputs, cashFlowBasisMonths }: Props) {
                                 <div className="grid grid-cols-4 gap-2">
                                     {projection.milestones.map((m) => (
                                         <div key={m.year} className="rounded-lg bg-gray-50 dark:bg-gray-700/40 p-2.5 text-center">
-                                            <div className="text-xs text-gray-500 dark:text-gray-500">
+                                            <div className="text-xs text-gray-500 dark:text-gray-400">
                                                 {t('housing.afford.inYears', { defaultValue: '+{{n}}y', n: m.year })}
                                             </div>
                                             <div className="mt-0.5 text-sm font-bold text-gray-800 dark:text-gray-100 tabular-nums">
@@ -437,7 +437,7 @@ export function AffordabilityPanel({ inputs, cashFlowBasisMonths }: Props) {
                         title={t('housing.afford.adjustTitle', 'Try a different situation')}
                         icon={<AdjustmentsHorizontalIcon className="w-3.5 h-3.5 text-emerald-500" />}
                     >
-                    <p className="text-xs text-gray-500 dark:text-gray-500 mb-2">
+                    <p className="text-xs text-gray-500 dark:text-gray-400 mb-2">
                         {t('housing.afford.adjustHint', 'Change anything below to see how the ceiling moves.')}
                     </p>
 
@@ -476,7 +476,7 @@ export function AffordabilityPanel({ inputs, cashFlowBasisMonths }: Props) {
                             value={returnPct} min={0} max={12} step={0.5} suffix="%/yr"
                             onChange={(v) => setReturnPct(v)}
                         />
-                        <p className="mt-1 text-xs text-gray-500 dark:text-gray-500">
+                        <p className="mt-1 text-xs text-gray-500 dark:text-gray-400">
                             {t('housing.afford.returnHint', 'Affects the projection only — today’s ceiling uses what you already hold.')}
                         </p>
                     </div>
@@ -540,7 +540,7 @@ export function AffordabilityPanel({ inputs, cashFlowBasisMonths }: Props) {
                 </div>
             </div>
 
-            <p className="mt-3 text-xs leading-relaxed text-gray-500 dark:text-gray-500">
+            <p className="mt-3 text-xs leading-relaxed text-gray-500 dark:text-gray-400">
                 {t(
                     'housing.afford.disclaimer',
                     'Assumes a safety buffer of six months of your own expenses after buying, and that you keep at least a tenth of your income spare each month. Projections hold your spending flat and are an estimate, not advice.',

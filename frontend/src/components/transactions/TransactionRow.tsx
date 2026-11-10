@@ -98,23 +98,21 @@ function TransactionRowBase({
                 <p className="text-sm font-medium text-gray-900 dark:text-white truncate mb-0.5">
                   {searchQuery ? highlight(transaction.description, searchQuery) : transaction.description}
                 </p>
+                {/* No "•" separators: every chip after the category is a pill, and a bullet left
+                    alone at the start of a wrapped line read as a stray mark. */}
                 <div className="flex flex-wrap items-center gap-1 text-xs text-gray-500 dark:text-gray-400 min-w-0">
                   <span className="flex-shrink-0">{searchQuery ? highlight(transaction.category, searchQuery) : transaction.category}</span>
                   {transaction.peerSplitShareId && (
-                    <>
-                      <span className="flex-shrink-0">•</span>
-                      <Link
-                        href={SPLITS_HREF}
-                        title={t('transactions:list.manageSplit', 'Manage split')}
-                        className="flex-shrink-0 px-1.5 py-0.5 rounded-full font-medium whitespace-nowrap bg-indigo-50 text-indigo-700 hover:bg-indigo-100 dark:bg-indigo-900/30 dark:text-indigo-300 dark:hover:bg-indigo-900/50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500"
-                      >
-                        {t('transactions:splitBadge', 'Split')}
-                      </Link>
-                    </>
+                    <Link
+                      href={SPLITS_HREF}
+                      title={t('transactions:list.manageSplit', 'Manage split')}
+                      className="flex-shrink-0 px-1.5 py-0.5 rounded-full font-medium whitespace-nowrap bg-indigo-50 text-indigo-700 hover:bg-indigo-100 dark:bg-indigo-900/30 dark:text-indigo-300 dark:hover:bg-indigo-900/50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500"
+                    >
+                      {t('transactions:splitBadge', 'Split')}
+                    </Link>
                   )}
                   {/* Wallet Type Badge - Always visible */}
                   <>
-                    <span className="flex-shrink-0">•</span>
                     <span className={cn(
                       "flex-shrink-0 px-1.5 py-0.5 rounded-full font-medium whitespace-nowrap flex items-center gap-1",
                       wallet.color
@@ -126,7 +124,6 @@ function TransactionRowBase({
                   {/* Payment method — visible on all sizes */}
                   {transaction.paymentMethod && (
                     <>
-                      <span className="flex-shrink-0">•</span>
                       <span className={cn(
                         "flex-shrink-0 px-1.5 py-0.5 rounded-full font-medium whitespace-nowrap",
                         getPaymentMethodColor(transaction.paymentMethod)
@@ -137,8 +134,7 @@ function TransactionRowBase({
                   )}
                   {/* Tags — hidden on mobile to keep row compact */}
                   {transaction.tags && transaction.tags.length > 0 && (
-                    <div className="hidden sm:flex items-center gap-1 min-w-0 overflow-hidden">
-                      <span className="flex-shrink-0">•</span>
+                    <div className="hidden sm:flex flex-wrap items-center gap-1 min-w-0">
                       {transaction.tags.map((tag, index) => (
                         <span
                           key={`${tag}-${index}`}
