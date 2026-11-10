@@ -260,7 +260,8 @@
     "saleEdit": {
       "title": "賣出所得",
       "note": "金額、日期與錢包依這筆賣出而定。要修改，請在投資組合編輯或撤銷這筆賣出。"
-    }
+    },
+    "splitSaveFirst": "請先儲存變更，再分帳。"
   },
   "importExport": {
     "button": "匯出 / 匯入",

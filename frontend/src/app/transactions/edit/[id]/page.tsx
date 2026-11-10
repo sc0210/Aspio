@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect, useMemo } from 'react';
 import Link from 'next/link';
-import { CheckIcon, DocumentDuplicateIcon, InformationCircleIcon, TrashIcon } from '@heroicons/react/24/outline';
+import { CheckIcon, DocumentDuplicateIcon, InformationCircleIcon, TrashIcon, UsersIcon } from '@heroicons/react/24/outline';
 import { useRouter, useParams, useSearchParams } from 'next/navigation';
 import { RETURN_TO_PARAM, safeReturnTo } from '@/lib/transactions/returnTo';
 import { useQueryClient } from '@tanstack/react-query';
@@ -31,6 +31,7 @@ import { parseInvestDescription, buildInvestDescription } from '@/utils/investme
 import { log } from '@/utils/logger';
 import { formatCurrency, localDateString, toDateInputValue } from '@/utils/formatters';
 import { Card } from '@/components/ui/Card';
+import SplitExpenseModal, { canSplit } from '@/components/transactions/SplitExpenseModal';
 
 const INVESTMENT_PURCHASE = 'Investment Purchase';
 const INVESTMENT_SALE = 'Investment Sale';
@@ -62,7 +63,14 @@ interface LoadedRow {
   transferGroupId?: string;
   loanId?: string;
   holdingId?: string;
+  peerSplitShareId?: string;
 }
+
+/** Where a split is changed, withdrawn or cancelled. */
+const SPLITS_HREF = '/savings?tab=splits';
+
+const SECONDARY_ACTION =
+  'inline-flex items-center gap-1.5 rounded-lg px-2 min-h-11 lg:min-h-0 lg:py-1.5 text-sm font-medium text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-500';
 
 export default function EditTransactionPage() {
   const router = useRouter();
@@ -101,6 +109,13 @@ export default function EditTransactionPage() {
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [confirmingDelete, setConfirmingDelete] = useState(false);
+  // Split with a partner from here: the phone list has no row menu, so this page is its way in.
+  const [splitting, setSplitting] = useState(false);
+  // Bumped after a split so the row reloads as it now is (split, whole until accepted).
+  const [reloadKey, setReloadKey] = useState(0);
+  // The form exactly as the load filled it (after its own clean-ups: payment method
+  // spelling, the default wallet), so "unsaved" means an edit, not a normalisation.
+  const [baseline, setBaseline] = useState<typeof formData | null>(null);
 
   // Investment mode state (populated when category === 'Investment Purchase')
   const [isInvestMode, setIsInvestMode] = useState(false);
@@ -143,6 +158,7 @@ export default function EditTransactionPage() {
         setIsInvestMode(false);
         setIsSaleMode(false);
         setLoaded(null);
+        setBaseline(null);
         setHoldingId(null);
         setInvestLink('unlinked');
         let txn: Transaction | null | undefined = null;
@@ -173,6 +189,7 @@ export default function EditTransactionPage() {
             transferGroupId: txn.transferGroupId,
             loanId: txnLoanId || undefined,
             holdingId: txn.holdingId,
+            peerSplitShareId: txn.peerSplitShareId,
           });
 
           // Investment Purchase: special investment mode
@@ -333,7 +350,7 @@ export default function EditTransactionPage() {
               paymentMethodValue = matchedPM?.value || txn.paymentMethod;
             }
 
-            setFormData({
+            const initial = {
               type: txType,
               amount: txn.amount.toString(),
               currency: txn.currency || defaultCurrency,
@@ -347,7 +364,9 @@ export default function EditTransactionPage() {
               tags: txn.tags || [],
               // Pre-fill the loan link if this expense is tied to a loan.
               loanId: txnLoanId ?? '',
-            });
+            };
+            setFormData(initial);
+            setBaseline(initial);
           }
         } else {
           toast.error(t('transactions:toast.notFound'));
@@ -369,7 +388,7 @@ export default function EditTransactionPage() {
     // rare row missing a currency, and re-running this whole load on every
     // profile-query resolution would blow away in-progress edits.
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [transactionId, router, isDemo, demoTransactions, t]);
+  }, [transactionId, router, isDemo, demoTransactions, t, reloadKey]);
 
   // Active loans for the "Link to Loan" selector (authed only — avoids a demo 401).
   useEffect(() => {
@@ -659,6 +678,29 @@ export default function EditTransactionPage() {
       toast.error(t('transactions:toast.deleteFailed', 'Could not delete the transaction'));
     }
   };
+
+  // The saved row as the split API sees it. Not in demo: a split asks a real partner.
+  const savedRow = loaded ? ({
+    id: transactionId, type: loaded.type, amount: loaded.amount, currency: loaded.currency,
+    description: loaded.description, category: loaded.category, date: loaded.date,
+    peerSplitShareId: loaded.peerSplitShareId, holdingId: loaded.holdingId,
+    transferGroupId: loaded.transferGroupId, loanId: loaded.loanId,
+    walletType: loaded.walletType, paymentMethod: loaded.paymentMethod, tags: loaded.tags,
+  } as Transaction) : null;
+  // Only a plain expense: an investment purchase, a sale or a transfer is not a bill to share, and
+  // only the plain branch of the load records the baseline the save-first check below reads.
+  const canSplitHere = !isDemo && !!savedRow && canSplit(savedRow) && !isInvestMode && !isSaleMode && !isTransferRow && !!baseline;
+  // A split takes the saved amount and reloads the row, so unsaved edits would be split wrong, then lost.
+  // Every field the form saves, against the form as loaded; text compared as '' when missing.
+  const same = (a?: string | null, b?: string | null) => (a ?? '') === (b ?? '');
+  const unsaved = !!baseline && (
+    !same(formData.amount, baseline.amount) || !same(formData.description, baseline.description)
+    || !same(formData.category, baseline.category) || !same(formData.currency, baseline.currency)
+    || formData.type !== baseline.type || formData.date !== baseline.date
+    || !same(formData.loanId, baseline.loanId) || !same(formData.paymentMethod, baseline.paymentMethod)
+    || !same(formData.walletType, baseline.walletType)
+    || (formData.tags ?? []).join('\u0000') !== (baseline.tags ?? []).join('\u0000')
+  );
 
   // "Duplicate": the add form, started from this row's saved values, dated today.
   const duplicateHref = (() => {
@@ -963,18 +1005,41 @@ export default function EditTransactionPage() {
 
             {/* Quiet secondary actions at the end of the form, outside the sticky
                 bar, so a thumb reaching for Update cannot land on Delete. */}
-            {(canDelete && !transferUnlinked) || duplicateHref ? (
-              <div className="flex flex-wrap items-center justify-between gap-2 -my-2">
-                {duplicateHref ? (
+            {(canDelete && !transferUnlinked) || duplicateHref || canSplitHere || loaded?.peerSplitShareId ? (
+              <div className="space-y-1 -my-2">
+              <div className="flex flex-wrap items-center justify-between gap-2">
+                <div className="-ml-2 flex flex-wrap items-center gap-1">
+                {duplicateHref && (
                   <Link
                     href={duplicateHref}
-                    className="-ml-2 inline-flex items-center gap-1.5 rounded-lg px-2 min-h-11 lg:min-h-0 lg:py-1.5 text-sm font-medium text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-500"
+                    className={SECONDARY_ACTION}
                   >
                     <DocumentDuplicateIcon className="w-4 h-4" aria-hidden="true" />
                     {t('transactions:form.duplicate', 'Duplicate')}
                   </Link>
-                ) : <span />}
+                )}
+                {canSplitHere && (
+                  <button type="button" onClick={() => setSplitting(true)} disabled={unsaved}
+                    aria-describedby={unsaved ? 'txe-split-unsaved' : undefined}
+                    className={cn(SECONDARY_ACTION, 'disabled:opacity-50 disabled:cursor-not-allowed')}>
+                    <UsersIcon className="w-4 h-4" aria-hidden="true" />
+                    {t('transactions:list.split', 'Split with partner')}
+                  </button>
+                )}
+                {loaded?.peerSplitShareId && (
+                  <Link href={SPLITS_HREF} className={SECONDARY_ACTION}>
+                    <UsersIcon className="w-4 h-4" aria-hidden="true" />
+                    {t('transactions:list.manageSplit', 'Manage split')} →
+                  </Link>
+                )}
+                </div>
                 {canDelete && !transferUnlinked && deleteButton('-mr-2')}
+              </div>
+              {canSplitHere && unsaved && (
+                <p id="txe-split-unsaved" className="text-xs text-gray-600 dark:text-gray-400">
+                  {t('transactions:form.splitSaveFirst', 'Save your changes first, then split.')}
+                </p>
+              )}
               </div>
             ) : null}
 
@@ -1000,12 +1065,23 @@ export default function EditTransactionPage() {
               </div>
             </StickySubmitBar>
           </form>,
+    <>
     <ConfirmDialog
       isOpen={confirmingDelete}
       onCancel={() => setConfirmingDelete(false)}
       onConfirm={handleDelete}
       title={t('transactions:list.confirmDeleteTitle', 'Delete transaction')}
       message={deleteMessage}
-    />,
+    />
+    <SplitExpenseModal
+      transaction={splitting ? savedRow : null}
+      onClose={() => setSplitting(false)}
+      onSuccess={() => {
+        setSplitting(false);
+        toast.success(t('transactions:toast.splitSent', 'Sent to your partner'));
+        setReloadKey((k) => k + 1);
+      }}
+    />
+    </>,
   );
 }
