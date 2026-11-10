@@ -506,15 +506,20 @@ class SplitService:
     # ------------------------------------------------------------------
 
     async def _recurring_out(self, rule: RecurringTransaction, user_id: UUID) -> RecurringSplitOut:
+        """A rule as `user_id` sees it: the payer who set it up, or the partner it splits with."""
         conn = await self.session.get(PeerConnection, rule.split_connection_id)
-        mine, theirs = split_amounts(rule.amount, rule.split_method or "equal", True,
-                                     rule.split_my_percent, rule.split_my_amount)
+        # Shares are saved from the payer's side (the rule's owner).
+        payer_share, other_share = split_amounts(rule.amount, rule.split_method or "equal", True,
+                                                 rule.split_my_percent, rule.split_my_amount)
+        payer_is_me = rule.user_id == user_id
+        mine, theirs = (payer_share, other_share) if payer_is_me else (other_share, payer_share)
         return RecurringSplitOut(
             id=str(rule.id), connection_id=str(rule.split_connection_id),
             partner_name=await self._name(self._partner(conn, user_id)),
             description=rule.description, total_amount=float(rule.amount), currency=rule.currency,
             frequency=rule.frequency.value, next_occurrence=rule.next_occurrence.isoformat(),
             method=rule.split_method or "equal", my_share=float(mine), partner_share=float(theirs),
+            payer_is_me=payer_is_me,
         )
 
     async def create_recurring(self, user_id: UUID, data: RecurringSplitCreate) -> RecurringSplitOut:
@@ -547,10 +552,16 @@ class SplitService:
         return await self._recurring_out(rule, user_id)
 
     async def list_recurring(self, user_id: UUID) -> list[RecurringSplitOut]:
+        """Repeating bills on any of your accepted connections: the ones you pay, and
+        the ones a partner pays and splits with you (so a bill doesn't arrive
+        unannounced each month). Only the payer can stop one."""
+        my_connections = select(PeerConnection.id).where(and_(
+            or_(PeerConnection.requester_id == user_id, PeerConnection.receiver_id == user_id),
+            PeerConnection.status == PeerStatus.ACCEPTED,
+        ))
         rules = (await self.session.execute(select(RecurringTransaction).where(and_(
-            RecurringTransaction.user_id == user_id,
             RecurringTransaction.is_active == True,  # noqa: E712
-            RecurringTransaction.split_connection_id.isnot(None),
+            RecurringTransaction.split_connection_id.in_(my_connections),
         )).order_by(RecurringTransaction.next_occurrence))).scalars().all()
         out = []
         for rule in rules:

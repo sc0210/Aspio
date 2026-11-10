@@ -915,17 +915,26 @@
         "withdraw": "Withdraw request"
       },
       "repeat": {
-        "label": "Repeat every month",
-        "hint": "From {{date}}, this bill is added and split the same way each month. Stop it any time.",
         "failed": "The bill was split, but it couldn’t be set to repeat: {{reason}}",
         "section": "Repeating bills",
-        "line": "{{amount}} {{frequency}} with {{name}} · you {{mine}} / {{name}} {{theirs}} · next {{next}}",
         "stop": "Stop",
-        "frequency": {
-          "weekly": "weekly",
-          "monthly": "monthly",
-          "yearly": "yearly"
-        }
+        "labelAny": "Repeat this bill",
+        "howOften": "How often",
+        "every": {
+          "weekly": "Every week",
+          "monthly": "Every month",
+          "yearly": "Every year"
+        },
+        "hints": {
+          "weekly": "From {{date}}, this bill is added and split the same way each week. Stop it any time.",
+          "monthly": "From {{date}}, this bill is added and split the same way each month. Stop it any time.",
+          "yearly": "From {{date}}, this bill is added and split the same way each year. Stop it any time."
+        },
+        "perMonth": "Your share ≈ {{amount}} a month",
+        "theyPay": "{{name}} pays",
+        "shares": "You {{mine}} · {{name}} {{theirs}} · next {{next}}",
+        "confirmTitle": "Stop repeating “{{name}}”?",
+        "confirmMessage": "No new bills will be added or split. Bills it already added stay as they are."
       },
       "insights": {
         "title": "Insights",

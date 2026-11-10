@@ -16,6 +16,14 @@ import SplitInsights from './SplitInsights';
 import SharedBillsFilter from './SharedBillsFilter';
 import { EMPTY_FILTER, filterSplits, monthLabel, monthOf, type SplitFilter, partnerLabels } from './sharedSpendingStats';
 import type { PeerBalanceOut, PeerConnectionOut, RecurringSplitOut, SettlementOut, SplitOut, SplitPolicy } from '@/shared/types';
+import { EVERY, perMonth, type RepeatFrequency } from '@/lib/savings/nextMonth';
+
+/** "Dec 1", or "Dec 1, 2027" when it isn't this year. */
+const shortDate = (isoDay: string, locale: string) => {
+  const d = new Date(`${isoDay}T00:00:00`);
+  const thisYear = d.getFullYear() === new Date().getFullYear();
+  return d.toLocaleDateString(locale, thisYear ? { month: 'short', day: 'numeric' } : { year: 'numeric', month: 'short', day: 'numeric' });
+};
 
 const money = (value: number, currency: string) =>
   formatCurrency(Math.abs(value), currency, currency === 'TWD' ? { precision: 0 } : {});
@@ -44,6 +52,7 @@ export interface SharedSpendingDemo {
   splits: SplitOut[];
   balances: PeerBalanceOut[];
   settlements: SettlementOut[];
+  recurring?: RecurringSplitOut[];
 }
 
 /**
@@ -70,6 +79,7 @@ export default function SharedSpendingTab({ connections, demo }: { connections: 
   const [settleTarget, setSettleTarget] = useState<SettleTarget | null>(null);
   const [amendTarget, setAmendTarget] = useState<SplitOut | null>(null);
   const [recurring, setRecurring] = useState<RecurringSplitOut[]>([]);
+  const [confirmStop, setConfirmStop] = useState<RecurringSplitOut | null>(null);
   // Per partner: ring the bell for their bills and repayments. undefined: not loaded.
   const [notify, setNotifyState] = useState<Record<string, boolean | undefined>>({});
 
@@ -78,6 +88,7 @@ export default function SharedSpendingTab({ connections, demo }: { connections: 
       setSplits(demo.splits);
       setBalances(demo.balances);
       setSettlements(demo.settlements);
+      setRecurring(demo.recurring ?? []);
       setLoading(false);
       return;
     }
@@ -398,29 +409,55 @@ export default function SharedSpendingTab({ connections, demo }: { connections: 
         </section>
       )}
 
-      {/* Repeating bills (mine: I pay them) */}
+      {/* Repeating bills: the ones I pay, and the ones a partner pays and splits with me */}
       {recurring.length > 0 && (
         <section aria-label={t('savings.splits.repeat.section', 'Repeating bills')} className="space-y-2">
-          <h3 className="text-sm font-semibold text-gray-900 dark:text-white">{t('savings.splits.repeat.section', 'Repeating bills')}</h3>
-          {recurring.map((r) => (
-            <div key={r.id} className="bg-white dark:bg-gray-800 rounded-xl p-4 shadow-sm flex flex-col sm:flex-row sm:items-center gap-2">
+          <div className="flex flex-wrap items-baseline justify-between gap-x-3">
+            <h3 className="text-sm font-semibold text-gray-900 dark:text-white">{t('savings.splits.repeat.section', 'Repeating bills')}</h3>
+            {/* What they come to for you, as a monthly figure, per currency. */}
+            <p className="text-xs text-gray-600 dark:text-gray-400">
+              {t('savings.splits.repeat.perMonth', 'Your share ≈ {{amount}} a month', {
+                amount: Object.entries(recurring.reduce<Record<string, number>>((acc, r) => {
+                  acc[r.currency] = (acc[r.currency] ?? 0) + perMonth(r.my_share, r.frequency);
+                  return acc;
+                }, {})).map(([cur, v]) => money(Math.round(v), cur)).join(' + '),
+              })}
+            </p>
+          </div>
+          {recurring.map((r) => {
+            const mine = r.payer_is_me !== false;
+            return (
+            <div key={r.id} className="bg-white dark:bg-gray-800 rounded-xl p-4 shadow-sm flex items-center gap-3">
               <div className="flex-1 min-w-0">
-                <p className="text-sm font-semibold text-gray-900 dark:text-white truncate">{r.description}</p>
-                <p className="text-xs text-gray-600 dark:text-gray-400">
-                  {t('savings.splits.repeat.line', '{{amount}} {{frequency}} with {{name}} · you {{mine}} / {{name}} {{theirs}} · next {{next}}', {
-                    amount: money(r.total_amount, r.currency),
-                    frequency: t(`savings.splits.repeat.frequency.${r.frequency}`, r.frequency),
-                    name: r.partner_name, mine: money(r.my_share, r.currency), theirs: money(r.partner_share, r.currency),
-                    next: r.next_occurrence,
+                <div className="flex flex-wrap items-center gap-x-2 gap-y-1">
+                  <p className="text-sm font-semibold text-gray-900 dark:text-white break-words min-w-0">{r.description}</p>
+                  <span className="text-xs font-medium px-1.5 py-0.5 rounded-full bg-primary-50 text-primary-800 dark:bg-primary-900/30 dark:text-primary-200">
+                    {t(`savings.splits.repeat.every.${r.frequency}`, EVERY[r.frequency as RepeatFrequency] ?? r.frequency)}
+                  </span>
+                  {!mine && (
+                    <span className="text-xs text-gray-600 dark:text-gray-400">
+                      {t('savings.splits.repeat.theyPay', '{{name}} pays', { name: r.partner_name })}
+                    </span>
+                  )}
+                </div>
+                <p className="mt-0.5 text-xs text-gray-600 dark:text-gray-400">
+                  {t('savings.splits.repeat.shares', 'You {{mine}} · {{name}} {{theirs}} · next {{next}}', {
+                    mine: money(r.my_share, r.currency), theirs: money(r.partner_share, r.currency),
+                    name: r.partner_name, next: shortDate(r.next_occurrence, i18n?.language || 'en'),
                   })}
                 </p>
               </div>
-              <button type="button" disabled={busyId === r.id} onClick={() => act(r, () => apiClient.stopRecurringSplit(r.id), false)}
-                className="min-h-[44px] px-3 rounded-lg text-sm font-medium text-error-700 dark:text-error-400 hover:bg-error-50 dark:hover:bg-error-900/20 disabled:opacity-50">
-                {t('savings.splits.repeat.stop', 'Stop')}
-              </button>
+              <p className="shrink-0 text-sm font-semibold text-gray-900 dark:text-white tabular-nums">{money(r.total_amount, r.currency)}</p>
+              {/* Only the payer stops a rule: it posts their expense. */}
+              {!readOnly && mine && (
+                <button type="button" disabled={busyId === r.id} onClick={() => setConfirmStop(r)}
+                  className="shrink-0 min-h-[44px] px-3 rounded-lg text-sm font-medium text-error-700 dark:text-error-400 hover:bg-error-50 dark:hover:bg-error-900/20 disabled:opacity-50">
+                  {t('savings.splits.repeat.stop', 'Stop')}
+                </button>
+              )}
             </div>
-          ))}
+            );
+          })}
         </section>
       )}
 
@@ -516,6 +553,18 @@ export default function SharedSpendingTab({ connections, demo }: { connections: 
       <NewSplitModal isOpen={isNewOpen} onClose={() => setIsNewOpen(false)} onSuccess={() => void changed()} connections={connections} />
       <AmendSplitModal split={amendTarget} onClose={() => setAmendTarget(null)} onSuccess={() => void changed()} />
       <SettleUpModal target={settleTarget} onClose={() => setSettleTarget(null)} onSuccess={() => void repaid()} />
+      <ConfirmDialog
+        isOpen={confirmStop !== null}
+        title={t('savings.splits.repeat.confirmTitle', 'Stop repeating “{{name}}”?', { name: confirmStop?.description ?? '' })}
+        message={t('savings.splits.repeat.confirmMessage', 'No new bills will be added or split. Bills it already added stay as they are.')}
+        confirmLabel={t('savings.splits.repeat.stop', 'Stop')}
+        onCancel={() => setConfirmStop(null)}
+        onConfirm={() => {
+          const rule = confirmStop;
+          setConfirmStop(null);
+          if (rule) void act(rule, () => apiClient.stopRecurringSplit(rule.id), false);
+        }}
+      />
       <ConfirmDialog
         isOpen={confirmCancel !== null}
         title={t('savings.splits.confirmCancelTitle', 'Cancel this split?')}

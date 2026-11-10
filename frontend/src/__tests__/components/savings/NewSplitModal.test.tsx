@@ -83,7 +83,7 @@ describe('repeat every month', () => {
     const onClose = jest.fn();
     render(<NewSplitModal isOpen onClose={onClose} onSuccess={jest.fn()} connections={[conn]} />);
     await fill();
-    fireEvent.click(screen.getByRole('checkbox', { name: /Repeat every month/ }));
+    fireEvent.click(screen.getByRole('checkbox', { name: /Repeat this bill/ }));
     fireEvent.click(screen.getByRole('button', { name: 'Split the bill' }));
     await waitFor(() => expect(apiClient.createRecurringSplit).toHaveBeenCalledWith(expect.objectContaining({
       connection_id: 'conn-1', description: 'Rent', total_amount: 30000, category_id: 'food',
@@ -93,11 +93,25 @@ describe('repeat every month', () => {
     expect(onClose).toHaveBeenCalled();
   });
 
+  it('repeats every year from the same day next year when chosen', async () => {
+    (apiClient.createSplit as jest.Mock).mockResolvedValue({ data: {} });
+    (apiClient.createRecurringSplit as jest.Mock).mockResolvedValue({ data: {} });
+    render(<NewSplitModal isOpen onClose={jest.fn()} onSuccess={jest.fn()} connections={[conn]} />);
+    await fill();
+    fireEvent.click(screen.getByRole('checkbox', { name: /Repeat this bill/ }));
+    fireEvent.change(screen.getByRole('combobox', { name: 'How often' }), { target: { value: 'yearly' } });
+    expect(screen.getByText(/From 2027-01-31, this bill is added and split the same way each year/)).toBeInTheDocument();
+    fireEvent.click(screen.getByRole('button', { name: 'Split the bill' }));
+    await waitFor(() => expect(apiClient.createRecurringSplit).toHaveBeenCalledWith(
+      expect.objectContaining({ frequency: 'yearly', start_date: '2026-01-31', skip_first: true }),
+    ));
+  });
+
   it('is only offered when you paid', async () => {
     render(<NewSplitModal isOpen onClose={jest.fn()} onSuccess={jest.fn()} connections={[conn]} />);
     await fill();
     fireEvent.click(screen.getByRole('button', { name: 'Bob paid' }));
-    expect(screen.queryByRole('checkbox', { name: /Repeat every month/ })).not.toBeInTheDocument();
+    expect(screen.queryByRole('checkbox', { name: /Repeat this bill/ })).not.toBeInTheDocument();
   });
 
   it('says so when only the repeating failed, and clears the form so it is not split twice', async () => {
@@ -107,7 +121,7 @@ describe('repeat every month', () => {
     const onClose = jest.fn();
     render(<NewSplitModal isOpen onClose={onClose} onSuccess={onSuccess} connections={[conn]} />);
     await fill();
-    fireEvent.click(screen.getByRole('checkbox', { name: /Repeat every month/ }));
+    fireEvent.click(screen.getByRole('checkbox', { name: /Repeat this bill/ }));
     fireEvent.click(screen.getByRole('button', { name: 'Split the bill' }));
     expect(await screen.findByText(/The bill was split, but it couldn’t be set to repeat/)).toBeInTheDocument();
     expect(onSuccess).toHaveBeenCalled();

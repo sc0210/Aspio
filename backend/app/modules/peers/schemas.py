@@ -323,6 +323,9 @@ class RecurringSplitOut(BaseModel):
     method: str
     my_share: float
     partner_share: float
+    # False when the viewer is the partner on someone else's rule: shares and
+    # partner_name are then from the viewer's side, and only the payer may stop it.
+    payer_is_me: bool = True
 
 
 class SplitAmend(BaseModel):

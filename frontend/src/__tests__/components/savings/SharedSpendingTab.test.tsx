@@ -393,19 +393,47 @@ describe('SharedSpendingTab cancel requests', () => {
 });
 
 describe('SharedSpendingTab repeating bills', () => {
-  it('lists a repeating bill and stops it', async () => {
+  const rule = (over: Record<string, unknown> = {}) => ({
+    id: 'r1', connection_id: 'conn-1', partner_name: 'Bob', description: 'Rent', total_amount: 30000,
+    currency: 'TWD', frequency: 'monthly', next_occurrence: '2026-12-07', method: 'equal',
+    my_share: 15000, partner_share: 15000, ...over,
+  });
+
+  it('lists a repeating bill and stops it after asking', async () => {
     api.listSplits.mockResolvedValue({ data: [] });
-    api.listRecurringSplits.mockResolvedValue({ data: [{
-      id: 'r1', connection_id: 'conn-1', partner_name: 'Bob', description: 'Rent', total_amount: 30000,
-      currency: 'TWD', frequency: 'monthly', next_occurrence: '2026-12-07', method: 'equal',
-      my_share: 15000, partner_share: 15000,
-    }] });
+    api.listRecurringSplits.mockResolvedValue({ data: [rule()] });
     api.stopRecurringSplit.mockResolvedValue({ data: null });
     renderTab();
-    expect(await screen.findByText('Rent')).toBeInTheDocument();
-    expect(screen.getByText(/monthly with Bob .* next 2026-12-07/)).toBeInTheDocument();
-    fireEvent.click(screen.getByRole('button', { name: 'Stop' }));
+    const section = await screen.findByRole('region', { name: 'Repeating bills' });
+    expect(within(section).getByText('Rent')).toBeInTheDocument();
+    expect(within(section).getByText('Every month')).toBeInTheDocument();
+    expect(within(section).getByText(/^You NT\$15,000 · Bob NT\$15,000 · next Dec 7$/)).toBeInTheDocument();
+    fireEvent.click(within(section).getByRole('button', { name: 'Stop' }));
+    // Nothing stops until it is confirmed.
+    expect(api.stopRecurringSplit).not.toHaveBeenCalled();
+    fireEvent.click(within(screen.getByRole('dialog')).getByRole('button', { name: 'Stop' }));
     await waitFor(() => expect(api.stopRecurringSplit).toHaveBeenCalledWith('r1'));
+  });
+
+  it('shows a bill the partner pays, from my side, with no Stop', async () => {
+    api.listSplits.mockResolvedValue({ data: [] });
+    api.listRecurringSplits.mockResolvedValue({ data: [rule({ payer_is_me: false, my_share: 12000, partner_share: 18000 })] });
+    renderTab();
+    const section = await screen.findByRole('region', { name: 'Repeating bills' });
+    expect(within(section).getByText('Bob pays')).toBeInTheDocument();
+    expect(within(section).getByText(/^You NT\$12,000 · Bob NT\$18,000/)).toBeInTheDocument();
+    expect(within(section).queryByRole('button', { name: 'Stop' })).toBeNull();
+  });
+
+  it('adds up my share as a monthly figure, a yearly bill counting a twelfth', async () => {
+    api.listSplits.mockResolvedValue({ data: [] });
+    api.listRecurringSplits.mockResolvedValue({ data: [
+      rule(), rule({ id: 'r2', description: 'Insurance', frequency: 'yearly', my_share: 6000, partner_share: 6000 }),
+    ] });
+    renderTab();
+    const section = await screen.findByRole('region', { name: 'Repeating bills' });
+    // 15,000 + 6,000 / 12
+    expect(within(section).getByText('Your share ≈ NT$15,500 a month')).toBeInTheDocument();
   });
 });
 

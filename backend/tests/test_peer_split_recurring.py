@@ -195,3 +195,39 @@ def test_next_occurrence_keeps_the_anchor_day(current, freq, anchor, expected):
     from app.modules.transactions.models import RecurringFrequency
     assert RecurringTransactionService._calculate_next_occurrence(
         current, RecurringFrequency(freq), 1, anchor) == expected
+
+
+async def test_the_partner_sees_a_repeating_bill_from_their_side(async_session, couple):
+    c = couple
+    out = await c["svc"].create_recurring(c["alice"].id, _rent(
+        c, start_date=date(2026, 12, 1), method="fixed", my_amount=Decimal("18000")))
+    # The payer: her share first, Bob named, hers to stop.
+    assert (out.my_share, out.partner_share, out.payer_is_me) == (18000.0, 12000.0, True)
+    [seen] = await c["svc"].list_recurring(c["bob"].id)
+    # Bob: the same rule, his share first, Alice named, not his to stop.
+    assert seen.id == out.id
+    assert (seen.my_share, seen.partner_share, seen.payer_is_me) == (12000.0, 18000.0, False)
+    assert seen.partner_name == c["alice"].name
+    assert (seen.description, seen.total_amount, seen.next_occurrence) == ("Rent", 30000.0, "2026-12-01")
+    # Someone on neither side sees nothing.
+    assert await c["svc"].list_recurring(c["eve"].id) == []
+
+
+async def test_the_partner_stops_seeing_it_once_stopped_or_unlinked(async_session, couple):
+    c = couple
+    first = await c["svc"].create_recurring(c["alice"].id, _rent(c, start_date=date(2026, 12, 1)))
+    await c["svc"].create_recurring(c["alice"].id, _rent(c, description="Internet", start_date=date(2026, 12, 3)))
+    await c["svc"].stop_recurring(c["alice"].id, uuid.UUID(first.id))
+    assert [r.description for r in await c["svc"].list_recurring(c["bob"].id)] == ["Internet"]
+    await PeerService(async_session).remove_connection(c["conn"].id, c["bob"].id)
+    assert await SplitService(async_session).list_recurring(c["bob"].id) == []
+    assert await SplitService(async_session).list_recurring(c["alice"].id) == []
+
+
+async def test_a_rule_of_alice_with_no_split_is_not_bobs_business(async_session, couple):
+    c = couple
+    out = await c["svc"].create_recurring(c["alice"].id, _rent(c, start_date=date(2026, 12, 1)))
+    rule = await async_session.get(RecurringTransaction, uuid.UUID(out.id))
+    rule.split_connection_id = None  # an ordinary recurring expense of hers
+    await async_session.commit()
+    assert await c["svc"].list_recurring(c["bob"].id) == []
