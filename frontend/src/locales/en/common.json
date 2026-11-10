@@ -84,7 +84,8 @@
     "statLife": "Life Wallet",
     "statNetWorth": "Net Worth",
     "statPortfolio": "Portfolio",
-    "youBadge": "You"
+    "youBadge": "You",
+    "statCashHoldings": "Cash in portfolio"
   },
   "currency": {
     "CNY": "Chinese Yuan",
@@ -718,7 +719,9 @@
       "overdue": "{{days}}d overdue",
       "progressAria": "{{title}} progress",
       "viewRecords": "View saving records",
-      "viewRecordsFor": "View saving records for {{title}}"
+      "viewRecordsFor": "View saving records for {{title}}",
+      "you": "You",
+      "pace": "{{amount}} a month between you reaches it on time"
     },
     "combined": "Combined",
     "completed": "Goal reached!",
@@ -756,7 +759,6 @@
     "inviteRequestSuffix": "wants to save together with you.",
     "inviteSharesFinances": "Accepting lets you both see each other’s wallet totals, debt and net worth.",
     "notePlaceholder": "Note",
-    "peerContribution": "{{name}}'s contribution",
     "peersLabel": "Members",
     "pendingLabel": "pending",
     "progress": "Progress",
@@ -967,7 +969,8 @@
         "clear": "Clear filters",
         "noMatch": "No bills match these filters.",
         "partner": "Partner",
-        "anyPartner": "Every partner"
+        "anyPartner": "Every partner",
+        "menus": "Filters"
       },
       "export": {
         "button": "Export CSV",
@@ -985,7 +988,8 @@
           "Myshare": "My share",
           "Partnershare": "Partner share"
         }
-      }
+      },
+      "settledWith": "All square with {{name}}"
     },
     "summary": {
       "active": "active",
@@ -1005,8 +1009,7 @@
     "targetAmountLabel": "Target Amount",
     "targetDateLabel": "Target Date (optional)",
     "title": "Savings Groups",
-    "userNotFound": "No user found with that username. Ask them to set a username in Settings → Profile.",
-    "yourContribution": "Your contribution"
+    "userNotFound": "No user found with that username. Ask them to set a username in Settings → Profile."
   },
   "settings": {
     "account": "Account",

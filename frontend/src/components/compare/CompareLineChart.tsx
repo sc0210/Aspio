@@ -13,6 +13,7 @@ import { useTranslation } from 'react-i18next';
 import type { CompareDataResponse, PeerStatCard } from '@/shared/types';
 import { formatCurrency as formatCurrencyUtil } from '@/utils/formatters';
 import { CURRENCIES } from '@/utils/constants';
+import { PERSON_COLORS, personColors } from './personColors';
 
 interface CompareLineChartProps {
   chart: CompareDataResponse['chart'];
@@ -21,12 +22,6 @@ interface CompareLineChartProps {
   currency: string;
 }
 
-// Per-user colour palette — matches portfolio chart's colour family
-const USER_COLORS = [
-  { line: '#3b82f6', area: '#3b82f6' },  // blue  (self)
-  { line: '#10b981', area: '#10b981' },  // green (peer 1)
-  { line: '#f97316', area: '#f97316' },  // orange (peer 2)
-];
 
 const currencySymbol = (currency: string) =>
   CURRENCIES.find((c) => c.code === currency)?.symbol ?? currency;
@@ -50,6 +45,8 @@ const formatDate = (dateStr: string) =>
   new Date(dateStr).toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
 
 export default function CompareLineChart({ chart, users, currency }: CompareLineChartProps) {
+  const colors = personColors(users.map((u) => u.user_id), users.find((u) => u.is_self)?.user_id);
+  const colorOf = (userId: string) => (colors.get(userId) ?? PERSON_COLORS[0]).hex;
   const { t } = useTranslation('common');
 
   if (chart.length <= 1) {
@@ -92,7 +89,7 @@ export default function CompareLineChart({ chart, users, currency }: CompareLine
           <LineChart data={chart} margin={{ top: 10, right: 16, left: 0, bottom: 0 }}>
             <defs>
               {users.map((user, index) => {
-                const color = USER_COLORS[index % USER_COLORS.length].line;
+                const color = colorOf(user.user_id);
                 return (
                   <linearGradient
                     key={user.user_id}
@@ -158,9 +155,10 @@ export default function CompareLineChart({ chart, users, currency }: CompareLine
                       {formatDate(label as string)}
                     </p>
                     <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
-                      {payload.map((entry, i) => {
-                        const color = USER_COLORS[i % USER_COLORS.length].line;
+                      {payload.map((entry) => {
                         const user = users.find((u) => u.user_id === entry.dataKey);
+                        // By person, not payload position: Recharts may order the payload differently.
+                        const color = colorOf(String(entry.dataKey));
                         return (
                           <div key={String(entry.dataKey)} style={{ display: 'flex', justifyContent: 'space-between', gap: '16px' }}>
                             <span style={{ fontSize: '12px', color: tooltipTextSecondary, display: 'flex', alignItems: 'center', gap: '6px' }}>
@@ -183,7 +181,7 @@ export default function CompareLineChart({ chart, users, currency }: CompareLine
             />
 
             {users.map((user, index) => {
-              const color = USER_COLORS[index % USER_COLORS.length].line;
+              const color = colorOf(user.user_id);
               return (
                 <Line
                   key={user.user_id}
@@ -210,8 +208,8 @@ export default function CompareLineChart({ chart, users, currency }: CompareLine
 
       {/* Inline legend — matches WalletTrendChart */}
       <div className="flex items-center justify-center gap-4 sm:gap-5 mt-3 text-xs">
-        {users.map((user, index) => {
-          const color = USER_COLORS[index % USER_COLORS.length].line;
+        {users.map((user) => {
+          const color = colorOf(user.user_id);
           return (
             <div key={user.user_id} className="flex items-center gap-1.5">
               <div className="w-3 h-1.5 rounded-full" style={{ backgroundColor: color }} />

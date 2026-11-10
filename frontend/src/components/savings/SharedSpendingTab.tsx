@@ -1,7 +1,7 @@
 'use client';
 
 import { RelatedMoneyLinks } from '@/components/layout/RelatedMoneyLinks';
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { Fragment, useCallback, useEffect, useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useQueryClient } from '@tanstack/react-query';
 import { PlusIcon } from '@heroicons/react/24/outline';
@@ -14,7 +14,7 @@ import SettleUpModal, { type SettleTarget } from './SettleUpModal';
 import AmendSplitModal from './AmendSplitModal';
 import SplitInsights from './SplitInsights';
 import SharedBillsFilter from './SharedBillsFilter';
-import { EMPTY_FILTER, filterSplits, type SplitFilter, partnerLabels } from './sharedSpendingStats';
+import { EMPTY_FILTER, filterSplits, monthLabel, monthOf, type SplitFilter, partnerLabels } from './sharedSpendingStats';
 import type { PeerBalanceOut, PeerConnectionOut, RecurringSplitOut, SettlementOut, SplitOut, SplitPolicy } from '@/shared/types';
 
 const money = (value: number, currency: string) =>
@@ -52,7 +52,7 @@ export interface SharedSpendingDemo {
  */
 export default function SharedSpendingTab({ connections, demo }: { connections: PeerConnectionOut[]; demo?: SharedSpendingDemo }) {
   const readOnly = demo !== undefined;
-  const { t } = useTranslation(['common', 'transactions']);
+  const { t, i18n } = useTranslation(['common', 'transactions']);
   const queryClient = useQueryClient();
   const [splits, setSplits] = useState<SplitOut[]>([]);
   const [balances, setBalances] = useState<PeerBalanceOut[]>([]);
@@ -216,13 +216,13 @@ export default function SharedSpendingTab({ connections, demo }: { connections: 
       <section aria-label={t('savings.splits.balances', 'Balances')} className="grid gap-3 sm:grid-cols-2">
         {balances.map((b) => (
           <div key={b.connection_id} className="bg-white dark:bg-gray-800 rounded-xl p-4 shadow-sm">
-            <p className="text-xs font-medium text-gray-600 dark:text-gray-400">{b.partner_name}</p>
+            {/* The sentence names the partner; a heading above it said it twice. */}
             {b.balances.every((x) => x.net === 0) ? (
-              <p className="mt-1 text-sm font-semibold text-gray-900 dark:text-white">
-                {t('savings.splits.settled', 'All square')}
+              <p className="text-sm font-semibold text-gray-900 dark:text-white">
+                {t('savings.splits.settledWith', 'All square with {{name}}', { name: b.partner_name })}
               </p>
             ) : b.balances.filter((x) => x.net !== 0).map((x) => (
-              <div key={x.currency} className="mt-1 flex items-center justify-between gap-2">
+              <div key={x.currency} className="flex items-center justify-between gap-2">
                 <p className={`text-sm font-semibold ${x.net > 0
                   ? 'text-prosperity-700 dark:text-prosperity-400' : 'text-error-700 dark:text-error-400'}`}>
                   {x.net > 0
@@ -440,8 +440,15 @@ export default function SharedSpendingTab({ connections, demo }: { connections: 
         {others.length > 0 && shownBills.length === 0 && (
           <p className="text-sm text-gray-600 dark:text-gray-400">{t('savings.splits.filter.noMatch', 'No bills match these filters.')}</p>
         )}
-        {shownBills.map((s) => (
-          <div key={s.id} className="bg-white dark:bg-gray-800 rounded-xl p-4 shadow-sm flex flex-col sm:flex-row sm:items-center gap-2">
+        {shownBills.map((s, i) => (
+          <Fragment key={s.id}>
+          {/* A month heading wherever the month changes: the list runs back a year or more. */}
+          {(i === 0 || monthOf(shownBills[i - 1].split_date) !== monthOf(s.split_date)) && (
+            <h4 className="pt-2 text-xs font-semibold uppercase tracking-wide text-gray-600 dark:text-gray-400">
+              {monthLabel(monthOf(s.split_date), i18n?.language || 'en')}
+            </h4>
+          )}
+          <div className="bg-white dark:bg-gray-800 rounded-xl p-4 shadow-sm flex flex-col sm:flex-row sm:items-center gap-2">
             <div className="flex-1 min-w-0">
               <p className="text-sm font-semibold text-gray-900 dark:text-white truncate">
                 {s.description}
@@ -502,6 +509,7 @@ export default function SharedSpendingTab({ connections, demo }: { connections: 
               </button>
             )}
           </div>
+          </Fragment>
         ))}
       </section>
 
