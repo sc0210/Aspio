@@ -12,13 +12,13 @@
 import { test, expect } from '@playwright/test';
 
 const CARD_FLOOR = 416; // 26rem, the grid's minmax floor
+const GAP = 8; // gap-2
 
-for (const { width, columns } of [
-  { width: 1280, columns: 1 }, // filter panel open: the list is ~630px (lg:grid-cols-2 fails here)
-  { width: 1520, columns: 2 }, // list ~870px, below 2xl (2xl:grid-cols-2 fails here)
-  { width: 1920, columns: 2 },
-]) {
-  test(`at ${width}px the day grid shows ${columns} column(s) of unclipped cards`, async ({ browser, baseURL }) => {
+// The expected count comes from the measured list width, so a few pixels of padding
+// can't flip it; each old rule still fails a width: lg:grid-cols-2 shows 2 at 1280
+// (where ~630px fits 1) and 2xl:grid-cols-2 shows 1 at 1520 (where ~870px fits 2).
+for (const width of [1280, 1520, 1920]) {
+  test(`at ${width}px every day grid fits as many >=416px cards as the list holds`, async ({ browser, baseURL }) => {
     const context = await browser.newContext({ viewport: { width, height: 900 }, timezoneId: 'Asia/Taipei' });
     await context.addInitScript(() => {
       localStorage.setItem('aspiro-language', 'en');
@@ -28,15 +28,23 @@ for (const { width, columns } of [
     const page = await context.newPage();
 
     await page.goto('/transactions');
-    const grid = page.locator('[class*="auto-fill"]').first();
-    await expect(grid).toBeVisible({ timeout: 60_000 });
+    const grids = page.locator('[class*="auto-fill"]');
+    await expect(grids.first()).toBeVisible({ timeout: 60_000 });
 
-    const layout = await grid.evaluate((el) => ({
-      columns: getComputedStyle(el).gridTemplateColumns.split(' ').length,
-      cardWidths: [...el.children].map((c) => c.getBoundingClientRect().width),
-    }));
-    expect(layout.columns).toBe(columns);
-    for (const w of layout.cardWidths) expect(w).toBeGreaterThanOrEqual(CARD_FLOOR);
+    const layouts = await grids.evaluateAll((els) =>
+      els.map((el) => ({
+        listWidth: el.clientWidth,
+        template: getComputedStyle(el).gridTemplateColumns,
+        cardWidths: [...el.children].map((c) => c.getBoundingClientRect().width),
+      })),
+    );
+    // auto-fill keeps card widths equal across days.
+    expect(new Set(layouts.map((l) => l.template)).size).toBe(1);
+    for (const { listWidth, template, cardWidths } of layouts) {
+      const expected = Math.max(1, Math.floor((listWidth + GAP) / (CARD_FLOOR + GAP)));
+      expect(template.split(' ').length).toBe(expected);
+      for (const w of cardWidths) expect(w).toBeGreaterThanOrEqual(Math.min(CARD_FLOOR, listWidth));
+    }
 
     // No description on the page is cut off.
     const clipped = await page
