@@ -1,4 +1,4 @@
-import { Transaction, PortfolioHolding, User, PeerConnectionOut, SharedGoalOut, SavingRecord, CompareDataResponse, PeerStatCard, SplitOut, SettlementOut, PeerBalanceOut } from '@/shared/types';
+import { Transaction, PortfolioHolding, User, PeerConnectionOut, SharedGoalOut, SavingRecord, CompareDataResponse, PeerStatCard, SplitOut, SettlementOut, PeerBalanceOut, RecurringSplitOut } from '@/shared/types';
 import type { DebtAccount } from '@/services/loanService';
 import { minimumsOnly } from '@/lib/finance/payoffPlan';
 import { businessToday } from '@/lib/portfolio/businessDate';
@@ -260,6 +260,21 @@ export const demoSplits: SplitOut[] = [
     demoSplit({ id: `demo-split-h${daysAgo}b`, description: `${theirs} (shared)`, category_name: theirs, total_amount: total,
       my_share: total / 2, split_date: splitDay(daysAgo + 3), payer_is_me: false, created_by_me: false }),
   ]),
+];
+
+// Repeating bills, from both sides: rent you pay and split with 小明, and a streaming
+// plan 小美 pays and splits with you (hers to stop). Next dates a few days ahead.
+const repeatDay = (daysAhead: number): string => splitDay(-daysAhead);
+export const demoRecurringSplits: RecurringSplitOut[] = [
+  { id: 'demo-repeat-rent', connection_id: 'demo-conn-1', partner_name: '小明', description: 'Rent',
+    total_amount: 24000, currency: 'TWD', frequency: 'monthly', next_occurrence: repeatDay(5), method: 'equal',
+    my_share: 12000, partner_share: 12000, payer_is_me: true },
+  { id: 'demo-repeat-internet', connection_id: 'demo-conn-1', partner_name: '小明', description: 'Home internet',
+    total_amount: 6000, currency: 'TWD', frequency: 'yearly', next_occurrence: repeatDay(40), method: 'equal',
+    my_share: 3000, partner_share: 3000, payer_is_me: true },
+  { id: 'demo-repeat-stream', connection_id: 'demo-conn-2', partner_name: '小美', description: 'Streaming plan',
+    total_amount: 390, currency: 'TWD', frequency: 'monthly', next_occurrence: repeatDay(12), method: 'equal',
+    my_share: 195, partner_share: 195, payer_is_me: false },
 ];
 
 export const demoSettlements: SettlementOut[] = [

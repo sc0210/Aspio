@@ -915,17 +915,26 @@
         "withdraw": "撤回請求"
       },
       "repeat": {
-        "label": "每月重複",
-        "hint": "從 {{date}} 起，每個月都會以相同方式新增並分攤這筆帳單，可隨時停止。",
         "failed": "帳單已分攤，但無法設定為每月重複：{{reason}}",
         "section": "重複的帳單",
-        "line": "{{amount}}，{{frequency}}與 {{name}} 分攤 · 你 {{mine}} / {{name}} {{theirs}} · 下次 {{next}}",
         "stop": "停止",
-        "frequency": {
+        "labelAny": "重複這筆帳單",
+        "howOften": "頻率",
+        "every": {
           "weekly": "每週",
           "monthly": "每月",
           "yearly": "每年"
-        }
+        },
+        "hints": {
+          "weekly": "從 {{date}} 起，每週都會以相同方式新增並分攤這筆帳單，可隨時停止。",
+          "monthly": "從 {{date}} 起，每個月都會以相同方式新增並分攤這筆帳單，可隨時停止。",
+          "yearly": "從 {{date}} 起，每年都會以相同方式新增並分攤這筆帳單，可隨時停止。"
+        },
+        "perMonth": "你的分攤 ≈ 每月 {{amount}}",
+        "theyPay": "{{name}} 付款",
+        "shares": "你 {{mine}} · {{name}} {{theirs}} · 下次 {{next}}",
+        "confirmTitle": "停止重複「{{name}}」？",
+        "confirmMessage": "之後不會再新增或分攤這筆帳單，已新增的帳單維持不變。"
       },
       "insights": {
         "title": "分析",

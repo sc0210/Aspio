@@ -21,7 +21,7 @@ import { ConfirmDialog } from '@/components/ui/ConfirmDialog';
 import SharedSpendingTab from '@/components/savings/SharedSpendingTab';
 import { withRecordTotals } from '@/components/savings/recordOwnership';
 import {
-  demoCompareData, demoPeerConnections, demoSavingRecords, demoSettlements, demoSharedGoals, demoSplitBalances, demoSplits,
+  demoCompareData, demoPeerConnections, demoRecurringSplits, demoSavingRecords, demoSettlements, demoSharedGoals, demoSplitBalances, demoSplits,
 } from '@/data/demoData';
 import type { CompareDataResponse, PeerConnectionOut, SharedGoalOut } from '@/shared/types';
 import { formatCurrency as formatCurrencyUtil } from '@/utils/formatters';
@@ -40,7 +40,7 @@ const CompareLineChart = dynamic(() => import('@/components/compare/CompareLineC
 const formatTWD = (value: number) => formatCurrencyUtil(value, 'TWD', { precision: 0 });
 
 // One object for the life of the module, so the tab's load effect doesn't re-run.
-const DEMO_SHARED_SPENDING = { splits: demoSplits, balances: demoSplitBalances, settlements: demoSettlements };
+const DEMO_SHARED_SPENDING = { splits: demoSplits, balances: demoSplitBalances, settlements: demoSettlements, recurring: demoRecurringSplits };
 
 type Tab = 'goals' | 'splits' | 'compare';
 const TABS: Tab[] = ['goals', 'splits', 'compare'];

@@ -570,6 +570,8 @@ export interface RecurringSplitOut {
   method: SplitMethod;
   my_share: number;
   partner_share: number;
+  /** False when a partner pays it and splits it with you: theirs to stop, shown for notice. */
+  payer_is_me?: boolean;
 }
 
 /** A proposed change to an accepted split, as one participant sees it. */

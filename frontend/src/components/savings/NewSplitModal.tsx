@@ -7,7 +7,7 @@ import { apiClient } from '@/lib/api-client';
 import { transactionService } from '@/services/transactionService';
 import { useDialog } from '@/hooks/useDialog';
 import { businessToday } from '@/lib/portfolio/businessDate';
-import { sameDayNextMonth } from '@/lib/savings/nextMonth';
+import { EVERY, nextOccurrence, type RepeatFrequency } from '@/lib/savings/nextMonth';
 import type { PeerConnectionOut, SplitMethod, TransactionCategory } from '@/shared/types';
 
 interface NewSplitModalProps {
@@ -38,6 +38,7 @@ export default function NewSplitModal({ isOpen, onClose, onSuccess, connections 
   const [myValue, setMyValue] = useState('');
   // Repeat monthly from next month (you pay it, so only when you paid).
   const [repeat, setRepeat] = useState(false);
+  const [frequency, setFrequency] = useState<RepeatFrequency>('monthly');
   const [categories, setCategories] = useState<TransactionCategory[]>([]);
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState('');
@@ -108,7 +109,7 @@ export default function NewSplitModal({ isOpen, onClose, onSuccess, connections 
           // on the 31st comes back on the 31st after a short month.
           start_date: date,
           skip_first: true,
-          frequency: 'monthly',
+          frequency,
           ...shares,
         });
       }
@@ -118,6 +119,7 @@ export default function NewSplitModal({ isOpen, onClose, onSuccess, connections 
       setTotal('');
       setMyValue('');
       setRepeat(false);
+      setFrequency('monthly');
     } catch (err) {
       // This month's bill is split; only the repeating failed. Say exactly that,
       // and clear the form so sending it again can't split the bill twice.
@@ -126,6 +128,7 @@ export default function NewSplitModal({ isOpen, onClose, onSuccess, connections 
       setTotal('');
       setMyValue('');
       setRepeat(false);
+      setFrequency('monthly');
       setError(t('savings.splits.repeat.failed', 'The bill was split, but it couldn’t be set to repeat: {{reason}}',
         { reason: err instanceof Error ? err.message : '' }));
     } finally {
@@ -255,16 +258,31 @@ export default function NewSplitModal({ isOpen, onClose, onSuccess, connections 
           </fieldset>
 
           {payer === 'me' && (
-            <label className="flex items-start gap-2 min-h-[44px] text-sm text-gray-700 dark:text-gray-300 cursor-pointer">
-              <input type="checkbox" checked={repeat} onChange={(e) => setRepeat(e.target.checked)}
-                className="mt-0.5 w-4 h-4 rounded border-gray-300 dark:border-gray-600 text-primary-600 focus-visible:ring-2 focus-visible:ring-primary-500" />
-              <span>
-                {t('savings.splits.repeat.label', 'Repeat every month')}
-                <span className="block text-xs text-gray-600 dark:text-gray-400">
-                  {t('savings.splits.repeat.hint', 'From {{date}}, this bill is added and split the same way each month. Stop it any time.', { date: date ? sameDayNextMonth(date) : '' })}
-                </span>
-              </span>
-            </label>
+            <div className="space-y-2">
+              <label className="flex items-center gap-2 min-h-[44px] text-sm text-gray-700 dark:text-gray-300 cursor-pointer">
+                <input type="checkbox" checked={repeat} onChange={(e) => setRepeat(e.target.checked)}
+                  className="w-4 h-4 rounded border-gray-300 dark:border-gray-600 text-primary-600 focus-visible:ring-2 focus-visible:ring-primary-500" />
+                {t('savings.splits.repeat.labelAny', 'Repeat this bill')}
+              </label>
+              {repeat && (
+                <div className="pl-6 space-y-1">
+                  <select id="split-frequency" value={frequency} onChange={(e) => setFrequency(e.target.value as RepeatFrequency)}
+                    aria-label={t('savings.splits.repeat.howOften', 'How often')} className={INPUT}>
+                    {(['weekly', 'monthly', 'yearly'] as const).map((f) => (
+                      <option key={f} value={f}>{t(`savings.splits.repeat.every.${f}`, EVERY[f])}</option>
+                    ))}
+                  </select>
+                  {/* One sentence per period: "each week/month/year" doesn't splice into every language. */}
+                  <p className="text-xs text-gray-600 dark:text-gray-400">
+                    {t(`savings.splits.repeat.hints.${frequency}`, {
+                      weekly: 'From {{date}}, this bill is added and split the same way each week. Stop it any time.',
+                      monthly: 'From {{date}}, this bill is added and split the same way each month. Stop it any time.',
+                      yearly: 'From {{date}}, this bill is added and split the same way each year. Stop it any time.',
+                    }[frequency], { date: date ? nextOccurrence(date, frequency) : '' })}
+                  </p>
+                </div>
+              )}
+            </div>
           )}
 
           <p className="text-xs text-gray-600 dark:text-gray-400">
