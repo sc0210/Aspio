@@ -12,7 +12,7 @@ httpx==0.28.1
 aiosqlite==0.22.1
 
 # Code quality
-ruff==0.17.3
+ruff==0.17.4
 black==26.10.1
 mypy==2.4.1
 pre-commit==4.7.0
