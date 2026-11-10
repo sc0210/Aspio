@@ -63,7 +63,8 @@ export default function SharedSpendingTab({ connections, demo }: { connections: 
   const [error, setError] = useState('');
   const [busyId, setBusyId] = useState<string | null>(null);
   const [isNewOpen, setIsNewOpen] = useState(false);
-  const [confirmCancel, setConfirmCancel] = useState<SplitOut | null>(null);
+  // Cancelling, directly (the payer) or by accepting the partner's request: both ask first.
+  const [confirmCancel, setConfirmCancel] = useState<{ split: SplitOut; viaRequest: boolean } | null>(null);
   const [billFilter, setBillFilter] = useState<SplitFilter>(EMPTY_FILTER);
   const [settlements, setSettlements] = useState<SettlementOut[]>([]);
   const [settleTarget, setSettleTarget] = useState<SettleTarget | null>(null);
@@ -134,7 +135,11 @@ export default function SharedSpendingTab({ connections, demo }: { connections: 
       await run();
       await (ledger ? changed() : repaid());
     } catch (err) {
-      setError(err instanceof Error ? err.message : t('savings.splits.errors.actionFailed', 'That didn’t work'));
+      const message = err instanceof Error ? err.message : t('savings.splits.errors.actionFailed', 'That didn’t work');
+      // A refusal often means the bill moved under this view (409): show it as it is
+      // now. The reload clears errors on success, so the message goes after it.
+      await load();
+      setError(message);
     } finally {
       setBusyId(null);
     }
@@ -263,22 +268,33 @@ export default function SharedSpendingTab({ connections, demo }: { connections: 
           <h3 className="text-sm font-semibold text-gray-900 dark:text-white">{t('savings.splits.inbox', 'Waiting for you')}</h3>
           {changesForMe.map((s) => {
             const change = s.pending_amendment!;
+            const asksCancel = change.kind === 'cancel';
             return (
               <div key={`change-${s.id}`} className="bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-700 rounded-xl p-4 flex flex-col sm:flex-row sm:items-center gap-3">
                 <div className="flex-1 text-sm text-amber-900 dark:text-amber-100">
                   <p className="font-semibold">
-                    {t('savings.splits.amend.prompt', '{{name}} wants to change “{{description}}”', { name: s.partner_name, description: s.description })}
+                    {asksCancel
+                      ? t('savings.splits.cancelRequest.prompt', '{{name}} asks to cancel “{{description}}”', { name: s.partner_name, description: s.description })
+                      : t('savings.splits.amend.prompt', '{{name}} wants to change “{{description}}”', { name: s.partner_name, description: s.description })}
                   </p>
                   <p>
-                    {change.description !== s.description && `${change.description} · `}
-                    {money(s.total_amount, s.currency)} → {money(change.total_amount, s.currency)} · {t('savings.splits.shares', 'you {{mine}} / {{name}} {{theirs}}', {
-                      mine: money(change.my_share, s.currency), theirs: money(change.partner_share, s.currency), name: s.partner_name,
-                    })}
+                    {asksCancel
+                      ? t('savings.splits.cancelRequest.detail', 'If you accept, you carry the whole {{total}} again and {{name}}’s share is removed.', {
+                        total: money(s.total_amount, s.currency), name: s.partner_name,
+                      })
+                      : <>
+                        {change.description !== s.description && `${change.description} · `}
+                        {money(s.total_amount, s.currency)} → {money(change.total_amount, s.currency)} · {t('savings.splits.shares', 'you {{mine}} / {{name}} {{theirs}}', {
+                          mine: money(change.my_share, s.currency), theirs: money(change.partner_share, s.currency), name: s.partner_name,
+                        })}
+                      </>}
                   </p>
                 </div>
                 {!readOnly && <div className="flex gap-2">
                   <button type="button" disabled={busyId === s.id}
-                    onClick={() => act(s, () => apiClient.respondToAmendment(s.id, 'accept'))}
+                    onClick={() => (asksCancel
+                      ? setConfirmCancel({ split: s, viaRequest: true })
+                      : act(s, () => apiClient.respondToAmendment(s.id, 'accept')))}
                     className="min-h-[44px] px-4 rounded-lg bg-green-700 hover:bg-green-800 text-white text-sm font-medium disabled:opacity-50">
                     {t('savings.accept', 'Accept')}
                   </button>
@@ -301,7 +317,10 @@ export default function SharedSpendingTab({ connections, demo }: { connections: 
               </div>
               {!readOnly && <div className="flex gap-2">
                 <button type="button" disabled={busyId === s.id}
-                  onClick={() => act(s, () => apiClient.respondToSplit(s.id, { action: 'accept' }))}
+                  onClick={() => act(s, () => apiClient.respondToSplit(s.id, {
+                    // What this card shows: refused if the creator has edited it since.
+                    action: 'accept', seen_total: s.total_amount, seen_my_share: s.my_share,
+                  }))}
                   className="min-h-[44px] px-4 rounded-lg bg-green-700 hover:bg-green-800 text-white text-sm font-medium disabled:opacity-50">
                   {t('savings.accept', 'Accept')}
                 </button>
@@ -427,7 +446,12 @@ export default function SharedSpendingTab({ connections, demo }: { connections: 
                   mine: money(s.my_share, s.currency), theirs: money(s.partner_share, s.currency), name: s.partner_name,
                 })}
               </p>
-              {s.pending_amendment?.proposed_by_me && (
+              {s.pending_amendment?.proposed_by_me && s.pending_amendment.kind === 'cancel' && (
+                <p className="text-xs text-amber-800 dark:text-amber-200">
+                  {t('savings.splits.cancelRequest.sent', 'You asked {{name}} to cancel this split', { name: s.partner_name })}
+                </p>
+              )}
+              {s.pending_amendment?.proposed_by_me && s.pending_amendment.kind !== 'cancel' && (
                 <p className="text-xs text-amber-800 dark:text-amber-200">
                   {t('savings.splits.amend.sent', 'Change sent: {{total}} · you {{mine}} / {{name}} {{theirs}}', {
                     total: money(s.pending_amendment.total_amount, s.currency),
@@ -440,10 +464,12 @@ export default function SharedSpendingTab({ connections, demo }: { connections: 
             {!readOnly && s.pending_amendment?.proposed_by_me && (
               <button type="button" disabled={busyId === s.id} onClick={() => act(s, () => apiClient.withdrawAmendment(s.id), false)}
                 className="min-h-[44px] px-3 rounded-lg text-sm font-medium text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 disabled:opacity-50">
-                {t('savings.splits.amend.withdraw', 'Withdraw change')}
+                {s.pending_amendment.kind === 'cancel'
+                  ? t('savings.splits.cancelRequest.withdraw', 'Withdraw request')
+                  : t('savings.splits.amend.withdraw', 'Withdraw change')}
               </button>
             )}
-            {!readOnly && s.status === 'active' && !s.pending_amendment && (
+            {!readOnly && ((s.status === 'active' && !s.pending_amendment) || (s.status === 'proposed' && s.created_by_me)) && (
               <button type="button" disabled={busyId === s.id} onClick={() => setAmendTarget(s)}
                 className="min-h-[44px] px-3 rounded-lg text-sm font-medium text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 disabled:opacity-50">
                 {t('savings.splits.amend.button', 'Change')}
@@ -455,8 +481,14 @@ export default function SharedSpendingTab({ connections, demo }: { connections: 
                 {t('savings.splits.withdraw', 'Withdraw')}
               </button>
             )}
+            {!readOnly && s.status === 'active' && !s.payer_is_me && !s.pending_amendment && (
+              <button type="button" disabled={busyId === s.id} onClick={() => act(s, () => apiClient.requestCancelSplit(s.id), false)}
+                className="min-h-[44px] px-3 rounded-lg text-sm font-medium text-error-700 dark:text-error-400 hover:bg-error-50 dark:hover:bg-error-900/20 disabled:opacity-50">
+                {t('savings.splits.cancelRequest.button', 'Ask to cancel')}
+              </button>
+            )}
             {!readOnly && s.status === 'active' && s.payer_is_me && (
-              <button type="button" disabled={busyId === s.id} onClick={() => setConfirmCancel(s)}
+              <button type="button" disabled={busyId === s.id} onClick={() => setConfirmCancel({ split: s, viaRequest: false })}
                 className="min-h-[44px] px-3 rounded-lg text-sm font-medium text-error-700 dark:text-error-400 hover:bg-error-50 dark:hover:bg-error-900/20 disabled:opacity-50">
                 {t('savings.splits.cancel', 'Cancel split')}
               </button>
@@ -466,18 +498,20 @@ export default function SharedSpendingTab({ connections, demo }: { connections: 
       </section>
 
       <NewSplitModal isOpen={isNewOpen} onClose={() => setIsNewOpen(false)} onSuccess={() => void changed()} connections={connections} />
-      <AmendSplitModal split={amendTarget} onClose={() => setAmendTarget(null)} onSuccess={() => void load()} />
+      <AmendSplitModal split={amendTarget} onClose={() => setAmendTarget(null)} onSuccess={() => void changed()} />
       <SettleUpModal target={settleTarget} onClose={() => setSettleTarget(null)} onSuccess={() => void repaid()} />
       <ConfirmDialog
         isOpen={confirmCancel !== null}
         title={t('savings.splits.confirmCancelTitle', 'Cancel this split?')}
-        message={t('savings.splits.confirmCancelMessage', 'You’ll carry the whole bill again and {{name}}’s share is removed from their account.', { name: confirmCancel?.partner_name ?? '' })}
+        message={t('savings.splits.confirmCancelMessage', 'You’ll carry the whole bill again and {{name}}’s share is removed from their account.', { name: confirmCancel?.split.partner_name ?? '' })}
         confirmLabel={t('savings.splits.cancel', 'Cancel split')}
         onCancel={() => setConfirmCancel(null)}
         onConfirm={() => {
-          const s = confirmCancel;
+          const pending = confirmCancel;
           setConfirmCancel(null);
-          if (s) void act(s, () => apiClient.cancelSplit(s.id));
+          if (!pending) return;
+          const { split: s, viaRequest } = pending;
+          void act(s, () => (viaRequest ? apiClient.respondToAmendment(s.id, 'accept') : apiClient.cancelSplit(s.id)));
         }}
       />
     </div>

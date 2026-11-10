@@ -581,6 +581,8 @@ export interface AmendmentOut {
   partner_share: number;
   method: SplitMethod;
   description: string;
+  /** 'cancel': the non-payer asks the payer to cancel the split. */
+  kind?: 'change' | 'cancel';
 }
 
 /** Propose a change; my_percent / my_amount are yours, as when splitting. */
@@ -612,6 +614,8 @@ export interface SplitOut {
   my_share_status: 'proposed' | 'accepted' | 'declined';
   partner_share_status: 'proposed' | 'accepted' | 'declined';
   my_transaction_id: string | null;
+  /** Split from an expense the payer recorded: its total is that expense's. */
+  from_recorded_expense?: boolean;
   /** An open proposed change to this (accepted) split, if any. */
   pending_amendment?: AmendmentOut | null;
 }

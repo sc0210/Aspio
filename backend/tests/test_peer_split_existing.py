@@ -15,7 +15,7 @@ from fastapi import HTTPException
 from sqlalchemy import select
 
 from app.modules.peers.models import PeerSplit
-from app.modules.peers.schemas import SplitFromTransaction
+from app.modules.peers.schemas import SplitAmend, SplitFromTransaction
 from app.core.exceptions import BusinessLogicException
 from app.modules.peers.service import PeerService
 from app.modules.transactions.models import (
@@ -188,3 +188,35 @@ async def test_your_own_expense_cant_be_changed_to_a_zero_share(async_session, c
     assert err.value.status_code == 422
     row = await _row(async_session, txn_id)
     assert (row.is_deleted, row.amount) == (False, Decimal("500"))
+
+
+async def test_an_unanswered_split_of_an_expense_keeps_its_total(async_session, couple):
+    c = couple
+    txn_id = await _expense(async_session, c)
+    sid = uuid.UUID((await c["svc"].split_transaction(c["alice"].id, _body(c, txn_id))).id)
+    with pytest.raises(HTTPException) as err:
+        await c["svc"].propose_amendment(c["alice"].id, sid, SplitAmend(total_amount=Decimal("900")))
+    assert err.value.status_code == 422
+    # The division can change; the expense stays whole until Bob answers.
+    await c["svc"].propose_amendment(c["alice"].id, sid, SplitAmend(
+        total_amount=Decimal("1000"), method="fixed", my_amount=Decimal("700")))
+    assert (await _row(async_session, txn_id)).amount == Decimal("1000")
+    await c["svc"].void(c["alice"].id, sid)
+    row = await _row(async_session, txn_id)
+    assert (row.amount, row.peer_split_share_id, row.description) == (Decimal("1000"), None, "Groceries")
+
+
+async def test_the_payer_share_of_a_recorded_expense_is_never_zero(async_session, couple):
+    """Accepted, a 0 share would soft-delete the expense the payer recorded."""
+    c = couple
+    txn_id = await _expense(async_session, c)
+    with pytest.raises(HTTPException) as err:
+        await c["svc"].split_transaction(c["alice"].id, _body(c, txn_id, method="fixed", my_amount=Decimal("0")))
+    assert err.value.status_code == 422
+    sid = uuid.UUID((await c["svc"].split_transaction(c["alice"].id, _body(c, txn_id))).id)
+    with pytest.raises(HTTPException) as err:  # nor by editing it before Bob answers
+        await c["svc"].propose_amendment(c["alice"].id, sid, SplitAmend(
+            total_amount=Decimal("1000"), method="fixed", my_amount=Decimal("0")))
+    assert err.value.status_code == 422
+    await c["svc"].respond(c["bob"].id, sid, "accept", None, "life")
+    assert (await _row(async_session, txn_id)).amount == Decimal("500")

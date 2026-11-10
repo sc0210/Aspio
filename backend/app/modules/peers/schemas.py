@@ -277,6 +277,10 @@ class SplitRespond(BaseModel):
     # Your own row: pick your category and wallet (Life or Emergency only).
     category_id: Optional[UUID] = None
     wallet_type: Literal["life", "emergency"] = "life"
+    # The figures you saw. The creator may edit an unanswered split, so an accept
+    # that carries them is refused (409) if they've changed since.
+    seen_total: Optional[Decimal] = Field(None, gt=0, decimal_places=2)
+    seen_my_share: Optional[Decimal] = Field(None, ge=0, decimal_places=2)
 
 
 class RecurringSplitCreate(BaseModel):
@@ -322,8 +326,8 @@ class RecurringSplitOut(BaseModel):
 
 
 class SplitAmend(BaseModel):
-    """Body for POST /peers/splits/{id}/amend: a change to an accepted split that
-    your partner must accept. my_percent / my_amount are yours, as when splitting."""
+    """Body for POST /peers/splits/{id}/amend: a change your partner must accept,
+    or, on a split they haven't answered yet, one that applies at once. my_percent / my_amount are yours, as when splitting."""
 
     total_amount: Decimal = Field(..., gt=0, decimal_places=2)
     method: Literal["equal", "percent", "fixed"] = "equal"
@@ -353,6 +357,8 @@ class AmendmentOut(BaseModel):
     partner_share: float
     method: str
     description: str
+    # "change", or "cancel": the non-payer asks the payer to cancel the split.
+    kind: str = "change"
 
 
 class SplitOut(BaseModel):
@@ -377,6 +383,8 @@ class SplitOut(BaseModel):
     my_share_status: str
     partner_share_status: str
     my_transaction_id: Optional[str]
+    # Split from an expense the payer had recorded: its total is that expense's.
+    from_recorded_expense: bool = False
     # An open proposed change to this (accepted) split, if any.
     pending_amendment: Optional[AmendmentOut] = None
 

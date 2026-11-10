@@ -306,7 +306,8 @@
     "updating": "更新中…",
     "walletPlaceholder": "重新分配錢包",
     "holdingLinkedSkipped": "有 {{count}} 筆選取的紀錄屬於投資組合持倉，已保持不變。請到投資組合修改。",
-    "split": "與夥伴分攤"
+    "split": "與夥伴分攤",
+    "manageSplit": "管理分帳"
   },
   "monthlySummary": "月度總結",
   "monthlySummaryPage": {

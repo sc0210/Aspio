@@ -595,7 +595,11 @@ class ApiClient {
 
   async respondToSplit(
     splitId: string,
-    body: { action: 'accept' | 'decline'; category_id?: string | null; wallet_type?: 'life' | 'emergency' },
+    body: {
+      action: 'accept' | 'decline'; category_id?: string | null; wallet_type?: 'life' | 'emergency';
+      /** The figures the accept was made on; the server refuses it if they've changed. */
+      seen_total?: number; seen_my_share?: number;
+    },
   ): Promise<ApiResponse<SplitOut>> {
     return this.post<SplitOut>(`/peers/splits/${splitId}/respond`, body);
   }
@@ -626,6 +630,10 @@ class ApiClient {
 
   async amendSplit(splitId: string, body: SplitAmend): Promise<ApiResponse<SplitOut>> {
     return this.post<SplitOut>(`/peers/splits/${splitId}/amend`, body);
+  }
+
+  async requestCancelSplit(splitId: string): Promise<ApiResponse<SplitOut>> {
+    return this.post<SplitOut>(`/peers/splits/${splitId}/cancel-request`, {});
   }
 
   async respondToAmendment(splitId: string, action: 'accept' | 'decline'): Promise<ApiResponse<SplitOut>> {

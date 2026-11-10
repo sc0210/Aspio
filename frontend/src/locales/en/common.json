@@ -896,11 +896,21 @@
         "button": "Change",
         "title": "Change this split",
         "total": "Total ({{currency}})",
+        "totalLocked": "This is the expense you recorded, so its total stays.",
         "note": "Nothing changes until {{name}} accepts. Then both of your accounts take the new shares.",
+        "noteUnanswered": "{{name}} hasn’t answered yet, so this changes now. They’ll see the updated bill.",
         "submit": "Send the change",
+        "submitUnanswered": "Update the bill",
         "prompt": "{{name}} wants to change “{{description}}”",
         "sent": "Change sent: {{total}} · you {{mine}} / {{name}} {{theirs}}",
         "withdraw": "Withdraw change"
+      },
+      "cancelRequest": {
+        "button": "Ask to cancel",
+        "prompt": "{{name}} asks to cancel “{{description}}”",
+        "detail": "If you accept, you carry the whole {{total}} again and {{name}}’s share is removed.",
+        "sent": "You asked {{name}} to cancel this split",
+        "withdraw": "Withdraw request"
       },
       "repeat": {
         "label": "Repeat every month",

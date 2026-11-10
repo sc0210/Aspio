@@ -19,8 +19,9 @@ const INPUT =
 const LABEL = 'block text-xs font-medium text-gray-700 dark:text-gray-300 mb-1';
 
 /**
- * Propose a change to an accepted split: a new total, how it divides, or the
- * description. Nothing changes until the partner accepts; the payer stays.
+ * Change a split: a new total, how it divides, or the description; the payer
+ * stays. An accepted split changes only when the partner accepts. One they
+ * haven't answered yet is the creator's to edit, and changes now.
  */
 export default function AmendSplitModal({ split, onClose, onSuccess }: AmendSplitModalProps) {
   const { t } = useTranslation('common');
@@ -48,10 +49,16 @@ export default function AmendSplitModal({ split, onClose, onSuccess }: AmendSpli
     const v = parseFloat(myValue) || 0;
     return method === 'percent' ? (totalNum * v) / 100 : v;
   }, [method, totalNum, myValue]);
-  const invalidShare = method !== 'equal' && (myValue === '' || myShare < 0 || myShare > totalNum);
+  // A split of an expense the payer recorded keeps a payer share above 0: 0 would delete that expense.
+  const payerShare = split?.payer_is_me ? myShare : totalNum - myShare;
+  const invalidShare = (method !== 'equal' && (myValue === '' || myShare < 0 || myShare > totalNum))
+    || (split?.from_recorded_expense === true && payerShare <= 0);
 
   const { panelRef, dialogProps } = useDialog({ isOpen, onClose });
   if (!split) return null;
+  const unanswered = split.status === 'proposed';
+  // That total is an expense the payer recorded; withdrawing hands it back as it was.
+  const totalLocked = unanswered && split.from_recorded_expense === true;
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -108,7 +115,14 @@ export default function AmendSplitModal({ split, onClose, onSuccess }: AmendSpli
               {t('savings.splits.amend.total', 'Total ({{currency}})', { currency: split.currency })}
             </label>
             <input id="amend-total" type="number" inputMode="decimal" min="0.01" step="0.01" required value={total}
-              onWheel={(e) => e.currentTarget.blur()} onChange={(e) => setTotal(e.target.value)} className={INPUT} />
+              readOnly={totalLocked} aria-describedby={totalLocked ? 'amend-total-locked' : undefined}
+              onWheel={(e) => e.currentTarget.blur()} onChange={(e) => setTotal(e.target.value)}
+              className={`${INPUT} ${totalLocked ? 'opacity-60 cursor-not-allowed' : ''}`} />
+            {totalLocked && (
+              <p id="amend-total-locked" className="mt-1 text-xs text-gray-600 dark:text-gray-400">
+                {t('savings.splits.amend.totalLocked', 'This is the expense you recorded, so its total stays.')}
+              </p>
+            )}
           </div>
           <fieldset>
             <legend className={LABEL}>{t('savings.splits.how', 'How to split')}</legend>
@@ -141,12 +155,18 @@ export default function AmendSplitModal({ split, onClose, onSuccess }: AmendSpli
             )}
           </fieldset>
           <p className="text-xs text-gray-600 dark:text-gray-400">
-            {t('savings.splits.amend.note', 'Nothing changes until {{name}} accepts. Then both of your accounts take the new shares.', { name: split.partner_name })}
+            {unanswered
+              ? t('savings.splits.amend.noteUnanswered', '{{name}} hasn’t answered yet, so this changes now. They’ll see the updated bill.', { name: split.partner_name })
+              : t('savings.splits.amend.note', 'Nothing changes until {{name}} accepts. Then both of your accounts take the new shares.', { name: split.partner_name })}
           </p>
           {error && <p role="alert" className="text-xs text-error-700 dark:text-error-400">{error}</p>}
           <button type="submit" disabled={submitting || totalNum <= 0 || invalidShare || !description.trim()}
             className="w-full min-h-[44px] rounded-lg bg-primary-700 hover:bg-primary-800 text-white text-sm font-semibold disabled:opacity-50">
-            {submitting ? t('savings.sending', 'Sending…') : t('savings.splits.amend.submit', 'Send the change')}
+            {submitting
+              ? t('savings.sending', 'Sending…')
+              : unanswered
+                ? t('savings.splits.amend.submitUnanswered', 'Update the bill')
+                : t('savings.splits.amend.submit', 'Send the change')}
           </button>
         </form>
       </div>
