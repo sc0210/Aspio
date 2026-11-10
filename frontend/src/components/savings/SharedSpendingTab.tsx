@@ -14,7 +14,7 @@ import SettleUpModal, { type SettleTarget } from './SettleUpModal';
 import AmendSplitModal from './AmendSplitModal';
 import SplitInsights from './SplitInsights';
 import SharedBillsFilter from './SharedBillsFilter';
-import { EMPTY_FILTER, filterSplits, type SplitFilter } from './sharedSpendingStats';
+import { EMPTY_FILTER, filterSplits, type SplitFilter, partnerLabels } from './sharedSpendingStats';
 import type { PeerBalanceOut, PeerConnectionOut, RecurringSplitOut, SettlementOut, SplitOut, SplitPolicy } from '@/shared/types';
 
 const money = (value: number, currency: string) =>
@@ -176,6 +176,13 @@ export default function SharedSpendingTab({ connections, demo }: { connections: 
   const toConfirm = settlements.filter((p) => p.status === 'proposed' && !p.created_by_me);
   const repayments = settlements.filter((p) => !(p.status === 'proposed' && !p.created_by_me));
   const shownBills = useMemo(() => filterSplits(others, billFilter), [others, billFilter]);
+  // One naming for partners everywhere on the tab, from every bill (see partnerLabels).
+  const labels = useMemo(() => partnerLabels(splits), [splits]);
+  // Insights follow the partner choice (only that one: month and the rest have their own controls there).
+  const insightSplits = useMemo(
+    () => (billFilter.partner ? splits.filter((s) => s.connection_id === billFilter.partner) : splits),
+    [splits, billFilter.partner],
+  );
 
   return (
     <div className="space-y-6">
@@ -418,7 +425,8 @@ export default function SharedSpendingTab({ connections, demo }: { connections: 
       )}
 
       {/* What the accepted bills add up to */}
-      <SplitInsights splits={splits} />
+      <SplitInsights splits={insightSplits}
+        partnerName={billFilter.partner ? labels.get(billFilter.partner) : undefined} partnerLabels={labels} />
 
       {/* History */}
       <section aria-label={t('savings.splits.history', 'Shared bills')} className="space-y-2">
@@ -427,7 +435,7 @@ export default function SharedSpendingTab({ connections, demo }: { connections: 
           <p className="text-sm text-gray-600 dark:text-gray-400">{t('savings.splits.empty', 'No shared bills yet.')}</p>
         )}
         {others.length > 0 && (
-          <SharedBillsFilter splits={others} shown={shownBills} filter={billFilter} onChange={setBillFilter} />
+          <SharedBillsFilter splits={others} shown={shownBills} filter={billFilter} onChange={setBillFilter} partnerLabels={labels} />
         )}
         {others.length > 0 && shownBills.length === 0 && (
           <p className="text-sm text-gray-600 dark:text-gray-400">{t('savings.splits.filter.noMatch', 'No bills match these filters.')}</p>

@@ -947,7 +947,8 @@
         "legend": "圖例",
         "you": "你",
         "trendAlt": "每月共同支出，你與 {{name}} 的部分",
-        "month": "月份"
+        "month": "月份",
+        "withPartner": "與{{name}}"
       },
       "filter": {
         "search": "搜尋共同帳單",
@@ -963,7 +964,9 @@
         "partnerPaid": "夥伴付的",
         "showing": "顯示 {{shown}} / {{total}} 筆",
         "clear": "清除篩選",
-        "noMatch": "沒有符合篩選條件的帳單。"
+        "noMatch": "沒有符合篩選條件的帳單。",
+        "partner": "夥伴",
+        "anyPartner": "所有夥伴"
       },
       "export": {
         "button": "匯出 CSV",

@@ -4,7 +4,7 @@ import { useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
 import { ArrowDownTrayIcon, MagnifyingGlassIcon } from '@heroicons/react/24/outline';
 import type { SplitOut, SplitStatus } from '@/shared/types';
-import { CSV_HEADER, EMPTY_FILTER, NO_CATEGORY, filterOptions, isFiltered, monthLabel as formatMonth, splitsCsv, type SplitFilter } from './sharedSpendingStats';
+import { CSV_HEADER, EMPTY_FILTER, type PartnerLabels, NO_CATEGORY, filterOptions, isFiltered, monthLabel as formatMonth, splitsCsv, type SplitFilter } from './sharedSpendingStats';
 
 const STATUSES: SplitStatus[] = ['proposed', 'active', 'declined', 'voided'];
 const FIELD = 'min-h-[44px] rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-sm text-gray-900 dark:text-white px-2';
@@ -16,12 +16,14 @@ interface SharedBillsFilterProps {
   shown: SplitOut[];
   filter: SplitFilter;
   onChange: (next: SplitFilter) => void;
+  /** Built from every bill, so the menu names partners as the insights do. */
+  partnerLabels: PartnerLabels;
 }
 
 /** Filter the Shared bills list and export what it shows as CSV. */
-export default function SharedBillsFilter({ splits, shown, filter, onChange }: SharedBillsFilterProps) {
+export default function SharedBillsFilter({ splits, shown, filter, onChange, partnerLabels }: SharedBillsFilterProps) {
   const { t, i18n } = useTranslation(['common', 'transactions']);
-  const options = useMemo(() => filterOptions(splits, filter), [splits, filter]);
+  const options = useMemo(() => filterOptions(splits, filter, partnerLabels), [splits, filter, partnerLabels]);
   const set = (patch: Partial<SplitFilter>) => onChange({ ...filter, ...patch });
 
   const monthLabel = (m: string) => formatMonth(m, i18n?.language || 'en');
@@ -37,7 +39,10 @@ export default function SharedBillsFilter({ splits, shown, filter, onChange }: S
     const url = URL.createObjectURL(new Blob(['﻿', csv], { type: 'text/csv;charset=utf-8' }));
     const link = document.createElement('a');
     link.href = url;
-    link.download = `shared-bills${filter.month ? `-${filter.month}` : ''}.csv`;
+    // A partner's name is theirs to choose: keep letters and digits (Chinese too), short.
+    const partnerName = options.partners.find((p) => p.connectionId === filter.partner)?.name
+      ?.replace(/[^\p{L}\p{N}_-]+/gu, '_').slice(0, 30);
+    link.download = `shared-bills${partnerName ? `-${partnerName}` : ''}${filter.month ? `-${filter.month}` : ''}.csv`;
     document.body.appendChild(link);
     link.click();
     link.remove();
@@ -76,6 +81,18 @@ export default function SharedBillsFilter({ splits, shown, filter, onChange }: S
           <option value="me">{t('savings.splits.filter.iPaid', 'I paid')}</option>
           <option value="partner">{t('savings.splits.filter.partnerPaid', 'Partner paid')}</option>
         </select>
+        {/* Only worth a menu with more than one partner; a kept choice still shows to be undone. */}
+        {(options.partners.length > 1 || filter.partner !== '') && (
+          <select value={filter.partner} onChange={(e) => set({ partner: e.target.value })} className={FIELD}
+            aria-label={t('savings.splits.filter.partner', 'Partner')}>
+            <option value="">{t('savings.splits.filter.anyPartner', 'Every partner')}</option>
+            {options.partners.map((p) => (
+              <option key={p.connectionId} value={p.connectionId}>
+                {p.name ?? t('savings.splits.export.partner', 'Partner')}
+              </option>
+            ))}
+          </select>
+        )}
         <button type="button" onClick={exportCsv} disabled={shown.length === 0}
           className="min-h-[44px] inline-flex items-center gap-1.5 px-3 rounded-lg border border-gray-300 dark:border-gray-600 text-sm font-medium text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700 disabled:opacity-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-500">
           <ArrowDownTrayIcon className="w-4 h-4" aria-hidden="true" />

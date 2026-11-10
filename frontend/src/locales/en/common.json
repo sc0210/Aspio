@@ -948,7 +948,8 @@
         "legend": "Legend",
         "you": "You",
         "trendAlt": "Shared spending per month, your part and {{name}}’s",
-        "month": "Month"
+        "month": "Month",
+        "withPartner": "with {{name}}"
       },
       "filter": {
         "search": "Search shared bills",
@@ -964,7 +965,9 @@
         "partnerPaid": "Partner paid",
         "showing": "Showing {{shown}} of {{total}}",
         "clear": "Clear filters",
-        "noMatch": "No bills match these filters."
+        "noMatch": "No bills match these filters.",
+        "partner": "Partner",
+        "anyPartner": "Every partner"
       },
       "export": {
         "button": "Export CSV",
