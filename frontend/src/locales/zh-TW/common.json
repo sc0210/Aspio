@@ -84,7 +84,8 @@
     "statLife": "生活錢包",
     "statNetWorth": "淨資產",
     "statPortfolio": "投資組合",
-    "youBadge": "我"
+    "youBadge": "我",
+    "statCashHoldings": "投資組合內現金"
   },
   "currency": {
     "CNY": "人民幣",
@@ -718,7 +719,9 @@
       "overdue": "逾期 {{days}} 天",
       "progressAria": "「{{title}}」進度",
       "viewRecords": "查看儲蓄紀錄",
-      "viewRecordsFor": "查看「{{title}}」的儲蓄紀錄"
+      "viewRecordsFor": "查看「{{title}}」的儲蓄紀錄",
+      "you": "你",
+      "pace": "兩人每月存 {{amount}} 就能如期達成"
     },
     "combined": "合計",
     "completed": "目標達成！",
@@ -756,7 +759,6 @@
     "inviteRequestSuffix": "想與您一起儲蓄。",
     "inviteSharesFinances": "接受後，你們將可以互相看到錢包總額、負債與淨資產。",
     "notePlaceholder": "備註",
-    "peerContribution": "{{name}} 的貢獻",
     "peersLabel": "夥伴",
     "pendingLabel": "待確認",
     "progress": "進度",
@@ -966,7 +968,8 @@
         "clear": "清除篩選",
         "noMatch": "沒有符合篩選條件的帳單。",
         "partner": "夥伴",
-        "anyPartner": "所有夥伴"
+        "anyPartner": "所有夥伴",
+        "menus": "篩選"
       },
       "export": {
         "button": "匯出 CSV",
@@ -984,7 +987,8 @@
           "Myshare": "我的份額",
           "Partnershare": "夥伴份額"
         }
-      }
+      },
+      "settledWith": "與 {{name}} 已結清"
     },
     "summary": {
       "active": "進行中",
@@ -1004,8 +1008,7 @@
     "targetAmountLabel": "目標金額",
     "targetDateLabel": "目標日期（選填）",
     "title": "共同儲蓄",
-    "userNotFound": "找不到該用戶名稱。請對方於「設定→個人資料」中設定用戶名稱。",
-    "yourContribution": "我的貢獻"
+    "userNotFound": "找不到該用戶名稱。請對方於「設定→個人資料」中設定用戶名稱。"
   },
   "settings": {
     "account": "帳戶",

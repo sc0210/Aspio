@@ -25,6 +25,12 @@ export default function SharedGoalCard({ goal, onViewRecords, onDelete, onEdit, 
     ? Math.ceil((new Date(goal.target_date).getTime() - Date.now()) / 86_400_000)
     : null;
 
+  // What a month takes to land on the date: the gap over the months left (at least one).
+  const remaining = Math.max(0, goal.target_amount - goal.total_amount);
+  const perMonth = daysLeft !== null && daysLeft > 0 && remaining > 0 && !isCompleted
+    ? remaining / Math.max(1, daysLeft / 30.44)
+    : null;
+
   const totalContributed = goal.your_amount + goal.peer_amount;
   const yourSplitPct = totalContributed > 0 ? (goal.your_amount / totalContributed) * 100 : 50;
   const peerSplitPct = 100 - yourSplitPct;
@@ -44,12 +50,13 @@ export default function SharedGoalCard({ goal, onViewRecords, onDelete, onEdit, 
       }`}
     >
       {/* Header */}
-      <div className="flex items-start justify-between gap-2 mb-3">
-        <div className="flex items-center gap-2 flex-1 min-w-0">
+      {/* Centred on the 44px icon buttons, and the title wraps: truncated, "新年禮物..." lost its point on a phone. */}
+      <div className="flex items-center justify-between gap-2 mb-3">
+        <div className="flex flex-wrap items-center gap-x-2 gap-y-1 flex-1 min-w-0">
           {isCompleted && (
             <CheckCircleIcon className="w-5 h-5 text-prosperity-700 dark:text-prosperity-500 shrink-0" />
           )}
-          <h3 className="text-sm font-semibold text-gray-900 dark:text-white truncate">
+          <h3 className="text-sm font-semibold text-gray-900 dark:text-white break-words min-w-0">
             {goal.title}
           </h3>
           {isCompleted && (
@@ -149,39 +156,36 @@ export default function SharedGoalCard({ goal, onViewRecords, onDelete, onEdit, 
             </span>
           )}
         </div>
+        {perMonth !== null && (
+          <p className="mt-1 text-xs text-gray-600 dark:text-gray-400">
+            {t('savings.card.pace', '{{amount}} a month between you reaches it on time', { amount: formatCurrency(Math.ceil(perMonth)) })}
+          </p>
+        )}
       </div>
 
-      {/* Contributions */}
-      <div className="pt-3 border-t border-gray-100 dark:border-gray-700 space-y-2.5">
+      {/* Contributions: who put in what, and the share it makes, once each. */}
+      <div className="pt-3 border-t border-gray-100 dark:border-gray-700 space-y-2">
         <div className="grid grid-cols-2 gap-3">
-          <div className="bg-primary-50 dark:bg-primary-900/20 rounded-lg p-2.5">
-            <p className="text-xs text-primary-700 dark:text-primary-400 font-medium mb-0.5">
-              {t('savings.yourContribution', 'Your contribution')}
+          <div className="min-w-0">
+            <p className="text-xs font-medium text-primary-700 dark:text-primary-400 truncate">
+              {t('savings.card.you', 'You')}
+              {totalContributed > 0 && <span className="font-normal text-gray-600 dark:text-gray-400"> · {yourSplitPct.toFixed(0)}%</span>}
             </p>
-            <p className="text-sm font-bold text-primary-700 dark:text-primary-300">
-              {formatCurrency(goal.your_amount)}
-            </p>
-            <p className="text-xs text-primary-700 dark:text-primary-400 truncate">{goal.your_name}</p>
+            <p className="text-sm font-bold text-gray-900 dark:text-white tabular-nums">{formatCurrency(goal.your_amount)}</p>
           </div>
-          <div className="bg-prosperity-50 dark:bg-prosperity-900/20 rounded-lg p-2.5">
-            <p className="text-xs text-prosperity-700 dark:text-prosperity-400 font-medium mb-0.5 truncate">
-              {t('savings.peerContribution', "{{name}}'s contribution", { name: goal.peer_name })}
+          <div className="min-w-0 text-right">
+            <p className="text-xs font-medium text-prosperity-700 dark:text-prosperity-400 truncate">
+              {goal.peer_name}
+              {totalContributed > 0 && <span className="font-normal text-gray-600 dark:text-gray-400"> · {peerSplitPct.toFixed(0)}%</span>}
             </p>
-            <p className="text-sm font-bold text-prosperity-700 dark:text-prosperity-300">
-              {formatCurrency(goal.peer_amount)}
-            </p>
-            <p className="text-xs text-prosperity-700 dark:text-prosperity-400 truncate">{goal.peer_name}</p>
+            <p className="text-sm font-bold text-gray-900 dark:text-white tabular-nums">{formatCurrency(goal.peer_amount)}</p>
           </div>
         </div>
 
         {/* Contribution split bar */}
         {totalContributed > 0 && (
           <div>
-            <div className="flex justify-between text-xs text-gray-500 dark:text-gray-400 mb-1">
-              <span>{goal.your_name}: {yourSplitPct.toFixed(0)}%</span>
-              <span>{peerSplitPct.toFixed(0)}%: {goal.peer_name}</span>
-            </div>
-            <div className="h-1.5 rounded-full flex overflow-hidden bg-gray-100 dark:bg-gray-700">
+            <div className="h-1.5 rounded-full flex overflow-hidden bg-gray-100 dark:bg-gray-700" aria-hidden="true">
               <div
                 style={{ width: `${yourSplitPct}%` }}
                 className="bg-primary-400 transition-all duration-500"

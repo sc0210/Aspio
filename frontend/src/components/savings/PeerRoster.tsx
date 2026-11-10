@@ -3,6 +3,7 @@
 import { useTranslation } from 'react-i18next';
 import { XMarkIcon, ClockIcon } from '@heroicons/react/24/outline';
 import type { PeerConnectionOut } from '@/shared/types';
+import { PERSON_COLORS, personColors } from '@/components/compare/personColors';
 
 interface PeerRosterProps {
   accepted: PeerConnectionOut[];
@@ -24,6 +25,8 @@ export function PeerRoster({ accepted, sentPending, removingId, onRemove }: Peer
   const { t } = useTranslation('common');
 
   if (accepted.length === 0 && sentPending.length === 0) return null;
+  // The colour each partner has in Compare too (you take the first, so partners start at the second).
+  const colors = personColors(accepted.map((c) => c.other_user.id));
 
   const removeButton = (connectionId: string, label: string) => (
     <button
@@ -48,7 +51,7 @@ export function PeerRoster({ accepted, sentPending, removingId, onRemove }: Peer
             <div className="relative">
               <div
                 aria-hidden="true"
-                className="w-12 h-12 rounded-full bg-primary-700 flex items-center justify-center text-white font-semibold"
+                className={`w-12 h-12 rounded-full ${(colors.get(conn.other_user.id) ?? PERSON_COLORS[1]).avatar} flex items-center justify-center text-white font-semibold`}
               >
                 {conn.other_user.name.charAt(0).toUpperCase()}
               </div>

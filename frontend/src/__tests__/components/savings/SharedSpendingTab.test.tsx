@@ -165,7 +165,7 @@ describe('SharedSpendingTab policy', () => {
       { connection_id: 'conn-1', partner_name: 'Bob', balances: [{ currency: 'TWD', net: 0 }] },
     ] });
     renderTab();
-    expect(await screen.findByText('All square')).toBeInTheDocument();
+    expect(await screen.findByText('All square with Bob')).toBeInTheDocument();
     expect(screen.queryByText(/You owe/)).not.toBeInTheDocument();
   });
 });
@@ -529,5 +529,34 @@ describe('SharedSpendingTab with more than one partner', () => {
     expect(within(insights).getByText('with Amy')).toBeInTheDocument();
     expect(within(insights).getByText('Amy paid up front')).toBeInTheDocument();
     expect(within(insights).queryByText(/Bob NT\$/)).toBeNull();
+  });
+});
+
+describe('SharedSpendingTab bills list layout', () => {
+  const across = [
+    split({ id: 'n1', description: 'Costco', split_date: '2026-11-04' }),
+    split({ id: 'n2', description: 'Dinner', split_date: '2026-11-02' }),
+    split({ id: 'o1', description: 'Taxi', split_date: '2026-10-31' }),
+  ];
+
+  it('heads each month once', async () => {
+    api.listSplits.mockResolvedValue({ data: across });
+    renderTab();
+    const list = await screen.findByRole('region', { name: 'Shared bills' });
+    await within(list).findByText(/Taxi/);
+    expect(within(list).getAllByRole('heading', { level: 4 }).map((h) => h.textContent)).toEqual(['November 2026', 'October 2026']);
+  });
+
+  it('folds the filter menus behind one button that counts what is set', async () => {
+    api.listSplits.mockResolvedValue({ data: across });
+    renderTab();
+    const list = await screen.findByRole('region', { name: 'Shared bills' });
+    await within(list).findByText(/Taxi/);
+    const toggle = within(list).getByRole('button', { name: /Filters/ });
+    expect(toggle).toHaveAttribute('aria-expanded', 'false');
+    fireEvent.click(toggle);
+    expect(toggle).toHaveAttribute('aria-expanded', 'true');
+    fireEvent.change(within(list).getByRole('combobox', { name: 'Paid by' }), { target: { value: 'me' } });
+    expect(toggle).toHaveTextContent('Filters1');
   });
 });

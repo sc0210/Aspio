@@ -1,8 +1,8 @@
 'use client';
 
-import { useMemo } from 'react';
+import { useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { ArrowDownTrayIcon, MagnifyingGlassIcon } from '@heroicons/react/24/outline';
+import { AdjustmentsHorizontalIcon, ArrowDownTrayIcon, MagnifyingGlassIcon } from '@heroicons/react/24/outline';
 import type { SplitOut, SplitStatus } from '@/shared/types';
 import { CSV_HEADER, EMPTY_FILTER, type PartnerLabels, NO_CATEGORY, filterOptions, isFiltered, monthLabel as formatMonth, splitsCsv, type SplitFilter } from './sharedSpendingStats';
 
@@ -25,6 +25,9 @@ export default function SharedBillsFilter({ splits, shown, filter, onChange, par
   const { t, i18n } = useTranslation(['common', 'transactions']);
   const options = useMemo(() => filterOptions(splits, filter, partnerLabels), [splits, filter, partnerLabels]);
   const set = (patch: Partial<SplitFilter>) => onChange({ ...filter, ...patch });
+  // On a phone the menus fold behind one button: four selects took four rows above the list.
+  const [menusOpen, setMenusOpen] = useState(false);
+  const menusSet = [filter.month, filter.category, filter.status, filter.payer, filter.partner].filter((v) => v !== '').length;
 
   const monthLabel = (m: string) => formatMonth(m, i18n?.language || 'en');
   const categoryLabel = (name: string) => t(`transactions:form.categories.${name}`, name);
@@ -52,13 +55,24 @@ export default function SharedBillsFilter({ splits, shown, filter, onChange, par
   return (
     <div className="space-y-2">
       <div className="flex flex-wrap items-center gap-2">
-        <label className="relative flex-1 min-w-[10rem]">
+        <label className="relative flex-1 basis-full sm:basis-auto min-w-[10rem]">
           <span className="sr-only">{t('savings.splits.filter.search', 'Search shared bills')}</span>
           <MagnifyingGlassIcon className="w-4 h-4 absolute left-2.5 top-1/2 -translate-y-1/2 text-gray-500" aria-hidden="true" />
           <input type="search" value={filter.query} onChange={(e) => set({ query: e.target.value })}
             placeholder={t('savings.splits.filter.searchPlaceholder', 'Search bills or partners')}
             className={`${FIELD} w-full pl-8`} />
         </label>
+        <button type="button" onClick={() => setMenusOpen((v) => !v)} aria-expanded={menusOpen}
+          aria-controls="shared-bills-menus"
+          className="sm:hidden min-h-[44px] inline-flex items-center gap-1.5 px-3 rounded-lg border border-gray-300 dark:border-gray-600 text-sm font-medium text-gray-700 dark:text-gray-300 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-500">
+          <AdjustmentsHorizontalIcon className="w-4 h-4" aria-hidden="true" />
+          {t('savings.splits.filter.menus', 'Filters')}
+          {menusSet > 0 && (
+            <span className="ml-0.5 min-w-[1.25rem] h-5 px-1 rounded-full bg-primary-700 text-white text-xs leading-5 text-center">{menusSet}</span>
+          )}
+        </button>
+        {/* From sm up the wrapper vanishes (contents) and the menus sit in the row as before. */}
+        <div id="shared-bills-menus" className={`${menusOpen ? 'flex' : 'hidden'} basis-full flex-wrap gap-2 sm:contents`}>
         <select value={filter.month} onChange={(e) => set({ month: e.target.value })} className={FIELD}
           aria-label={t('savings.splits.filter.month', 'Month')}>
           <option value="">{t('savings.splits.filter.anyMonth', 'Any month')}</option>
@@ -93,6 +107,7 @@ export default function SharedBillsFilter({ splits, shown, filter, onChange, par
             ))}
           </select>
         )}
+        </div>
         <button type="button" onClick={exportCsv} disabled={shown.length === 0}
           className="min-h-[44px] inline-flex items-center gap-1.5 px-3 rounded-lg border border-gray-300 dark:border-gray-600 text-sm font-medium text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700 disabled:opacity-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-500">
           <ArrowDownTrayIcon className="w-4 h-4" aria-hidden="true" />

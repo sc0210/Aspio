@@ -8,7 +8,8 @@ jest.mock('react-i18next', () => ({
   // makes lib/i18n throw and the whole suite dies before any test runs.
   initReactI18next: { type: '3rdParty', init: () => {} },
   useTranslation: () => ({
-    t: (_key: string, fallback: string) => fallback,
+    t: (_key: string, fallback: string, vars?: Record<string, string | number>) =>
+      fallback.replace(/\{\{(\w+)\}\}/g, (_: string, k: string) => String(vars?.[k] ?? '')),
   }),
 }));
 
@@ -55,10 +56,33 @@ describe('SharedGoalCard', () => {
     expect(screen.getByText('60.0%')).toBeInTheDocument();
   });
 
-  it('renders your_name and peer_name in contribution section', () => {
+  it('shows each side once: you and the partner, with the share each put in', () => {
     render(<SharedGoalCard goal={BASE_GOAL} onViewRecords={onViewRecords} onDelete={onDelete} />);
-    expect(screen.getByText('Alex')).toBeInTheDocument();
-    expect(screen.getByText('小明')).toBeInTheDocument();
+    expect(screen.getByText(/^You/)).toHaveTextContent('You · 60%');
+    expect(screen.getByText(/^小明/)).toHaveTextContent('小明 · 40%');
+    // Not your own name again under "You", nor the old "Alex: 60%" label row.
+    expect(screen.queryByText(/Alex/)).toBeNull();
+  });
+
+  describe('pace', () => {
+    afterEach(() => jest.useRealTimers());
+
+    it('says what a month takes to reach the target on time', () => {
+      jest.useFakeTimers().setSystemTime(new Date('2026-09-01T00:00:00Z'));
+      render(<SharedGoalCard goal={BASE_GOAL} onViewRecords={onViewRecords} onDelete={onDelete} />);
+      // NT$20,000 left over 91 days (2.99 months of 30.44 days): NT$6,690.1, rounded up.
+      expect(screen.getByText(/a month between you reaches it on time/)).toHaveTextContent(/^NT\$6,691 a month/);
+    });
+
+    it('asks for no pace once the goal is reached or its date has passed', () => {
+      jest.useFakeTimers().setSystemTime(new Date('2026-09-01T00:00:00Z'));
+      const { rerender } = render(
+        <SharedGoalCard goal={{ ...BASE_GOAL, status: 'completed', total_amount: 50000, progress_pct: 100 }} onViewRecords={onViewRecords} onDelete={onDelete} />,
+      );
+      expect(screen.queryByText(/a month between you/)).toBeNull();
+      rerender(<SharedGoalCard goal={{ ...BASE_GOAL, target_date: '2026-08-01' }} onViewRecords={onViewRecords} onDelete={onDelete} />);
+      expect(screen.queryByText(/a month between you/)).toBeNull();
+    });
   });
 
   it('shows completed badge when status is completed', () => {
