@@ -239,16 +239,27 @@ const demoSplit = (over: Partial<SplitOut> & Pick<SplitOut, 'id' | 'description'
 
 export const demoSplits: SplitOut[] = [
   // 小明 is waiting on you: a bill they paid and split with you.
-  demoSplit({ id: 'demo-split-movie', description: 'Movie tickets', total_amount: 640, my_share: 320, split_date: splitDay(1),
+  demoSplit({ id: 'demo-split-movie', description: 'Movie tickets', category_name: 'Entertainment', total_amount: 640, my_share: 320, split_date: splitDay(1),
     status: 'proposed', payer_is_me: false, created_by_me: false, my_share_status: 'proposed', partner_share_status: 'accepted' }),
   // You sent this one; 小明 hasn't answered yet.
-  demoSplit({ id: 'demo-split-power', description: 'Electricity bill', total_amount: 1500, my_share: 900, method: 'percent',
+  demoSplit({ id: 'demo-split-power', description: 'Electricity bill', category_name: 'Utilities', total_amount: 1500, my_share: 900, method: 'percent',
     split_date: splitDay(2), status: 'proposed', partner_share_status: 'proposed' }),
-  demoSplit({ id: 'demo-split-dinner', description: 'Dinner at Din Tai Fung', total_amount: 2400, my_share: 1200, split_date: splitDay(4) }),
-  demoSplit({ id: 'demo-split-costco', description: 'Costco groceries', total_amount: 3600, my_share: 1800, split_date: splitDay(6),
+  demoSplit({ id: 'demo-split-dinner', description: 'Dinner at Din Tai Fung', category_name: 'Dining', total_amount: 2400, my_share: 1200, split_date: splitDay(4) }),
+  demoSplit({ id: 'demo-split-costco', description: 'Costco groceries', category_name: 'Groceries', total_amount: 3600, my_share: 1800, split_date: splitDay(6),
     payer_is_me: false, created_by_me: false }),
-  demoSplit({ id: 'demo-split-taxi', connection_id: 'demo-conn-2', partner_name: '小美', description: 'Taxi home', total_amount: 480,
+  demoSplit({ id: 'demo-split-taxi', connection_id: 'demo-conn-2', partner_name: '小美', description: 'Taxi home', category_name: 'Transportation',
+    total_amount: 480,
     my_share: 240, split_date: splitDay(10), payer_is_me: false, created_by_me: false }),
+  // Earlier months with 小明, for the insights trend. Each month is a pair of
+  // equal bills split evenly, one paid by each of you, so they net to zero and
+  // the balance above stays what its test says.
+  ...([[35, 2800, 'Groceries', 'Dining'], [65, 1900, 'Dining', 'Entertainment'], [95, 3400, 'Utilities', 'Groceries'],
+    [125, 2200, 'Groceries', 'Dining'], [155, 1600, 'Dining', 'Transportation']] as const).flatMap(([daysAgo, total, mine, theirs]) => [
+    demoSplit({ id: `demo-split-h${daysAgo}a`, description: `${mine} (shared)`, category_name: mine, total_amount: total,
+      my_share: total / 2, split_date: splitDay(daysAgo) }),
+    demoSplit({ id: `demo-split-h${daysAgo}b`, description: `${theirs} (shared)`, category_name: theirs, total_amount: total,
+      my_share: total / 2, split_date: splitDay(daysAgo + 3), payer_is_me: false, created_by_me: false }),
+  ]),
 ];
 
 export const demoSettlements: SettlementOut[] = [

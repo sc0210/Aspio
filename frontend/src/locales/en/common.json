@@ -914,6 +914,64 @@
           "monthly": "monthly",
           "yearly": "yearly"
         }
+      },
+      "insights": {
+        "title": "Insights",
+        "period": "Period",
+        "prevMonth": "Previous month",
+        "nextMonth": "Next month",
+        "allTime": "All time",
+        "currency": "Currency",
+        "total": "Shared spending",
+        "bills_one": "{{count}} bill",
+        "bills_other": "{{count}} bills",
+        "mine": "Your share",
+        "minePct": "{{pct}}% of it",
+        "iFronted": "You paid up front",
+        "partnerFronted": "{{name}} paid up front",
+        "partners": "Partners",
+        "byCategory": "By category",
+        "none": "No shared bills in this period.",
+        "uncategorised": "No category",
+        "youPart": "you {{amount}}",
+        "trend": "Last {{count}} months",
+        "legend": "Legend",
+        "you": "You",
+        "trendAlt": "Shared spending per month, your part and {{name}}’s",
+        "month": "Month"
+      },
+      "filter": {
+        "search": "Search shared bills",
+        "searchPlaceholder": "Search bills or partners",
+        "month": "Month",
+        "anyMonth": "Any month",
+        "anyCategory": "Any category",
+        "status": "Status",
+        "anyStatus": "Any status",
+        "paidBy": "Paid by",
+        "anyPayer": "Anyone paid",
+        "iPaid": "I paid",
+        "partnerPaid": "Partner paid",
+        "showing": "Showing {{shown}} of {{total}}",
+        "clear": "Clear filters",
+        "noMatch": "No bills match these filters."
+      },
+      "export": {
+        "button": "Export CSV",
+        "me": "Me",
+        "partner": "Partner",
+        "columns": {
+          "Date": "Date",
+          "Description": "Description",
+          "Category": "Category",
+          "Partner": "Partner",
+          "Paidby": "Paid by",
+          "Status": "Status",
+          "Currency": "Currency",
+          "Total": "Total",
+          "Myshare": "My share",
+          "Partnershare": "Partner share"
+        }
       }
     },
     "summary": {
