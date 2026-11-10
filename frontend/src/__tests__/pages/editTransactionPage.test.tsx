@@ -696,6 +696,23 @@ describe('EditTransactionPage — split with a partner', () => {
     expect(split).toBeDisabled();
   });
 
+  it('does not count the load\'s own clean-ups as unsaved: payment method spelling, a missing wallet', async () => {
+    for (const tx of [{ ...expenseTx, paymentMethod: 'Credit Card' }, { ...expenseTx, walletType: undefined }]) {
+      await renderAndLoad(tx);
+      expect(screen.getByRole('button', { name: /Split with partner/ })).toBeEnabled();
+      cleanup();
+    }
+  });
+
+  it('counts a changed amount typed back to the saved one as saved again', async () => {
+    await renderAndLoad(expenseTx);
+    const amount = document.getElementById('txe-amount')!;
+    fireEvent.change(amount, { target: { value: '300' } });
+    expect(screen.getByRole('button', { name: /Split with partner/ })).toBeDisabled();
+    fireEvent.change(amount, { target: { value: '250' } });
+    expect(screen.getByRole('button', { name: /Split with partner/ })).toBeEnabled();
+  });
+
   it('links an already split row to where the split is managed, with no second split', async () => {
     await renderAndLoad({ ...expenseTx, peerSplitShareId: 'share-1' });
     expect(screen.getByRole('link', { name: /Manage split/ })).toHaveAttribute('href', '/savings?tab=splits');

@@ -113,6 +113,9 @@ export default function EditTransactionPage() {
   const [splitting, setSplitting] = useState(false);
   // Bumped after a split so the row reloads as it now is (split, whole until accepted).
   const [reloadKey, setReloadKey] = useState(0);
+  // The form exactly as the load filled it (after its own clean-ups: payment method
+  // spelling, the default wallet), so "unsaved" means an edit, not a normalisation.
+  const [baseline, setBaseline] = useState<typeof formData | null>(null);
 
   // Investment mode state (populated when category === 'Investment Purchase')
   const [isInvestMode, setIsInvestMode] = useState(false);
@@ -155,6 +158,7 @@ export default function EditTransactionPage() {
         setIsInvestMode(false);
         setIsSaleMode(false);
         setLoaded(null);
+        setBaseline(null);
         setHoldingId(null);
         setInvestLink('unlinked');
         let txn: Transaction | null | undefined = null;
@@ -346,7 +350,7 @@ export default function EditTransactionPage() {
               paymentMethodValue = matchedPM?.value || txn.paymentMethod;
             }
 
-            setFormData({
+            const initial = {
               type: txType,
               amount: txn.amount.toString(),
               currency: txn.currency || defaultCurrency,
@@ -360,7 +364,9 @@ export default function EditTransactionPage() {
               tags: txn.tags || [],
               // Pre-fill the loan link if this expense is tied to a loan.
               loanId: txnLoanId ?? '',
-            });
+            };
+            setFormData(initial);
+            setBaseline(initial);
           }
         } else {
           toast.error(t('transactions:toast.notFound'));
@@ -683,15 +689,15 @@ export default function EditTransactionPage() {
   } as Transaction) : null;
   const canSplitHere = !isDemo && !!savedRow && canSplit(savedRow);
   // A split takes the saved amount and reloads the row, so unsaved edits would be split wrong, then lost.
-  // Every field the form saves; text compared as '' when missing, so a row with no description isn't "changed".
+  // Every field the form saves, against the form as loaded; text compared as '' when missing.
   const same = (a?: string | null, b?: string | null) => (a ?? '') === (b ?? '');
-  const unsaved = !!loaded && (
-    Number(formData.amount) !== loaded.amount || !same(formData.description, loaded.description)
-    || !same(formData.category, loaded.category) || !same(formData.currency, loaded.currency)
-    || formData.type !== loaded.type || formData.date !== loaded.date
-    || !same(formData.loanId, loaded.loanId) || !same(formData.paymentMethod, loaded.paymentMethod)
-    || !same(formData.walletType, loaded.walletType)
-    || (formData.tags ?? []).join('\u0000') !== (loaded.tags ?? []).join('\u0000')
+  const unsaved = !!baseline && (
+    !same(formData.amount, baseline.amount) || !same(formData.description, baseline.description)
+    || !same(formData.category, baseline.category) || !same(formData.currency, baseline.currency)
+    || formData.type !== baseline.type || formData.date !== baseline.date
+    || !same(formData.loanId, baseline.loanId) || !same(formData.paymentMethod, baseline.paymentMethod)
+    || !same(formData.walletType, baseline.walletType)
+    || (formData.tags ?? []).join('\u0000') !== (baseline.tags ?? []).join('\u0000')
   );
 
   // "Duplicate": the add form, started from this row's saved values, dated today.
