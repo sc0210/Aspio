@@ -6,6 +6,7 @@ import {
   waitFor,
   act,
   within as _within,
+  cleanup,
 } from '@testing-library/react';
 
 // ─── Next.js / routing mocks ──────────────────────────────────────────────────
@@ -116,8 +117,24 @@ jest.mock('@/hooks/useAppMode', () => ({
         status: 'authenticated',
         isLoading: false,
     }),
-  useModeAwareUI: () => ({ isDemo: false }),
+  useModeAwareUI: () => ({ isDemo: mockModeIsDemo.value }),
 }));
+const mockModeIsDemo = { value: false };
+// The real canSplit; the modal itself stands in as a dialog showing what it was handed.
+jest.mock('@/components/transactions/SplitExpenseModal', () => {
+  const actual = jest.requireActual('@/components/transactions/SplitExpenseModal');
+  return {
+    __esModule: true,
+    canSplit: actual.canSplit,
+    default: ({ transaction, onSuccess }: { transaction: { amount: number } | null; onSuccess: () => void }) =>
+      transaction ? (
+        <div role="dialog" aria-label="Split expense">
+          splitting {transaction.amount}
+          <button type="button" onClick={onSuccess}>Send split</button>
+        </div>
+      ) : null,
+  };
+});
 jest.mock('react-i18next', () => {
   // Hoisted into the factory so the identities below are created once, not per
   // render. The real useTranslation returns a stable `t`, and the page's load
@@ -188,6 +205,7 @@ jest.mock('@heroicons/react/24/outline', () => ({
   ChevronDownIcon: () => <svg data-testid="chevron-down" />,
   ChevronRightIcon: () => <svg data-testid="chevron-right" />,
   DocumentDuplicateIcon: () => <svg data-testid="duplicate-icon" />,
+  UsersIcon: () => <svg data-testid="users-icon" />,
   TrashIcon: () => <svg data-testid="trash-icon" />,
 }));
 
@@ -640,5 +658,56 @@ describe('EditTransactionPage — what an edit may and may not change', () => {
     fireEvent.click(screen.getByRole('button', { name: 'Update Transaction' }));
     await waitFor(() => expect(mockUpdateTransaction).toHaveBeenCalled());
     expect(mockUpdateTransaction.mock.calls[0][1].paymentMethod).toBeNull();
+  });
+});
+
+describe('EditTransactionPage — split with a partner', () => {
+  beforeEach(() => {
+    jest.clearAllMocks();
+    mockModeIsDemo.value = false;
+  });
+  afterAll(() => { mockModeIsDemo.value = false; });
+
+  it('splits the saved expense, then reloads the row as it now is', async () => {
+    await renderAndLoad(expenseTx);
+    fireEvent.click(screen.getByRole('button', { name: /Split with partner/ }));
+    expect(screen.getByRole('dialog', { name: 'Split expense' })).toHaveTextContent('splitting 250');
+    mockGetTransactionById.mockClear();
+    await act(async () => {
+      fireEvent.click(screen.getByRole('button', { name: 'Send split' }));
+    });
+    await waitFor(() => expect(mockGetTransactionById).toHaveBeenCalledWith('test-transaction-id'));
+    expect(screen.queryByRole('dialog', { name: 'Split expense' })).not.toBeInTheDocument();
+  });
+
+  it('asks to save first when the form has unsaved changes', async () => {
+    await renderAndLoad(expenseTx);
+    fireEvent.change(document.getElementById('txe-amount')!, { target: { value: '300' } });
+    const split = screen.getByRole('button', { name: /Split with partner/ });
+    expect(split).toBeDisabled();
+    expect(split).toHaveAccessibleDescription(/Save your changes first/);
+  });
+
+  it('links an already split row to where the split is managed, with no second split', async () => {
+    await renderAndLoad({ ...expenseTx, peerSplitShareId: 'share-1' });
+    expect(screen.getByRole('link', { name: /Manage split/ })).toHaveAttribute('href', '/savings?tab=splits');
+    expect(screen.queryByRole('button', { name: /Split with partner/ })).not.toBeInTheDocument();
+  });
+
+  it('offers no split on income, a holding leg, a loan payment or in demo', async () => {
+    for (const tx of [
+      { ...expenseTx, type: 'income', category: 'Salary' },
+      { ...expenseTx, holdingId: 'holding-1' },
+      { ...expenseTx, loan_id: 'loan-1' },
+    ]) {
+      await renderAndLoad(tx);
+      expect(screen.queryByRole('button', { name: /Split with partner/ })).not.toBeInTheDocument();
+      cleanup();
+    }
+    mockModeIsDemo.value = true;
+    mockDemoTransactions.splice(0, mockDemoTransactions.length, expenseTx);
+    await renderAndLoad(expenseTx);
+    expect(screen.queryByRole('button', { name: /Split with partner/ })).not.toBeInTheDocument();
+    mockDemoTransactions.splice(0, mockDemoTransactions.length);
   });
 });
