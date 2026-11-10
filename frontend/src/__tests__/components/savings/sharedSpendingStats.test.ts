@@ -1,6 +1,6 @@
 import type { SplitOut } from '@/shared/types';
 import {
-  EMPTY_FILTER, NO_CATEGORY, byCategory, byMonth, currenciesByUse, filterOptions, filterSplits, shiftMonth,
+  EMPTY_FILTER, NO_CATEGORY, byCategory, isFiltered, byMonth, currenciesByUse, filterOptions, filterSplits, frontedByPartner, shiftMonth,
   monthLabel, splitsCsv, summarize,
 } from '@/components/savings/sharedSpendingStats';
 
@@ -72,7 +72,10 @@ describe('sharedSpendingStats', () => {
   });
 
   it('offers the months newest first and the categories in order', () => {
-    expect(filterOptions(SPLITS)).toEqual({ months: ['2026-11', '2026-10'], categories: ['Dining', 'Groceries'], uncategorised: false });
+    expect(filterOptions(SPLITS)).toEqual({
+      months: ['2026-11', '2026-10'], categories: ['Dining', 'Groceries'], uncategorised: false,
+      partners: [{ connectionId: 'c1', name: 'Bob' }],
+    });
   });
 
   it('writes CSV that quotes and defuses what a spreadsheet would misread', () => {
@@ -108,5 +111,46 @@ describe('sharedSpendingStats', () => {
     expect(monthLabel('2026-11', 'en')).toBe('November 2026');
     expect(monthLabel('2026-11', 'en', 'short')).toBe('Nov');
   });
-});
 
+  describe('more than one partner', () => {
+    const BOB = { connection_id: 'c1', partner_name: 'Bob' };
+    const AMY = { connection_id: 'c2', partner_name: 'Amy' };
+    // A second partner who shares Bob's name: told apart by connection, not by name.
+    const BOB2 = { connection_id: 'c3', partner_name: 'Bob' };
+    const MIXED = [
+      split({ ...BOB, total_amount: 1000, payer_is_me: false }),
+      split({ ...AMY, total_amount: 400, payer_is_me: false }),
+      split({ ...AMY, total_amount: 250, payer_is_me: true }),
+      split({ ...BOB2, total_amount: 80, payer_is_me: false }),
+      split({ ...AMY, total_amount: 9999, payer_is_me: false, status: 'proposed' }), // not accepted yet
+    ];
+
+    it('filters to one partner by connection, even when two share a name', () => {
+      const amounts = (partner: string) => filterSplits(MIXED, { ...EMPTY_FILTER, partner }).map((s) => s.total_amount);
+      expect(amounts('c2')).toEqual([400, 250, 9999]);
+      expect(amounts('c1')).toEqual([1000]);
+      expect(amounts('c3')).toEqual([80]);
+    });
+
+    it('lists each partner once, by name, and keeps a chosen one whose bills are gone', () => {
+      expect(filterOptions(MIXED).partners).toEqual([
+        { connectionId: 'c2', name: 'Amy' }, { connectionId: 'c1', name: 'Bob' }, { connectionId: 'c3', name: 'Bob' },
+      ]);
+      expect(filterOptions([split(BOB)], { ...EMPTY_FILTER, partner: 'gone' }).partners)
+        .toEqual([{ connectionId: 'c1', name: 'Bob' }, { connectionId: 'gone', name: null }]);
+    });
+
+    it('splits what partners paid up front by partner, largest first, accepted bills only', () => {
+      expect(frontedByPartner(MIXED, 'TWD', '2026-11')).toEqual([
+        { connectionId: 'c1', name: 'Bob', amount: 1000 },
+        { connectionId: 'c2', name: 'Amy', amount: 400 },
+        { connectionId: 'c3', name: 'Bob', amount: 80 },
+      ]);
+      expect(frontedByPartner(MIXED, 'TWD', '2026-10')).toEqual([]);
+    });
+
+    it('counts a partner choice as a filter', () => {
+      expect(isFiltered({ ...EMPTY_FILTER, partner: 'c2' })).toBe(true);
+    });
+  });
+});

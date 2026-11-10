@@ -176,6 +176,11 @@ export default function SharedSpendingTab({ connections, demo }: { connections: 
   const toConfirm = settlements.filter((p) => p.status === 'proposed' && !p.created_by_me);
   const repayments = settlements.filter((p) => !(p.status === 'proposed' && !p.created_by_me));
   const shownBills = useMemo(() => filterSplits(others, billFilter), [others, billFilter]);
+  // Insights follow the partner choice (only that one: month and the rest have their own controls there).
+  const insightSplits = useMemo(
+    () => (billFilter.partner ? splits.filter((s) => s.connection_id === billFilter.partner) : splits),
+    [splits, billFilter.partner],
+  );
 
   return (
     <div className="space-y-6">
@@ -418,7 +423,8 @@ export default function SharedSpendingTab({ connections, demo }: { connections: 
       )}
 
       {/* What the accepted bills add up to */}
-      <SplitInsights splits={splits} />
+      <SplitInsights splits={insightSplits}
+        partnerName={billFilter.partner ? splits.find((s) => s.connection_id === billFilter.partner)?.partner_name : undefined} />
 
       {/* History */}
       <section aria-label={t('savings.splits.history', 'Shared bills')} className="space-y-2">

@@ -78,6 +78,24 @@ export interface CategoryTotal {
 }
 
 /** Shared spending per category, largest first. */
+export interface PartnerFronted {
+  connectionId: string;
+  name: string;
+  amount: number;
+}
+
+/** Whole bills each partner paid up front, largest first: who is behind "partners paid". */
+export function frontedByPartner(splits: SplitOut[], currency: string, month: string | null): PartnerFronted[] {
+  const by = new Map<string, PartnerFronted>();
+  for (const s of scoped(splits, currency, month)) {
+    if (s.payer_is_me) continue;
+    const row = by.get(s.connection_id) ?? { connectionId: s.connection_id, name: s.partner_name, amount: 0 };
+    row.amount += s.total_amount;
+    by.set(s.connection_id, row);
+  }
+  return [...by.values()].map((r) => ({ ...r, amount: cents(r.amount) })).sort((a, b) => b.amount - a.amount);
+}
+
 export function byCategory(splits: SplitOut[], currency: string, month: string | null): CategoryTotal[] {
   const totals = new Map<string | null, CategoryTotal>();
   for (const s of scoped(splits, currency, month)) {
@@ -122,14 +140,16 @@ export interface SplitFilter {
   category: string;
   status: SplitStatus | '';
   payer: 'me' | 'partner' | '';
+  /** A partner's connection id, or '' for everyone. An id, not a name: two partners can share a name. */
+  partner: string;
   query: string;
 }
 
 export const NO_CATEGORY = '__none__';
-export const EMPTY_FILTER: SplitFilter = { month: '', category: '', status: '', payer: '', query: '' };
+export const EMPTY_FILTER: SplitFilter = { month: '', category: '', status: '', payer: '', partner: '', query: '' };
 
 export const isFiltered = (f: SplitFilter): boolean =>
-  f.month !== '' || f.category !== '' || f.status !== '' || f.payer !== '' || f.query.trim() !== '';
+  f.month !== '' || f.category !== '' || f.status !== '' || f.payer !== '' || f.partner !== '' || f.query.trim() !== '';
 
 export function filterSplits(splits: SplitOut[], f: SplitFilter): SplitOut[] {
   const q = f.query.trim().toLowerCase();
@@ -138,6 +158,7 @@ export function filterSplits(splits: SplitOut[], f: SplitFilter): SplitOut[] {
     && (f.category === '' || (f.category === NO_CATEGORY ? !s.category_name : s.category_name === f.category))
     && (f.status === '' || s.status === f.status)
     && (f.payer === '' || (f.payer === 'me') === s.payer_is_me)
+    && (f.partner === '' || s.connection_id === f.partner)
     && (q === '' || s.description.toLowerCase().includes(q) || s.partner_name.toLowerCase().includes(q)),
   );
 }
@@ -147,8 +168,8 @@ export function filterSplits(splits: SplitOut[], f: SplitFilter): SplitOut[] {
  * `keep` holds the current choices: a bill that changed or left the list must
  * not leave its filter selected but missing from the menu, hiding everything.
  */
-export function filterOptions(splits: SplitOut[], keep: Pick<SplitFilter, 'month' | 'category'> = EMPTY_FILTER):
-  { months: string[]; categories: string[]; uncategorised: boolean } {
+export function filterOptions(splits: SplitOut[], keep: Pick<SplitFilter, 'month' | 'category'> & { partner?: string } = EMPTY_FILTER):
+  { months: string[]; categories: string[]; uncategorised: boolean; partners: PartnerOption[] } {
   const months = [...new Set([...splits.map((s) => monthOf(s.split_date)), ...(keep.month ? [keep.month] : [])])].sort().reverse();
   const names = [...splits.map((s) => s.category_name), keep.category === NO_CATEGORY ? null : keep.category]
     .filter((n): n is string => !!n);
@@ -156,7 +177,24 @@ export function filterOptions(splits: SplitOut[], keep: Pick<SplitFilter, 'month
     months,
     categories: [...new Set(names)].sort((a, b) => a.localeCompare(b)),
     uncategorised: keep.category === NO_CATEGORY || splits.some((s) => !s.category_name),
+    partners: partnerOptions(splits, keep.partner ?? ''),
   };
+}
+
+export interface PartnerOption {
+  connectionId: string;
+  /** null when the chosen partner has no bill left on the list to name them by. */
+  name: string | null;
+}
+
+/** One entry per partner on the list, by name; a kept choice stays even with no bill left. */
+function partnerOptions(splits: SplitOut[], keep: string): PartnerOption[] {
+  const names = new Map<string, string>();
+  for (const s of splits) names.set(s.connection_id, s.partner_name);
+  const out: PartnerOption[] = [...names].map(([connectionId, name]) => ({ connectionId, name }))
+    .sort((a, b) => (a.name ?? '').localeCompare(b.name ?? ''));
+  if (keep && !names.has(keep)) out.push({ connectionId: keep, name: null });
+  return out;
 }
 
 function csvCell(value: string | number): string {

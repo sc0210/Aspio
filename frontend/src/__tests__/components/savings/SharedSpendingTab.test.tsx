@@ -497,3 +497,37 @@ describe('SharedSpendingTab insights', () => {
     click.mockRestore();
   });
 });
+
+describe('SharedSpendingTab with more than one partner', () => {
+  const twoPartners = [
+    split({ id: 'b1', description: 'Costco', total_amount: 1000, payer_is_me: false }),
+    split({ id: 'a1', connection_id: 'conn-2', partner_name: 'Amy', description: 'Taxi', total_amount: 400, payer_is_me: false }),
+  ];
+
+  it('offers no partner menu with one partner', async () => {
+    api.listSplits.mockResolvedValue({ data: [split({})] });
+    renderTab();
+    const list = await screen.findByRole('region', { name: 'Shared bills' });
+    await within(list).findByText(/Dinner/);
+    expect(within(list).queryByRole('combobox', { name: 'Partner' })).toBeNull();
+  });
+
+  it('breaks down what partners paid, then narrows the list and the insights to one partner', async () => {
+    api.listSplits.mockResolvedValue({ data: twoPartners });
+    renderTab();
+    const list = await screen.findByRole('region', { name: 'Shared bills' });
+    await within(list).findByText(/Taxi/);
+    const insights = screen.getByRole('region', { name: /Insights/ });
+    // Everyone: one total, with who is behind it.
+    expect(within(insights).getByText('Partners paid up front')).toBeInTheDocument();
+    expect(within(insights).getByText(/Bob NT\$1,000 · Amy NT\$400/)).toBeInTheDocument();
+
+    fireEvent.change(within(list).getByRole('combobox', { name: 'Partner' }), { target: { value: 'conn-2' } });
+
+    expect(within(list).queryByText(/Costco/)).toBeNull();
+    expect(within(list).getByText(/Taxi/)).toBeInTheDocument();
+    expect(within(insights).getByText('with Amy')).toBeInTheDocument();
+    expect(within(insights).getByText('Amy paid up front')).toBeInTheDocument();
+    expect(within(insights).queryByText(/Bob NT\$/)).toBeNull();
+  });
+});
