@@ -79,9 +79,12 @@ export interface CategoryTotal {
 
 /**
  * One label per partner connection: the name, or "Bob (2)" when two partners
- * share it, numbered in connection order so the menu and the insights agree.
+ * share it, numbered in connection order. Build it once from every bill and
+ * pass it on: numbered from a narrowed list, Bob (2) would read plain "Bob".
  */
-export function partnerLabels(splits: SplitOut[]): Map<string, string> {
+export type PartnerLabels = Map<string, string>;
+
+export function partnerLabels(splits: SplitOut[]): PartnerLabels {
   const names = new Map<string, string>();
   for (const s of splits) names.set(s.connection_id, s.partner_name);
   const seen = new Map<string, number>();
@@ -101,9 +104,9 @@ export interface PartnerFronted {
 }
 
 /** Whole bills each partner paid up front, largest first: who is behind "partners paid". */
-export function frontedByPartner(splits: SplitOut[], currency: string, month: string | null): PartnerFronted[] {
+export function frontedByPartner(splits: SplitOut[], currency: string, month: string | null,
+  labels: PartnerLabels = partnerLabels(splits)): PartnerFronted[] {
   const by = new Map<string, PartnerFronted>();
-  const labels = partnerLabels(splits);
   for (const s of scoped(splits, currency, month)) {
     if (s.payer_is_me) continue;
     const row = by.get(s.connection_id)
@@ -187,7 +190,8 @@ export function filterSplits(splits: SplitOut[], f: SplitFilter): SplitOut[] {
  * `keep` holds the current choices: a bill that changed or left the list must
  * not leave its filter selected but missing from the menu, hiding everything.
  */
-export function filterOptions(splits: SplitOut[], keep: Pick<SplitFilter, 'month' | 'category'> & { partner?: string } = EMPTY_FILTER):
+export function filterOptions(splits: SplitOut[], keep: Pick<SplitFilter, 'month' | 'category'> & { partner?: string } = EMPTY_FILTER,
+  labels: PartnerLabels = partnerLabels(splits)):
   { months: string[]; categories: string[]; uncategorised: boolean; partners: PartnerOption[] } {
   const months = [...new Set([...splits.map((s) => monthOf(s.split_date)), ...(keep.month ? [keep.month] : [])])].sort().reverse();
   const names = [...splits.map((s) => s.category_name), keep.category === NO_CATEGORY ? null : keep.category]
@@ -196,7 +200,7 @@ export function filterOptions(splits: SplitOut[], keep: Pick<SplitFilter, 'month
     months,
     categories: [...new Set(names)].sort((a, b) => a.localeCompare(b)),
     uncategorised: keep.category === NO_CATEGORY || splits.some((s) => !s.category_name),
-    partners: partnerOptions(splits, keep.partner ?? ''),
+    partners: partnerOptions(splits, keep.partner ?? '', labels),
   };
 }
 
@@ -206,13 +210,13 @@ export interface PartnerOption {
   name: string | null;
 }
 
-/** One entry per partner on the list, by name; a kept choice stays even with no bill left. */
-function partnerOptions(splits: SplitOut[], keep: string): PartnerOption[] {
-  const names = partnerLabels(splits);
-  const out: PartnerOption[] = [...names].map(([connectionId, name]) => ({ connectionId, name }))
-    .sort((a, b) => (a.name ?? '').localeCompare(b.name ?? ''));
-  if (keep && !names.has(keep)) out.push({ connectionId: keep, name: null });
-  return out;
+/** One entry per partner on the list, by label; a kept choice stays even with no bill left. */
+function partnerOptions(splits: SplitOut[], keep: string, labels: PartnerLabels): PartnerOption[] {
+  const ids = new Set(splits.map((s) => s.connection_id));
+  if (keep) ids.add(keep);
+  return [...ids].map((connectionId) => ({ connectionId, name: labels.get(connectionId) ?? null }))
+    // By name, and a partner with no name to show last.
+    .sort((a, b) => (a.name === null ? 1 : 0) - (b.name === null ? 1 : 0) || (a.name ?? '').localeCompare(b.name ?? ''));
 }
 
 function csvCell(value: string | number): string {

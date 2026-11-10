@@ -4,7 +4,7 @@ import { useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
 import { ArrowDownTrayIcon, MagnifyingGlassIcon } from '@heroicons/react/24/outline';
 import type { SplitOut, SplitStatus } from '@/shared/types';
-import { CSV_HEADER, EMPTY_FILTER, NO_CATEGORY, filterOptions, isFiltered, monthLabel as formatMonth, splitsCsv, type SplitFilter } from './sharedSpendingStats';
+import { CSV_HEADER, EMPTY_FILTER, type PartnerLabels, NO_CATEGORY, filterOptions, isFiltered, monthLabel as formatMonth, splitsCsv, type SplitFilter } from './sharedSpendingStats';
 
 const STATUSES: SplitStatus[] = ['proposed', 'active', 'declined', 'voided'];
 const FIELD = 'min-h-[44px] rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-sm text-gray-900 dark:text-white px-2';
@@ -16,12 +16,14 @@ interface SharedBillsFilterProps {
   shown: SplitOut[];
   filter: SplitFilter;
   onChange: (next: SplitFilter) => void;
+  /** Built from every bill, so the menu names partners as the insights do. */
+  partnerLabels: PartnerLabels;
 }
 
 /** Filter the Shared bills list and export what it shows as CSV. */
-export default function SharedBillsFilter({ splits, shown, filter, onChange }: SharedBillsFilterProps) {
+export default function SharedBillsFilter({ splits, shown, filter, onChange, partnerLabels }: SharedBillsFilterProps) {
   const { t, i18n } = useTranslation(['common', 'transactions']);
-  const options = useMemo(() => filterOptions(splits, filter), [splits, filter]);
+  const options = useMemo(() => filterOptions(splits, filter, partnerLabels), [splits, filter, partnerLabels]);
   const set = (patch: Partial<SplitFilter>) => onChange({ ...filter, ...patch });
 
   const monthLabel = (m: string) => formatMonth(m, i18n?.language || 'en');

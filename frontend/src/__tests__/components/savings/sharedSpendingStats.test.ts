@@ -1,6 +1,6 @@
 import type { SplitOut } from '@/shared/types';
 import {
-  EMPTY_FILTER, NO_CATEGORY, byCategory, isFiltered, byMonth, currenciesByUse, filterOptions, filterSplits, frontedByPartner, shiftMonth,
+  EMPTY_FILTER, NO_CATEGORY, byCategory, isFiltered, byMonth, currenciesByUse, filterOptions, filterSplits, frontedByPartner, partnerLabels, shiftMonth,
   monthLabel, splitsCsv, summarize,
 } from '@/components/savings/sharedSpendingStats';
 
@@ -147,6 +147,24 @@ describe('sharedSpendingStats', () => {
         { connectionId: 'c3', name: 'Bob (2)', amount: 80 },
       ]);
       expect(frontedByPartner(MIXED, 'TWD', '2026-10')).toEqual([]);
+    });
+
+    it('numbers partners who share a name, in connection order', () => {
+      const labels = partnerLabels([...MIXED, split({ connection_id: 'c0', partner_name: 'Bob' })]);
+      expect([...labels].sort(([a], [b]) => a.localeCompare(b))).toEqual([
+        ['c0', 'Bob'], ['c1', 'Bob (2)'], ['c2', 'Amy'], ['c3', 'Bob (3)'],
+      ]);
+    });
+
+    it('keeps a partner\'s label when the list is narrowed to them', () => {
+      const labels = partnerLabels(MIXED);
+      const onlyC3 = filterSplits(MIXED, { ...EMPTY_FILTER, partner: 'c3' });
+      // Numbered from the narrowed list alone, Bob (2) would read plain "Bob".
+      expect(frontedByPartner(onlyC3, 'TWD', '2026-11', labels)).toEqual([{ connectionId: 'c3', name: 'Bob (2)', amount: 80 }]);
+      expect(filterOptions(onlyC3, { ...EMPTY_FILTER, partner: 'c3' }, labels).partners)
+        .toEqual([{ connectionId: 'c3', name: 'Bob (2)' }]);
+      // A chosen partner with no bill on a narrowed list keeps their name too.
+      expect(filterOptions([], { ...EMPTY_FILTER, partner: 'c2' }, labels).partners).toEqual([{ connectionId: 'c2', name: 'Amy' }]);
     });
 
     it('counts a partner choice as a filter', () => {

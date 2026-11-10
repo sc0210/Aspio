@@ -8,7 +8,7 @@ import { useIsDark } from '@/contexts/ThemeContext';
 import { businessToday } from '@/lib/portfolio/businessDate';
 import { formatCurrency } from '@/utils/formatters';
 import type { SplitOut } from '@/shared/types';
-import { accepted, byCategory, byMonth, currenciesByUse, frontedByPartner, monthLabel as formatMonth, monthOf, shiftMonth, summarize } from './sharedSpendingStats';
+import { accepted, byCategory, byMonth, currenciesByUse, frontedByPartner, monthLabel as formatMonth, monthOf, shiftMonth, summarize, type PartnerLabels } from './sharedSpendingStats';
 
 // As the rest of the tab: whole dollars for TWD.
 const money = (value: number, currency: string) =>
@@ -27,13 +27,15 @@ interface SplitInsightsProps {
   splits: SplitOut[];
   /** Set when the bills filter narrows to one partner, so the title says whose figures these are. */
   partnerName?: string;
+  /** Built from every bill: with a partner chosen, `splits` is narrowed and would renumber same-name partners. */
+  partnerLabels?: PartnerLabels;
 }
 
 /**
  * What the accepted shared bills add up to: a month's totals, where the money
  * went, and how it moved over the last six months. See `sharedSpendingStats.ts`.
  */
-export default function SplitInsights({ splits, partnerName }: SplitInsightsProps) {
+export default function SplitInsights({ splits, partnerName, partnerLabels }: SplitInsightsProps) {
   const { t, i18n } = useTranslation(['common', 'transactions']);
   const isDark = useIsDark();
   const colors = isDark ? SERIES.dark : SERIES.light;
@@ -47,7 +49,10 @@ export default function SplitInsights({ splits, partnerName }: SplitInsightsProp
   const scope = allTime ? null : month;
   const summary = useMemo(() => (currency ? summarize(splits, currency, scope) : null), [splits, currency, scope]);
   const categories = useMemo(() => (currency ? byCategory(splits, currency, scope) : []), [splits, currency, scope]);
-  const fronted = useMemo(() => (currency ? frontedByPartner(splits, currency, scope) : []), [splits, currency, scope]);
+  const fronted = useMemo(
+    () => (currency ? frontedByPartner(splits, currency, scope, partnerLabels) : []),
+    [splits, currency, scope, partnerLabels],
+  );
   const trend = useMemo(
     () => (currency ? byMonth(splits, currency, allTime ? thisMonth : month, TREND_MONTHS) : []),
     [splits, currency, month, allTime, thisMonth],
@@ -59,7 +64,7 @@ export default function SplitInsights({ splits, partnerName }: SplitInsightsProp
   const categoryLabel = (name: string) => t(`transactions:form.categories.${name}`, name);
   // Named after the partners behind these figures, not every bill on the list.
   const partners = new Set(accepted(splits).filter((s) => s.currency === currency).map((s) => s.partner_name));
-  const partnerLabel = partners.size === 1 ? [...partners][0] : t('savings.splits.insights.partners', 'Partners');
+  const partnerLabel = partnerName ?? (partners.size === 1 ? [...partners][0] : t('savings.splits.insights.partners', 'Partners'));
   const minePct = summary.total > 0 ? Math.round((summary.mine / summary.total) * 100) : 0;
   const largest = categories[0]?.total ?? 0;
   const uncategorised = t('savings.splits.insights.uncategorised', 'No category');
