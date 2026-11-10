@@ -24,9 +24,13 @@ import { cn } from '@/utils/cn';
 import type { Transaction } from '@/shared/types';
 import { moveId } from './dayOrder';
 
-// Two columns only at 2xl: beside the 320px filter panel a 1280px screen left each
-// card ~300px, enough for one character of the description.
-const GRID = 'grid grid-cols-1 2xl:grid-cols-2 gap-2 animate-fade-in';
+// Columns follow the list's own width, not the viewport's: a 416px floor per card
+// (at ~390px the description and chips still clipped and wrapped).
+// A viewport breakpoint got both ends wrong: `lg` gave ~300px cards beside the filter
+// panel at 1280px (descriptions cut to one character), and `2xl` left a wide list one
+// stretched row per line. auto-fill keeps card widths equal across days; min() keeps
+// a list narrower than the floor to one column instead of overflowing.
+const GRID = 'grid grid-cols-[repeat(auto-fill,minmax(min(100%,26rem),1fr))] gap-2 animate-fade-in';
 
 interface SortableDayGridProps {
   rows: Transaction[];
