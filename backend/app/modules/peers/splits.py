@@ -23,7 +23,7 @@ from __future__ import annotations
 import logging
 import uuid
 from collections import defaultdict
-from datetime import datetime, timezone
+from datetime import datetime, timedelta, timezone
 from decimal import ROUND_DOWN, ROUND_HALF_UP, Decimal
 from typing import Optional
 from uuid import UUID
@@ -87,6 +87,8 @@ logger = logging.getLogger(__name__)
 
 CENT = Decimal("0.01")
 SPLITS_URL = "/savings?tab=splits"
+# One reminder per partner per day: a nudge, not a stream.
+REMINDER_COOLDOWN = timedelta(hours=24)
 # Unanswered proposals one person may have open with one partner (each one notifies).
 MAX_OPEN_PROPOSALS = 20
 LIST_LIMIT = 200
@@ -858,6 +860,43 @@ class SplitService:
             .where(TransactionCategory.id.in_(category_ids))
         )).all()) if category_ids else {}
         return [await self._out(s, user_id, rows, amendments, categories) for s in splits]
+
+    async def remind(self, user_id: UUID, connection_id: UUID) -> None:
+        """Nudge a partner who owes you: one notification saying how much, linking to
+        settling up. Refused when nothing is owed or a reminder went out in the last
+        day. A partner who muted you gets nothing, as with splits; the sender sees the
+        same success either way, so a mute isn't revealed."""
+        conn = await self._connection(connection_id, user_id)
+        owed = {c: v for c, v in (await self._net(user_id, conn.id)).get(conn.id, {}).items() if v > 0}
+        if not owed:
+            raise HTTPException(status.HTTP_422_UNPROCESSABLE_ENTITY, "Nothing is owed to you")
+        partner_id = self._partner(conn, user_id)
+
+        now = datetime.now(timezone.utc)
+        recent = (await self.session.execute(
+            select(Notification).where(Notification.user_id == partner_id)
+            .order_by(Notification.created_at.desc()).limit(50)
+        )).scalars().all()
+        for n in recent:
+            sent = n.created_at if n.created_at.tzinfo else n.created_at.replace(tzinfo=timezone.utc)
+            if (n.data or {}).get("action") == "settle_reminder" and (n.data or {}).get("connection_id") == str(conn.id) \
+                    and now - sent < REMINDER_COOLDOWN:
+                raise HTTPException(status.HTTP_429_TOO_MANY_REQUESTS, "You already reminded them today")
+
+        pref = await self.session.get(PeerConnectionPref, (conn.id, partner_id))
+        if pref is None or pref.split_notifications:
+            name = await self._name(user_id)
+            amounts = " + ".join(f"{c} {v:,.0f}" if c == "TWD" else f"{c} {v:,.2f}" for c, v in sorted(owed.items()))
+            self.session.add(Notification(
+                id=uuid.uuid4(), user_id=partner_id, type=NotificationType.SYSTEM_UPDATE,
+                priority=NotificationPriority.MEDIUM, status=NotificationStatus.PENDING,
+                title=f"Reminder from {name}",
+                message=f"You owe {name} {amounts} for shared bills. Settle up when you can.",
+                action_url=SPLITS_URL, is_actionable=True,
+                data={"action": "settle_reminder", "connection_id": str(conn.id)},
+                channels=[NotificationChannel.IN_APP],
+            ))
+        await self.session.commit()
 
     async def balances(self, user_id: UUID) -> list[PeerBalanceOut]:
         """Per partner and currency: > 0 they owe you, < 0 you owe them.
