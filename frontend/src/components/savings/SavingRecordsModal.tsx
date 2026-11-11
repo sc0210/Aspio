@@ -9,6 +9,10 @@ import { isOwnRecord } from '@/components/savings/recordOwnership';
 import { formatCurrency as formatCurrencyUtil } from '@/utils/formatters';
 import { useDialog } from '@/hooks/useDialog';
 import { useTranslation } from 'react-i18next';
+import dynamic from 'next/dynamic';
+
+// Recharts loads only when a goal's records are opened, not with the Savings page.
+const GoalHistoryChart = dynamic(() => import('@/components/savings/GoalHistoryChart'), { ssr: false });
 
 const fmt = (v: number) => formatCurrencyUtil(v, 'TWD', { precision: 0 });
 
@@ -90,6 +94,12 @@ export default function SavingRecordsModal({
       loadRecords();
     }
   }, [goal, loadRecords]);
+
+  // Whose each record is, by the rule the card's totals use.
+  const isMine = useCallback(
+    (r: SavingRecord) => (goal ? isOwnRecord(r, goal, currentUserId) : false),
+    [goal, currentUserId],
+  );
 
   if (!goal) return null;
 
@@ -337,6 +347,7 @@ export default function SavingRecordsModal({
             </div>
           ) : (
             <div className="overflow-x-auto">
+              <GoalHistoryChart records={records} isMine={isMine} target={goal.target_amount} partnerName={goal.peer_name} />
               <table className="w-full text-sm">
                 <thead>
                   <tr className="text-left text-xs text-gray-500 dark:text-gray-400 border-b border-gray-100 dark:border-gray-700">

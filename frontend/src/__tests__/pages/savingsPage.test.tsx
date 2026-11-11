@@ -57,6 +57,8 @@ jest.mock('@/lib/api-client', () => ({
     getPeerCompareData: jest.fn(),
     removePeerConnection: jest.fn(),
     deleteSharedGoal: jest.fn(),
+    // The pace line reads every active goal's records.
+    listSavingRecords: jest.fn(() => Promise.resolve({ data: [] })),
   },
 }));
 
@@ -371,6 +373,26 @@ describe('/savings — goals and compare as tabs over one roster', () => {
       api.listSharedGoals.mockResolvedValue({ data: [demoSharedGoals[0]] });
       render(<SavingsPage />);
       expect(await screen.findByRole('button', { name: `edit ${demoSharedGoals[0].id}` })).toBeInTheDocument();
+    });
+
+    it('projects the pace from the active goals\' recent records', async () => {
+      const goalOnTime = { ...demoSharedGoals[0], status: 'active' as const, target_date: '2099-01-01', target_amount: 50000, total_amount: 20000 };
+      api.listSharedGoals.mockResolvedValue({ data: [goalOnTime] });
+      const recent = new Date(Date.now() - 10 * 86_400_000).toISOString().slice(0, 10);
+      // Every fetch (the page loads goals more than once), then back to empty for the next tests.
+      api.listSavingRecords.mockImplementation(() => Promise.resolve({ data: [{
+        id: 'r1', goal_id: goalOnTime.id, user_id: 'u1', user_name: 'Me', amount: 9000,
+        record_date: recent, note: null, created_at: `${recent}T00:00:00Z`,
+      }] }));
+      try {
+        render(<SavingsPage />);
+        await waitFor(() => expect(screen.getByTestId('savings-pace')).toHaveTextContent(/every active goal is reached by .*on time/));
+        // And never the "nothing saved" line on the way there.
+        expect(screen.queryByText(/Nothing saved toward the active goals/)).toBeNull();
+        expect(api.listSavingRecords).toHaveBeenCalledWith(goalOnTime.id);
+      } finally {
+        api.listSavingRecords.mockImplementation(() => Promise.resolve({ data: [] }));
+      }
     });
 
     it('fetches the comparison once when its tab is shown', async () => {

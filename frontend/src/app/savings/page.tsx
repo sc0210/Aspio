@@ -23,7 +23,9 @@ import { withRecordTotals } from '@/components/savings/recordOwnership';
 import {
   demoCompareData, demoPeerConnections, demoRecurringSplits, demoSavingRecords, demoSettlements, demoSharedGoals, demoSplitBalances, demoSplits,
 } from '@/data/demoData';
-import type { CompareDataResponse, PeerConnectionOut, SharedGoalOut } from '@/shared/types';
+import type { CompareDataResponse, PeerConnectionOut, SavingRecord, SharedGoalOut } from '@/shared/types';
+import { paceForecast } from '@/components/savings/savingsPace';
+import { businessToday } from '@/lib/portfolio/businessDate';
 import { formatCurrency as formatCurrencyUtil } from '@/utils/formatters';
 import { cn } from '@/utils/cn';
 import { useIsMobile } from '@/hooks/useMediaQuery';
@@ -86,6 +88,31 @@ function SavingsGroups() {
 
   const [connections, setConnections] = useState<PeerConnectionOut[]>([]);
   const [goals, setGoals] = useState<SharedGoalOut[]>([]);
+  // The pace line reads every active goal's saving records. Fetched results are kept with
+  // the goals they were for (ids and totals: a record added or removed changes a total), so a
+  // stale set is never shown and nothing reads "nothing saved" while a fetch is under way.
+  const activeGoals = goals.filter((g) => g.status !== 'completed');
+  const paceKey = activeGoals.map((g) => `${g.id}:${g.total_amount}`).join(',');
+  const [fetchedPace, setFetchedPace] = useState<{ key: string; records: SavingRecord[] | null } | null>(null);
+  useEffect(() => {
+    if (isDemo || !isAuthenticated || paceKey === '') return;
+    const ids = paceKey.split(',').map((k) => k.split(':')[0]);
+    let stale = false;
+    // All or nothing: a partial set would understate the pace. Started inside a then,
+    // so even a synchronous throw ends in the catch.
+    Promise.resolve()
+      .then(() => Promise.all(ids.map((id) => apiClient.listSavingRecords(id).then((r) => r.data ?? []))))
+      .then((all) => { if (!stale) setFetchedPace({ key: paceKey, records: all.flat() }); })
+      .catch(() => { if (!stale) setFetchedPace({ key: paceKey, records: null }); });
+    return () => { stale = true; };
+  }, [paceKey, isDemo, isAuthenticated]);
+  // null: not loaded yet, or the load failed; the line stays hidden.
+  const paceRecords: SavingRecord[] | null = isDemo
+    ? activeGoals.flatMap((g) => demoSavingRecords[g.id] ?? [])
+    : paceKey === ''
+      ? []
+      : fetchedPace?.key === paceKey ? fetchedPace.records : null;
+
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [isAddPeerOpen, setIsAddPeerOpen] = useState(false);
@@ -410,7 +437,7 @@ function SavingsGroups() {
                     <SharedSpendingTab connections={accepted} demo={isDemo ? DEMO_SHARED_SPENDING : undefined} />
                   ) : activeTab === 'goals' ? (
                     <div className="space-y-6">
-                      {goals.length > 0 && <CombinedProgress goals={goals} />}
+                      {goals.length > 0 && <CombinedProgress goals={goals} paceRecords={paceRecords} />}
 
                       {goals.length === 0 ? (
                         <div className="bg-white dark:bg-gray-800 rounded-xl p-10 shadow-sm flex flex-col items-center text-center gap-4">
@@ -575,8 +602,11 @@ function TabBar({ tab, onSelect, tabs = TABS }: { tab: Tab; onSelect: (tab: Tab)
   );
 }
 
-function CombinedProgress({ goals }: { goals: SharedGoalOut[] }) {
-  const { t } = useTranslation('common');
+function CombinedProgress({ goals, paceRecords }: { goals: SharedGoalOut[]; paceRecords: SavingRecord[] | null }) {
+  const { t, i18n } = useTranslation('common');
+  const forecast = paceRecords ? paceForecast(goals, paceRecords, businessToday()) : null;
+  const monthName = (ym: string) =>
+    new Date(Date.UTC(+ym.slice(0, 4), +ym.slice(5, 7) - 1, 1)).toLocaleDateString(i18n?.language || 'en', { year: 'numeric', month: 'short', timeZone: 'UTC' });
   const totalSaved = goals.reduce((s, g) => s + g.total_amount, 0);
   const totalTarget = goals.reduce((s, g) => s + g.target_amount, 0);
   const overallPct = totalTarget > 0 ? Math.min((totalSaved / totalTarget) * 100, 100) : 0;
@@ -626,6 +656,24 @@ function CombinedProgress({ goals }: { goals: SharedGoalOut[] }) {
           </div>
         )}
       </div>
+      {/* Where the recent pace lands: only a projection, so it says what it is built on. */}
+      {forecast && forecast.kind !== 'done' && (
+        <p className="mt-3 text-sm text-gray-700 dark:text-gray-300" data-testid="savings-pace">
+          {forecast.kind === 'stalled'
+            ? t('savings.summary.paceStalled', 'Nothing saved toward the active goals in the last 3 months, so there is no pace to project yet.')
+            : forecast.monthsLate > 0
+              ? t('savings.summary.paceLate', {
+                  count: forecast.monthsLate,
+                  amount: formatTWD(Math.round(forecast.perMonth)), month: monthName(forecast.finish),
+                  defaultValue_one: 'At your last 3 months\' pace ({{amount}} a month), every active goal is reached by {{month}}, {{count}} month after the last deadline.',
+                  defaultValue_other: 'At your last 3 months\' pace ({{amount}} a month), every active goal is reached by {{month}}, {{count}} months after the last deadline.',
+                  defaultValue: 'At your last 3 months\' pace ({{amount}} a month), every active goal is reached by {{month}}, {{count}} months after the last deadline.',
+                })
+              : t('savings.summary.paceOnTime', 'At your last 3 months\' pace ({{amount}} a month), every active goal is reached by {{month}}, on time.', {
+                  amount: formatTWD(Math.round(forecast.perMonth)), month: monthName(forecast.finish),
+                })}
+        </p>
+      )}
     </div>
   );
 }

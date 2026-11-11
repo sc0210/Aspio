@@ -806,22 +806,23 @@ export const demoGroupExpenses: Record<string, DemoGroupExpense[]> = {
   ],
 };
 
+// Dated back from today, so the demo always has recent saving for the pace line to read.
 export const demoSavingRecords: Record<string, SavingRecord[]> = {
   'demo-goal-1': [
-    { id: 'rec-1a', goal_id: 'demo-goal-1', user_id: 'demo-user-1', user_name: 'Alex Chen', amount: 5000, record_date: '2026-01-20', note: 'Monthly savings', created_at: '2026-01-20T10:00:00Z' },
-    { id: 'rec-1b', goal_id: 'demo-goal-1', user_id: 'demo-peer-1', user_name: '小明', amount: 4000, record_date: '2026-01-22', note: null, created_at: '2026-01-22T09:00:00Z' },
-    { id: 'rec-1c', goal_id: 'demo-goal-1', user_id: 'demo-user-1', user_name: 'Alex Chen', amount: 7000, record_date: '2026-02-15', note: 'Bonus savings', created_at: '2026-02-15T11:00:00Z' },
-    { id: 'rec-1d', goal_id: 'demo-goal-1', user_id: 'demo-peer-1', user_name: '小明', amount: 8000, record_date: '2026-03-10', note: 'March contribution', created_at: '2026-03-10T08:00:00Z' },
-    { id: 'rec-1e', goal_id: 'demo-goal-1', user_id: 'demo-user-1', user_name: 'Alex Chen', amount: 6000, record_date: '2026-04-05', note: null, created_at: '2026-04-05T14:00:00Z' },
+    { id: 'rec-1a', goal_id: 'demo-goal-1', user_id: 'demo-user-1', user_name: 'Alex Chen', amount: 5000, record_date: splitDay(200), note: 'Monthly savings', created_at: `${splitDay(200)}T10:00:00Z` },
+    { id: 'rec-1b', goal_id: 'demo-goal-1', user_id: 'demo-peer-1', user_name: '小明', amount: 4000, record_date: splitDay(198), note: null, created_at: `${splitDay(198)}T10:00:00Z` },
+    { id: 'rec-1c', goal_id: 'demo-goal-1', user_id: 'demo-user-1', user_name: 'Alex Chen', amount: 7000, record_date: splitDay(120), note: 'Bonus savings', created_at: `${splitDay(120)}T10:00:00Z` },
+    { id: 'rec-1d', goal_id: 'demo-goal-1', user_id: 'demo-peer-1', user_name: '小明', amount: 8000, record_date: splitDay(62), note: 'Monthly contribution', created_at: `${splitDay(62)}T10:00:00Z` },
+    { id: 'rec-1e', goal_id: 'demo-goal-1', user_id: 'demo-user-1', user_name: 'Alex Chen', amount: 6000, record_date: splitDay(18), note: null, created_at: `${splitDay(18)}T10:00:00Z` },
   ],
   'demo-goal-2': [
-    { id: 'rec-2a', goal_id: 'demo-goal-2', user_id: 'demo-user-1', user_name: 'Alex Chen', amount: 15000, record_date: '2026-02-25', note: 'Initial deposit', created_at: '2026-02-25T09:00:00Z' },
-    { id: 'rec-2b', goal_id: 'demo-goal-2', user_id: 'demo-peer-2', user_name: '小美', amount: 12000, record_date: '2026-03-01', note: null, created_at: '2026-03-01T10:00:00Z' },
-    { id: 'rec-2c', goal_id: 'demo-goal-2', user_id: 'demo-user-1', user_name: 'Alex Chen', amount: 15000, record_date: '2026-04-20', note: 'April savings', created_at: '2026-04-20T11:00:00Z' },
-    { id: 'rec-2d', goal_id: 'demo-goal-2', user_id: 'demo-peer-2', user_name: '小美', amount: 13000, record_date: '2026-05-10', note: null, created_at: '2026-05-10T09:00:00Z' },
+    { id: 'rec-2a', goal_id: 'demo-goal-2', user_id: 'demo-user-1', user_name: 'Alex Chen', amount: 15000, record_date: splitDay(150), note: 'Initial deposit', created_at: `${splitDay(150)}T10:00:00Z` },
+    { id: 'rec-2b', goal_id: 'demo-goal-2', user_id: 'demo-peer-2', user_name: '小美', amount: 12000, record_date: splitDay(146), note: null, created_at: `${splitDay(146)}T10:00:00Z` },
+    { id: 'rec-2c', goal_id: 'demo-goal-2', user_id: 'demo-user-1', user_name: 'Alex Chen', amount: 15000, record_date: splitDay(75), note: 'Monthly savings', created_at: `${splitDay(75)}T10:00:00Z` },
+    { id: 'rec-2d', goal_id: 'demo-goal-2', user_id: 'demo-peer-2', user_name: '小美', amount: 13000, record_date: splitDay(33), note: null, created_at: `${splitDay(33)}T10:00:00Z` },
   ],
   'demo-goal-3': [
-    { id: 'rec-3a', goal_id: 'demo-goal-3', user_id: 'demo-user-1', user_name: 'Alex Chen', amount: 5500, record_date: '2025-12-20', note: 'Gift fund', created_at: '2025-12-20T10:00:00Z' },
-    { id: 'rec-3b', goal_id: 'demo-goal-3', user_id: 'demo-peer-1', user_name: '小明', amount: 4500, record_date: '2025-12-25', note: null, created_at: '2025-12-25T08:00:00Z' },
+    { id: 'rec-3a', goal_id: 'demo-goal-3', user_id: 'demo-user-1', user_name: 'Alex Chen', amount: 5500, record_date: splitDay(330), note: 'Gift fund', created_at: `${splitDay(330)}T10:00:00Z` },
+    { id: 'rec-3b', goal_id: 'demo-goal-3', user_id: 'demo-peer-1', user_name: '小明', amount: 4500, record_date: splitDay(325), note: null, created_at: `${splitDay(325)}T10:00:00Z` },
   ],
 };
