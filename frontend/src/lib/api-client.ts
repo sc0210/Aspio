@@ -632,6 +632,11 @@ class ApiClient {
     return this.post<SplitOut>(`/peers/splits/${splitId}/amend`, body);
   }
 
+  /** Nudge a partner who owes you to settle up; refused (429) more than once a day. */
+  async remindPartner(connectionId: string): Promise<ApiResponse<null>> {
+    return this.post<null>(`/peers/${connectionId}/remind`, {});
+  }
+
   async requestCancelSplit(splitId: string): Promise<ApiResponse<SplitOut>> {
     return this.post<SplitOut>(`/peers/splits/${splitId}/cancel-request`, {});
   }

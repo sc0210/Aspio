@@ -80,6 +80,9 @@ export default function SharedSpendingTab({ connections, demo }: { connections: 
   const [amendTarget, setAmendTarget] = useState<SplitOut | null>(null);
   const [recurring, setRecurring] = useState<RecurringSplitOut[]>([]);
   const [confirmStop, setConfirmStop] = useState<RecurringSplitOut | null>(null);
+  // A reminder's outcome, and the partners already reminded this visit (one a day server-side).
+  const [notice, setNotice] = useState('');
+  const [reminded, setReminded] = useState<Set<string>>(() => new Set());
   // Per partner: ring the bell for their bills and repayments. undefined: not loaded.
   const [notify, setNotifyState] = useState<Record<string, boolean | undefined>>({});
 
@@ -140,6 +143,21 @@ export default function SharedSpendingTab({ connections, demo }: { connections: 
   }, [load, queryClient]);
 
   // ledger: whether the action writes ledger rows (splits do; repayments don't).
+  const remind = async (connectionId: string, name: string) => {
+    setBusyId(`remind-${connectionId}`);
+    setError('');
+    setNotice('');
+    try {
+      await apiClient.remindPartner(connectionId);
+      setNotice(t('savings.splits.remind.sent', 'Reminder sent to {{name}}.', { name }));
+      setReminded((prev) => new Set(prev).add(connectionId));
+    } catch (err) {
+      setError(err instanceof Error ? err.message : t('savings.splits.errors.actionFailed', 'That didn’t work'));
+    } finally {
+      setBusyId(null);
+    }
+  };
+
   const act = async (item: { id: string }, run: () => Promise<unknown>, ledger = true) => {
     setBusyId(item.id);
     try {
@@ -222,6 +240,7 @@ export default function SharedSpendingTab({ connections, demo }: { connections: 
       <RelatedMoneyLinks current="splits" />
 
       {error && <p role="alert" className="text-sm text-error-700 dark:text-error-400">{error}</p>}
+      {notice && <p role="status" className="text-sm text-prosperity-700 dark:text-prosperity-400">{notice}</p>}
 
       {/* Balances */}
       <section aria-label={t('savings.splits.balances', 'Balances')} className="grid gap-3 sm:grid-cols-2">
@@ -240,11 +259,25 @@ export default function SharedSpendingTab({ connections, demo }: { connections: 
                     ? t('savings.splits.owesYou', '{{name}} owes you {{amount}}', { name: b.partner_name, amount: money(x.net, x.currency) })
                     : t('savings.splits.youOwe', 'You owe {{name}} {{amount}}', { name: b.partner_name, amount: money(x.net, x.currency) })}
                 </p>
-                {!readOnly && <button type="button"
-                  onClick={() => setSettleTarget({ connectionId: b.connection_id, partnerName: b.partner_name, currency: x.currency, net: x.net })}
-                  className="shrink-0 min-h-[44px] px-3 rounded-lg border border-gray-300 dark:border-gray-600 text-sm font-medium text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700">
-                  {t('savings.splits.settle.button', 'Settle up')}
-                </button>}
+                {!readOnly && (
+                  <div className="shrink-0 flex items-center gap-1">
+                    {/* They owe you: a nudge, once a day, alongside recording a repayment. */}
+                    {x.net > 0 && connections.some((c) => c.id === b.connection_id) && (
+                      <button type="button" onClick={() => void remind(b.connection_id, b.partner_name)}
+                        disabled={reminded.has(b.connection_id) || busyId === `remind-${b.connection_id}`}
+                        className="min-h-[44px] px-3 rounded-lg text-sm font-medium text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 disabled:opacity-50">
+                        {reminded.has(b.connection_id)
+                          ? t('savings.splits.remind.done', 'Reminded')
+                          : t('savings.splits.remind.button', 'Remind')}
+                      </button>
+                    )}
+                    <button type="button"
+                      onClick={() => setSettleTarget({ connectionId: b.connection_id, partnerName: b.partner_name, currency: x.currency, net: x.net })}
+                      className="min-h-[44px] px-3 rounded-lg border border-gray-300 dark:border-gray-600 text-sm font-medium text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700">
+                      {t('savings.splits.settle.button', 'Settle up')}
+                    </button>
+                  </div>
+                )}
               </div>
             ))}
             {/* A former partner keeps their balance card, but has no setting left. */}

@@ -999,7 +999,12 @@
           "Partnershare": "夥伴份額"
         }
       },
-      "settledWith": "與 {{name}} 已結清"
+      "settledWith": "與 {{name}} 已結清",
+      "remind": {
+        "button": "提醒",
+        "done": "已提醒",
+        "sent": "已提醒 {{name}}。"
+      }
     },
     "summary": {
       "active": "進行中",
