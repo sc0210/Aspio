@@ -45,8 +45,10 @@ describe('paceForecast', () => {
   });
 
   it('says "more than 10 years" instead of a date when the pace is tiny', () => {
-    const f = paceForecast([goal({})], [rec('2026-11-01', 1)], TODAY);
-    expect(f.kind).toBe('far');
+    // NT$30 in 90 days is ~NT$10 a month: 3,000 months for NT$30,000.
+    expect(paceForecast([goal({})], [rec('2026-11-01', 30)], TODAY).kind).toBe('far');
+    // A pace that rounds to NT$0 a month is no pace at all.
+    expect(paceForecast([goal({})], [rec('2026-11-01', 1)], TODAY).kind).toBe('stalled');
   });
 
   it('has nothing to project when every active goal is reached', () => {

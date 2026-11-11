@@ -47,6 +47,8 @@ export function paceForecast(goals: SharedGoalOut[], records: SavingRecord[], to
   if (saved <= 0) return { kind: 'stalled', remaining };
 
   const perMonth = saved / (PACE_WINDOW_DAYS / 30.44);
+  // Under a dollar a month would read "NT$0 a month": no pace worth projecting.
+  if (Math.round(perMonth) < 1) return { kind: 'stalled', remaining };
   const months = Math.ceil(remaining / perMonth);
   if (months > PACE_HORIZON_MONTHS) return { kind: 'far', perMonth, remaining };
   const finishIndex = monthIndex(today) + months;
