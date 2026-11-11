@@ -75,10 +75,13 @@ export interface StreakUpdateResult {
 }
 
 /**
- * A failure whose message the backend wrote for the user (its error envelope's
- * `error.message`, or a FastAPI string `detail`). Anything else that `upload()`
- * throws (a dropped connection, a timeout, the dev proxy's own 502) is a plain
- * Error whose message is not fit to show.
+ * An HTTP error response, with its status. From `upload()` it is thrown only when
+ * the backend wrote the message for the user (its error envelope's `error.message`,
+ * or a FastAPI string `detail`); anything else upload() throws (a dropped
+ * connection, a timeout, the dev proxy's own 502) is a plain Error. From the
+ * ordinary request path it is thrown for every error response, so its message may
+ * be the generic "HTTP error! status: N": read `.status` to tell failures apart,
+ * not `instanceof` to decide whether the message is fit to show.
  */
 export class ApiError extends Error {
   constructor(message: string, public readonly status: number) {
