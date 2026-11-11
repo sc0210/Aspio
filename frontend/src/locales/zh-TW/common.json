@@ -793,7 +793,9 @@
       "savedBy": "存款人",
       "saving": "儲存中…",
       "title": "儲蓄紀錄",
-      "total": "合計：{{amount}}"
+      "total": "合計：{{amount}}",
+      "history": "累積進度",
+      "historySummary": "目前已存：你 {{mine}}，{{name}} {{theirs}}，目標 {{target}}。"
     },
     "removePeer": "移除 {{name}}",
     "saveGoal": "儲存",
@@ -1005,7 +1007,11 @@
       "completed": "已達成",
       "overall": "整體",
       "savedOf": "已存，目標 {{target}}",
-      "title": "共同儲蓄進度"
+      "title": "共同儲蓄進度",
+      "paceStalled": "近 3 個月沒有為進行中的目標存錢，暫時無法推估進度。",
+      "paceOnTime": "以你們近 3 個月的速度（每月 {{amount}}），所有進行中的目標會在 {{month}} 如期達成。",
+      "paceLate_other": "以你們近 3 個月的速度（每月 {{amount}}），所有進行中的目標會在 {{month}} 達成，比最晚的期限晚 {{count}} 個月。",
+      "paceFar": "以你們近 3 個月的速度（每月 {{amount}}），進行中的目標需要超過 10 年才能達成。"
     },
     "tabs": {
       "compare": "比較",
