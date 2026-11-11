@@ -314,11 +314,14 @@ class ApiClient {
               return field ? `${field}: ${e.msg}` : e.msg;
             }).join('; ')
           : null;
-        throw new Error(
+        // An ApiError (an Error with the status), so a caller can tell a 429 or 409
+        // from any other failure; handlers reading .message are unchanged.
+        throw new ApiError(
           detail422 ||
           (dataObj?.error as Record<string, unknown>)?.message as string ||
           dataObj?.message as string ||
-          `HTTP error! status: ${response.status}`
+          `HTTP error! status: ${response.status}`,
+          response.status,
         );
       }
 
