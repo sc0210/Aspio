@@ -5,7 +5,7 @@ import { Fragment, useCallback, useEffect, useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useQueryClient } from '@tanstack/react-query';
 import { PlusIcon } from '@heroicons/react/24/outline';
-import { apiClient } from '@/lib/api-client';
+import { apiClient, ApiError } from '@/lib/api-client';
 import { invalidateAllFinancialData, QUERY_KEYS } from '@/hooks/useDataSynchronization';
 import { formatCurrency } from '@/utils/formatters';
 import { ConfirmDialog } from '@/components/ui/ConfirmDialog';
@@ -152,6 +152,8 @@ export default function SharedSpendingTab({ connections, demo }: { connections: 
       setNotice(t('savings.splits.remind.sent', 'Reminder sent to {{name}}.', { name }));
       setReminded((prev) => new Set(prev).add(connectionId));
     } catch (err) {
+      // Already reminded today (after a reload, say): the button should say so too.
+      if (err instanceof ApiError && err.status === 429) setReminded((prev) => new Set(prev).add(connectionId));
       setError(err instanceof Error ? err.message : t('savings.splits.errors.actionFailed', 'That didn’t work'));
     } finally {
       setBusyId(null);
@@ -159,6 +161,7 @@ export default function SharedSpendingTab({ connections, demo }: { connections: 
   };
 
   const act = async (item: { id: string }, run: () => Promise<unknown>, ledger = true) => {
+    setNotice(''); // a reminder's "sent" is old news once something else is done
     setBusyId(item.id);
     try {
       await run();

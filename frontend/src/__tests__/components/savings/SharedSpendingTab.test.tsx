@@ -20,6 +20,10 @@ jest.mock('react-i18next', () => {
 });
 
 jest.mock('@/lib/api-client', () => ({
+  // The real class shape: the tab reads .status off a refusal.
+  ApiError: class ApiError extends Error {
+    constructor(message: string, public readonly status: number) { super(message); }
+  },
   apiClient: {
     listSplits: jest.fn(),
     getSplitBalances: jest.fn(),
@@ -604,10 +608,13 @@ describe('SharedSpendingTab reminders', () => {
 
   it('shows the refusal when Bob was already reminded today', async () => {
     api.listSplits.mockResolvedValue({ data: [] });
-    api.remindPartner.mockRejectedValue(new Error('You already reminded them today'));
+    const { ApiError } = jest.requireMock('@/lib/api-client');
+    api.remindPartner.mockRejectedValue(new ApiError('You already reminded them today', 429));
     renderTab();
     fireEvent.click(await screen.findByRole('button', { name: 'Remind' }));
     expect(await screen.findByRole('alert')).toHaveTextContent('You already reminded them today');
+    // A refusal for the day reads as reminded, not as a button to press again.
+    expect(screen.getByRole('button', { name: 'Reminded' })).toBeDisabled();
   });
 
   it('offers no Remind when you are the one who owes', async () => {
