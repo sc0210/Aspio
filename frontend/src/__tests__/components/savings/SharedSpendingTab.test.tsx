@@ -20,6 +20,10 @@ jest.mock('react-i18next', () => {
 });
 
 jest.mock('@/lib/api-client', () => ({
+  // The real class shape: the tab reads .status off a refusal.
+  ApiError: class ApiError extends Error {
+    constructor(message: string, public readonly status: number) { super(message); }
+  },
   apiClient: {
     listSplits: jest.fn(),
     getSplitBalances: jest.fn(),
@@ -37,6 +41,7 @@ jest.mock('@/lib/api-client', () => ({
     respondToAmendment: jest.fn(),
     withdrawAmendment: jest.fn(),
     requestCancelSplit: jest.fn(),
+    remindPartner: jest.fn(),
     listRecurringSplits: jest.fn(),
     stopRecurringSplit: jest.fn(),
   },
@@ -586,5 +591,39 @@ describe('SharedSpendingTab bills list layout', () => {
     expect(toggle).toHaveAttribute('aria-expanded', 'true');
     fireEvent.change(within(list).getByRole('combobox', { name: 'Paid by' }), { target: { value: 'me' } });
     expect(toggle).toHaveTextContent('Filters1');
+  });
+});
+
+describe('SharedSpendingTab reminders', () => {
+  it('offers Remind only when the partner owes you, and sends it once', async () => {
+    api.listSplits.mockResolvedValue({ data: [] });
+    api.remindPartner.mockResolvedValue({ data: null });
+    renderTab(); // beforeEach: Bob owes NT$500
+    const remind = await screen.findByRole('button', { name: 'Remind' });
+    fireEvent.click(remind);
+    await waitFor(() => expect(api.remindPartner).toHaveBeenCalledWith('conn-1'));
+    expect(await screen.findByRole('status')).toHaveTextContent('Reminder sent to Bob.');
+    expect(screen.getByRole('button', { name: 'Reminded' })).toBeDisabled();
+  });
+
+  it('shows the refusal when Bob was already reminded today', async () => {
+    api.listSplits.mockResolvedValue({ data: [] });
+    const { ApiError } = jest.requireMock('@/lib/api-client');
+    api.remindPartner.mockRejectedValue(new ApiError('You already reminded them today', 429));
+    renderTab();
+    fireEvent.click(await screen.findByRole('button', { name: 'Remind' }));
+    expect(await screen.findByRole('alert')).toHaveTextContent('You already reminded them today');
+    // A refusal for the day reads as reminded, not as a button to press again.
+    expect(screen.getByRole('button', { name: 'Reminded' })).toBeDisabled();
+  });
+
+  it('offers no Remind when you are the one who owes', async () => {
+    api.listSplits.mockResolvedValue({ data: [] });
+    api.getSplitBalances.mockResolvedValue({ data: [
+      { connection_id: 'conn-1', partner_name: 'Bob', balances: [{ currency: 'TWD', net: -500 }] },
+    ] });
+    renderTab();
+    await screen.findByText(/You owe Bob/);
+    expect(screen.queryByRole('button', { name: 'Remind' })).toBeNull();
   });
 });

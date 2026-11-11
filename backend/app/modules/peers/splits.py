@@ -23,7 +23,7 @@ from __future__ import annotations
 import logging
 import uuid
 from collections import defaultdict
-from datetime import datetime, timezone
+from datetime import datetime, timedelta, timezone
 from decimal import ROUND_DOWN, ROUND_HALF_UP, Decimal
 from typing import Optional
 from uuid import UUID
@@ -87,6 +87,8 @@ logger = logging.getLogger(__name__)
 
 CENT = Decimal("0.01")
 SPLITS_URL = "/savings?tab=splits"
+# One reminder per partner per day: a nudge, not a stream.
+REMINDER_COOLDOWN = timedelta(hours=24)
 # Unanswered proposals one person may have open with one partner (each one notifies).
 MAX_OPEN_PROPOSALS = 20
 LIST_LIMIT = 200
@@ -858,6 +860,60 @@ class SplitService:
             .where(TransactionCategory.id.in_(category_ids))
         )).all()) if category_ids else {}
         return [await self._out(s, user_id, rows, amendments, categories) for s in splits]
+
+    async def remind(self, user_id: UUID, connection_id: UUID) -> None:
+        """Nudge a partner who owes you: one notification saying how much, linking to
+        settling up. Refused when nothing is owed or you reminded them in the last day.
+
+        The day's limit is kept on the sender's side, as a receipt already read
+        ("You reminded …"), not on the partner's: a partner who muted you gets no
+        notification, and a limit read from theirs would let a second reminder
+        through only when muted, giving the mute away.
+        """
+        conn = await self._connection(connection_id, user_id)
+        # One reminder at a time per connection: two at once would both pass the check.
+        await self.session.execute(select(PeerConnection.id).where(PeerConnection.id == conn.id).with_for_update())
+        owed = {c: v for c, v in (await self._net(user_id, conn.id)).get(conn.id, {}).items() if v > 0}
+        if not owed:
+            raise HTTPException(status.HTTP_422_UNPROCESSABLE_ENTITY, "Nothing is owed to you")
+        partner_id = self._partner(conn, user_id)
+
+        now = datetime.now(timezone.utc)
+        mine_today = (await self.session.execute(
+            select(Notification).where(and_(
+                Notification.user_id == user_id,
+                Notification.created_at > now - REMINDER_COOLDOWN,
+            ))
+        )).scalars().all()
+        if any((n.data or {}).get("action") == "settle_reminder_sent"
+               and (n.data or {}).get("connection_id") == str(conn.id) for n in mine_today):
+            raise HTTPException(status.HTTP_429_TOO_MANY_REQUESTS, "You already reminded them today")
+
+        name = await self._name(user_id)
+        partner_name = await self._name(partner_id)
+        amounts = " + ".join(f"{c} {v:,.0f}" if c == "TWD" else f"{c} {v:,.2f}" for c, v in sorted(owed.items()))
+        pref = await self.session.get(PeerConnectionPref, (conn.id, partner_id))
+        if pref is None or pref.split_notifications:
+            self.session.add(Notification(
+                id=uuid.uuid4(), user_id=partner_id, type=NotificationType.SYSTEM_UPDATE,
+                priority=NotificationPriority.MEDIUM, status=NotificationStatus.PENDING,
+                title=f"Reminder from {name}",
+                message=f"You owe {name} {amounts} for shared bills. Settle up when you can.",
+                action_url=SPLITS_URL, is_actionable=True,
+                data={"action": "settle_reminder", "connection_id": str(conn.id)},
+                channels=[NotificationChannel.IN_APP],
+            ))
+        # The sender's receipt, read already: their history, and the day's limit.
+        self.session.add(Notification(
+            id=uuid.uuid4(), user_id=user_id, type=NotificationType.SYSTEM_UPDATE,
+            priority=NotificationPriority.LOW, status=NotificationStatus.READ, read_at=now,
+            title=f"You reminded {partner_name}",
+            message=f"You reminded {partner_name} to settle up {amounts}.",
+            action_url=SPLITS_URL, is_actionable=False,
+            data={"action": "settle_reminder_sent", "connection_id": str(conn.id)},
+            channels=[NotificationChannel.IN_APP],
+        ))
+        await self.session.commit()
 
     async def balances(self, user_id: UUID) -> list[PeerBalanceOut]:
         """Per partner and currency: > 0 they owe you, < 0 you owe them.

@@ -1,4 +1,4 @@
-import { ApiClient } from '@/lib/api-client';
+import { ApiClient, ApiError } from '@/lib/api-client';
 import { getSession } from 'next-auth/react';
 
 // Mock fetch globally
@@ -326,6 +326,21 @@ describe('ApiClient', () => {
       });
 
       await expect(apiClient.get('/test')).rejects.toThrow('HTTP error! status: 500');
+    });
+
+    it('rejects with an ApiError carrying the status, so a caller can tell a 429 apart', async () => {
+      mockFetch.mockResolvedValue({
+        headers: { get: () => 'application/json' },
+        ok: false,
+        status: 429,
+        json: jest.fn().mockResolvedValue({ success: false, message: 'You already reminded them today' }),
+        text: jest.fn().mockResolvedValue(''),
+      });
+      const err = await apiClient.remindPartner('conn-1').catch((e: unknown) => e);
+      expect(err).toBeInstanceOf(ApiError);
+      expect(err).toBeInstanceOf(Error); // handlers reading .message keep working
+      expect((err as ApiError).status).toBe(429);
+      expect((err as ApiError).message).toBe('You already reminded them today');
     });
 
     it('should handle network errors', async () => {

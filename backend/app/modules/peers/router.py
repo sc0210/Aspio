@@ -518,6 +518,13 @@ async def withdraw_amendment(split_id: UUID, current_user: CurrentUser, session:
     return ApiResponse.success_response(data=await SplitService(session).withdraw_amendment(current_user.id, split_id))
 
 
+@router.post("/{connection_id}/remind", response_model=ApiResponse[None],
+             summary="Remind a partner who owes you to settle up (once a day)")
+async def remind_partner(connection_id: UUID, current_user: CurrentUser, session: AsyncSession = Depends(get_db)):
+    await SplitService(session).remind(current_user.id, connection_id)
+    return ApiResponse.success_response(data=None, message="Reminder sent")
+
+
 @router.get("/{connection_id}/prefs", response_model=ApiResponse[PeerPrefsOut],
             summary="Your settings for this partner")
 async def get_prefs(connection_id: UUID, current_user: CurrentUser, session: AsyncSession = Depends(get_db)):

@@ -75,10 +75,13 @@ export interface StreakUpdateResult {
 }
 
 /**
- * A failure whose message the backend wrote for the user (its error envelope's
- * `error.message`, or a FastAPI string `detail`). Anything else that `upload()`
- * throws (a dropped connection, a timeout, the dev proxy's own 502) is a plain
- * Error whose message is not fit to show.
+ * An HTTP error response, with its status. From `upload()` it is thrown only when
+ * the backend wrote the message for the user (its error envelope's `error.message`,
+ * or a FastAPI string `detail`); anything else upload() throws (a dropped
+ * connection, a timeout, the dev proxy's own 502) is a plain Error. From the
+ * ordinary request path it is thrown for every error response, so its message may
+ * be the generic "HTTP error! status: N": read `.status` to tell failures apart,
+ * not `instanceof` to decide whether the message is fit to show.
  */
 export class ApiError extends Error {
   constructor(message: string, public readonly status: number) {
@@ -314,11 +317,14 @@ class ApiClient {
               return field ? `${field}: ${e.msg}` : e.msg;
             }).join('; ')
           : null;
-        throw new Error(
+        // An ApiError (an Error with the status), so a caller can tell a 429 or 409
+        // from any other failure; handlers reading .message are unchanged.
+        throw new ApiError(
           detail422 ||
           (dataObj?.error as Record<string, unknown>)?.message as string ||
           dataObj?.message as string ||
-          `HTTP error! status: ${response.status}`
+          `HTTP error! status: ${response.status}`,
+          response.status,
         );
       }
 
@@ -630,6 +636,11 @@ class ApiClient {
 
   async amendSplit(splitId: string, body: SplitAmend): Promise<ApiResponse<SplitOut>> {
     return this.post<SplitOut>(`/peers/splits/${splitId}/amend`, body);
+  }
+
+  /** Nudge a partner who owes you to settle up; refused (429) more than once a day. */
+  async remindPartner(connectionId: string): Promise<ApiResponse<null>> {
+    return this.post<null>(`/peers/${connectionId}/remind`, {});
   }
 
   async requestCancelSplit(splitId: string): Promise<ApiResponse<SplitOut>> {

@@ -1000,7 +1000,12 @@
           "Partnershare": "Partner share"
         }
       },
-      "settledWith": "All square with {{name}}"
+      "settledWith": "All square with {{name}}",
+      "remind": {
+        "button": "Remind",
+        "done": "Reminded",
+        "sent": "Reminder sent to {{name}}."
+      }
     },
     "summary": {
       "active": "active",
