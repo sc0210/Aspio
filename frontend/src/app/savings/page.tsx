@@ -661,6 +661,10 @@ function CombinedProgress({ goals, paceRecords }: { goals: SharedGoalOut[]; pace
         <p className="mt-3 text-sm text-gray-700 dark:text-gray-300" data-testid="savings-pace">
           {forecast.kind === 'stalled'
             ? t('savings.summary.paceStalled', 'Nothing saved toward the active goals in the last 3 months, so there is no pace to project yet.')
+            : forecast.kind === 'far'
+              ? t('savings.summary.paceFar', 'At your last 3 months\' pace ({{amount}} a month), the active goals would take more than 10 years.', {
+                  amount: formatTWD(Math.round(forecast.perMonth)),
+                })
             : forecast.monthsLate > 0
               ? t('savings.summary.paceLate', {
                   count: forecast.monthsLate,

@@ -44,6 +44,11 @@ describe('paceForecast', () => {
     expect(f).toEqual({ kind: 'stalled', remaining: 30000 });
   });
 
+  it('says "more than 10 years" instead of a date when the pace is tiny', () => {
+    const f = paceForecast([goal({})], [rec('2026-11-01', 1)], TODAY);
+    expect(f.kind).toBe('far');
+  });
+
   it('has nothing to project when every active goal is reached', () => {
     expect(paceForecast([goal({ total_amount: 50000 })], [rec('2026-11-01', 1)], TODAY)).toEqual({ kind: 'done' });
   });

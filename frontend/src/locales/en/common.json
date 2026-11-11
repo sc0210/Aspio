@@ -1012,7 +1012,8 @@
       "paceStalled": "Nothing saved toward the active goals in the last 3 months, so there is no pace to project yet.",
       "paceOnTime": "At your last 3 months' pace ({{amount}} a month), every active goal is reached by {{month}}, on time.",
       "paceLate_one": "At your last 3 months' pace ({{amount}} a month), every active goal is reached by {{month}}, {{count}} month after the last deadline.",
-      "paceLate_other": "At your last 3 months' pace ({{amount}} a month), every active goal is reached by {{month}}, {{count}} months after the last deadline."
+      "paceLate_other": "At your last 3 months' pace ({{amount}} a month), every active goal is reached by {{month}}, {{count}} months after the last deadline.",
+      "paceFar": "At your last 3 months' pace ({{amount}} a month), the active goals would take more than 10 years."
     },
     "tabs": {
       "compare": "Compare",

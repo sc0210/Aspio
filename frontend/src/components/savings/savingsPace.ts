@@ -3,11 +3,16 @@ import type { SavingRecord, SharedGoalOut } from '@/shared/types';
 /** How far back "your recent pace" looks: about three months. */
 export const PACE_WINDOW_DAYS = 90;
 
+/** Past this many months a projection says nothing useful: "more than 10 years" instead of a date. */
+export const PACE_HORIZON_MONTHS = 120;
+
 export type PaceForecast =
   /** Nothing left to save on the active goals. */
   | { kind: 'done' }
   /** Nothing saved in the window: no pace to project from. */
   | { kind: 'stalled'; remaining: number }
+  /** Saving, but so slowly the finish is beyond the horizon. */
+  | { kind: 'far'; perMonth: number; remaining: number }
   | {
       kind: 'pace';
       /** Saved per month over the window, both people together. */
@@ -42,7 +47,9 @@ export function paceForecast(goals: SharedGoalOut[], records: SavingRecord[], to
   if (saved <= 0) return { kind: 'stalled', remaining };
 
   const perMonth = saved / (PACE_WINDOW_DAYS / 30.44);
-  const finishIndex = monthIndex(today) + Math.ceil(remaining / perMonth);
+  const months = Math.ceil(remaining / perMonth);
+  if (months > PACE_HORIZON_MONTHS) return { kind: 'far', perMonth, remaining };
+  const finishIndex = monthIndex(today) + months;
   const deadlines = active.map((g) => g.target_date).filter((d): d is string => !!d).map((d) => monthIndex(d.slice(0, 10)));
   const latest = deadlines.length ? Math.max(...deadlines) : null;
   return {
