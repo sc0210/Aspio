@@ -28,4 +28,8 @@ describe('todayChange', () => {
   it('leaves out holdings with no previous close', () => {
     expect(todayChange([h({ previousClose: undefined, dayChange: undefined })])).toEqual({ gain: 0, percentage: 0, counted: 0 });
   });
+
+  it('leaves out a stale price: its last move is days old, not today\'s', () => {
+    expect(todayChange([h({}), h({ priceStale: true, dayChange: 900 })])).toEqual({ gain: 50, percentage: 5, counted: 1 });
+  });
 });

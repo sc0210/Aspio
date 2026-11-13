@@ -19,6 +19,7 @@ Every reader of a day change goes through `resolve_day_change`.
 """
 
 import logging
+from contextlib import nullcontext
 from dataclasses import dataclass
 from datetime import date, timedelta
 from decimal import Decimal
@@ -73,13 +74,18 @@ def freshest_series(
     """
     best: List[Dict[str, Any]] = []
     for candidate in variants:
-        series = [
-            p for p in prices_by_symbol.get(candidate.upper(), [])
-            if p.get("close") and Decimal(str(p["close"])).is_finite()
-        ]
+        series = [p for p in prices_by_symbol.get(candidate.upper(), []) if _usable_close(p)]
         if series and (not best or str(series[-1]["date"]) > str(best[-1]["date"])):
             best = series
     return best
+
+
+def _usable_close(bar: Dict[str, Any]) -> bool:
+    """A bar whose close parses as a finite number; a bad row is skipped, not a 500."""
+    try:
+        return bool(bar.get("close")) and Decimal(str(bar["close"])).is_finite()
+    except (ArithmeticError, ValueError):
+        return False
 
 
 def _positive(value: Optional[Decimal]) -> Optional[Decimal]:
@@ -175,17 +181,24 @@ async def resolve_day_change(
         symbol_lookup_variants(_get(h, "symbol"), _get(h, "market")) if _get(h, "symbol") else []
         for h in holdings
     ]
+    # Each read in a savepoint: a failed statement otherwise aborts the caller's
+    # transaction, and its next query (the dashboard's, say) fails with it.
+    def savepoint():
+        return session.begin_nested() if session is not None else nullcontext()
+
     if prices_by_symbol is None:
         symbols = sorted({s for vs in variants for s in vs})
         try:
-            prices_by_symbol = (
-                await repo.get_batch_price_history(symbols, start, today) if symbols else {}
-            )
+            async with savepoint():
+                prices_by_symbol = (
+                    await repo.get_batch_price_history(symbols, start, today) if symbols else {}
+                )
         except Exception:
             logger.warning("Day change: price history unavailable; using stored quotes", exc_info=True)
             prices_by_symbol = {}
     try:
-        days_by_label = await repo.get_market_days(start, today)
+        async with savepoint():
+            days_by_label = await repo.get_market_days(start, today)
     except Exception:
         logger.warning("Day change: market days unavailable", exc_info=True)
         days_by_label = {}

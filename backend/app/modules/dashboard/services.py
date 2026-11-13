@@ -602,7 +602,8 @@ class DashboardService:
             bases = await resolve_day_change(self.db, holdings, business_today())
 
             for holding, base in zip(holdings, bases):
-                prev_close = base.previous_close
+                # A stale price's last move is not today's (see priceStale).
+                prev_close = None if base.price_stale else base.previous_close
                 h_value = holding.total_value or Decimal("0")
                 h_cost = holding.total_cost or Decimal("0")
 

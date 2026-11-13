@@ -14,6 +14,8 @@ import { toTWD } from '@/utils/formatters';
 export function todayChange(holdings: PortfolioHolding[]): { gain: number; percentage: number; counted: number } {
   const moved = holdings.filter(
     (h) => (!h.walletType || h.walletType === 'portfolio')
+      // A stale price's last move is days old, not today's (the backend's priceStale).
+      && !h.priceStale
       && h.dayChange != null
       && h.previousClose != null && h.previousClose > 0,
   );

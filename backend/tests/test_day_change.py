@@ -202,3 +202,39 @@ async def test_a_failed_history_read_falls_back_to_the_stored_quotes():
 
     assert [b.previous_close for b in result] == [Decimal("100.85"), Decimal("156.01")]
 
+
+
+PG_URL = __import__("os").environ.get("ASPIRO_PG_LOCK_TEST_URL", "")
+
+
+@pytest.mark.integration
+@pytest.mark.asyncio
+@pytest.mark.skipif(not PG_URL.startswith("postgresql"), reason="needs ASPIRO_PG_LOCK_TEST_URL")
+async def test_a_failed_read_leaves_the_callers_session_usable_on_postgres():
+    """Postgres aborts the whole transaction on a failed statement; without a
+    savepoint the dashboard's next query failed too. SQLite cannot show this.
+
+        ASPIRO_PG_LOCK_TEST_URL=postgresql+asyncpg://user:pass@host:5432/db \\
+            python -m pytest tests/test_day_change.py -m integration -o "addopts="
+    """
+    from sqlalchemy import text
+    from sqlalchemy.ext.asyncio import AsyncSession, create_async_engine
+
+    engine = create_async_engine(PG_URL, connect_args={"statement_cache_size": 0})
+
+    class BrokenRepo(FakeRepo):
+        def __init__(self, session):
+            self.session = session
+
+        async def get_batch_price_history(self, symbols, start, end):
+            await self.session.execute(text("SELECT * FROM no_such_table_for_day_change"))
+
+    try:
+        async with AsyncSession(engine) as session:
+            await session.execute(text("SELECT 1"))  # the caller's transaction is open
+            with patch.object(day_change, "HistoricalPriceRepository", BrokenRepo):
+                result = await resolve_day_change(session, HOLDINGS, TODAY)
+            assert [b.previous_close for b in result] == [Decimal("100.85"), Decimal("156.01")]
+            assert (await session.execute(text("SELECT 1"))).scalar() == 1
+    finally:
+        await engine.dispose()
