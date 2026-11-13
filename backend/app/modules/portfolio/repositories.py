@@ -694,9 +694,18 @@ class HoldingRepository:
                 ]:
                     setattr(holding, key, value)
 
+            # Cash stays at face value whatever an edit sends (see HoldingCreate).
+            cash_repriced = False
+            if str(getattr(holding.type, "value", holding.type)).lower() == "cash" and (
+                holding.average_cost != 1 or holding.current_price != 1
+            ):
+                holding.average_cost = holding.current_price = Decimal("1")
+                cash_repriced = True
+
             # Recalculate derived fields if quantity, cost or price changed
             if (
-                "quantity" in updates
+                cash_repriced
+                or "quantity" in updates
                 or "average_cost" in updates
                 or "averageCost" in updates
                 or "current_price" in updates

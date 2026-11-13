@@ -131,7 +131,11 @@ export function BuyHoldingModal({ isOpen, onClose, onBuy, existingHoldings = [] 
     };
 
     const quantityNum = parseFloat(quantity) || 0;
-    const priceNum = parseFloat(price) || 0;
+    // Cash is counted at face value in its own currency, as the wallet ledger
+    // records it: a price here is never asked for. A USD lot once entered at the
+    // exchange rate (31.5) was stored as US$63,000 and then converted to TWD again.
+    const isCash = type === 'cash';
+    const priceNum = isCash ? 1 : parseFloat(price) || 0;
     const totalCost = quantityNum * priceNum;
 
     const canSubmit = symbol && name && quantityNum > 0 && priceNum > 0 && !isSubmitting;
@@ -439,9 +443,10 @@ export function BuyHoldingModal({ isOpen, onClose, onBuy, existingHoldings = [] 
                                             inputMode="decimal"
                                             onWheel={(e) => e.currentTarget.blur()}
                                             step="any"
-                                            value={price}
+                                            value={isCash ? '1' : price}
                                             onChange={(e) => setPrice(e.target.value)}
-                                            className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus-visible:ring-2 focus-visible:ring-primary-500 bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
+                                            disabled={isCash}
+                                            className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus-visible:ring-2 focus-visible:ring-primary-500 bg-white dark:bg-gray-700 text-gray-900 dark:text-white disabled:opacity-60 disabled:cursor-not-allowed"
                                             required
                                         />
                                     </div>

@@ -180,6 +180,16 @@ class HoldingCreate(BaseHoldingSchema):
 
     model_config = ConfigDict(populate_by_name=True)
 
+    @model_validator(mode="after")
+    def _cash_at_face_value(self):
+        """Cash is worth its quantity in its own currency, which is how the wallet
+        bridge books it (add_holding: amount = quantity). A USD lot entered at the
+        exchange rate, 31.5, was stored as US$63,000 and converted to TWD again."""
+        if self.type == "cash":
+            self.average_cost = Decimal("1")
+            self.current_price = None
+        return self
+
 
 class HoldingUpdate(BaseModel):
     """Schema for updating holding information"""
