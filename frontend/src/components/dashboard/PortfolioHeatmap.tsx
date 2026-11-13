@@ -16,9 +16,9 @@ interface NodeInfo {
   sector: string;
   value: number;
   currency: string;
-  dayPct: number; // today's change %
+  dayPct: number | null; // today's change %; null when there is no previous close
   totalPct: number; // total gain/loss %
-  primaryPct: number; // the one driving colour + tile label (daily, or total as fallback)
+  primaryPct: number | null; // the one driving colour + tile label (daily, or total as fallback)
   fill: string;
 }
 
@@ -28,6 +28,7 @@ interface NodeInfo {
 const GREENS = ['#065f46', '#047857', '#059669']; // emerald 800 · 700 · 600
 const REDS = ['#991b1b', '#b91c1c', '#dc2626'];   // red 800 · 700 · 600
 const NEUTRAL = '#4b5563';                         // gray 600
+const NO_DATA = '#1f2937';                         // gray 800 — no previous close, so no "today"
 
 // Colour a gain/loss %. Western: gains green, losses red. TW/Asian markets use
 // the opposite convention (漲紅跌綠 — gains red, losses green), toggled via `tw`.
@@ -52,7 +53,7 @@ function legendColors(tw: boolean): string[] {
 
 const HEATMAP_TW_KEY = 'aspiro-heatmap-tw-colors';
 
-const formatPct = (pct: number) => `${pct >= 0 ? '+' : ''}${pct.toFixed(2)}%`;
+const formatPct = (pct: number | null) => (pct == null ? '—' : `${pct >= 0 ? '+' : ''}${pct.toFixed(2)}%`);
 
 /** Recharts Treemap content: draws sector-block borders (depth 1) and holding
  *  tiles (depth 2). Reads colour/label from the `nodes` lookup by symbol. */
@@ -134,7 +135,12 @@ export function PortfolioHeatmap() {
     });
 
   const { treeData, nodes, count, anyDaily } = useMemo(() => {
-    const active = (holdings || []).filter(h => (h.totalValue ?? 0) > 0);
+    // The Portfolio wallet's invested positions, as every other day-change figure
+    // counts them: Emergency-wallet holdings and cash have no place on this map.
+    const active = (holdings || []).filter(h =>
+      (h.totalValue ?? 0) > 0
+      && (!h.walletType || h.walletType === 'portfolio')
+      && h.type !== 'cash');
     const otherLabel = t('portfolio.sectorOther', 'Other');
 
     // Aggregate multiple lots of the SAME symbol into a single position:
@@ -142,7 +148,12 @@ export function PortfolioHeatmap() {
     // the tile's % is the blended return across all lots of that asset.
     const agg = new Map<
       string,
-      { symbol: string; name: string; sector: string; value: number; cost: number; gain: number; dayChange: number }
+      {
+        symbol: string; name: string; sector: string; value: number; cost: number; gain: number;
+        // Summed only over lots that have a previous close, against those lots' value:
+        // a lot without one is unknown, not flat, and must not dilute the others.
+        dayChange: number; dayBase: number; hasDay: boolean;
+      }
     >();
     for (const h of active) {
       // Normalize to TWD so US (USD) and TW (TWD) holdings are sized on the same
@@ -151,13 +162,17 @@ export function PortfolioHeatmap() {
       const cur = h.currency || 'TWD';
       const value = toTWD(Number(h.totalValue) || 0, cur);
       const gain = toTWD(Number(h.gainLoss) || 0, cur);
-      const dayChange = toTWD(Number(h.dayChange) || 0, cur);
+      const hasDay = h.dayChange != null;
+      const dayChange = hasDay ? toTWD(Number(h.dayChange) || 0, cur) : 0;
+      const dayBase = hasDay ? value - dayChange : 0;
       const existing = agg.get(h.symbol);
       if (existing) {
         existing.value += value;
         existing.cost += value - gain;
         existing.gain += gain;
         existing.dayChange += dayChange;
+        existing.dayBase += dayBase;
+        existing.hasDay ||= hasDay;
         if (existing.sector === otherLabel && h.sector?.trim()) existing.sector = h.sector.trim();
       } else {
         agg.set(h.symbol, {
@@ -168,6 +183,8 @@ export function PortfolioHeatmap() {
           cost: value - gain,
           gain,
           dayChange,
+          dayBase,
+          hasDay,
         });
       }
     }
@@ -180,9 +197,8 @@ export function PortfolioHeatmap() {
     const bySector = new Map<string, { name: string; size: number }[]>();
     for (const e of agg.values()) {
       const totalPct = e.cost > 0 ? (e.gain / e.cost) * 100 : 0;
-      // Prior-close value = current value − today's change; % vs that base.
-      const prevValue = e.value - e.dayChange;
-      const dayPct = prevValue > 0 ? (e.dayChange / prevValue) * 100 : 0;
+      // % against the prior-close value of the lots that have one.
+      const dayPct = e.hasDay && e.dayBase > 0 ? (e.dayChange / e.dayBase) * 100 : null;
       const primaryPct = anyDaily ? dayPct : totalPct;
       nodes[e.symbol] = {
         symbol: e.symbol,
@@ -193,7 +209,7 @@ export function PortfolioHeatmap() {
         dayPct,
         totalPct,
         primaryPct,
-        fill: heatColor(primaryPct, twMode),
+        fill: primaryPct == null ? NO_DATA : heatColor(primaryPct, twMode),
       };
       if (!bySector.has(e.sector)) bySector.set(e.sector, []);
       bySector.get(e.sector)!.push({ name: e.symbol, size: e.value });
@@ -292,7 +308,7 @@ export function PortfolioHeatmap() {
                         </div>
                         <div className="flex items-center justify-between gap-4">
                           <span className="text-gray-500 dark:text-gray-400">{t('portfolio.heatmapToday', 'Today')}</span>
-                          <span className={info.dayPct >= 0 ? 'text-success-700 dark:text-success-400 font-semibold' : 'text-red-700 dark:text-red-400 font-semibold'}>
+                          <span className={info.dayPct == null ? 'text-gray-500 dark:text-gray-400' : info.dayPct >= 0 ? 'text-success-700 dark:text-success-400 font-semibold' : 'text-red-700 dark:text-red-400 font-semibold'}>
                             {formatPct(info.dayPct)}
                           </span>
                         </div>
