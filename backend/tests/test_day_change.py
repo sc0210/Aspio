@@ -238,3 +238,53 @@ async def test_a_failed_read_leaves_the_callers_session_usable_on_postgres():
             assert (await session.execute(text("SELECT 1"))).scalar() == 1
     finally:
         await engine.dispose()
+
+
+@pytest.mark.unit
+@pytest.mark.asyncio
+async def test_both_history_reads_run_in_a_savepoint():
+    """The Postgres test above shows why; this one runs in CI and fails if a
+    read loses its savepoint."""
+    import contextlib
+
+    opened = []
+
+    class Session:
+        def begin_nested(self):
+            opened.append(1)
+            return contextlib.nullcontext()
+
+    FakeRepo.calls, FakeRepo.fail = [], False
+    with patch.object(day_change, "HistoricalPriceRepository", FakeRepo):
+        await resolve_day_change(Session(), HOLDINGS, TODAY)
+    assert len(opened) == 2
+
+
+@pytest.mark.unit
+@pytest.mark.asyncio
+async def test_the_dashboard_leaves_a_stale_price_out_of_todays_change():
+    from unittest.mock import AsyncMock, Mock
+
+    from app.modules.dashboard.services import DashboardService
+    from app.modules.portfolio.day_change import DayChangeBase
+
+    db = AsyncMock()
+    result = Mock()
+    result.scalars.return_value.all.return_value = [Mock()]  # one active portfolio
+    db.execute = AsyncMock(return_value=result)
+
+    def lot(symbol, price):
+        return SimpleNamespace(
+            symbol=symbol, name=symbol, currency="TWD", quantity=Decimal("10"),
+            current_price=Decimal(price), total_value=Decimal(price) * 10, total_cost=Decimal("1000"),
+        )
+
+    bases = [DayChangeBase(Decimal("100"), False), DayChangeBase(Decimal("2000"), True)]
+    with patch.object(day_change, "resolve_day_change", AsyncMock(return_value=bases)):
+        summary = await DashboardService(db)._get_portfolio_summary(
+            "11111111-1111-1111-1111-111111111111",
+            holdings=[lot("0050", "102.5"), lot("2330", "2285")],
+        )
+
+    assert summary["day_change"] == Decimal("25")  # (102.5 - 100) × 10; 2330's old move left out
+    assert summary["day_change_percentage"] == 2.5

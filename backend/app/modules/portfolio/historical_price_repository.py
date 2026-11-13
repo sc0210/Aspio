@@ -432,9 +432,10 @@ class HistoricalPriceRepository:
             # Without this, a historical sync would not be reflected for up to 1 hour.
             try:
                 affected_symbols = {rec["symbol"] for rec in prepared_data}
+                # ...and the market calendar, which new bars can extend.
                 keys_to_delete = [
                     key for key in list(_hist_cache.keys())
-                    if any(sym in key for sym in affected_symbols)
+                    if ":market_days:" in key or any(sym in key for sym in affected_symbols)
                 ]
                 for key in keys_to_delete:
                     _hcache_delete(key)
