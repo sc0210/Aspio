@@ -177,6 +177,11 @@ SELECT
 FROM checks
 ORDER BY present, sort;
 
+-- 2026_11_13_cash_face_value: expect 0 (cash lots priced other than 1).
+SELECT 'cash lots not at face value' AS what, count(*)::text AS value
+FROM portfolio_holdings
+WHERE lower(type::text) = 'cash' AND (average_cost <> 1 OR current_price <> 1);
+
 -- ── alembic bookkeeping ────────────────────────────────────────────────────
 -- Should equal the single head in backend/alembic/versions (check with
 -- `alembic heads`). If the schema above is fully OK but this lags, the fix is

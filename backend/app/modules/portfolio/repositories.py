@@ -244,6 +244,18 @@ class PortfolioRepository:
 
         await self.session.execute(stmt)
 
+def _cash_at_face_value(holding: PortfolioHolding) -> bool:
+    """Put a cash lot at 1 per unit in its own currency, as the wallet ledger books
+    it (see HoldingCreate). True when it was priced otherwise, so the caller
+    recomputes its totals. A USD reserve stored at 31.5 read as US$63,000."""
+    if str(getattr(holding.type, "value", holding.type)).lower() != "cash":
+        return False
+    if holding.average_cost == 1 and holding.current_price == 1:
+        return False
+    holding.average_cost = holding.current_price = Decimal("1")
+    return True
+
+
 class HoldingRepository:
     """Repository for portfolio holding operations"""
 
@@ -522,6 +534,7 @@ class HoldingRepository:
 
             if existing and should_aggregate:
                 # AGGREGATE: Sum quantities and calculate weighted average cost
+                _cash_at_face_value(existing)  # a legacy mispriced lot heals here
                 old_quantity = existing.quantity
                 old_total_cost = existing.quantity * existing.average_cost
 
@@ -571,7 +584,11 @@ class HoldingRepository:
                         setattr(existing, key, value)
 
                 # Recalculate derived fields
-                if "quantity" in holding_data or "average_cost" in holding_data:
+                if (
+                    _cash_at_face_value(existing)
+                    or "quantity" in holding_data
+                    or "average_cost" in holding_data
+                ):
                     existing.total_cost = existing.quantity * existing.average_cost
                     existing.total_value = existing.quantity * existing.current_price
                     existing.gain_loss = existing.total_value - existing.total_cost
@@ -694,13 +711,8 @@ class HoldingRepository:
                 ]:
                     setattr(holding, key, value)
 
-            # Cash stays at face value whatever an edit sends (see HoldingCreate).
-            cash_repriced = False
-            if str(getattr(holding.type, "value", holding.type)).lower() == "cash" and (
-                holding.average_cost != 1 or holding.current_price != 1
-            ):
-                holding.average_cost = holding.current_price = Decimal("1")
-                cash_repriced = True
+            # Cash stays at face value whatever an edit sends.
+            cash_repriced = _cash_at_face_value(holding)
 
             # Recalculate derived fields if quantity, cost or price changed
             if (
