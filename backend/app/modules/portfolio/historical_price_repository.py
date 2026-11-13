@@ -98,6 +98,22 @@ class HistoricalPriceRepository:
         result = await self.session.execute(stmt)
         return list(result.scalars().all())
 
+    async def get_market_days(self, start_date: date, end_date: date) -> Dict[str, set]:
+        """Every date any symbol has a bar on, per market label, in [start, end].
+
+        The exchange's own calendar as far as our data shows it: a weekday with
+        no bar for any symbol of a market was a holiday there.
+        """
+        stmt = (
+            select(HistoricalPrice.market, HistoricalPrice.date)
+            .where(HistoricalPrice.date >= start_date, HistoricalPrice.date <= end_date)
+            .distinct()
+        )
+        days: Dict[str, set] = {}
+        for market, day in (await self.session.execute(stmt)).all():
+            days.setdefault((market or "").upper(), set()).add(day)
+        return days
+
     async def get_batch_price_history(
         self,
         symbols: List[str],

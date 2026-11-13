@@ -592,16 +592,21 @@ class DashboardService:
             previous_value_basis = Decimal("0")
             top_performers = []
 
-            for holding in holdings:
+            # Day change against the official close of the session before each
+            # price's own, the base the portfolio page and P&L calendar use (see
+            # portfolio/day_change.py). A holding with no usable close contributes
+            # nothing — better a smaller true total than a fabricated share of it.
+            from app.modules.portfolio.day_change import resolve_day_change
+            from app.utils.datetime_helpers import business_today
+
+            bases = await resolve_day_change(self.db, holdings, business_today())
+
+            for holding, base in zip(holdings, bases):
+                prev_close = base.previous_close
                 h_value = holding.total_value or Decimal("0")
                 h_cost = holding.total_cost or Decimal("0")
 
-                # Day change against the provider's own previous close, captured
-                # alongside current_price so both describe the same session. A
-                # holding not yet repriced has none and contributes nothing —
-                # better a smaller true total than a fabricated share of it.
                 quantity = holding.quantity or Decimal("0")
-                prev_close = holding.previous_close
                 h_day_change = Decimal("0")
                 h_prev_value = Decimal("0")
                 if prev_close and prev_close > 0 and holding.current_price is not None:

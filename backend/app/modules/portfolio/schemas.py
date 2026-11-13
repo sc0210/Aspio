@@ -377,6 +377,11 @@ class HoldingResponse(BaseModel):
         description="Previous trading day's closing price (used for daily change calculation)",
         serialization_alias="previousClose",
     )
+    price_stale: Optional[bool] = Field(
+        None,
+        description="True once the holding's market has traded two sessions without this price",
+        serialization_alias="priceStale",
+    )
     sparkline_data: Optional[List[float]] = Field(
         default_factory=list,
         description="Historical price data for sparkline (last 30 days)",
