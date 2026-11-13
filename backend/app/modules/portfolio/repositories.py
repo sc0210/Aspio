@@ -553,6 +553,9 @@ class HoldingRepository:
                 existing.quantity = total_quantity
                 existing.average_cost = weighted_avg_cost
                 existing.total_cost = total_cost_sum
+                # An incoming cash leg that bypassed HoldingCreate is pinned too.
+                if _cash_at_face_value(existing):
+                    existing.total_cost = existing.quantity * existing.average_cost
 
                 # The lot keeps its market price. A buy's own price is what was
                 # paid, not a quote: copying it over (and stamping it fresh) made
@@ -584,11 +587,7 @@ class HoldingRepository:
                         setattr(existing, key, value)
 
                 # Recalculate derived fields
-                if (
-                    _cash_at_face_value(existing)
-                    or "quantity" in holding_data
-                    or "average_cost" in holding_data
-                ):
+                if "quantity" in holding_data or "average_cost" in holding_data:
                     existing.total_cost = existing.quantity * existing.average_cost
                     existing.total_value = existing.quantity * existing.current_price
                     existing.gain_loss = existing.total_value - existing.total_cost
