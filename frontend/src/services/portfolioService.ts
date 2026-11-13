@@ -992,6 +992,7 @@ class PortfolioService {
       manuallyPriced: Boolean(holding.manuallyPriced ?? holding.manually_priced),
       marketState: (holding.marketState ?? holding.market_state) as PortfolioHolding['marketState'],
       priceSession: (holding.priceSession ?? holding.price_session ?? undefined) as string | undefined,
+      priceStale: (holding.priceStale ?? holding.price_stale ?? undefined) as boolean | undefined,
       lastUpdated: new Date((holding.lastUpdated ?? holding.last_updated ?? holding.last_price_update_at ?? Date.now()) as string | number),
       priceHistory: (holding.priceHistory ?? holding.price_history) as PortfolioHolding['priceHistory'],
       sparklineData: sparklineData as PortfolioHolding['sparklineData'],

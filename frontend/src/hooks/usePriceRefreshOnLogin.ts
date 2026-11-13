@@ -2,15 +2,22 @@
 
 import { useEffect } from 'react';
 import { useSession } from 'next-auth/react';
+import { useQueryClient } from '@tanstack/react-query';
 import { portfolioService } from '@/services/portfolioService';
+import { invalidateDashboardData } from '@/hooks/useDataSynchronization';
 import { log } from '@/utils/logger';
 
 /**
  * Hook to check if user just logged in and trigger price cache update.
  * This ensures latest prices are fetched as soon as possible after login.
+ *
+ * The page has already rendered from the stored prices by the time this
+ * returns, so when it wrote new ones the dashboard queries are refetched;
+ * otherwise the fresh prices only appeared on the next visit.
  */
 export function usePriceRefreshOnLogin() {
     const { data: session, status } = useSession();
+    const queryClient = useQueryClient();
 
     useEffect(() => {
         // Only run when session is authenticated AND has access token
@@ -66,6 +73,7 @@ export function usePriceRefreshOnLogin() {
                         const result = await portfolioService.refreshPortfolioPrices(false);
 
                         if (result.success && result.data) {
+                            if (result.data.updated > 0) invalidateDashboardData(queryClient);
                             log.info(
                                 `Price cache updated on login: ${result.data.updated} updated, ${result.data.cached} cached`,
                                 undefined,
@@ -88,7 +96,11 @@ export function usePriceRefreshOnLogin() {
                         // If cache exists but might be stale, refresh in background (non-blocking)
                         // Use a small timeout to allow page to render first
                         setTimeout(() => {
-                            portfolioService.refreshPortfolioPrices(false).catch((error) => {
+                            portfolioService.refreshPortfolioPrices(false).then((result) => {
+                                if (result.success && result.data && result.data.updated > 0) {
+                                    invalidateDashboardData(queryClient);
+                                }
+                            }).catch((error) => {
                                 log.warn(
                                     'Background price refresh failed',
                                     error,
@@ -108,5 +120,5 @@ export function usePriceRefreshOnLogin() {
         }, 500); // 500ms delay to ensure API client is initialized
 
         return () => clearTimeout(timer);
-    }, [session?.user?.id, session?.accessToken, status]);
+    }, [session?.user?.id, session?.accessToken, status, queryClient]);
 }

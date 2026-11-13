@@ -585,5 +585,18 @@
     "lower": "Your wallets already count your share of shared bills, so they read {{amount}} less than your bank until you pay it.",
     "settle": "Settle up",
     "even": "Your wallets count only your share of shared bills; in {{currency}} what you’re owed and what you owe cancel out, so they match your bank."
+  },
+  "dataNotice": {
+    "title": "Some of your figures may be incomplete",
+    "dismiss": "Dismiss",
+    "failed_one": "{{count}} section couldn't load.",
+    "failed_other": "{{count}} sections couldn't load.",
+    "retry": "Retry",
+    "stale": "Prices for {{symbols}} are from {{date}}; they have not updated since.",
+    "refreshPrices": "Refresh prices",
+    "refreshing": "Refreshing…",
+    "refreshFailed": "Prices couldn't be refreshed. Try again later.",
+    "noDayChange": "No previous close for {{symbols}}, so they are left out of today's change.",
+    "unconverted": "No exchange rate for {{currencies}}; those amounts are not converted to TWD."
   }
 }

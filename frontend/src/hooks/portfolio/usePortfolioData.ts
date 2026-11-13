@@ -7,6 +7,7 @@ import { aggregateHoldingsBySymbol } from '@/utils/portfolio-aggregation';
 import { useRetirementProjection } from '@/hooks/useRetirementProjection';
 import type { PortfolioFilters } from './usePortfolioFilters';
 import { dailyPerformanceKey, DAILY_PERFORMANCE_DAYS_DEFAULT } from '@/lib/queryKeys';
+import { fetchDailyPerformance } from './fetchDailyPerformance';
 
 /**
  * Portfolio data hook
@@ -201,16 +202,8 @@ export function usePortfolioData(filters: PortfolioFilters) {
     refetch: refetchDailyPerformance,
   } = useQuery({
     queryKey: dailyPerformanceKey(session?.user?.email, DAILY_PERFORMANCE_DAYS_DEFAULT),
-    queryFn: async () => {
-      try {
-        // Fetch a year upfront, filter client-side
-        const response = await portfolioService.getDailyPerformance(DAILY_PERFORMANCE_DAYS_DEFAULT);
-        return response.success ? response.data : [];
-      } catch (error) {
-        log.warn('Failed to fetch daily performance', error, 'Portfolio');
-        return [];
-      }
-    },
+    // Fetch a year upfront, filter client-side. Shared with the dashboard.
+    queryFn: fetchDailyPerformance,
     enabled: !!portfolioData && portfolioData.holdings?.length > 0,
     staleTime: 15 * 60 * 1000, // 15 minutes (historical data)
     retry: false,

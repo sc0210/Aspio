@@ -585,5 +585,18 @@
     "lower": "錢包已計入你在共同帳單中的份額，因此在你還款前，會比銀行餘額少 {{amount}}。",
     "settle": "結清",
     "even": "錢包只計入你在共同帳單中的份額；{{currency}} 的應收與應付剛好抵銷，因此與銀行餘額一致。"
+  },
+  "dataNotice": {
+    "title": "部分數據可能不完整",
+    "dismiss": "關閉",
+    "failed_one": "有 {{count}} 個區塊無法載入。",
+    "failed_other": "有 {{count}} 個區塊無法載入。",
+    "retry": "重試",
+    "stale": "{{symbols}} 的價格停留在 {{date}}，之後未再更新。",
+    "refreshPrices": "更新價格",
+    "refreshing": "更新中…",
+    "refreshFailed": "價格更新失敗，請稍後再試。",
+    "noDayChange": "{{symbols}} 缺少前一日收盤價，未計入今日損益。",
+    "unconverted": "{{currencies}} 沒有匯率，相關金額未換算成新台幣。"
   }
 }

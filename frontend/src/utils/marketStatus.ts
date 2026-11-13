@@ -14,7 +14,7 @@ export function sessionMarket(market?: string): string {
 const MARKET_ZONES: Record<string, string> = { TW: 'Asia/Taipei', 'TW-INDEX': 'Asia/Taipei', US: 'America/New_York' };
 
 /** Today's date (YYYY-MM-DD) in a market's own zone; the viewer's for unmodelled ones. */
-function todayIn(market: string, now: Date): string {
+export function todayIn(market: string, now: Date): string {
   const zone = MARKET_ZONES[market];
   return zone ? new Intl.DateTimeFormat('en-CA', { timeZone: zone }).format(now) : localDateString(now);
 }

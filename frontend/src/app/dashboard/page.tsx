@@ -9,6 +9,7 @@ import { MobileDashboard } from '@/components/dashboard/MobileDashboard';
 import { CompactDashboard } from '@/components/dashboard/CompactDashboard';
 import { useIsMobile } from '@/hooks/useMediaQuery';
 import { useDashboardViewMode } from '@/hooks/useDashboardViewMode';
+import { usePriceRefreshOnLogin } from '@/hooks/usePriceRefreshOnLogin';
 
 /**
  * Dashboard Page
@@ -30,6 +31,8 @@ export default function DashboardPage() {
     const isMobile = useIsMobile(); // null until the breakpoint resolves (post-mount)
     const [viewMode] = useDashboardViewMode(); // null until the preference resolves
     const hasAccess = isAuthenticated || isDemo;
+    // Here rather than in one layout, so phone and compact views get fresh prices too.
+    usePriceRefreshOnLogin();
 
     useEffect(() => {
         if (!isLoading && !hasAccess) {

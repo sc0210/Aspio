@@ -182,6 +182,8 @@ export interface PortfolioHolding {
   marketState?: 'open' | 'closed' | 'manual' | 'unknown';
   /** The trading day (YYYY-MM-DD, market time) the stored price belongs to. */
   priceSession?: string;
+  /** True once its market has traded two sessions without this price (backend, holiday-aware). */
+  priceStale?: boolean;
   priceHistory?: PricePoint[];
   sparklineData?: number[]; // Historical price data for sparkline (last 30 days)
   lastUpdated: Date;

@@ -10,7 +10,7 @@ import { greetingName } from '@/lib/dashboard/greetingName';
 import { useOptimizedDashboard } from '@/hooks/useOptimizedDashboard';
 import { useDataSynchronization, useDashboardRefresh } from '@/hooks/useDataSynchronization';
 import { useWalletTrends, useWalletTrendBaseline } from '@/hooks/useWalletTrends';
-import { usePriceRefreshOnLogin } from '@/hooks/usePriceRefreshOnLogin';
+import { DashboardDataNotice } from './DashboardDataNotice';
 import { DataRefreshButton } from '@/components/ui/DataRefreshButton';
 import { DashboardViewToggle } from '@/components/dashboard/DashboardViewToggle';
 import { ComprehensiveDashboardSkeleton } from '@/components/ui/DashboardSkeleton';
@@ -94,7 +94,6 @@ export function ComprehensiveDashboard() {
   const editingGoal    = editingGoalId    ? (goalsData.find(g => g.id === editingGoalId)    ?? null) : null;
   const contributeGoal = contributeGoalId ? (goalsData.find(g => g.id === contributeGoalId) ?? null) : null;
 
-  usePriceRefreshOnLogin();
 
   const { data: dashboardData, isLoading, error, isFetching } = useOptimizedDashboard(dateRange as '7d' | 'month' | '30d' | '90d' | '6m' | '1y' | 'ytd');
 
@@ -258,6 +257,8 @@ export function ComprehensiveDashboard() {
       <div className="space-y-4 sm:space-y-6 lg:space-y-8">
         {/* Demo status is already shown by the persistent global DemoBanner (top strip);
             a second in-page banner here is redundant and wastes vertical space on mobile. */}
+
+        <DashboardDataNotice />
 
         {/* ========== HEADER + AT A GLANCE (merged) ========== */}
         <div className="rounded-2xl bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-700 shadow-sm overflow-hidden animate-fade-in">
