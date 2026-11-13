@@ -29,6 +29,10 @@ const mockRefresh = jest.fn();
 jest.mock('@/services/portfolioService', () => ({
   portfolioService: { refreshPortfolioPrices: (...args: unknown[]) => mockRefresh(...args) },
 }));
+let mockRates: Record<string, number> | undefined;
+jest.mock('@/hooks/useExchangeRates', () => ({
+  useExchangeRates: () => ({ data: mockRates ? { rates: mockRates } : undefined }),
+}));
 jest.mock('react-hot-toast', () => ({ __esModule: true, default: { error: jest.fn() } }));
 
 function holding(overrides: Partial<PortfolioHolding>): PortfolioHolding {
@@ -55,6 +59,7 @@ beforeEach(() => {
   mockDemo = false;
   mockHoldings = [holding({})];
   mockRefresh.mockReset();
+  mockRates = undefined;
   sessionStorage.clear();
   client = new QueryClient({ defaultOptions: { queries: { retry: false } } });
 });
@@ -134,6 +139,20 @@ it('stays dismissed for the same problems, and comes back for a new one', () => 
     </QueryClientProvider>,
   );
   expect(screen.getByText(/BTC-USD, ETH-USD/)).toBeInTheDocument();
+});
+
+it('names a currency with no rate, and drops it when the rates arrive', () => {
+  mockHoldings = [holding({ currency: 'XYZ' })];
+  const { rerender } = renderNotice();
+  expect(screen.getByText(/No exchange rate for XYZ/)).toBeInTheDocument();
+
+  mockRates = { XYZ: 4.2 };
+  rerender(
+    <QueryClientProvider client={client}>
+      <DashboardDataNotice />
+    </QueryClientProvider>,
+  );
+  expect(screen.queryByText(/No exchange rate/)).not.toBeInTheDocument();
 });
 
 it('shows nothing in demo mode', () => {

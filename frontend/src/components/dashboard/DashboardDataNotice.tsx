@@ -6,6 +6,7 @@ import { useTranslation } from 'react-i18next';
 import toast from 'react-hot-toast';
 import { useAppMode } from '@/hooks/useAppMode';
 import { usePortfolio } from '@/hooks/usePortfolio';
+import { useExchangeRates } from '@/hooks/useExchangeRates';
 import { invalidateDashboardData, isRefreshableQueryKey } from '@/hooks/useDataSynchronization';
 import { portfolioService } from '@/services/portfolioService';
 import { hasPortfolioDataIssues, portfolioDataIssues } from '@/utils/portfolioDataIssues';
@@ -55,7 +56,10 @@ export function DashboardDataNotice({ className = '' }: { className?: string }) 
   const [refreshing, setRefreshing] = useState(false);
   const [dismissed, setDismissed] = useState<string | null>(readDismissed);
 
-  const issues = useMemo(() => portfolioDataIssues(holdings), [holdings]);
+  // Observes the rates query (the root loader fetches it) so a rate that arrives
+  // after first paint re-evaluates the currency check.
+  const { data: fx } = useExchangeRates('TWD', { enabled: false });
+  const issues = useMemo(() => portfolioDataIssues(holdings, new Date(), fx?.rates), [holdings, fx]);
 
   // A dismissal holds only for the problems it was given; a new one shows again.
   const signature = [

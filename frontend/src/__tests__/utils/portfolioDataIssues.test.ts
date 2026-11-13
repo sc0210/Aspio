@@ -1,6 +1,6 @@
 import type { PortfolioHolding } from '@/shared/types';
 import { hasPortfolioDataIssues, portfolioDataIssues } from '@/utils/portfolioDataIssues';
-import { __resetExchangeRates, toTWD } from '@/utils/formatters';
+import { __resetExchangeRates } from '@/utils/formatters';
 
 function holding(overrides: Partial<PortfolioHolding>): PortfolioHolding {
   return {
@@ -65,9 +65,14 @@ describe('portfolioDataIssues', () => {
     expect(hasPortfolioDataIssues(issues)).toBe(false);
   });
 
-  it('reports a held currency the page has no rate for', () => {
-    toTWD(1, 'XYZ'); // asked for and could not be priced
-    const issues = portfolioDataIssues([holding({ currency: 'XYZ' })], NOW);
+  it('reports a held currency there is no rate for, before anything renders it', () => {
+    // No toTWD call first: the check must not depend on a sibling having rendered.
+    const issues = portfolioDataIssues([holding({ currency: 'XYZ' }), holding({ currency: 'USD' })], NOW);
     expect(issues.unconvertedCurrencies).toEqual(['XYZ']);
+  });
+
+  it('stops reporting it once the fetched rates include it', () => {
+    const issues = portfolioDataIssues([holding({ currency: 'XYZ' })], NOW, { XYZ: 4.2 });
+    expect(issues.unconvertedCurrencies).toEqual([]);
   });
 });

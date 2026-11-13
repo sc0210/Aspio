@@ -1,5 +1,5 @@
 import type { PortfolioHolding } from '@/shared/types';
-import { getUnconvertedCurrencies } from '@/utils/formatters';
+import { hasTwdRate } from '@/utils/formatters';
 import { sessionMarket, todayIn } from '@/utils/marketStatus';
 
 export interface PortfolioDataIssues {
@@ -43,7 +43,11 @@ function isFeedPriced(h: PortfolioHolding): boolean {
  * The backend's `priceStale` counts the market's real sessions, so a holiday
  * week is not staleness; weekdays stand in only where it is absent (demo data).
  */
-export function portfolioDataIssues(holdings: PortfolioHolding[], now: Date = new Date()): PortfolioDataIssues {
+export function portfolioDataIssues(
+  holdings: PortfolioHolding[],
+  now: Date = new Date(),
+  fetchedRates?: Record<string, number>,
+): PortfolioDataIssues {
   const priced = holdings.filter(isFeedPriced);
 
   const stale = priced.filter((h) => h.priceStale ?? (
@@ -56,8 +60,8 @@ export function portfolioDataIssues(holdings: PortfolioHolding[], now: Date = ne
     ...new Set(priced.filter((h) => h.previousClose == null || h.previousClose <= 0).map((h) => h.symbol)),
   ].sort();
 
-  const held = new Set(holdings.map((h) => (h.currency || 'TWD').toUpperCase()));
-  const unconvertedCurrencies = getUnconvertedCurrencies().filter((c) => held.has(c));
+  const held = [...new Set(holdings.map((h) => (h.currency || 'TWD').toUpperCase()))].sort();
+  const unconvertedCurrencies = held.filter((c) => !hasTwdRate(c, fetchedRates));
 
   return { staleSymbols, oldestSession, noDayChangeSymbols, unconvertedCurrencies };
 }

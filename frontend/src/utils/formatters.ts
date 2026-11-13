@@ -272,6 +272,17 @@ export function getUnconvertedCurrencies(): string[] {
   return [..._unconverted].sort();
 }
 
+/**
+ * Whether `toTWD` converts `currency`: from the bootstrap table, the rates
+ * already applied, or `fetched` (the server's rates, which the loader applies a
+ * moment after they arrive). Pure, unlike `getUnconvertedCurrencies`, which only
+ * knows the codes something has happened to render.
+ */
+export function hasTwdRate(currency: string, fetched?: Record<string, number>): boolean {
+  const code = currency.toUpperCase();
+  return code === 'TWD' || _toTwd[code] !== undefined || (fetched?.[code] ?? 0) > 0;
+}
+
 /** Test seam: forget any fetched rates. */
 export function __resetExchangeRates(): void {
   _toTwd = { ...BOOTSTRAP_TO_TWD };
