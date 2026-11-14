@@ -28,6 +28,8 @@ interface AssetGoalCardProps {
     investedAmount?: number;
     atRiskAmount?: number;
     valueAmount?: number | null;
+    /** Follows the Emergency Wallet: valueAmount is its balance, no reserving. */
+    tracksEmergency?: boolean;
     onContribute?: () => void;
     onEdit?: () => void;
     onDelete?: () => void;
@@ -51,6 +53,7 @@ export function AssetGoalCard({
     investedAmount,
     atRiskAmount,
     valueAmount,
+    tracksEmergency = false,
     onContribute,
     onEdit,
     onDelete,
@@ -67,16 +70,18 @@ export function AssetGoalCard({
     const legacy = Number(legacyAmount) || 0;
     const invested = Number(investedAmount) || 0;
     const atRisk = Number(atRiskAmount) || 0;
-    const money = { currentAmount, targetAmount, investedAmount, atRiskAmount, valueAmount, targetDate };
+    const money = { currentAmount, targetAmount, investedAmount, atRiskAmount, valueAmount, targetDate, tracksEmergency };
     // At market value once some of the goal's money is invested.
     const current = goalProgressAmount(money);
     const progress = target > 0 ? (current / target) * 100 : 0;
     const remaining = Math.max(0, target - current);
-    const isCompleted = Number(currentAmount) >= target;
+    // Reached on money put in, or, for an emergency fund, the Emergency Wallet.
+    const isCompleted = (tracksEmergency ? current : Number(currentAmount)) >= target;
     const monthsLeft = monthsUntil(targetDate);
     const horizonWarning = goalHorizonRisk(money);
     // A finished goal can still hold cash to release, so it keeps the button.
-    const canMoveCash = !isCompleted || reserved > 0;
+    // An emergency fund only offers it to release cash reserved before it followed the wallet.
+    const canMoveCash = tracksEmergency ? reserved > 0 : (!isCompleted || reserved > 0);
 
     const categoryMeta = GOAL_CATEGORIES.find((c) => c.id === category);
     const categoryIcon = categoryMeta?.icon ?? '🎯';
@@ -329,6 +334,9 @@ export function AssetGoalCard({
                         </div>
                     )}
                 </dl>
+            )}
+            {tracksEmergency && (
+                <p className="mb-3 text-xs text-gray-600 dark:text-gray-400">{t('goals:reserve.tracksEmergency')}</p>
             )}
             {horizonWarning && (
                 <p role="note" className="mb-3 rounded-lg bg-amber-50 dark:bg-amber-900/20 px-3 py-2 text-xs text-amber-800 dark:text-amber-300">

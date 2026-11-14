@@ -16,6 +16,8 @@ interface GoalMoneyFields {
   investedAmount?: number | string;
   atRiskAmount?: number | string;
   valueAmount?: number | string | null;
+  /** An emergency-fund goal, whose valueAmount is the Emergency Wallet. */
+  tracksEmergency?: boolean;
   targetDate?: string | Date | null;
   status?: string;
 }
@@ -29,7 +31,7 @@ interface GoalMoneyFields {
  */
 export function goalProgressAmount(goal: GoalMoneyFields): number {
   const invested = Number(goal.investedAmount) || 0;
-  return invested > 0 && goal.valueAmount != null
+  return (invested > 0 || goal.tracksEmergency) && goal.valueAmount != null
     ? Number(goal.valueAmount)
     : Number(goal.currentAmount) || 0;
 }
@@ -44,7 +46,7 @@ export function monthsUntil(targetDate: GoalMoneyFields['targetDate']): number |
  *  funds or crypto. */
 export function goalHorizonRisk(goal: GoalMoneyFields): boolean {
   const reached =
-    goal.status === 'completed' || Number(goal.currentAmount) >= Number(goal.targetAmount);
+    goal.status === 'completed' || goalProgressAmount(goal) >= Number(goal.targetAmount);
   const months = monthsUntil(goal.targetDate);
   return !reached && (Number(goal.atRiskAmount) || 0) > 0 && months !== null && months < HORIZON_MONTHS;
 }

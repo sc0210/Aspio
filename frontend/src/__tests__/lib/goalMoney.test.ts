@@ -24,3 +24,14 @@ describe('goalHorizonRisk', () => {
     expect(goalHorizonRisk({ ...base, targetDate: null })).toBe(false);
   });
 });
+
+describe('emergency-fund goals', () => {
+  it('read the Emergency Wallet balance as progress, invested or not', () => {
+    expect(goalProgressAmount({ currentAmount: 0, targetAmount: 180000, valueAmount: '120000.00', tracksEmergency: true })).toBe(120000);
+  });
+
+  it('count as reached once the wallet covers the target', () => {
+    const goal = { currentAmount: 0, targetAmount: 100000, valueAmount: 150000, tracksEmergency: true, atRiskAmount: 5000, targetDate: inMonths(6) };
+    expect(goalHorizonRisk(goal)).toBe(false);
+  });
+});

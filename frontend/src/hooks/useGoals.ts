@@ -40,6 +40,10 @@ export interface Goal {
     investedAmount?: number;
     atRiskAmount?: number;
     valueAmount?: number | null;
+    /** An emergency-fund goal: valueAmount is the Emergency Wallet balance. */
+    tracksEmergency?: boolean;
+    /** The shared goal (Savings) this goal backs your side of. */
+    sharedGoalId?: string | null;
     currency: string;
     targetDate?: string;
     startedAt: string;
@@ -172,6 +176,10 @@ export function demoGoalToGoal(g: FinancialGoal): Goal {
         currentAmount,
         progressPercentage: goalProgressPercent({ targetAmount, currentAmount }),
         remainingAmount: Math.max(0, targetAmount - currentAmount),
+        // Demo goals' progress is Life cash they hold (goals/reservations.py),
+        // except an emergency fund, which follows the Emergency Wallet.
+        reservedAmount: g.category === 'emergency_fund' ? 0 : currentAmount,
+        tracksEmergency: g.category === 'emergency_fund',
         currency: g.currency,
         targetDate: iso(g.targetDate),
         startedAt: iso(g.createdAt) ?? new Date().toISOString(),
@@ -428,12 +436,19 @@ export function useDeleteGoal() {
  */
 export function useLifeCash() {
     const { data: session } = useSession();
-    const { isDemoMode } = useDemo();
+    const { isDemoMode, demoGoals, demoRevision, getDemoStats } = useDemo();
 
     return useQuery<LifeCash | null>({
-        queryKey: [QUERY_KEYS.LIFE_CASH, isDemoMode ? 'demo' : (session?.user?.id || 'anon')],
+        queryKey: [QUERY_KEYS.LIFE_CASH, isDemoMode ? `demo-${demoRevision ?? 0}` : (session?.user?.id || 'anon')],
         queryFn: async () => {
-            if (isDemoMode) return null;
+            if (isDemoMode) {
+                // The demo's Life Wallet less what its goals hold, as the API computes it.
+                const lifeBalance = Number(getDemoStats?.().life_wallet) || 0;
+                const reserved = (demoGoals ?? [])
+                    .map(demoGoalToGoal)
+                    .reduce((sum, g) => sum + (Number(g.reservedAmount) || 0), 0);
+                return { lifeBalance, reserved, available: lifeBalance - reserved };
+            }
             const response = await apiClient.get<LifeCash>('/goals/life-cash');
             const d = response.data;
             if (!d) return null;

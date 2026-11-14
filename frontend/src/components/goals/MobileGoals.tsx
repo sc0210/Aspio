@@ -1,6 +1,7 @@
 'use client';
 
-import { useMemo } from 'react';
+import { useEffect, useMemo, useState } from 'react';
+import dynamic from 'next/dynamic';
 import { goalHorizonRisk, goalProgressAmount } from '@/lib/goals/goalMoney';
 import { LifeCashSummary } from '@/components/goals/LifeCashSummary';
 import { useRouter } from 'next/navigation';
@@ -16,6 +17,16 @@ import { usePrivacy } from '@/contexts/PrivacyContext';
 import { GOAL_CATEGORIES } from '@/utils/constants';
 import { formatTWD, formatTWDCompact } from '@/utils/formatters';
 import { Card } from '@/components/ui/Card';
+
+// The same windows the desktop page uses, loaded only when opened.
+const CreateGoalModal = dynamic(
+    () => import('@/components/goals/CreateGoalModal').then((m) => ({ default: m.CreateGoalModal })),
+    { ssr: false },
+);
+const ContributeModal = dynamic(
+    () => import('@/components/goals/ContributeModal').then((m) => ({ default: m.ContributeModal })),
+    { ssr: false },
+);
 
 const RING = '#10b981';
 
@@ -46,9 +57,32 @@ export function MobileGoals() {
         0;
     const { isValueVisible } = usePrivacy();
     const router = useRouter();
-    // The full desktop page owns the create modal (heavy form deps); on mobile we
-    // route there with ?create=1 to keep this view lean.
-    const goCreate = () => router.push('/goals?create=1');
+    // Create and Reserve / Release open here; links elsewhere arrive as
+    // /goals?create=1, which used to open nothing on a phone.
+    const [createOpen, setCreateOpen] = useState(false);
+    const [moneyGoal, setMoneyGoal] = useState<Goal | null>(null);
+    const goCreate = () => setCreateOpen(true);
+    useEffect(() => {
+        if (new URLSearchParams(window.location.search).get('create')) {
+            setCreateOpen(true);
+            router.replace('/goals');
+        }
+    }, [router]);
+    // An emergency-fund goal follows the Emergency Wallet; it only offers the
+    // window to release cash reserved before that rule.
+    const canMoveMoney = (g: Goal) => !g.tracksEmergency || (Number(g.reservedAmount) || 0) > 0;
+    const moneyButton = (g: Goal) => canMoveMoney(g) ? (
+        <button
+            type="button"
+            onClick={() => setMoneyGoal(g)}
+            aria-label={t('goals:reserve.mobileButtonFor', { title: g.title })}
+            className="inline-flex min-h-11 items-center rounded-lg border border-primary-200 dark:border-primary-800 px-3 text-sm font-semibold text-primary-700 dark:text-primary-300 hover:bg-primary-50 dark:hover:bg-primary-900/20 focus:outline-none focus-visible:ring-2 focus-visible:ring-primary-500"
+        >
+            {t('goals:reserve.mobileButton')}
+        </button>
+    ) : (
+        <p className="text-xs text-gray-500 dark:text-gray-400">{t('goals:reserve.tracksEmergency')}</p>
+    );
 
     const model = useMemo(() => {
         const active = goals.filter((g) => g.status === 'active');
@@ -137,6 +171,7 @@ export function MobileGoals() {
                                                 {t('goals:invest.horizonShort')}
                                             </p>
                                         )}
+                                        <div className="mt-3">{moneyButton(g)}</div>
                                     </div>
                                 </section>
                             );
@@ -169,6 +204,7 @@ export function MobileGoals() {
                                                     {t('goals:invest.horizonShort')}
                                                 </p>
                                             )}
+                                            <div className="mt-3 flex justify-end">{moneyButton(g)}</div>
                                         </Card>
                                     );
                                 })}
@@ -178,12 +214,25 @@ export function MobileGoals() {
                 )}
 
                 <p className="text-center px-4 pt-1 text-xs font-semibold leading-relaxed text-gray-500 dark:text-gray-400">
-                    {t('dashboard:mobile.fullGoals', 'Milestones, contributions & achievements')}
+                    {t('goals:reserve.mobileMore', 'Milestones & achievements')}
                     <br />
                     <span className="text-primary-700 dark:text-primary-400">→ {t('dashboard:mobile.onLargerScreen', 'on tablet / desktop')}</span>
                 </p>
             </div>
 
+            {createOpen && <CreateGoalModal isOpen onClose={() => setCreateOpen(false)} />}
+            {moneyGoal && (
+                <ContributeModal
+                    isOpen
+                    onClose={() => setMoneyGoal(null)}
+                    goalId={moneyGoal.id}
+                    goalTitle={moneyGoal.title}
+                    currentAmount={Number(moneyGoal.currentAmount)}
+                    targetAmount={Number(moneyGoal.targetAmount)}
+                    currency="TWD"
+                    reservedAmount={Number(moneyGoal.reservedAmount ?? 0)}
+                />
+            )}
         </DashboardLayout>
     );
 }
