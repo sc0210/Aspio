@@ -240,8 +240,9 @@ export function GoalsOverview({ goals = [], isLoading = false, onEdit, onContrib
             ...rankByPriority(open.filter((g) => g.id !== top?.id)),
             ...rankByPriority(live.filter((g) => g.id !== top?.id && !open.includes(g))),
         ];
-        // Summed the way every row reads progress (market value, Emergency Wallet).
-        const shownTotal = live.reduce((sum, g) => sum + shown(g), 0);
+        // Summed the way every row reads progress (market value, Emergency Wallet),
+        // each capped at its target: one overfunded goal must not hide another's gap.
+        const shownTotal = live.reduce((sum, g) => sum + Math.min(shown(g), g.targetAmount), 0);
         const targetTotal = live.reduce((sum, g) => sum + g.targetAmount, 0);
         const overallPct = targetTotal > 0 ? Math.min(100, (shownTotal / targetTotal) * 100) : 0;
         const months = top ? monthsUntil(top.targetDate) : null;
