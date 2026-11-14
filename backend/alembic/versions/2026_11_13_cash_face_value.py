@@ -7,8 +7,8 @@ Create Date: 2026-11-13
 The buy form let a cash lot take any price while the wallet bridge booked its
 quantity alone, so a US$2,000 reserve entered at the exchange rate (31.5) was
 stored as US$63,000 and converted to TWD again. New writes are fixed in code;
-this repairs rows already stored that way: the holdings, and their buy/sell
-ledger rows (whose total then matches the amount the wallet bridge booked).
+this repairs holdings already stored that way. Their ledger rows are left as
+recorded (the owner chose to keep a retired lot's history as entered).
 Data only: no schema change, no RLS.
 Not reversible (the wrong prices are not kept), so downgrade does nothing.
 """
@@ -30,21 +30,6 @@ def upgrade() -> None:
                gain_loss = 0, gain_loss_percentage = 0, updated_at = now()
          WHERE lower(type::text) = 'cash'
            AND (average_cost <> 1 OR current_price <> 1)
-        """
-    )
-    op.execute(
-        """
-        UPDATE portfolio_transactions pt
-           SET price = 1, total_amount = pt.quantity,
-               -- a sell's basis and gain were worked out from the wrong price
-               cost_basis = CASE WHEN pt.cost_basis IS NOT NULL THEN pt.quantity END,
-               capital_gain = CASE WHEN pt.capital_gain IS NOT NULL THEN 0 END,
-                  updated_at = now()
-          FROM portfolio_holdings h
-         WHERE h.id = pt.holding_id
-           AND lower(h.type::text) = 'cash'
-           AND pt.type::text IN ('buy', 'sell')
-           AND pt.price <> 1
         """
     )
 

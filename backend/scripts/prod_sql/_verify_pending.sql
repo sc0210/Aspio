@@ -181,9 +181,6 @@ ORDER BY present, sort;
 SELECT 'cash lots not at face value' AS what, count(*)::text AS value
 FROM portfolio_holdings
 WHERE lower(type::text) = 'cash' AND (average_cost <> 1 OR current_price <> 1);
-SELECT 'cash buy/sell rows not at face value' AS what, count(*)::text AS value
-FROM portfolio_transactions pt JOIN portfolio_holdings h ON h.id = pt.holding_id
-WHERE lower(h.type::text) = 'cash' AND pt.type::text IN ('buy', 'sell') AND pt.price <> 1;
 
 -- ── alembic bookkeeping ────────────────────────────────────────────────────
 -- Should equal the single head in backend/alembic/versions (check with
