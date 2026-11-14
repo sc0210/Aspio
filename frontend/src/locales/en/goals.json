@@ -194,11 +194,13 @@
     "title": "Goals",
     "viewAll": "View All →",
     "topPriority": "Top priority",
-    "monthsLeft": "{{count}} months left",
-    "yearsLeft": "{{count}} years left",
     "overdue": "Past its date",
     "perMonth": "{{amount}} a month to make it",
-    "priorityLabel": "{{level}} priority"
+    "priorityLabel": "{{level}} priority",
+    "monthsLeft_one": "{{count}} month left",
+    "monthsLeft_other": "{{count}} months left",
+    "yearsLeft_one": "{{count}} year left",
+    "yearsLeft_other": "{{count}} years left"
   },
   "pause": "Pause Goal",
   "priorities": {

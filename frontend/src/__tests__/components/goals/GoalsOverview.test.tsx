@@ -66,3 +66,35 @@ describe('GoalsOverview', () => {
         expect(screen.getByTestId('goal-card')).toHaveTextContent('FIRE by 45:0');
     });
 });
+
+describe('GoalsOverview — dashboard (compact)', () => {
+    it('features the highest-priority open goal and lists the rest, open ones first', () => {
+        render(
+            <GoalsOverview
+                compact
+                goals={[
+                    goal({ id: 'done', title: 'Paid-off car', priority: 'high', status: 'completed', currentAmount: 100, targetAmount: 100 }),
+                    goal({ id: 'trip', title: 'Japan trip', priority: 'low' }),
+                    goal({ id: 'house', title: 'House', priority: 'high', targetDate: '2030-12-31' }),
+                    goal({ id: 'wedding', title: 'Wedding', priority: 'medium' }),
+                ]}
+            />,
+        );
+        // The t() stub echoes keys, so the region is named by its key.
+        expect(screen.getByRole('region', { name: 'goals:overview.topPriority' })).toHaveTextContent('House');
+        const rows = screen.getAllByRole('listitem').map((li) => li.textContent);
+        expect(rows[0]).toContain('Wedding');       // open, medium
+        expect(rows[1]).toContain('Japan trip');    // open, low
+        expect(rows[2]).toContain('Paid-off car');  // finished, after every open goal
+    });
+
+    it('counts an emergency fund at its wallet in the overall line, as its row does', () => {
+        render(
+            <GoalsOverview
+                compact
+                goals={[goal({ id: 'e', title: 'Cushion', category: 'emergency_fund', currentAmount: 0, targetAmount: 200, valueAmount: 100, tracksEmergency: true })]}
+            />,
+        );
+        expect(screen.getAllByRole('progressbar')[0]).toHaveAttribute('aria-valuenow', '50');
+    });
+});

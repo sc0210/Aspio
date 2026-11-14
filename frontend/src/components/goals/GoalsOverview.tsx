@@ -10,7 +10,7 @@ import { usePortfolio } from '@/hooks/usePortfolio';
 import { useTranslation } from 'react-i18next';
 import { portfolioCreditedGoal } from '@/utils/goalMatchers';
 import { Card } from '@/components/ui/Card';
-import { canMoveGoalCash, goalProgressAmount } from '@/lib/goals/goalMoney';
+import { canMoveGoalCash, goalProgressAmount, monthsUntil } from '@/lib/goals/goalMoney';
 
 interface Goal {
     id: string;
@@ -232,11 +232,21 @@ export function GoalsOverview({ goals = [], isLoading = false, onEdit, onContrib
             g.id === creditedGoalId ? g.currentAmount : goalProgressAmount(g);
         const pctOf = (g: typeof normalizedGoals[number]) =>
             g.targetAmount > 0 ? Math.min(100, (shown(g) / g.targetAmount) * 100) : 0;
-        const open = normalizedGoals.filter((g) => g.status !== 'completed' && g.status !== 'cancelled' && pctOf(g) < 100);
-        const top = rankByPriority(open)[0] ?? rankByPriority(normalizedGoals)[0];
-        const rest = rankByPriority(normalizedGoals.filter((g) => g.id !== top?.id && g.status !== 'cancelled'));
-        const overallPct = Math.min(100, overallProgress);
-        const months = top?.targetDate ? (new Date(top.targetDate).getTime() - Date.now()) / (30.44 * 86_400_000) : null;
+        const live = normalizedGoals.filter((g) => g.status !== 'cancelled');
+        const open = live.filter((g) => g.status !== 'completed' && pctOf(g) < 100);
+        const top = rankByPriority(open)[0] ?? rankByPriority(live)[0];
+        // Open goals first, by priority; finished ones after, never ahead of them.
+        const rest = [
+            ...rankByPriority(open.filter((g) => g.id !== top?.id)),
+            ...rankByPriority(live.filter((g) => g.id !== top?.id && !open.includes(g))),
+        ];
+        // Summed the way every row reads progress (market value, Emergency Wallet).
+        const shownTotal = live.reduce((sum, g) => sum + shown(g), 0);
+        const targetTotal = live.reduce((sum, g) => sum + g.targetAmount, 0);
+        const overallPct = targetTotal > 0 ? Math.min(100, (shownTotal / targetTotal) * 100) : 0;
+        const months = top ? monthsUntil(top.targetDate) : null;
+        // Privacy hides amounts; a bar's width would still give the percent away.
+        const barWidth = (pct: number) => (isValueVisible ? `${pct}%` : '0%');
         const remaining = top ? Math.max(0, top.targetAmount - shown(top)) : 0;
         const perMonth = months !== null && months > 0 && remaining > 0 ? remaining / Math.max(1, months) : null;
         const isRetirement = top?.id === creditedGoalId;
@@ -269,16 +279,16 @@ export function GoalsOverview({ goals = [], isLoading = false, onEdit, onContrib
                         </div>
                         <div
                             role="progressbar"
-                            aria-valuenow={Math.round(overallPct)}
+                            aria-valuenow={isValueVisible ? Math.round(overallPct) : undefined}
                             aria-valuemin={0}
                             aria-valuemax={100}
                             aria-label={t('goals:overview.overallProgress')}
                             className="mt-1.5 h-1.5 w-full rounded-full bg-gray-200 dark:bg-gray-700 overflow-hidden"
                         >
-                            <div className="h-full rounded-full bg-primary-500 transition-all duration-500" style={{ width: `${overallPct}%` }} />
+                            <div className="h-full rounded-full bg-primary-500 transition-all duration-500" style={{ width: barWidth(overallPct) }} />
                         </div>
                         <p className="mt-1 text-xs tabular-nums text-gray-500 dark:text-gray-400">
-                            {money(totalCurrent, goals[0]?.currency)} / {money(totalTarget, goals[0]?.currency)}
+                            {money(shownTotal, goals[0]?.currency)} / {money(targetTotal, goals[0]?.currency)}
                         </p>
                     </div>
 
@@ -305,13 +315,13 @@ export function GoalsOverview({ goals = [], isLoading = false, onEdit, onContrib
                             </div>
                             <div
                                 role="progressbar"
-                                aria-valuenow={Math.round(pctOf(top))}
+                                aria-valuenow={isValueVisible ? Math.round(pctOf(top)) : undefined}
                                 aria-valuemin={0}
                                 aria-valuemax={100}
                                 aria-label={t('goals:card.aria.progress', { title: top.title })}
                                 className="mt-2 h-2 w-full rounded-full bg-white/80 dark:bg-gray-700 overflow-hidden"
                             >
-                                <div className="h-full rounded-full bg-primary-500 transition-all duration-500" style={{ width: `${pctOf(top)}%` }} />
+                                <div className="h-full rounded-full bg-primary-500 transition-all duration-500" style={{ width: barWidth(pctOf(top)) }} />
                             </div>
                             <div className="mt-2 flex items-center justify-between gap-2">
                                 <p className="text-xs tabular-nums text-gray-600 dark:text-gray-400 min-w-0 truncate">
@@ -356,7 +366,7 @@ export function GoalsOverview({ goals = [], isLoading = false, onEdit, onContrib
                                             </span>
                                         </div>
                                         <div className="mt-1.5 h-1 w-full rounded-full bg-gray-200 dark:bg-gray-700 overflow-hidden" aria-hidden="true">
-                                            <div className="h-full rounded-full bg-gray-400 dark:bg-gray-500" style={{ width: `${pctOf(g)}%` }} />
+                                            <div className="h-full rounded-full bg-gray-400 dark:bg-gray-500" style={{ width: barWidth(pctOf(g)) }} />
                                         </div>
                                     </Link>
                                 </li>
