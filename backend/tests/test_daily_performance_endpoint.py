@@ -122,6 +122,19 @@ async def test_values_cost_basis_and_capital_added(authenticated_client, portfol
     assert all(p["capitalAdded"] == 0 for d, p in points.items() if d != bought)
 
 
+async def test_values_are_twd_whatever_the_portfolio_currency(authenticated_client, async_session, portfolio):
+    """Portfolios are created with currency "USD" by default, and the series
+    followed it: the dashboard's P&L calendar, which formats TWD, showed a
+    NT$16k day as "+519". The series is TWD, as GET /portfolio/ reports."""
+    from sqlalchemy import update
+
+    await async_session.execute(update(Portfolio).values(currency="USD"))
+    await async_session.commit()
+    bought = portfolio
+    for day, p in {p["date"]: p for p in _series(authenticated_client)}.items():
+        assert p["value"] == pytest.approx(4000 + (600 if day >= bought else 0)), day
+
+
 async def test_only_today_priced_from_a_live_quote_is_provisional(authenticated_client, portfolio):
     today = business_today().isoformat()
     for p in _series(authenticated_client):
