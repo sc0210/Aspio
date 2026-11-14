@@ -673,7 +673,7 @@ export function CashFields({ idPrefix: p, formData, errors, onChange, onTagsChan
                     {money(lifeCash.available)}
                   </p>
                   {intoGoals > 0 ? (
-                    <p role="alert" className="text-xs text-amber-700 dark:text-amber-400">
+                    <p role="status" aria-live="polite" className="text-xs text-amber-700 dark:text-amber-400">
                       {t('goals:reserve.formIntoGoals', { amount: money(intoGoals) })}
                     </p>
                   ) : lifeCash.reserved > 0 ? (
