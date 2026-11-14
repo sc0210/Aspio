@@ -24,7 +24,7 @@ from .models import (
     GoalPriority,
 )
 from .repositories import GoalRepository
-from .reservations import GoalMoney, LifeCash, goal_money, life_cash, lock_user_goals
+from .reservations import GoalMoney, LifeCash, emergency_balance, goal_money, life_cash, lock_user_goals
 from .schemas import (
     GoalCreate,
     GoalUpdate,
@@ -34,6 +34,11 @@ from .schemas import (
 )
 
 logger = logging.getLogger(__name__)
+
+
+def _is_emergency_goal(goal) -> bool:
+    """An emergency-fund goal tracks the Emergency Wallet instead of reserving Life cash."""
+    return getattr(goal.category, "value", goal.category) == GoalCategory.EMERGENCY_FUND.value
 
 
 def _resolve_enum(enum_cls, value):
@@ -145,6 +150,10 @@ class GoalService:
     async def attach_money(self, goals: List[Goal], user_id: UUID) -> List[Goal]:
         """Set reserved/spent/legacy (TWD) on each goal for GoalResponse."""
         money = await goal_money(self.session, user_id, [g.id for g in goals], with_holdings=True)
+        # An emergency-fund goal follows the Emergency Wallet (emergency_balance).
+        emergency = None
+        if any(_is_emergency_goal(g) for g in goals):
+            emergency = await emergency_balance(self.session, user_id)
         for goal in goals:
             m = money.get(goal.id) or GoalMoney()
             goal.reserved_amount = m.reserved
@@ -152,7 +161,8 @@ class GoalService:
             goal.legacy_amount = m.legacy
             goal.invested_amount = m.invested
             goal.at_risk_amount = m.at_risk
-            goal.value_amount = m.value
+            goal.tracks_emergency = _is_emergency_goal(goal)
+            goal.value_amount = emergency if goal.tracks_emergency else m.value
         return goals
 
     async def life_cash(self, user_id: UUID) -> LifeCash:
@@ -358,6 +368,11 @@ class GoalService:
         """Check the cash is free and record the reservation (caller commits)."""
         if goal.status == GoalStatus.CANCELLED:
             raise BusinessLogicException("A cancelled goal cannot hold money")
+        if _is_emergency_goal(goal):
+            raise BusinessLogicException(
+                "An emergency-fund goal follows your Emergency Wallet. Move money "
+                "there with a Life → Emergency transfer instead of reserving it."
+            )
         await lock_user_goals(self.session, goal.user_id)
         cash = await life_cash(self.session, goal.user_id)
         if amount > cash.available:
@@ -396,6 +411,12 @@ class GoalService:
             goal.status = GoalStatus.ACTIVE
             goal.completed_at = None
         self._check_milestones_sync(goal)
+        if goal.shared_goal_id is not None:
+            # This goal backs a side of a shared goal: its stored status and
+            # "reached" alert follow the money (peers PeerService).
+            from app.modules.peers.service import PeerService
+
+            await PeerService(self.session).sync_backed_goal(goal.shared_goal_id, goal.user_id)
         return contribution
 
     async def _check_milestones(self, goal: Goal):

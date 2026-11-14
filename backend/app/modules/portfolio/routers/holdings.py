@@ -1249,11 +1249,16 @@ async def sell_holding(
             # goal has (goals/reservations.py). Position lock held, then goals'.
             from app.modules.goals.service import GoalService
 
-            gain_twd, gain_currency = await portfolio_service._to_twd(
-                realized_gain_loss, holding.currency or "TWD",
-                on_day=business_day_of(transaction_date or now),
+            gain_twd = await portfolio_service.goal_sale_gain_twd(
+                allocation.consumptions, net_proceeds, holding.currency or "TWD",
+                business_day_of(transaction_date or now),
             )
-            if gain_currency == "TWD" and gain_twd != 0:
+            if gain_twd is None:
+                logger.warning(
+                    "Goal lot %s sold with no %s→TWD rate; the goal's progress "
+                    "misses this sale's gain or loss", holding.id, holding.currency,
+                )
+            elif gain_twd != 0:
                 await GoalService(session).record_sale_gain(
                     holding.goal_id, current_user.id, gain_twd, transaction_date or now,
                     f"Sold {quantity} {holding.symbol}",

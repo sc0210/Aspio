@@ -475,6 +475,31 @@ class PeerService:
         await goals.attach_money([goal], user_id)
         return goal
 
+    async def sync_backed_goal(self, shared_goal_id: UUID, user_id: UUID) -> None:
+        """Re-judge a shared goal after a partner's linked goal moved (caller commits).
+
+        A reservation, release or sale's gain changes that side without a
+        saving record, so the stored status and the "reached" alert follow it
+        here, the way add_record does for a record.
+        """
+        row = await self._goals.get_with_connection(shared_goal_id, user_id)
+        if row is None:
+            return
+        goal, conn = row
+        if goal.status == GoalStatus.cancelled:
+            return
+        was_completed = goal.status == GoalStatus.completed
+        await self._recalc_totals(goal, conn)
+        if goal.status == GoalStatus.completed and not was_completed:
+            for participant in (conn.requester_id, conn.receiver_id):
+                self._notify(
+                    participant,
+                    "Shared goal reached!",
+                    f"\"{goal.title}\" reached its target together.",
+                    "peer_goal_completed",
+                    goal_id=str(goal.id),
+                )
+
     async def _backing(self, rows) -> dict:
         """Each partner's linked goal on these shared goals: {(shared id, user id): (goal id, value)}.
 

@@ -474,6 +474,55 @@ class PortfolioService:
         holding_responses = [HoldingResponse.model_validate(holding) for holding in holdings]
         return holding_responses, total_count
 
+    async def goal_sale_gain_twd(
+        self, consumptions, net_proceeds: Decimal, currency: str, on_day
+    ) -> Optional[Decimal]:
+        """A goal lot sale's realized gain in TWD, against what the goal paid.
+
+        The proceeds are booked in TWD at the sale day's rate; the cost is what
+        each lot's buy leg actually took from the goal's reserve, so the gain
+        row keeps the goal's progress equal to its money even when the rate
+        moved between buy and sale. Each lot's rate is its buy legs' TWD over
+        the native amount its buys paid; a lot with neither falls back to the
+        sale day's rate. None when the proceeds have no TWD rate.
+        """
+        from sqlalchemy import and_, func, select
+
+        from app.modules.transactions.models import Transaction, TransactionType
+
+        from .models import PortfolioTransaction
+
+        proceeds_twd, booked = await self._to_twd(net_proceeds, currency or "TWD", on_day=on_day)
+        if booked != "TWD":
+            return None
+        cost_twd = Decimal("0")
+        for consumption in consumptions:
+            lot = consumption.lot
+            native_cost = Decimal(str(consumption.quantity_taken)) * Decimal(str(lot.average_cost))
+            legs_twd = await self.session.scalar(
+                select(func.coalesce(func.sum(Transaction.amount), 0)).where(and_(
+                    Transaction.holding_id == lot.id,
+                    Transaction.type == TransactionType.EXPENSE,
+                    Transaction.is_deleted.is_(False),
+                    func.upper(Transaction.currency) == "TWD",
+                ))
+            )
+            paid_native = await self.session.scalar(
+                select(func.coalesce(func.sum(PortfolioTransaction.total_amount), 0)).where(and_(
+                    PortfolioTransaction.holding_id == lot.id,
+                    PortfolioTransaction.type == "buy",
+                ))
+            )
+            legs_twd, paid_native = Decimal(str(legs_twd)), Decimal(str(paid_native))
+            if legs_twd > 0 and paid_native > 0:
+                cost_twd += native_cost * legs_twd / paid_native
+            else:
+                twd, unit = await self._to_twd(native_cost, currency or "TWD", on_day=on_day)
+                if unit != "TWD":
+                    return None
+                cost_twd += twd
+        return (proceeds_twd - cost_twd).quantize(Decimal("0.01"))
+
     async def _check_goal_can_pay(self, user_id: UUID, goal_id: UUID, holding_data) -> None:
         """Refuse a goal-funded buy the goal's reserved cash cannot cover."""
         from app.modules.goals.reservations import assert_goal_can_cover

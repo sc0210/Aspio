@@ -34,9 +34,9 @@ from app.modules.transactions.models import Transaction, TransactionType, Transa
 
 def _goal_payload(**overrides):
     data = dict(
-        title="Emergency Fund",
-        description="six months of expenses",
-        category=GoalCategory.EMERGENCY_FUND.value,
+        title="New laptop",
+        description="saving up for it",
+        category=GoalCategory.SAVINGS.value,
         priority=GoalPriority.HIGH.value,
         target_amount=Decimal("1000.00"),
         currency="TWD",
