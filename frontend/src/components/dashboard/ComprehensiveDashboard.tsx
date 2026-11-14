@@ -42,7 +42,7 @@ const TransactionHeatmap = dynamic(
 import { MonthlyInsightCard } from './MonthlyInsightCard';
 import { FinancialTermsHelp } from '@/components/dashboard/FinancialTermsHelp';
 import { useTranslation } from 'react-i18next';
-import { useGoals } from '@/hooks/useGoals';
+import { useGoals, useLifeCash } from '@/hooks/useGoals';
 import { GoalsOverview } from '@/components/goals/GoalsOverview';
 import dynamic from 'next/dynamic';
 
@@ -94,6 +94,9 @@ export function ComprehensiveDashboard() {
   const editingGoal    = editingGoalId    ? (goalsData.find(g => g.id === editingGoalId)    ?? null) : null;
   const contributeGoal = contributeGoalId ? (goalsData.find(g => g.id === contributeGoalId) ?? null) : null;
 
+
+  // Life cash set aside for goals (shown under the Life wallet).
+  const { data: lifeCash } = useLifeCash();
 
   const { data: dashboardData, isLoading, error, isFetching } = useOptimizedDashboard(dateRange as '7d' | 'month' | '30d' | '90d' | '6m' | '1y' | 'ytd');
 
@@ -333,6 +336,7 @@ export function ComprehensiveDashboard() {
             walletTrendsData={walletTrendsData ?? []}
             loading={isLoading}
             isPeriodSwitching={isFetching}
+            lifeCash={lifeCash}
           />
         </section>
 
@@ -457,6 +461,7 @@ export function ComprehensiveDashboard() {
           currentAmount={Number(contributeGoal.currentAmount)}
           targetAmount={Number(contributeGoal.targetAmount)}
           currency={contributeGoal.currency}
+          reservedAmount={Number(contributeGoal.reservedAmount ?? 0)}
         />
       )}
     </DashboardLayout>

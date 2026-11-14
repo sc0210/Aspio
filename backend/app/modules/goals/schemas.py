@@ -30,6 +30,16 @@ def _enum_code(enum_cls, value):
     raise ValueError(f"must be one of: {', '.join(m.value for m in enum_cls)}")
 
 
+def _twd_only(value):
+    """Goals are kept in TWD: what they reserve is Life Wallet cash, and every
+    wallet balance is in TWD. Another code would label TWD amounts as dollars."""
+    if value is None:
+        return value
+    if not isinstance(value, str) or value.upper() != "TWD":
+        raise ValueError("goals are kept in TWD")
+    return "TWD"
+
+
 # One definition per enum, shared by the create and update schemas.
 CategoryCode = Annotated[str, BeforeValidator(partial(_enum_code, GoalCategory))]
 PriorityCode = Annotated[str, BeforeValidator(partial(_enum_code, GoalPriority))]
@@ -74,7 +84,7 @@ class GoalBase(BaseModel):
     target_amount: Decimal = Field(
         ..., ge=0, validation_alias="targetAmount", serialization_alias="targetAmount"
     )
-    currency: str = Field("USD", min_length=3, max_length=3)
+    currency: str = Field("TWD", min_length=3, max_length=3)
     target_date: Optional[datetime] = Field(
         None, validation_alias="targetDate", serialization_alias="targetDate"
     )
@@ -102,7 +112,16 @@ class GoalBase(BaseModel):
 
 
 class GoalCreate(GoalBase):
-    """Create goal schema"""
+    """Create goal schema.
+
+    current_amount is cash already saved for the goal: it is reserved out of the
+    Life Wallet when the goal is created, so it cannot exceed what is available.
+    """
+
+    @field_validator("currency", mode="before")
+    @classmethod
+    def currency_is_twd(cls, v):
+        return _twd_only(v)
 
     current_amount: Optional[Decimal] = Field(
         Decimal("0.00"),
@@ -126,13 +145,14 @@ class GoalUpdate(BaseModel):
     target_amount: Optional[Decimal] = Field(
         None, ge=0, validation_alias="targetAmount", serialization_alias="targetAmount"
     )
-    current_amount: Optional[Decimal] = Field(
-        None,
-        ge=0,
-        validation_alias="currentAmount",
-        serialization_alias="currentAmount",
-    )
+    # No current_amount: progress moves only by reserving or releasing cash
+    # (POST /goals/{id}/reserve, /release), never by typing a number.
     currency: Optional[str] = Field(None, min_length=3, max_length=3)
+
+    @field_validator("currency", mode="before")
+    @classmethod
+    def currency_is_twd(cls, v):
+        return _twd_only(v)
     target_date: Optional[datetime] = Field(
         None, validation_alias="targetDate", serialization_alias="targetDate"
     )
@@ -158,6 +178,12 @@ class GoalResponse(GoalBase):
     current_amount: Decimal = Field(serialization_alias="currentAmount")
     progress_percentage: Decimal = Field(serialization_alias="progressPercentage")
     remaining_amount: Decimal = Field(serialization_alias="remainingAmount")
+    # Where the progress is (see goals/reservations.py): Life Wallet cash still
+    # set aside, cash already spent on the goal, and progress from before
+    # reservations existed, which holds no cash.
+    reserved_amount: Decimal = Field(Decimal("0"), serialization_alias="reservedAmount")
+    spent_amount: Decimal = Field(Decimal("0"), serialization_alias="spentAmount")
+    legacy_amount: Decimal = Field(Decimal("0"), serialization_alias="legacyAmount")
     status: str
     started_at: datetime = Field(serialization_alias="startedAt")
     completed_at: Optional[datetime] = Field(None, serialization_alias="completedAt")
@@ -189,16 +215,16 @@ class GoalSummary(BaseModel):
 
 
 class GoalContributionCreate(BaseModel):
-    """Create contribution schema"""
+    """Reserve (or release) Life Wallet cash for a goal."""
 
-    amount: Decimal = Field(..., ge=0)
+    # Whole cents: the column is Numeric(20,2), so 0.004 would be stored as 0.00.
+    amount: Decimal = Field(..., gt=0, decimal_places=2)
     contribution_date: Optional[datetime] = Field(
         None,
         validation_alias="contributionDate",
         serialization_alias="contributionDate",
     )
     notes: Optional[str] = Field(None, max_length=10000)
-    transaction_id: Optional[UUID4] = Field(None, serialization_alias="transactionId")
 
     model_config = ConfigDict(populate_by_name=True)
 
@@ -208,6 +234,7 @@ class GoalContributionResponse(BaseModel):
 
     id: UUID4
     goal_id: UUID4 = Field(serialization_alias="goalId")
+    kind: str
     amount: Decimal
     contribution_date: datetime = Field(serialization_alias="contributionDate")
     notes: Optional[str] = Field(None, max_length=10000)
@@ -215,3 +242,13 @@ class GoalContributionResponse(BaseModel):
     created_at: datetime = Field(serialization_alias="createdAt")
 
     model_config = ConfigDict(from_attributes=True, populate_by_name=True)
+
+
+class LifeCashResponse(BaseModel):
+    """The Life Wallet balance, what goals hold of it, and what is left (TWD)."""
+
+    life_balance: Decimal = Field(serialization_alias="lifeBalance")
+    reserved: Decimal
+    available: Decimal
+
+    model_config = ConfigDict(populate_by_name=True)

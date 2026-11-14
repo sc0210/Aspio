@@ -56,6 +56,22 @@ class GoalStatus(str, enum.Enum):
     CANCELLED = "cancelled"
 
 
+class ContributionKind(str, enum.Enum):
+    """What a goal_contributions row records. Its amount is signed: what it adds
+    to (or takes from) the goal's progress.
+
+    reserve / release set Life Wallet cash aside for the goal, or hand it back.
+    No transaction is written and no wallet moves: the cash stays in Life, and
+    Life's *available* figure is its balance minus what goals hold (see
+    goals/reservations.py). legacy is progress recorded before reservations
+    existed: it counts toward the goal but holds no cash.
+    """
+
+    RESERVE = "reserve"
+    RELEASE = "release"
+    LEGACY = "legacy"
+
+
 # Backwards-compatible alias — tests and older code that import GoalType map to GoalCategory
 GoalType = GoalCategory
 
@@ -95,7 +111,7 @@ class Goal(Base):
     # Financial details
     target_amount = Column(Numeric(20, 2), nullable=False)
     current_amount = Column(Numeric(20, 2), nullable=False, default=Decimal("0.00"))
-    currency = Column(String(3), nullable=False, default="USD")
+    currency = Column(String(3), nullable=False, default="TWD")
 
     # Timeline
     target_date = Column(DateTime(timezone=True), nullable=True)
@@ -209,7 +225,10 @@ class GoalContribution(Base):
         index=True,
     )
 
-    # Contribution details
+    # Contribution details. Signed (see ContributionKind): a release is negative.
+    kind = Column(
+        String(16), nullable=False, default=ContributionKind.RESERVE.value
+    )
     amount = Column(Numeric(20, 2), nullable=False)
     contribution_date = Column(
         DateTime(timezone=True), nullable=False, default=datetime.utcnow

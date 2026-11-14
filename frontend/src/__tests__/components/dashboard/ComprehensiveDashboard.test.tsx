@@ -56,6 +56,7 @@ jest.mock('@/hooks/usePriceRefreshOnLogin', () => ({
 
 jest.mock('@/hooks/useGoals', () => ({
   useGoals: () => ({ data: [], isLoading: false }),
+  useLifeCash: () => ({ data: null }),
 }));
 
 jest.mock('react-i18next', () => {

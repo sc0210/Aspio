@@ -29,6 +29,12 @@ export interface Goal {
     currentAmount: number;
     progressPercentage: number;
     remainingAmount: number;
+    /** Life Wallet cash still set aside for this goal (TWD). */
+    reservedAmount?: number;
+    /** Cash already spent from the goal's reserve (TWD). */
+    spentAmount?: number;
+    /** Progress recorded before goals reserved cash: counts, holds no money. */
+    legacyAmount?: number;
     currency: string;
     targetDate?: string;
     startedAt: string;
@@ -55,6 +61,8 @@ export interface GoalMilestone {
 export interface GoalContribution {
     id: string;
     goalId: string;
+    /** reserve / release / legacy. amount is signed: a release is negative. */
+    kind?: 'reserve' | 'release' | 'legacy';
     amount: number;
     contributionDate: string;
     notes?: string;
@@ -95,16 +103,30 @@ export interface UpdateGoalData {
     priority?: 'high' | 'medium' | 'low';
     status?: 'active' | 'completed' | 'paused' | 'cancelled';
     target_amount?: number;
-    current_amount?: number;
-    currency?: string;
     target_date?: string;
 }
 
+/** Reserve (or release) Life Wallet cash for a goal. */
 export interface ContributeData {
     amount: number;
     contribution_date?: string;
     notes?: string;
-    transaction_id?: string;
+}
+
+/** The Life Wallet balance, what goals have reserved of it, and what is free (TWD). */
+export interface LifeCash {
+    lifeBalance: number;
+    reserved: number;
+    available: number;
+}
+
+/** The message the backend wrote for the user, else `fallback`. */
+function serverMessage(error: unknown, fallback: string): string {
+    const status = (error as { status?: unknown })?.status;
+    const message = error instanceof Error ? error.message : '';
+    // ApiError carries the backend's own message; a bare "HTTP error!" does not help.
+    if (typeof status === 'number' && message && !message.startsWith('HTTP error!')) return message;
+    return fallback;
 }
 
 /**
@@ -305,6 +327,7 @@ export function useCreateGoal() {
             queryClient.invalidateQueries({ queryKey: [QUERY_KEYS.GOALS_SUMMARY] });
             // Refetch ALL instances (active + inactive) so dashboard & portfolio stay in sync
             queryClient.refetchQueries({ queryKey: [QUERY_KEYS.GOALS], type: 'all' });
+            queryClient.invalidateQueries({ queryKey: [QUERY_KEYS.LIFE_CASH] });
             invalidateDashboardData(queryClient);
             toast.success(t('goals:toast.created'));
         },
@@ -313,7 +336,7 @@ export function useCreateGoal() {
             console.error('[useCreateGoal] Error response:', error.response?.data);
             const errorMessage = error.response?.data?.message ||
                 error.response?.data?.detail ||
-                t('goals:toast.createFailed');
+                serverMessage(error, t('goals:toast.createFailed'));
             toast.error(errorMessage);
         },
     });
@@ -335,8 +358,6 @@ export function useUpdateGoal() {
                 if (data.priority !== undefined) updates.priority = data.priority;
                 if (data.status !== undefined && data.status !== 'cancelled') updates.status = data.status;
                 if (data.target_amount !== undefined) updates.targetAmount = Number(data.target_amount);
-                if (data.current_amount !== undefined) updates.currentAmount = Number(data.current_amount);
-                if (data.currency !== undefined) updates.currency = data.currency;
                 if (data.target_date !== undefined) updates.targetDate = new Date(data.target_date);
                 demo.updateDemoGoal?.(id, updates);
                 return DEMO_WRITE;
@@ -354,6 +375,7 @@ export function useUpdateGoal() {
             queryClient.invalidateQueries({ queryKey: [QUERY_KEYS.GOALS_SUMMARY] });
             // Refetch ALL instances (active + inactive) so dashboard & portfolio stay in sync
             queryClient.refetchQueries({ queryKey: [QUERY_KEYS.GOALS], type: 'all' });
+            queryClient.invalidateQueries({ queryKey: [QUERY_KEYS.LIFE_CASH] });
             invalidateDashboardData(queryClient);
             toast.success(t('goals:toast.updated'));
         },
@@ -384,6 +406,7 @@ export function useDeleteGoal() {
             queryClient.invalidateQueries({ queryKey: [QUERY_KEYS.GOALS_SUMMARY] });
             // Refetch ALL instances (active + inactive) so dashboard & portfolio stay in sync
             queryClient.refetchQueries({ queryKey: [QUERY_KEYS.GOALS], type: 'all' });
+            queryClient.invalidateQueries({ queryKey: [QUERY_KEYS.LIFE_CASH] });
             invalidateDashboardData(queryClient);
             toast.success(t('goals:toast.deleted'));
         },
@@ -393,7 +416,39 @@ export function useDeleteGoal() {
     });
 }
 
-export function useAddContribution() {
+/**
+ * The Life Wallet's cash: its balance, what goals have reserved, what is free.
+ * Demo mode has no ledger behind its goals, so it reports nothing (callers
+ * hide the figure).
+ */
+export function useLifeCash() {
+    const { data: session } = useSession();
+    const { isDemoMode } = useDemo();
+
+    return useQuery<LifeCash | null>({
+        queryKey: [QUERY_KEYS.LIFE_CASH, isDemoMode ? 'demo' : (session?.user?.id || 'anon')],
+        queryFn: async () => {
+            if (isDemoMode) return null;
+            const response = await apiClient.get<LifeCash>('/goals/life-cash');
+            const d = response.data;
+            if (!d) return null;
+            // Decimals arrive as strings: make them numbers before anyone adds them.
+            return {
+                lifeBalance: Number(d.lifeBalance) || 0,
+                reserved: Number(d.reserved) || 0,
+                available: Number(d.available) || 0,
+            };
+        },
+        enabled: !!session || isDemoMode,
+        staleTime: 30_000,
+    });
+}
+
+/**
+ * Reserve Life Wallet cash for a goal, or release it back. Nothing moves
+ * between wallets: Life keeps the money and its free cash goes down (or up).
+ */
+function useGoalCash(kind: 'reserve' | 'release') {
     const queryClient = useQueryClient();
     const { t } = useTranslation(['goals']);
 
@@ -404,14 +459,15 @@ export function useAddContribution() {
             if (isDemo) {
                 const goal = demo.demoGoals?.find((g) => g.id === goalId);
                 if (goal) {
+                    const delta = (Number(data.amount) || 0) * (kind === 'release' ? -1 : 1);
                     demo.updateDemoGoal?.(goalId, {
-                        currentAmount: (Number(goal.currentAmount) || 0) + (Number(data.amount) || 0),
+                        currentAmount: Math.max(0, (Number(goal.currentAmount) || 0) + delta),
                     });
                 }
                 return DEMO_WRITE;
             }
             const response = await apiClient.post<GoalContribution>(
-                `/goals/${goalId}/contributions`,
+                `/goals/${goalId}/${kind}`,
                 data
             );
             return response.data!;
@@ -421,13 +477,27 @@ export function useAddContribution() {
             queryClient.invalidateQueries({ queryKey: [QUERY_KEYS.GOALS] });
             queryClient.invalidateQueries({ queryKey: [QUERY_KEYS.GOALS, variables.goalId] });
             queryClient.invalidateQueries({ queryKey: [QUERY_KEYS.GOALS_SUMMARY] });
+            queryClient.invalidateQueries({ queryKey: [QUERY_KEYS.LIFE_CASH] });
             // Refetch ALL instances (active + inactive) so dashboard & portfolio stay in sync
             queryClient.refetchQueries({ queryKey: [QUERY_KEYS.GOALS], type: 'all' });
             invalidateDashboardData(queryClient);
-            toast.success(t('goals:toast.contributionAdded'));
+            toast.success(t(kind === 'release' ? 'goals:toast.released' : 'goals:toast.contributionAdded'));
         },
-        onError: (error: MutationError) => {
-            toast.error(error.response?.data?.message || t('goals:toast.contributionFailed'));
+        onError: (error: unknown) => {
+            toast.error(serverMessage(
+                error,
+                t(kind === 'release' ? 'goals:toast.releaseFailed' : 'goals:toast.contributionFailed'),
+            ));
         },
     });
+}
+
+/** Reserve Life Wallet cash for a goal (the goal's "contribution"). */
+export function useAddContribution() {
+    return useGoalCash('reserve');
+}
+
+/** Release a goal's reserved cash back to the Life Wallet's free money. */
+export function useReleaseFromGoal() {
+    return useGoalCash('release');
 }

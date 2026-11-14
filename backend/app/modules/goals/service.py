@@ -12,7 +12,10 @@ from uuid import UUID
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import case, literal
 
+from app.core.exceptions import BusinessLogicException, ValidationException
+
 from .models import (
+    ContributionKind,
     Goal,
     GoalMilestone,
     GoalContribution,
@@ -21,6 +24,7 @@ from .models import (
     GoalPriority,
 )
 from .repositories import GoalRepository
+from .reservations import LifeCash, goal_money, life_cash, lock_user_goals
 from .schemas import (
     GoalCreate,
     GoalUpdate,
@@ -90,8 +94,8 @@ class GoalService:
                 category=_resolve_enum(GoalCategory, goal_data.category),
                 priority=_resolve_enum(GoalPriority, goal_data.priority),
                 target_amount=goal_data.target_amount,
-                current_amount=goal_data.current_amount or Decimal("0.00"),
-                currency=goal_data.currency,
+                current_amount=Decimal("0.00"),
+                currency="TWD",
                 target_date=goal_data.target_date,
                 status=GoalStatus.ACTIVE,
             )
@@ -111,19 +115,43 @@ class GoalService:
                     )
                     self.repository.add_milestone(milestone)
 
+            # Cash already saved for the goal is reserved out of Life, like
+            # any later contribution: it has to be there to be set aside.
+            if goal_data.current_amount and goal_data.current_amount > 0:
+                await self.repository.refresh(goal, ["milestones"])
+                await self._reserve(
+                    goal, goal_data.current_amount, None, "Already saved when the goal was created"
+                )
+
             await self.session.commit()
             await self.repository.refresh(goal, ["milestones", "contributions"])
+            await self.attach_money([goal], user_id)
 
             logger.info(f"Goal created successfully: {goal.id}")
             return goal
 
         except Exception as e:
             logger.error(f"Error creating goal: {str(e)}", exc_info=True)
+            await self.session.rollback()
             raise
 
     async def get_goal(self, goal_id: UUID, user_id: UUID) -> Optional[Goal]:
         """Get a specific goal"""
         return await self.repository.get_goal_by_id(goal_id, user_id)
+
+    async def attach_money(self, goals: List[Goal], user_id: UUID) -> List[Goal]:
+        """Set reserved/spent/legacy (TWD) on each goal for GoalResponse."""
+        money = await goal_money(self.session, user_id, [g.id for g in goals])
+        for goal in goals:
+            m = money.get(goal.id)
+            goal.reserved_amount = m.reserved if m else Decimal("0")
+            goal.spent_amount = m.spent if m else Decimal("0")
+            goal.legacy_amount = m.legacy if m else Decimal("0")
+        return goals
+
+    async def life_cash(self, user_id: UUID) -> LifeCash:
+        """The Life Wallet balance, what goals hold of it and what is left."""
+        return await life_cash(self.session, user_id)
 
     async def list_goals(
         self,
@@ -159,18 +187,24 @@ class GoalService:
             limit=limit,
         )
         total = await self.repository.count_goals_for_user(conditions)
+        await self.attach_money(goals, user_id)
         return goals, total
 
     async def update_goal(
         self, goal_id: UUID, user_id: UUID, goal_data: GoalUpdate
     ) -> Optional[Goal]:
         """Update a goal"""
-        goal = await self.get_goal(goal_id, user_id)
+        update_data = goal_data.model_dump(exclude_unset=True)
+        # Cancelling releases the goal's cash, so it reads the goal under the
+        # same lock as a reserve or release (see _locked_goal).
+        if update_data.get("status") is not None and _resolve_enum(
+                GoalStatus, update_data["status"]) == GoalStatus.CANCELLED:
+            goal = await self._locked_goal(goal_id, user_id)
+        else:
+            goal = await self.get_goal(goal_id, user_id)
         if not goal:
             logger.warning(f"Goal {goal_id} not found for user {user_id}")
             return None
-
-        update_data = goal_data.model_dump(exclude_unset=True)
 
         # Convert enum string values to proper enum members
         enum_fields = {
@@ -182,8 +216,21 @@ class GoalService:
             if field in update_data and update_data[field] is not None:
                 update_data[field] = _resolve_enum(enum_cls, update_data[field])
 
+        cancelling = (
+            update_data.get("status") == GoalStatus.CANCELLED
+            and goal.status != GoalStatus.CANCELLED
+        )
+
         for key, value in update_data.items():
             setattr(goal, key, value)
+
+        # A cancelled goal gives its cash back to Life: nothing is set aside
+        # for a goal that is no longer pursued.
+        if cancelling:
+            held = (await goal_money(self.session, user_id, [goal.id])).get(goal.id)
+            if held and held.reserved > 0:
+                await self._record(goal, ContributionKind.RELEASE, -held.reserved, None,
+                             "Released when the goal was cancelled")
 
         # Auto-complete if target reached
         if (
@@ -217,6 +264,7 @@ class GoalService:
 
         await self.session.commit()
         await self.repository.refresh(goal, ["milestones", "contributions"])
+        await self.attach_money([goal], user_id)
         return goal
 
     async def delete_goal(self, goal_id: UUID, user_id: UUID) -> bool:
@@ -229,43 +277,110 @@ class GoalService:
         await self.session.commit()
         return True
 
-    async def add_contribution(
-        self, goal_id: UUID, user_id: UUID, contribution_data: GoalContributionCreate
+    async def reserve(
+        self, goal_id: UUID, user_id: UUID, data: GoalContributionCreate
     ) -> Optional[GoalContribution]:
-        """Add a contribution to a goal"""
-        goal = await self.get_goal(goal_id, user_id)
+        """Set Life Wallet cash aside for a goal. No transaction, no wallet move."""
+        goal = await self._locked_goal(goal_id, user_id)
         if not goal:
             return None
+        try:
+            contribution = await self._reserve(goal, data.amount, data.contribution_date, data.notes)
+            await self.session.commit()
+        except Exception:
+            await self.session.rollback()
+            raise
+        await self.repository.refresh(contribution)
+        return contribution
 
+    # The old name: POST /goals/{id}/contributions reserves.
+    add_contribution = reserve
+
+    async def release(
+        self, goal_id: UUID, user_id: UUID, data: GoalContributionCreate
+    ) -> Optional[GoalContribution]:
+        """Hand reserved cash back to the Life Wallet's available money."""
+        goal = await self._locked_goal(goal_id, user_id)
+        if not goal:
+            return None
+        try:
+            held = (await goal_money(self.session, user_id, [goal.id])).get(goal.id)
+            reserved = held.reserved if held else Decimal("0")
+            if data.amount > reserved:
+                raise ValidationException(
+                    f"Only NT${reserved:,.0f} is reserved for {goal.title}",
+                    details={"reserved": str(reserved), "amount": str(data.amount)},
+                )
+            contribution = await self._record(
+                goal, ContributionKind.RELEASE, -data.amount, data.contribution_date, data.notes
+            )
+            await self.session.commit()
+        except Exception:
+            await self.session.rollback()
+            raise
+        await self.repository.refresh(contribution)
+        return contribution
+
+    async def _locked_goal(self, goal_id: UUID, user_id: UUID) -> Optional[Goal]:
+        """The goal, read after its owner's goals are locked.
+
+        Loading it first would let two quick moves both add to the same stale
+        progress figure and lose one of them.
+        """
+        await lock_user_goals(self.session, user_id)
+        return await self.get_goal(goal_id, user_id)
+
+    async def _reserve(
+        self, goal: Goal, amount: Decimal, when: Optional[datetime], notes: Optional[str]
+    ) -> GoalContribution:
+        """Check the cash is free and record the reservation (caller commits)."""
+        if goal.status == GoalStatus.CANCELLED:
+            raise BusinessLogicException("A cancelled goal cannot hold money")
+        await lock_user_goals(self.session, goal.user_id)
+        cash = await life_cash(self.session, goal.user_id)
+        if amount > cash.available:
+            raise ValidationException(
+                f"Only NT${max(cash.available, Decimal('0')):,.0f} of your Life Wallet is free to set aside",
+                details={"available": str(cash.available), "amount": str(amount)},
+            )
+        return await self._record(goal, ContributionKind.RESERVE, amount, when, notes)
+
+    async def _record(
+        self,
+        goal: Goal,
+        kind: ContributionKind,
+        amount: Decimal,
+        when: Optional[datetime],
+        notes: Optional[str],
+    ) -> GoalContribution:
+        """Stage one signed contribution row and move the goal's progress with it."""
         contribution = GoalContribution(
-            goal_id=goal_id,
-            amount=contribution_data.amount,
-            contribution_date=contribution_data.contribution_date or datetime.now(timezone.utc),
-            notes=contribution_data.notes,
-            transaction_id=contribution_data.transaction_id,
+            goal_id=goal.id,
+            kind=kind.value,
+            amount=amount,
+            contribution_date=when or datetime.now(timezone.utc),
+            notes=notes,
         )
-
-        # Update goal's current amount
-        goal.current_amount += contribution_data.amount
-
-        # Check if goal is completed
-        if (
-            goal.current_amount >= goal.target_amount
-            and goal.status == GoalStatus.ACTIVE
-        ):
+        self.repository.add_contribution(contribution)
+        # Progress is every contribution row (reservations.py). Re-read the sum
+        # rather than adding to the loaded figure, so the column cannot drift
+        # from the rows whatever ran before.
+        goal.current_amount = await self.repository.contribution_total(goal.id)
+        if goal.current_amount >= goal.target_amount and goal.status == GoalStatus.ACTIVE:
             goal.status = GoalStatus.COMPLETED
             goal.completed_at = datetime.now(timezone.utc)
-
-        # Check and complete milestones
-        await self._check_milestones(goal)
-
-        self.repository.add_contribution(contribution)
-        await self.session.commit()
-        await self.repository.refresh(contribution)
-
+        elif goal.current_amount < goal.target_amount and goal.status == GoalStatus.COMPLETED:
+            # Releasing below the target reopens it.
+            goal.status = GoalStatus.ACTIVE
+            goal.completed_at = None
+        self._check_milestones_sync(goal)
         return contribution
 
     async def _check_milestones(self, goal: Goal):
+        self._check_milestones_sync(goal)
+
+    @staticmethod
+    def _check_milestones_sync(goal: Goal):
         """Check and auto-complete milestones based on current amount"""
         for milestone in goal.milestones:
             if not milestone.is_completed and goal.current_amount >= milestone.amount:

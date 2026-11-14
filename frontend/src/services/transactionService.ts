@@ -331,7 +331,7 @@ class TransactionService {
       // Transform backend transaction format to frontend Transaction interface
       if (response.data) {
         const tx = response.data as Record<string, unknown>;
-        const transformedTransaction: Transaction & { loan_id?: string | null } = {
+        const transformedTransaction: Transaction & { loan_id?: string | null; goal_id?: string | null } = {
           id: tx.id as string,
           userId: tx.user_id as string,
           type: tx.type as Transaction['type'],
@@ -349,6 +349,8 @@ class TransactionService {
           transferGroupId: (tx.transferGroupId ?? tx.transfer_group_id) as string | undefined,
           // Surfaced so the edit form can pre-fill the "Link to Loan" selector.
           loan_id: (tx.loan_id ?? tx.loanId) as string | null | undefined,
+          // …and "Pay from goal".
+          goal_id: (tx.goal_id ?? tx.goalId) as string | null | undefined,
           // Lets the edit form save a buy through its holding, not by guessing a symbol.
           holdingId: (tx.holdingId ?? tx.holding_id ?? undefined) as string | undefined,
           peerSplitShareId: (tx.peerSplitShareId ?? tx.peer_split_share_id ?? undefined) as string | undefined,
@@ -382,7 +384,7 @@ class TransactionService {
   }
 
   async createTransaction(
-    transaction: Omit<Transaction, 'id' | 'userId' | 'createdAt' | 'updatedAt'>
+    transaction: Omit<Transaction, 'id' | 'userId' | 'createdAt' | 'updatedAt'> & { loan_id?: string; goal_id?: string }
   ): Promise<ApiResponse<Transaction>> {
     try {
       // Get category_id or use category_name for backend to resolve
@@ -421,6 +423,10 @@ class TransactionService {
       if (categoryId) {
         backendTransaction.category_id = categoryId;
       }
+      // The links the add form sets. loan_id used to be dropped here, so an
+      // expense linked to a loan on create never paid it down.
+      if (transaction.loan_id) backendTransaction.loan_id = transaction.loan_id;
+      if (transaction.goal_id) backendTransaction.goal_id = transaction.goal_id;
 
       const response = await apiClient.post('/transactions/', backendTransaction);
 
@@ -509,7 +515,7 @@ class TransactionService {
     return response.data.ids;
   }
 
-  async updateTransaction(id: string, updates: Partial<Transaction> & { loan_id?: string | null }): Promise<ApiResponse<Transaction>> {
+  async updateTransaction(id: string, updates: Partial<Transaction> & { loan_id?: string | null; goal_id?: string | null }): Promise<ApiResponse<Transaction>> {
     try {
       // Transform frontend Transaction updates to backend format
       const backendUpdates: Record<string, unknown> = {};
@@ -517,6 +523,8 @@ class TransactionService {
       // Loan link: forward when the caller sets it (null/'' unlinks and restores
       // the loan balance backend-side). `in` check so it's only sent intentionally.
       if ('loan_id' in updates) backendUpdates.loan_id = updates.loan_id ?? null;
+      // Goal link the same way: '' unlinks and the money goes back to the goal.
+      if ('goal_id' in updates) backendUpdates.goal_id = updates.goal_id ?? '';
 
       if (updates.type !== undefined) backendUpdates.type = updates.type;
       if (updates.amount !== undefined) backendUpdates.amount = updates.amount;

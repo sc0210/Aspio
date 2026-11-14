@@ -88,6 +88,8 @@ def make_mock_transaction(
     t.recurring_transaction_id = None
     # Not the cash side of a holding (those refuse delete and money edits).
     t.holding_id = None
+    # Not paid from a goal (a bare MagicMock attribute would read as linked).
+    t.goal_id = None
     t.created_at = datetime.now(timezone.utc)
     t.updated_at = datetime.now(timezone.utc)
     return t
@@ -1113,6 +1115,8 @@ def _make_loan_expense(loan_id=None, amount="100.00", principal=None):
     t.transfer_group_id = None
     # Nor a holding's cash leg, which refuses delete and money edits.
     t.holding_id = None
+    # Nor paid from a goal.
+    t.goal_id = None
     return t
 
 

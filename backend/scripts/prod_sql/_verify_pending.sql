@@ -168,7 +168,15 @@ WITH checks(sort, object, source_file, present) AS (
                  WHERE table_name = 'recurring_transactions' AND column_name = 'split_connection_id')),
     (34, 'column peer_split_amendments.kind', '2026_11_09_split_cancel_request.sql',
         EXISTS (SELECT 1 FROM information_schema.columns
-                 WHERE table_name = 'peer_split_amendments' AND column_name = 'kind'))
+                 WHERE table_name = 'peer_split_amendments' AND column_name = 'kind')),
+    (35, 'column goal_contributions.kind', '2026_11_14_goal_reservations.sql',
+        EXISTS (SELECT 1 FROM information_schema.columns
+                 WHERE table_name = 'goal_contributions' AND column_name = 'kind')),
+    (36, 'column transactions.goal_id', '2026_11_14_goal_reservations.sql',
+        EXISTS (SELECT 1 FROM information_schema.columns
+                 WHERE table_name = 'transactions' AND column_name = 'goal_id')),
+    (37, 'every goal in TWD', '2026_11_14_goal_reservations.sql',
+        NOT EXISTS (SELECT 1 FROM goals WHERE currency <> 'TWD'))
 )
 SELECT
     CASE WHEN present THEN 'OK     ' ELSE 'MISSING' END AS status,

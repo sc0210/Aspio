@@ -28,6 +28,8 @@ export const QUERY_KEYS = {
   GOALS: 'goals',
   LOANS: 'loans',
   GOALS_SUMMARY: 'goals-summary',
+  // The Life Wallet balance, what goals have reserved of it, and what is free.
+  LIFE_CASH: 'life-cash',
 
 
   // Derived from transactions — these read the same ledger the wallets do, so
@@ -142,19 +144,23 @@ const LEDGER_DERIVED: readonly QueryKeyValue[] = [
   QUERY_KEYS.ASSET_HISTORY,
   QUERY_KEYS.BENCHMARK,
   QUERY_KEYS.HOLDINGS,
+  // An expense paid from a goal spends that goal's reserved cash
+  // (transactions.goal_id), so a ledger write changes a goal's reserved and
+  // spent amounts and the Life Wallet's free cash.
+  QUERY_KEYS.GOALS,
+  QUERY_KEYS.LIFE_CASH,
 ];
 
 /**
  * A user's own data that a ledger write does NOT touch.
  *
- * Goals have no link to transactions on the backend: a contribution goes
- * through its own endpoint, which invalidates its own queries, and achievements
- * follow contributions the same way. Sweeping them into a transaction write
- * would be a refetch nobody asked for on every edit — so they are refreshed by
- * the manual Refresh button and on an auth change, but not by a save.
+ * A goal's progress moves only by reserving or releasing (its own endpoints,
+ * which invalidate their own queries); spending a goal's cash leaves progress
+ * where it is. Achievements follow contributions the same way. So these are
+ * refreshed by the manual Refresh button and on an auth change, not by a save.
+ * (The goals list itself is ledger-derived: see LEDGER_DERIVED.)
  */
 const USER_DATA: readonly QueryKeyValue[] = [
-  QUERY_KEYS.GOALS,
   QUERY_KEYS.GOALS_SUMMARY,
   QUERY_KEYS.ACHIEVEMENTS,
   QUERY_KEYS.GAMIFICATION,

@@ -26,8 +26,9 @@ import {
   TRANSACTION_TYPES, TYPE_TONE, CURRENCIES, CashFields, TypeToggle, DateRow, validateCashFields, StickySubmitBar, revealFirstError,
   FIELD_LABEL, CHIP_ROW, CHIP, CHIP_ON, CHIP_OFF, SEGMENT, SEGMENT_ON, SEGMENT_OFF, revealSelected,
   ENTRY_PANEL, ENTRY_SECTION, ENTRY_CAPTION, ENTRY_INPUT, ENTRY_INPUT_INVALID, ERROR_TEXT, NOTE,
-  ROW, ROW_LIST, ROW_LABEL, ROW_SEGMENTED, ROW_SEGMENT,
+  ROW, ROW_LIST, ROW_LABEL, ROW_SEGMENTED, ROW_SEGMENT, payableGoals,
 } from '@/components/transactions/TransactionFormFields';
+import { useGoals } from '@/hooks/useGoals';
 
 // useSearchParams needs a Suspense boundary on a statically rendered route.
 export default function AddTransactionPage() {
@@ -64,6 +65,7 @@ function AddTransactionForm() {
     tags: [] as string[],
     currency: prefill?.currency ?? 'TWD',
     loanId: '',
+    goalId: '',
   });
 
   // Investment sub-form state
@@ -104,6 +106,7 @@ function AddTransactionForm() {
       category: '',
       tags: [],
       loanId: '',
+      goalId: '',
       fromWallet: 'life',
       toWallet: 'emergency',
     }));
@@ -134,6 +137,8 @@ function AddTransactionForm() {
   // Bumped after "add another" on a loan payment, so the next entry sees the new balance.
   const [loansReload, setLoansReload] = useState(0);
   const [activeLoans, setActiveLoans] = useState<{ id: string; name: string; current_balance: number; currency: string }[]>([]);
+  // Goals holding Life cash, offered under "Pay from goal".
+  const { data: allGoals = [] } = useGoals();
   useEffect(() => {
     if (isDemo) return;
     loanService.getLoans()
@@ -356,7 +361,7 @@ function AddTransactionForm() {
         }
 
       } else {
-        const txData: Omit<Transaction, 'id' | 'userId' | 'createdAt' | 'updatedAt'> & { loan_id?: string } = {
+        const txData: Omit<Transaction, 'id' | 'userId' | 'createdAt' | 'updatedAt'> & { loan_id?: string; goal_id?: string } = {
           type: formData.type as 'income' | 'expense',
           amount: parseFloat(formData.amount),
           currency: formData.currency,
@@ -367,6 +372,9 @@ function AddTransactionForm() {
           walletType: formData.walletType as 'life' | 'emergency' | undefined,
           tags: formData.tags,
           ...(formData.type === 'expense' && formData.loanId ? { loan_id: formData.loanId } : {}),
+          // Goal cash is reserved in Life: only a Life expense spends it.
+          ...(formData.type === 'expense' && formData.walletType === 'life' && formData.goalId
+            ? { goal_id: formData.goalId } : {}),
         };
         const response = await transactionService.createTransaction(txData);
         if (response.success) {
@@ -765,6 +773,7 @@ function AddTransactionForm() {
                 onChange={handleInputChange}
                 onTagsChange={(tags) => setFormData(prev => ({ ...prev, tags }))}
                 activeLoans={activeLoans}
+                goals={payableGoals(allGoals, formData.goalId)}
                 showInvestmentHint
                 autoFocusAmount
               />

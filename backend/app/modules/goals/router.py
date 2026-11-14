@@ -19,6 +19,7 @@ from .schemas import (
     GoalSummary,
     GoalContributionCreate,
     GoalContributionResponse,
+    LifeCashResponse,
 )
 from .service import get_goal_service
 
@@ -115,6 +116,21 @@ async def get_goals_summary(
     return ApiResponse.success_response(data=summary, message="Goals summary retrieved")
 
 
+@router.get("/life-cash", response_model=ApiResponse[LifeCashResponse])
+async def get_life_cash(
+    current_user: CurrentUser,
+    session: AsyncSession = Depends(get_db),
+):
+    """The Life Wallet balance, what goals have reserved of it, and what is free."""
+    cash = await get_goal_service(session).life_cash(current_user.id)
+    return ApiResponse.success_response(
+        data=LifeCashResponse(
+            life_balance=cash.balance, reserved=cash.reserved, available=cash.available
+        ),
+        message="Life Wallet cash retrieved",
+    )
+
+
 @router.get("/{goal_id}", response_model=ApiResponse[GoalResponse])
 async def get_goal(
     goal_id: UUID,
@@ -129,6 +145,7 @@ async def get_goal(
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND, detail="Goal not found"
         )
+    await goal_service.attach_money([goal], current_user.id)
 
     return ApiResponse.success_response(
         data=GoalResponse.model_validate(goal), message="Goal retrieved"
@@ -174,29 +191,56 @@ async def delete_goal(
     return ApiResponse.success_response(message="Goal deleted successfully")
 
 
+async def _move(goal_id, data, current_user, session, release: bool):
+    goal_service = get_goal_service(session)
+    action = goal_service.release if release else goal_service.reserve
+    contribution = await action(goal_id, current_user.id, data)
+    if not contribution:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND, detail="Goal not found"
+        )
+    return contribution
+
+
+@router.post(
+    "/{goal_id}/reserve",
+    response_model=ApiResponse[GoalContributionResponse],
+    status_code=status.HTTP_201_CREATED,
+)
 @router.post(
     "/{goal_id}/contributions",
     response_model=ApiResponse[GoalContributionResponse],
     status_code=status.HTTP_201_CREATED,
+    include_in_schema=False,
 )
-async def add_contribution(
+async def reserve_for_goal(
     goal_id: UUID,
     contribution_data: GoalContributionCreate,
     current_user: CurrentUser,
     session: AsyncSession = Depends(get_db),
 ):
-    """Add a contribution to a goal"""
-    goal_service = get_goal_service(session)
-    contribution = await goal_service.add_contribution(
-        goal_id, current_user.id, contribution_data
-    )
-
-    if not contribution:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND, detail="Goal not found"
-        )
-
+    """Set Life Wallet cash aside for a goal (no transaction, Life is unchanged)."""
+    contribution = await _move(goal_id, contribution_data, current_user, session, release=False)
     return ApiResponse.success_response(
         data=GoalContributionResponse.model_validate(contribution),
-        message="Contribution added successfully",
+        message="Money reserved for the goal",
+    )
+
+
+@router.post(
+    "/{goal_id}/release",
+    response_model=ApiResponse[GoalContributionResponse],
+    status_code=status.HTTP_201_CREATED,
+)
+async def release_from_goal(
+    goal_id: UUID,
+    contribution_data: GoalContributionCreate,
+    current_user: CurrentUser,
+    session: AsyncSession = Depends(get_db),
+):
+    """Hand reserved cash back to the Life Wallet's free money."""
+    contribution = await _move(goal_id, contribution_data, current_user, session, release=True)
+    return ApiResponse.success_response(
+        data=GoalContributionResponse.model_validate(contribution),
+        message="Money released from the goal",
     )

@@ -164,6 +164,7 @@ export function PortfolioModalsContainer({
           currentAmount={modals.modalData.contributeGoal?.currentAmount || 0}
           targetAmount={modals.modalData.contributeGoal?.targetAmount || 0}
           currency={modals.modalData.contributeGoal?.currency || 'TWD'}
+          reservedAmount={Number(modals.modalData.contributeGoal?.reservedAmount ?? 0)}
         />
       )}
     </>

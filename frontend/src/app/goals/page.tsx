@@ -65,6 +65,7 @@ function DesktopGoalsPage() {
         currentAmount: number;
         targetAmount: number;
         currency: string;
+        reservedAmount?: number;
     } | null>(null);
     const [filterStatus, setFilterStatus] = useState<string | undefined>(undefined);
     const [filterCategory, setFilterCategory] = useState<string | undefined>(undefined);
@@ -130,6 +131,7 @@ function DesktopGoalsPage() {
             currentAmount: goal.currentAmount,
             targetAmount: goal.targetAmount,
             currency: goal.currency,
+            reservedAmount: goal.reservedAmount,
         });
     }, []);
 
@@ -529,6 +531,9 @@ function DesktopGoalsPage() {
                                     priority={goal.priority}
                                     isAtRisk={atRiskGoalIds.has(goal.id)}
                                     monthlyNeeded={getMonthlyNeeded(goal)}
+                                    reservedAmount={goal.reservedAmount}
+                                    spentAmount={goal.spentAmount}
+                                    legacyAmount={goal.legacyAmount}
                                     onContribute={() => handleContribute(goal)}
                                     onEdit={() => handleEdit(goal)}
                                     onDelete={() => handleDelete(goal.id)}
@@ -560,6 +565,11 @@ function DesktopGoalsPage() {
                                     targetDate={goal.targetDate ? new Date(goal.targetDate) : undefined}
                                     category={goal.category}
                                     priority={goal.priority}
+                                    reservedAmount={goal.reservedAmount}
+                                    spentAmount={goal.spentAmount}
+                                    legacyAmount={goal.legacyAmount}
+                                    // A finished goal's leftover cash is released from here.
+                                    onContribute={() => handleContribute(goal)}
                                     onEdit={() => handleEdit(goal)}
                                     onDelete={() => handleDelete(goal.id)}
                                 />
@@ -629,6 +639,7 @@ function DesktopGoalsPage() {
                         currentAmount={contributeGoal.currentAmount}
                         targetAmount={contributeGoal.targetAmount}
                         currency={contributeGoal.currency}
+                        reservedAmount={contributeGoal.reservedAmount}
                     />
                 )}
             </div>

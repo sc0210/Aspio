@@ -14,11 +14,12 @@ that is what this covers: creation, milestones, contributions, auto-completion,
 user scoping, and the summary aggregation.
 """
 
-from datetime import datetime, timedelta, timezone
+from datetime import date, datetime, timedelta, timezone
 from decimal import Decimal
 from uuid import uuid4
 
 import pytest
+import pytest_asyncio
 
 from app.modules.goals.models import GoalCategory, GoalPriority, GoalStatus
 from app.modules.goals.schemas import (
@@ -28,6 +29,7 @@ from app.modules.goals.schemas import (
     GoalUpdate,
 )
 from app.modules.goals.service import GoalService
+from app.modules.transactions.models import Transaction, TransactionType, TransactionWalletType
 
 
 def _goal_payload(**overrides):
@@ -44,8 +46,17 @@ def _goal_payload(**overrides):
     return GoalCreate(**data)
 
 
-@pytest.fixture
-def service(async_session):
+@pytest_asyncio.fixture
+async def service(async_session, test_user, test_category):
+    """A GoalService whose user has NT$10,000 in Life to set aside: a goal's
+    progress is Life Wallet cash it reserves (see test_goal_reservations.py)."""
+    async_session.add(Transaction(
+        user_id=test_user.id, type=TransactionType.INCOME,
+        wallet_type=TransactionWalletType.LIFE, amount=Decimal("10000"), currency="TWD",
+        description="Salary", transaction_date=date(2026, 1, 1),
+        category_id=test_category.id,
+    ))
+    await async_session.commit()
     return GoalService(async_session)
 
 
