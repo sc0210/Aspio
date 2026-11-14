@@ -146,7 +146,10 @@ class GoalRepository:
         return contribution
 
     async def contribution_total(self, goal_id: UUID) -> Decimal:
-        """Σ every contribution row of a goal, staged ones included (autoflush)."""
+        """Σ every contribution row of a goal, the ones staged in this session included."""
+        # The app's sessions do not autoflush (core/database.py), so a row just
+        # added would otherwise be missing from the sum.
+        await self.db.flush()
         total = await self.db.scalar(
             select(func.coalesce(func.sum(GoalContribution.amount), 0))
             .where(GoalContribution.goal_id == goal_id)
