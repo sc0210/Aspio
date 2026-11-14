@@ -4,6 +4,7 @@ import { useEffect, useMemo, useState } from 'react';
 import dynamic from 'next/dynamic';
 import { canMoveGoalCash, goalHorizonRisk, goalProgressAmount } from '@/lib/goals/goalMoney';
 import { LifeCashSummary } from '@/components/goals/LifeCashSummary';
+import { createLinkDefaults } from '@/lib/goals/createLink';
 import { useRouter } from 'next/navigation';
 import { useTranslation } from 'react-i18next';
 import { PlusIcon } from '@heroicons/react/24/outline';
@@ -60,11 +61,14 @@ export function MobileGoals() {
     // Create and Reserve / Release open here; links elsewhere arrive as
     // /goals?create=1, which used to open nothing on a phone.
     const [createOpen, setCreateOpen] = useState(false);
+    const [createLink, setCreateLink] = useState<ReturnType<typeof createLinkDefaults> | null>(null);
     const [moneyGoal, setMoneyGoal] = useState<Goal | null>(null);
     const goCreate = () => setCreateOpen(true);
     useEffect(() => {
         const params = new URLSearchParams(window.location.search);
-        if (params.get('create') === '1') {
+        const link = createLinkDefaults(params.get('create'));
+        if (link.open) {
+            setCreateLink(link);
             setCreateOpen(true);
             params.delete('create');
             const rest = params.toString();
@@ -222,7 +226,14 @@ export function MobileGoals() {
                 </p>
             </div>
 
-            {createOpen && <CreateGoalModal isOpen onClose={() => setCreateOpen(false)} />}
+            {createOpen && (
+                <CreateGoalModal
+                    isOpen
+                    onClose={() => { setCreateOpen(false); setCreateLink(null); }}
+                    defaults={createLink?.defaults}
+                    returnToPortfolio={createLink?.returnToPortfolio}
+                />
+            )}
             {moneyGoal && (
                 <ContributeModal
                     isOpen

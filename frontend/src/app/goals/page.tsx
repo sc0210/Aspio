@@ -7,6 +7,7 @@ import { MobileGoals } from '@/components/goals/MobileGoals';
 import { useGoals, useDeleteGoal, Goal, CreateGoalData, goalProgressPercent } from '@/hooks/useGoals';
 import { usePortfolio } from '@/hooks/usePortfolio';
 import { LifeCashSummary } from '@/components/goals/LifeCashSummary';
+import { createLinkDefaults } from '@/lib/goals/createLink';
 import { AssetGoalCard } from '@/components/goals/AssetGoalCard';
 import dynamic from 'next/dynamic';
 
@@ -86,20 +87,10 @@ function DesktopGoalsPage() {
     React.useEffect(() => {
         if (typeof window !== 'undefined') {
             const searchParams = new URLSearchParams(window.location.search);
-            if (searchParams.get('create') === 'retirement') {
-                // Pre-fill with retirement defaults
-                const targetYear = new Date().getFullYear() + 10;
-                const targetDate = `${targetYear}-12-31`;
-                setCreateModalDefaults({
-                    title: 'Retirement Fund',
-                    category: 'retirement',
-                    priority: 'high',
-                    target_amount: 10000000, // 10M TWD default
-                    currency: 'TWD',
-                    target_date: targetDate,
-                    description: 'Financial independence and retirement goal',
-                });
-                setReturnToPortfolio(true);
+            const link = createLinkDefaults(searchParams.get('create'));
+            if (link.open) {
+                if (link.defaults) setCreateModalDefaults(link.defaults);
+                if (link.returnToPortfolio) setReturnToPortfolio(true);
                 setIsCreateModalOpen(true);
                 // Clean up URL
                 window.history.replaceState({}, '', '/goals');
