@@ -2,7 +2,7 @@
 
 import { useEffect, useMemo, useState } from 'react';
 import dynamic from 'next/dynamic';
-import { goalHorizonRisk, goalProgressAmount } from '@/lib/goals/goalMoney';
+import { canMoveGoalCash, goalHorizonRisk, goalProgressAmount } from '@/lib/goals/goalMoney';
 import { LifeCashSummary } from '@/components/goals/LifeCashSummary';
 import { useRouter } from 'next/navigation';
 import { useTranslation } from 'react-i18next';
@@ -63,15 +63,17 @@ export function MobileGoals() {
     const [moneyGoal, setMoneyGoal] = useState<Goal | null>(null);
     const goCreate = () => setCreateOpen(true);
     useEffect(() => {
-        if (new URLSearchParams(window.location.search).get('create')) {
+        const params = new URLSearchParams(window.location.search);
+        if (params.get('create') === '1') {
             setCreateOpen(true);
-            router.replace('/goals');
+            params.delete('create');
+            const rest = params.toString();
+            router.replace(rest ? `/goals?${rest}` : '/goals');
         }
     }, [router]);
-    // An emergency-fund goal follows the Emergency Wallet; it only offers the
-    // window to release cash reserved before that rule.
-    const canMoveMoney = (g: Goal) => !g.tracksEmergency || (Number(g.reservedAmount) || 0) > 0;
-    const moneyButton = (g: Goal) => canMoveMoney(g) ? (
+    // Same rule as the desktop card (goalMoney.ts): nothing to move on a
+    // reached goal holding no cash, or an emergency fund holding none.
+    const moneyButton = (g: Goal) => canMoveGoalCash(g) ? (
         <button
             type="button"
             onClick={() => setMoneyGoal(g)}
@@ -80,9 +82,9 @@ export function MobileGoals() {
         >
             {t('goals:reserve.mobileButton')}
         </button>
-    ) : (
+    ) : g.tracksEmergency ? (
         <p className="text-xs text-gray-500 dark:text-gray-400">{t('goals:reserve.tracksEmergency')}</p>
-    );
+    ) : null;
 
     const model = useMemo(() => {
         const active = goals.filter((g) => g.status === 'active');
@@ -229,7 +231,7 @@ export function MobileGoals() {
                     goalTitle={moneyGoal.title}
                     currentAmount={Number(moneyGoal.currentAmount)}
                     targetAmount={Number(moneyGoal.targetAmount)}
-                    currency="TWD"
+                    currency={moneyGoal.currency || 'TWD'}
                     reservedAmount={Number(moneyGoal.reservedAmount ?? 0)}
                 />
             )}
