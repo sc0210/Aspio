@@ -159,6 +159,8 @@ export interface PortfolioHolding {
   name: string;
   type: 'stock' | 'etf' | 'crypto' | 'cryptocurrency' | 'bond' | 'mutual_fund' | 'cash' | 'reit' | 'commodity';
   walletType?: 'portfolio' | 'emergency'; // Wallet classification
+  /** The goal whose reserved cash bought this lot (goals/reservations.py). */
+  goalId?: string | null;
   quantity: number;
   averageCost: number;
   currentPrice: number;

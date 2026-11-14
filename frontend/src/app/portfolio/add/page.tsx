@@ -27,6 +27,10 @@ import { Button } from '@/components/ui/Button';
 import { Input } from '@/components/ui/Input';
 import { LoadingSpinner } from '@/components/ui/LoadingSpinner';
 import { DashboardLayout } from '@/components/layout/DashboardLayout';
+import { GoalFundingPicker } from '@/components/goals/GoalFundingPicker';
+import { payableGoals } from '@/components/transactions/TransactionFormFields';
+import { useGoals } from '@/hooks/useGoals';
+import { invalidateDashboardData } from '@/hooks/useDataSynchronization';
 import { useTranslation } from 'react-i18next';
 
 // Declared, not inferred: the real schema is built inside the component so its
@@ -138,6 +142,9 @@ export default function AddInvestmentPage() {
   const [popularSymbols, setPopularSymbols] = useState<PopularSymbol[]>([]);
   const [isLoadingQuote, setIsLoadingQuote] = useState(false);
   const [walletType, setWalletType] = useState<'portfolio' | 'emergency'>('portfolio');
+  // Paid with a goal's reserved cash ('' = the user's own free cash).
+  const [goalId, setGoalId] = useState('');
+  const { data: allGoals = [] } = useGoals();
 
   // Wallet type options for portfolio holdings
   const WALLET_TYPES = [
@@ -200,6 +207,7 @@ export default function AddInvestmentPage() {
         // yup cast the YYYY-MM-DD input to local midnight; toISOString would send the
         // previous UTC day east of UTC. Send the picked calendar day, as BuyHoldingModal does.
         purchaseDate: data.purchaseDate ? localDateString(new Date(data.purchaseDate)) : undefined,
+        goalId: goalId || undefined,
       };
 
       log.debug('Calling portfolioService.addHolding', holdingInput, 'AddHoldingPage');
@@ -225,6 +233,8 @@ export default function AddInvestmentPage() {
       queryClient.invalidateQueries({ queryKey: ['portfolio-daily-performance'] });
       queryClient.invalidateQueries({ queryKey: ['dashboard'] });
       queryClient.invalidateQueries({ queryKey: ['cash-wallet'] });
+      // Life cash and, for a goal-funded buy, the goal's money.
+      invalidateDashboardData(queryClient);
 
       // Force refetch to ensure data is fresh before navigation
       await queryClient.refetchQueries({ queryKey: ['portfolio'], type: 'active' });
@@ -589,6 +599,15 @@ export default function AddInvestmentPage() {
                   {errors.walletType && (
                     <p className="mt-2 text-sm text-error-700 dark:text-error-600">{errors.walletType.message}</p>
                   )}
+                </div>
+
+                <div className="md:col-span-2">
+                  <GoalFundingPicker
+                    id="holding-goal"
+                    goals={payableGoals(allGoals, goalId)}
+                    value={goalId}
+                    onChange={setGoalId}
+                  />
                 </div>
 
                 <div>

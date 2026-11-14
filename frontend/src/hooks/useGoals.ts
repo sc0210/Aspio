@@ -35,6 +35,11 @@ export interface Goal {
     spentAmount?: number;
     /** Progress recorded before goals reserved cash: counts, holds no money. */
     legacyAmount?: number;
+    /** Market value (TWD) of the holdings the goal's money bought, the part of
+     *  it in stocks/funds/crypto, and progress at market value. */
+    investedAmount?: number;
+    atRiskAmount?: number;
+    valueAmount?: number | null;
     currency: string;
     targetDate?: string;
     startedAt: string;

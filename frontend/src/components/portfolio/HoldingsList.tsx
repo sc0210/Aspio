@@ -76,6 +76,8 @@ export interface Holding {
   name: string;
   type: string;
   walletType?: 'portfolio' | 'emergency' | string;
+  /** The goal whose reserved cash bought this lot. */
+  goalId?: string | null;
   market?: string;
   quantity: number;
   averageCost: number;

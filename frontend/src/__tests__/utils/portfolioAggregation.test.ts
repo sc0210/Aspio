@@ -74,3 +74,25 @@ describe('aggregateHoldingsBySymbol — day change', () => {
     expect(aggregated.dayChangePercentage).toBeUndefined();
   });
 });
+
+describe('aggregateHoldingsBySymbol — goal lots', () => {
+  it("keeps a goal's lots in their own row, so selling a row sells only that money", () => {
+    // The backend sells only lots of the chosen lot's goal; one merged row
+    // would sell whichever group lotIds[0] happened to be in.
+    const lots = [
+      lot({ quantity: 100, id: 'own-1' }),
+      lot({ quantity: 50, id: 'own-2' }),
+      lot({ quantity: 20, id: 'house-1', goalId: 'goal-house' }),
+    ];
+
+    const rows = aggregateHoldingsBySymbol(lots);
+
+    expect(rows).toHaveLength(2);
+    const own = rows.find((r) => !r.goalId)!;
+    const house = rows.find((r) => r.goalId === 'goal-house')!;
+    expect(own.quantity).toBe(150);
+    expect(own.metadata?.lotIds).toEqual(['own-1', 'own-2']);
+    expect(house.quantity).toBe(20);
+    expect(house.id).toBe('house-1');
+  });
+});

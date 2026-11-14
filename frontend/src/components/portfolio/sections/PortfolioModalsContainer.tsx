@@ -5,6 +5,8 @@ import toast from 'react-hot-toast';
 import type { PortfolioModalsState } from '@/hooks/portfolio/usePortfolioModals';
 import type { PortfolioHolding } from '@/shared/types';
 import { portfolioService } from '@/services/portfolioService';
+import { useQueryClient } from '@tanstack/react-query';
+import { invalidateDashboardData } from '@/hooks/useDataSynchronization';
 
 // All modals are heavy (400-800 lines each, pull in form libraries + Recharts).
 // Lazy-loading them means their JS is only fetched when the user first opens a modal,
@@ -58,6 +60,7 @@ export function PortfolioModalsContainer({
   rawHoldings = [],
   sellableHoldings = [],
 }: PortfolioModalsContainerProps) {
+  const queryClient = useQueryClient();
   // Non-cash positions the user can pick from when selling without a pre-selected holding.
   const sellPickList = sellableHoldings.filter(
     (h) => !h.symbol?.toUpperCase().startsWith('CASH-'),
@@ -89,6 +92,8 @@ export function PortfolioModalsContainer({
             );
             modals.closeModal('sell');
             onRefreshPortfolio();
+            // Proceeds land in Life, or back in the goal whose lot was sold.
+            invalidateDashboardData(queryClient);
           }}
           existingHoldings={
             (modals.modalData.sellingHolding

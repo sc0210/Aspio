@@ -534,6 +534,9 @@ function DesktopGoalsPage() {
                                     reservedAmount={goal.reservedAmount}
                                     spentAmount={goal.spentAmount}
                                     legacyAmount={goal.legacyAmount}
+                                    investedAmount={goal.investedAmount}
+                                    atRiskAmount={goal.atRiskAmount}
+                                    valueAmount={goal.valueAmount}
                                     onContribute={() => handleContribute(goal)}
                                     onEdit={() => handleEdit(goal)}
                                     onDelete={() => handleDelete(goal.id)}
@@ -568,6 +571,9 @@ function DesktopGoalsPage() {
                                     reservedAmount={goal.reservedAmount}
                                     spentAmount={goal.spentAmount}
                                     legacyAmount={goal.legacyAmount}
+                                    investedAmount={goal.investedAmount}
+                                    atRiskAmount={goal.atRiskAmount}
+                                    valueAmount={goal.valueAmount}
                                     // A finished goal's leftover cash is released from here.
                                     onContribute={() => handleContribute(goal)}
                                     onEdit={() => handleEdit(goal)}

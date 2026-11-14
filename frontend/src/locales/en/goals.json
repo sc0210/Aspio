@@ -307,5 +307,16 @@
     "initialHint": "Reserved out of your Life Wallet. {{amount}} is free.",
     "quickAriaReserve": "Set contribution to {{pct}}% of remaining amount",
     "quickAriaRelease": "Set release to {{pct}}% of the reserved amount"
+  },
+  "invest": {
+    "fundFromGoal": "Pay with goal money",
+    "fundNone": "My own money",
+    "fundHint": "Uses up to {{amount}} reserved for this goal. Your free Life cash stays the same, and selling returns the money to the goal.",
+    "fundNoneHint": "Paid from your free Life cash.",
+    "invested": "Invested (market value)",
+    "horizonWarning": "{{amount}} of this goal is in stocks, funds or crypto, and it is due in {{months}} months. Money needed within 3 years is safer in a deposit: a market fall may not recover in time.",
+    "horizonShort": "Due within 3 years, with money in stocks, funds or crypto.",
+    "goalLot": "Goal",
+    "goalLotHint": "Bought with a goal's reserved money; selling it returns the proceeds to that goal."
   }
 }
