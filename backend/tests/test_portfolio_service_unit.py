@@ -93,7 +93,7 @@ class TestCreatePortfolio:
 
         with patch("app.modules.portfolio.services.PortfolioResponse.model_validate",
                    return_value=MagicMock()):
-            data = PortfolioCreate(name="Test", currency="USD", is_default=False)
+            data = PortfolioCreate(name="Test", currency="TWD", is_default=False)
             result = await svc.create_portfolio(data, uuid4())
 
         assert result is not None
@@ -109,7 +109,7 @@ class TestCreatePortfolio:
             mock_settings.MAX_PORTFOLIOS_PER_USER = 5
             mock_settings.SUPPORTED_CURRENCIES = ["USD", "TWD"]
             with pytest.raises(BusinessLogicException):
-                data = PortfolioCreate(name="Test", currency="USD", is_default=False)
+                data = PortfolioCreate(name="Test", currency="TWD", is_default=False)
                 await svc.create_portfolio(data, uuid4())
 
     @pytest.mark.asyncio
@@ -122,7 +122,11 @@ class TestCreatePortfolio:
             mock_settings.MAX_PORTFOLIOS_PER_USER = 10
             mock_settings.SUPPORTED_CURRENCIES = ["USD", "TWD"]
             with pytest.raises(BusinessLogicException):
-                data = PortfolioCreate(name="Test", currency="XYZ", is_default=False)
+                # The schema refuses anything but TWD; the service's own check is
+                # a second layer, reached here without the schema's validation.
+                data = PortfolioCreate.model_construct(
+                    name="Test", description=None, currency="XYZ", is_default=False, auto_update=True
+                )
                 await svc.create_portfolio(data, uuid4())
 
 

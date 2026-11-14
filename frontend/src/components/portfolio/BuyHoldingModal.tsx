@@ -1,13 +1,15 @@
 'use client';
 
 import { useTranslation } from 'react-i18next';
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { Dialog, DialogPanel, DialogTitle } from '@headlessui/react';
 import { XMarkIcon, MagnifyingGlassIcon, ArrowPathIcon } from '@heroicons/react/24/outline';
 import { Button } from '@/components/ui/Button';
 import { formatCurrency, localDateString } from '@/utils/formatters';
 import { cn } from '@/utils/cn';
 import symbolService from '@/services/symbolService';
+import { listingDefaults } from '@/lib/portfolio/holdingFormOptions';
+import { useAppMode } from '@/hooks/useAppMode';
 import { useScrollLock } from '@/hooks/useScrollLock';
 
 interface BuyHoldingModalProps {
@@ -37,6 +39,7 @@ interface StockSearchResult {
     quoteType?: string;
     currency?: string;
     exchange?: string;
+    market?: string;
     regularMarketPrice?: number;
 }
 
@@ -63,6 +66,9 @@ export function BuyHoldingModal({ isOpen, onClose, onBuy, existingHoldings = [] 
     useScrollLock(isOpen);
     const [step, setStep] = useState<'search' | 'details'>('search');
     const [searchQuery, setSearchQuery] = useState('');
+    const { isDemo } = useAppMode();
+    // The symbol whose quote may still fill the form; cleared on reset.
+    const quoteForRef = useRef<string | undefined>(undefined);
     const [searchResults, setSearchResults] = useState<StockSearchResult[]>([]);
     const [isSearching, setIsSearching] = useState(false);
     const [_selectedStock, setSelectedStock] = useState<StockSearchResult | null>(null);
@@ -111,10 +117,28 @@ export function BuyHoldingModal({ isOpen, onClose, onBuy, existingHoldings = [] 
         setSymbol(stock.symbol || stock.ticker || '');
         setName(stock.name || stock.shortName || '');
         setType(stock.quoteType?.toLowerCase() === 'equity' ? 'stock' : 'etf');
-        setCurrency(stock.currency || 'TWD');
-        setExchange(stock.exchange || 'TWSE');
+        // The search list carries a market but no currency: a US pick used to
+        // fall back to TWD and be bought as if priced in NT$.
+        const defaults = listingDefaults(stock.market);
+        setCurrency(stock.currency || defaults.currency);
+        setExchange(stock.exchange || defaults.exchange || '');
         setPrice(stock.regularMarketPrice?.toString() || '');
         setStep('details');
+
+        // ...nor an exchange or price: the quote fills whichever is still empty,
+        // for this pick only (a slow quote must not land on the next one). Demo
+        // mode does not reach the backend.
+        const quoteSymbol = stock.symbol || stock.ticker;
+        quoteForRef.current = quoteSymbol;
+        if (quoteSymbol && !isDemo) {
+            symbolService.getQuote(quoteSymbol, stock.market)
+                .then((quote) => {
+                    if (quoteForRef.current !== quoteSymbol || quote?.status !== 'success') return;
+                    if (quote.exchange) setExchange((prev) => prev || quote.exchange);
+                    if (quote.current_price) setPrice((prev) => prev || String(quote.current_price));
+                })
+                .catch(() => { /* the fields stay editable */ });
+        }
     };
 
     const handleSelectExisting = (holding: { symbol: string; name: string; type: string; currency: string; exchange: string }) => {
@@ -131,7 +155,11 @@ export function BuyHoldingModal({ isOpen, onClose, onBuy, existingHoldings = [] 
     };
 
     const quantityNum = parseFloat(quantity) || 0;
-    const priceNum = parseFloat(price) || 0;
+    // Cash is counted at face value in its own currency, as the wallet ledger
+    // records it: a price here is never asked for. A USD lot once entered at the
+    // exchange rate (31.5) was stored as US$63,000 and then converted to TWD again.
+    const isCash = type === 'cash';
+    const priceNum = isCash ? 1 : parseFloat(price) || 0;
     const totalCost = quantityNum * priceNum;
 
     const canSubmit = symbol && name && quantityNum > 0 && priceNum > 0 && !isSubmitting;
@@ -168,6 +196,7 @@ export function BuyHoldingModal({ isOpen, onClose, onBuy, existingHoldings = [] 
     };
 
     const handleReset = () => {
+        quoteForRef.current = undefined;
         setStep('search');
         setSearchQuery('');
         setSearchResults([]);
@@ -439,9 +468,10 @@ export function BuyHoldingModal({ isOpen, onClose, onBuy, existingHoldings = [] 
                                             inputMode="decimal"
                                             onWheel={(e) => e.currentTarget.blur()}
                                             step="any"
-                                            value={price}
+                                            value={isCash ? '1' : price}
                                             onChange={(e) => setPrice(e.target.value)}
-                                            className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus-visible:ring-2 focus-visible:ring-primary-500 bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
+                                            disabled={isCash}
+                                            className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus-visible:ring-2 focus-visible:ring-primary-500 bg-white dark:bg-gray-700 text-gray-900 dark:text-white disabled:opacity-60 disabled:cursor-not-allowed"
                                             required
                                         />
                                     </div>

@@ -210,7 +210,7 @@ describe('MarketDataService', () => {
                 symbol: 'NVDA',
                 name: 'NVIDIA',
                 market: 'US',
-                exchange: 'NASDAQ/NYSE',
+                exchange: 'NASDAQ',
                 currency: 'USD',
                 current_price: 123.45,
                 market_open: false,

@@ -15,6 +15,7 @@ import { portfolioService } from '@/services/portfolioService';
 import { AssetTrendChart } from '@/components/portfolio/AssetTrendChart';
 import { buildMiniCalendarCells } from '@/components/portfolio/calendarGrid';
 import { dailyPerformanceKey, DAILY_PERFORMANCE_DAYS_DEFAULT } from '@/lib/queryKeys';
+import { fetchDailyPerformance } from '@/hooks/portfolio/fetchDailyPerformance';
 import { usePrivacy } from '@/contexts/PrivacyContext';
 import { formatCurrency, formatCompactChange } from '@/utils/formatters';
 import { cn } from '@/utils/cn';
@@ -244,14 +245,8 @@ export function PortfolioOverview({ portfolio, dateRange }: PortfolioOverviewPro
   // ── Daily performance (365d, shared with portfolio page cache) ──────────────
   const { data: allTrendData, isLoading: trendLoading } = useQuery({
     queryKey: dailyPerformanceKey(session?.user?.email, DAILY_PERFORMANCE_DAYS_DEFAULT),
-    queryFn: async () => {
-      try {
-        const response = await portfolioService.getDailyPerformance(DAILY_PERFORMANCE_DAYS_DEFAULT);
-        return response.success ? response.data : [];
-      } catch {
-        return [];
-      }
-    },
+    // Throws on failure so the data notice sees it; readers below treat undefined as no data.
+    queryFn: fetchDailyPerformance,
     // Demo mode also fetches: the backend serves generated demo daily data for
     // unauthenticated requests (same as the /portfolio/trend page), so the mini
     // calendar populates instead of staying blank for demo users.

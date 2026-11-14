@@ -47,17 +47,20 @@ class BasePortfolioSchema(BaseModel):
         None, max_length=1000, description="Portfolio description"
     )
     currency: str = Field(
-        "USD", min_length=3, max_length=3, description="Base currency"
+        "TWD", min_length=3, max_length=3,
+        description="Base currency. Always TWD: stored totals are read as TWD everywhere",
     )
     is_default: bool = Field(False, description="Whether this is the default portfolio")
     auto_update: bool = Field(True, description="Enable automatic price updates")
 
     @field_validator("currency")
     @classmethod
-    def currency_must_be_uppercase(cls, v):
-        if v:
-            return v.upper()
-        return v
+    def currency_is_twd(cls, v):
+        # A USD portfolio stored USD totals that the LINE bot and rebalancing
+        # read as TWD; holdings keep their own currencies regardless.
+        if (v or "").upper() != "TWD":
+            raise ValueError("a portfolio's currency is always TWD")
+        return "TWD"
 
 
 class PortfolioCreate(BasePortfolioSchema):
@@ -179,6 +182,16 @@ class HoldingCreate(BaseHoldingSchema):
     )
 
     model_config = ConfigDict(populate_by_name=True)
+
+    @model_validator(mode="after")
+    def _cash_at_face_value(self):
+        """Cash is worth its quantity in its own currency, which is how the wallet
+        bridge books it (add_holding: amount = quantity). A USD lot entered at the
+        exchange rate, 31.5, was stored as US$63,000 and converted to TWD again."""
+        if self.type == "cash":
+            self.average_cost = Decimal("1")
+            self.current_price = None
+        return self
 
 
 class HoldingUpdate(BaseModel):
@@ -376,6 +389,11 @@ class HoldingResponse(BaseModel):
         None,
         description="Previous trading day's closing price (used for daily change calculation)",
         serialization_alias="previousClose",
+    )
+    price_stale: Optional[bool] = Field(
+        None,
+        description="True once the holding's market has traded two sessions without this price",
+        serialization_alias="priceStale",
     )
     sparkline_data: Optional[List[float]] = Field(
         default_factory=list,

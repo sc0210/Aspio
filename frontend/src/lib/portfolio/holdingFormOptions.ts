@@ -52,6 +52,7 @@ export const exchanges = [
   { value: 'TSE', label: 'Tokyo Stock Exchange (TSE)' },
   { value: 'KLSE', label: 'Bursa Malaysia (KLSE)' },
   { value: 'SET', label: 'Stock Exchange of Thailand (SET)' },
+  { value: 'CRYPTO', label: 'Crypto' },
 ];
 
 // One spelling per sector: allocation groups by the raw string, so offering
@@ -70,3 +71,20 @@ export const sectors = [
   'Communication Services',
   'Cryptocurrency',
 ];
+
+/**
+ * The currency a listing trades in, and its exchange where the market alone
+ * says it, for a symbol picked from a list that carries only its market.
+ * A US listing's exchange (NASDAQ or NYSE) comes from its quote. Portfolios
+ * are TWD, but each holding keeps its own currency: a US stock is bought in USD.
+ */
+export function listingDefaults(market?: string): { currency: string; exchange?: string } {
+  switch ((market || '').toUpperCase()) {
+    case 'US':
+      return { currency: 'USD' };
+    case 'CRYPTO':
+      return { currency: 'USD', exchange: 'CRYPTO' };
+    default:
+      return { currency: 'TWD', exchange: 'TWSE' };
+  }
+}

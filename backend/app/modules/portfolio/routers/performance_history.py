@@ -231,8 +231,11 @@ async def get_daily_performance(
         # Initialize exchange rate service for currency conversion
         exchange_service = ExchangeRateService(session)
 
-        # Determine base currency from portfolio (default to TWD)
-        base_currency = portfolio.currency if hasattr(portfolio, "currency") else "TWD"
+        # Always TWD: every reader formats these values as TWD, as GET /portfolio/
+        # reports its totals. Portfolios are created with currency "USD" by default,
+        # so following portfolio.currency put the dashboard's P&L calendar in US
+        # dollars with no symbol: a NT$16k day read "+519" beside a NT$9,560 card.
+        base_currency = "TWD"
         logger.info(f"Using base currency: {base_currency}")
 
         # Query existing historical data from database (no API calls).

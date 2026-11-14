@@ -1,6 +1,7 @@
 'use client';
 
 import { GetStarted } from './GetStarted';
+import { DashboardDataNotice } from './DashboardDataNotice';
 import { SharedBalanceNote } from './SharedBalanceNote';
 import { useTranslation } from 'react-i18next';
 import {
@@ -71,6 +72,7 @@ export function CompactDashboard() {
                     </h2>
                     <span className="text-xs font-semibold text-gray-500 dark:text-gray-400">{t('view.compactBadge', 'Compact view')}</span>
                 </div>
+                <DashboardDataNotice />
                 {/* Nothing recorded yet: the first steps, before the zeros. */}
                 {m.isNewUser && <GetStarted variant="list" />}
 

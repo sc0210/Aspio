@@ -204,7 +204,7 @@ class PortfolioService:
             portfolio_create = PortfolioCreate(
                 name="My Portfolio",
                 description="Default investment portfolio",
-                currency="USD",
+                currency="TWD",
                 is_default=True,
             )
             portfolio = await self.create_portfolio(portfolio_create, user_id)

@@ -162,7 +162,7 @@ async def get_market_data(
         ),
         MarketDataResponse(
             symbol="BTC-USD",
-            exchange="Crypto",
+            exchange="CRYPTO",
             price=Decimal("48500.00"),
             open_price=Decimal("47000.00"),
             high_price=Decimal("49200.00"),
@@ -223,7 +223,7 @@ async def search_instruments(
             "symbol": "BTC-USD",
             "name": "Bitcoin",
             "type": "crypto",
-            "exchange": "Crypto",
+            "exchange": "CRYPTO",
             "currency": "USD",
             "sector": "Cryptocurrency",
         },
@@ -601,6 +601,13 @@ async def get_symbol_quote(
         # Get market data service
         market_data_service = get_market_data_service()
 
+        # A US listing's exchange is looked up alongside the price, not after it.
+        us_exchange_task = (
+            asyncio.create_task(market_data_service.get_us_exchange(symbol))
+            if market not in ("TW", "CRYPTO")
+            else None
+        )
+
         # Fetch current price with 10 second timeout
         try:
             current_price = await asyncio.wait_for(
@@ -609,6 +616,11 @@ async def get_symbol_quote(
         except asyncio.TimeoutError:
             logger.warning(f"Timeout fetching price for {symbol} after 10s")
             current_price = None
+        except BaseException:
+            # A failed or cancelled request must not leave the lookup running.
+            if us_exchange_task:
+                us_exchange_task.cancel()
+            raise
 
         # Check if market is currently open
         market_open = MarketHoursManager.is_market_open(market)
@@ -619,11 +631,16 @@ async def get_symbol_quote(
             currency = "TWD"
             name = None
         elif market == "CRYPTO":
-            exchange = "Crypto"
+            exchange = "CRYPTO"
             currency = "USD"
             name = symbol.upper()
         else:
-            exchange = "NASDAQ/NYSE"
+            # A real listing the form offers, or None so the form asks rather
+            # than keeping a wrong default. Currency stays USD either way.
+            try:
+                exchange = await asyncio.wait_for(us_exchange_task, timeout=5.0)
+            except Exception:
+                exchange = None  # the form asks the user to pick
             currency = "USD"
             name = None
 

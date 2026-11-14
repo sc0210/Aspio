@@ -22,8 +22,9 @@ from app.core.config import get_settings
 from app.modules.portfolio.manual_pricing import is_manually_priced
 from app.modules.portfolio.models import HoldingWalletType, Portfolio, PortfolioHolding
 from app.modules.portfolio.price_update_service import PriceUpdateService
+from app.modules.portfolio.repositories import HoldingRepository
 from app.modules.portfolio.routers.holdings import update_holding
-from app.modules.portfolio.schemas import HoldingResponse, HoldingUpdate
+from app.modules.portfolio.schemas import HoldingCreate, HoldingResponse, HoldingUpdate
 from app.modules.transactions.models import (
     CategoryType,
     Transaction,
@@ -1006,3 +1007,86 @@ async def test_price_refresh_leaves_a_hand_set_price_alone(async_session, test_u
     await async_session.refresh(lot)
     assert lot.current_price == Decimal("1.02")
     assert stats["failed"] == 0
+
+
+class TestCashStaysAtFaceValue:
+    """Cash is worth its quantity in its own currency, as the wallet ledger books
+    it. A USD cash lot stored at 31.5 (the exchange rate) read as US$63,000 and was
+    converted to TWD again; an edit, even one that only touches the notes, puts it
+    back at 1 and its totals with it."""
+
+    @pytest.mark.asyncio
+    async def test_an_edit_reprices_cash_to_one(self, async_session, test_user):
+        (lot,) = await _seed(async_session, test_user.id, [
+            dict(symbol="EMERGENCY-USD", asset_type="cash", qty="2000", avg="31.5", price="31.5"),
+        ])
+        updated = await HoldingRepository(async_session).update_holding(
+            lot.id, test_user.id, {"notes": "foreign-currency reserve"}
+        )
+        assert updated.average_cost == Decimal("1") and updated.current_price == Decimal("1")
+        assert updated.total_value == Decimal("2000") and updated.total_cost == Decimal("2000")
+
+    @pytest.mark.asyncio
+    async def test_a_buy_onto_a_mispriced_cash_lot_heals_it(self, async_session, test_user):
+        (lot,) = await _seed(async_session, test_user.id, [
+            dict(symbol="EMERGENCY-USD", asset_type="cash", qty="2000", avg="31.5", price="31.5"),
+        ])
+        merged = await HoldingRepository(async_session).create_or_aggregate_holding(
+            portfolio_id=lot.portfolio_id, user_id=test_user.id, aggregate=True,
+            holding_data=dict(
+                symbol="EMERGENCY-USD", name="EMERGENCY-USD", type="cash", exchange="X",
+                currency="USD", market="US", wallet_type=HoldingWalletType.PORTFOLIO,
+                quantity=Decimal("500"), average_cost=Decimal("1"), current_price=Decimal("1"),
+                total_cost=Decimal("500"), total_value=Decimal("500"),
+                purchase_date=datetime(2026, 1, 1, tzinfo=timezone.utc),  # same lot as _lot seeds
+            ),
+        )
+        assert merged.id == lot.id
+        assert merged.average_cost == Decimal("1") and merged.current_price == Decimal("1")
+        assert merged.total_value == Decimal("2500") and merged.total_cost == Decimal("2500")
+
+    @pytest.mark.asyncio
+    async def test_a_stock_buy_merged_onto_a_lot_keeps_its_market_price(self, async_session, test_user):
+        (lot,) = await _seed(async_session, test_user.id, [
+            dict(symbol="VT", asset_type="etf", qty="10", avg="150", price="155"),
+        ])
+        merged = await HoldingRepository(async_session).create_or_aggregate_holding(
+            portfolio_id=lot.portfolio_id, user_id=test_user.id, aggregate=True,
+            holding_data=dict(
+                symbol="VT", name="VT", type="etf", exchange="X", currency="USD", market="US",
+                wallet_type=HoldingWalletType.PORTFOLIO, quantity=Decimal("10"),
+                average_cost=Decimal("160"), current_price=Decimal("160"),
+                total_cost=Decimal("1600"), total_value=Decimal("1600"),
+                purchase_date=datetime(2026, 1, 1, tzinfo=timezone.utc),
+            ),
+        )
+        assert merged.current_price == Decimal("155") and merged.average_cost == Decimal("155")
+
+    @pytest.mark.asyncio
+    async def test_a_stock_edit_keeps_its_price(self, async_session, test_user):
+        (lot,) = await _seed(async_session, test_user.id, [
+            dict(symbol="VT", asset_type="etf", qty="10", avg="150", price="155"),
+        ])
+        updated = await HoldingRepository(async_session).update_holding(
+            lot.id, test_user.id, {"notes": "core"}
+        )
+        assert updated.average_cost == Decimal("150") and updated.current_price == Decimal("155")
+
+
+@pytest.mark.unit
+def test_cash_is_recorded_at_face_value():
+
+    """A USD cash lot entered at the exchange rate (31.5) was stored as
+    US$63,000 and converted to TWD again; the ledger had booked US$2,000."""
+    cash = HoldingCreate(
+        symbol="EMERGENCY-USD", name="USD cash", type="cash", quantity=Decimal("2000"),
+        average_cost=Decimal("31.5"), currentPrice=Decimal("31.5"), currency="USD",
+        exchange="CASH", market="US",
+    )
+    assert cash.average_cost == Decimal("1") and cash.current_price is None
+
+    stock = HoldingCreate(
+        symbol="0050", name="0050", type="etf", quantity=Decimal("10"),
+        average_cost=Decimal("100"), currency="TWD", exchange="TWSE", market="TW",
+    )
+    assert stock.average_cost == Decimal("100")

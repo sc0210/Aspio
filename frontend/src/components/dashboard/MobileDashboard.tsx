@@ -1,6 +1,7 @@
 'use client';
 
 import { GetStarted } from './GetStarted';
+import { DashboardDataNotice } from './DashboardDataNotice';
 import { SharedBalanceNote } from './SharedBalanceNote';
 import Link from 'next/link';
 import { useTranslation } from 'react-i18next';
@@ -74,6 +75,8 @@ export function MobileDashboard() {
                         <PlusIcon className="w-5 h-5" aria-hidden="true" />
                     </Link>
                 </div>
+
+                <DashboardDataNotice />
 
                 <BiggerScreenHint />
 

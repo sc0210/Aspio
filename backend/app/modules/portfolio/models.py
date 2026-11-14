@@ -57,7 +57,9 @@ class Portfolio(Base):
     # Basic information
     name = Column(String(100), nullable=False)
     description = Column(Text)
-    currency = Column(String(3), nullable=False, default="USD")
+    # TWD, the currency every page shows: a "USD" default put the P&L calendar
+    # in dollars for every account but the owner's (2026_11_14 migration).
+    currency = Column(String(3), nullable=False, default="TWD")
 
     # Portfolio settings
     is_default = Column(Boolean, default=False, nullable=False)

@@ -1,4 +1,6 @@
-import { act, renderHook } from '@testing-library/react';
+import { createElement, type ReactNode } from 'react';
+import { act, renderHook as rtlRenderHook } from '@testing-library/react';
+import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { useSession } from 'next-auth/react';
 import { portfolioService } from '@/services/portfolioService';
 import { usePriceRefreshOnLogin } from '@/hooks/usePriceRefreshOnLogin';
@@ -6,6 +8,14 @@ import { usePriceRefreshOnLogin } from '@/hooks/usePriceRefreshOnLogin';
 jest.mock('@/services/portfolioService', () => ({
   portfolioService: { refreshPortfolioPrices: jest.fn() },
 }));
+
+let queryClient: QueryClient;
+
+function renderHook<T>(hook: () => T) {
+  const wrapper = ({ children }: { children: ReactNode }) =>
+    createElement(QueryClientProvider, { client: queryClient }, children);
+  return rtlRenderHook(hook, { wrapper });
+}
 
 const mockSession = useSession as jest.Mock;
 const refresh = portfolioService.refreshPortfolioPrices as jest.Mock;
@@ -26,6 +36,7 @@ beforeEach(() => {
   sessionStorage.clear();
   localStorage.clear();
   refresh.mockResolvedValue({ success: true, data: { updated: 1, cached: 0 } });
+  queryClient = new QueryClient();
 });
 
 afterEach(() => jest.useRealTimers());
@@ -84,4 +95,24 @@ it('cancels the pending check on unmount', async () => {
   unmount();
   await flush(500);
   expect(refresh).not.toHaveBeenCalled();
+});
+
+it('refetches the dashboard once it has written new prices', async () => {
+  // The page rendered from the stored prices before this returned; without a
+  // refetch the fresh ones only showed on the next visit.
+  const invalidate = jest.spyOn(queryClient, 'invalidateQueries');
+  signIn();
+  renderHook(() => usePriceRefreshOnLogin());
+  await flush(500);
+  expect(invalidate).toHaveBeenCalledWith(expect.objectContaining({ queryKey: ['portfolio'] }));
+});
+
+it('does not refetch when nothing changed', async () => {
+  refresh.mockResolvedValue({ success: true, data: { updated: 0, cached: 3 } });
+  const invalidate = jest.spyOn(queryClient, 'invalidateQueries');
+  signIn();
+  renderHook(() => usePriceRefreshOnLogin());
+  await flush(500);
+  expect(refresh).toHaveBeenCalledTimes(1);
+  expect(invalidate).not.toHaveBeenCalled();
 });

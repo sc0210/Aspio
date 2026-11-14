@@ -16,6 +16,7 @@ from ._shared import (  # noqa: F401  explicit re-import for underscore-prefixed
 from app.core.exceptions import AspiroException
 from ..symbols import symbol_lookup_variants
 from app.utils.datetime_helpers import business_today
+from ..day_change import LOOKBACK_DAYS, freshest_series, resolve_day_change
 # Demo holdings are rebuilt on every request, so their ids have to be derived
 # rather than minted. uuid4() handed out a different id each call, which meant an
 # id-based route into a demo holding (portfolio/edit/[id]) could never resolve the
@@ -33,26 +34,6 @@ def _demo_holding_id(symbol: str) -> str:
 
 
 router = APIRouter()
-
-# How stale the "previous close" may be before the day-change delta stops being
-# reported. Covers a weekend plus a public holiday; anything older means the
-# historical sync has a gap and the delta would not be a single day's move.
-MAX_PREVIOUS_CLOSE_AGE_DAYS = 7
-
-
-def _pick_previous_close(
-    stored: Optional[Decimal], from_history: Optional[Decimal]
-) -> Optional[Decimal]:
-    """Provider-reported previous close wins over the one we derive ourselves.
-
-    ``portfolio_holdings.previous_close`` is captured from the same quote as
-    current_price, so the two always describe the same session. The historical
-    table is only a fallback: it is as complete as the nightly sync, and one
-    missing session turns "today's change" into a multi-day change.
-    """
-    if stored is not None and Decimal(str(stored)) > 0:
-        return Decimal(str(stored))
-    return from_history
 
 
 def _historical_symbol_variants(symbol: str, market: Optional[str] = None) -> List[str]:
@@ -155,7 +136,7 @@ async def get_portfolio(
             portfolio_create = PortfolioCreate(
                 name="My Portfolio",
                 description="Default investment portfolio",
-                currency="USD",
+                currency="TWD",
                 is_default=True,
             )
             portfolio = await portfolio_service.create_portfolio(
@@ -549,7 +530,7 @@ async def get_portfolio(
                 f"🔍 Fetching sparkline data for {len(filtered_holdings)} holdings"
             )
             end_date = business_today()
-            start_date = end_date - timedelta(days=30)
+            start_date = end_date - timedelta(days=LOOKBACK_DAYS)
 
             hist_service = get_historical_price_service(session)
 
@@ -557,18 +538,17 @@ async def get_portfolio(
             # Each holding carries every key its history may live under — see
             # _historical_symbol_variants — so a ticker stored in one form still
             # finds a series written in the other.
+            def _field(holding, name):
+                return holding.get(name) if isinstance(holding, dict) else getattr(holding, name, None)
+
             holding_symbols: List[Optional[List[str]]] = []
             for holding in filtered_holdings:
-                symbol = holding.get("symbol") if isinstance(holding, dict) else holding.symbol
-                holding_type = holding.get("type") if isinstance(holding, dict) else holding.type
-                if holding_type and holding_type.lower() == "cash":
+                holding_type = _field(holding, "type")
+                if holding_type and str(getattr(holding_type, "value", holding_type)).lower() == "cash":
                     holding_symbols.append(None)
                     continue
-                holding_market = (
-                    holding.get("market") if isinstance(holding, dict) else holding.market
-                )
                 holding_symbols.append(
-                    _historical_symbol_variants(symbol, holding_market)
+                    _historical_symbol_variants(_field(holding, "symbol"), _field(holding, "market"))
                 )
 
             non_cash_symbols = sorted(
@@ -583,57 +563,15 @@ async def get_portfolio(
                 except Exception as e:
                     logger.warning(f"❌ Batch sparkline fetch failed: {str(e)[:100]}")
 
-            sparkline_results = []
-            previous_close_results = []
-
-            for variants in holding_symbols:
-                if variants is None:
-                    # Cash holding — no sparkline
-                    sparkline_results.append([])
-                    previous_close_results.append(None)
-                    continue
-
-                # Pick the freshest series among the candidate keys. A relabelled
-                # ticker leaves a dead series behind under its old key; taking the
-                # one with the most recent close avoids reading months-old prices.
-                valid_prices: List[Dict[str, Any]] = []
-                for candidate in variants:
-                    candidate_prices = [
-                        p for p in prices_by_symbol.get(candidate, [])
-                        if p.get("close") and math.isfinite(float(p["close"]))
-                    ]
-                    if not candidate_prices:
-                        continue
-                    if not valid_prices or str(candidate_prices[-1].get("date", "")) > str(
-                        valid_prices[-1].get("date", "")
-                    ):
-                        valid_prices = candidate_prices
-
-                sparkline = [float(p["close"]) for p in valid_prices]
-
-                # previous_close = the most recent close strictly before today.
-                # Suppressed when that close is too old to be "yesterday": the
-                # frontend labels this delta "today", and a gap in the series
-                # would silently turn it into a multi-day (or multi-month) change.
-                prev_close: Optional[Decimal] = None
-                prior_closes = [
-                    p for p in valid_prices
-                    if str(p.get("date", "")) != end_date.isoformat()
-                ]
-                if prior_closes:
-                    last_close = prior_closes[-1]
-                    try:
-                        last_close_date = date.fromisoformat(str(last_close["date"]))
-                    except ValueError:
-                        last_close_date = None
-                    if (
-                        last_close_date is not None
-                        and (end_date - last_close_date).days <= MAX_PREVIOUS_CLOSE_AGE_DAYS
-                    ):
-                        prev_close = Decimal(str(last_close["close"]))
-
-                sparkline_results.append(sparkline)
-                previous_close_results.append(prev_close)
+            sparkline_results = [
+                [float(p["close"]) for p in freshest_series(prices_by_symbol, variants)]
+                if variants else []
+                for variants in holding_symbols
+            ]
+            # Same official bars the P&L calendar is built from — see day_change.
+            day_change_bases = await resolve_day_change(
+                session, filtered_holdings, end_date, prices_by_symbol=prices_by_symbol
+            )
 
             # Assign sparkline data to holdings
             # Create new HoldingResponse objects with sparkline data to ensure proper serialization
@@ -641,8 +579,8 @@ async def get_portfolio(
                 f"📊 Processing {len(sparkline_results)} sparkline results for {len(filtered_holdings)} holdings"
             )
             updated_holdings = []
-            for holding, sparkline_data, prev_close in zip(
-                filtered_holdings, sparkline_results, previous_close_results
+            for holding, sparkline_data, base in zip(
+                filtered_holdings, sparkline_results, day_change_bases
             ):
                 # Handle exceptions
                 if isinstance(sparkline_data, Exception):
@@ -652,9 +590,8 @@ async def get_portfolio(
                 if isinstance(holding, dict):
                     holding_dict = holding.copy()
                     holding_dict["sparkline_data"] = sparkline_data
-                    holding_dict["previous_close"] = _pick_previous_close(
-                        holding_dict.get("previous_close"), prev_close
-                    )
+                    holding_dict["previous_close"] = base.previous_close
+                    holding_dict["price_stale"] = base.price_stale
                     logger.debug(
                         f"📊 [DICT] Setting sparkline for {holding_dict.get('symbol')}: {len(sparkline_data)} points"
                     )
@@ -663,9 +600,8 @@ async def get_portfolio(
                     # Create a new HoldingResponse with sparkline data
                     holding_dict = holding.model_dump()
                     holding_dict["sparkline_data"] = sparkline_data
-                    holding_dict["previous_close"] = _pick_previous_close(
-                        holding_dict.get("previous_close"), prev_close
-                    )
+                    holding_dict["previous_close"] = base.previous_close
+                    holding_dict["price_stale"] = base.price_stale
                     logger.debug(
                         f"📊 [MODEL] Setting sparkline for {holding.symbol}: {len(sparkline_data)} points"
                     )

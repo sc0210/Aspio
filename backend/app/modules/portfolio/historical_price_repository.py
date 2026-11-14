@@ -98,6 +98,29 @@ class HistoricalPriceRepository:
         result = await self.session.execute(stmt)
         return list(result.scalars().all())
 
+    async def get_market_days(self, start_date: date, end_date: date) -> Dict[str, set]:
+        """Every date any symbol has a bar on, per market label, in [start, end].
+
+        The exchange's own calendar as far as our data shows it: a weekday with
+        no bar for any symbol of a market was a holiday there. Shared by every
+        user and read on each portfolio load, so cached briefly; ten minutes
+        is soon enough for a fresh sync to show.
+        """
+        cache_key = f"{HIST_PRICE_CACHE_NAMESPACE}:market_days:{start_date}:{end_date}"
+        cached = _hcache_get(cache_key)
+        if cached is not None:
+            return cached
+        stmt = (
+            select(HistoricalPrice.market, HistoricalPrice.date)
+            .where(HistoricalPrice.date >= start_date, HistoricalPrice.date <= end_date)
+            .distinct()
+        )
+        days: Dict[str, set] = {}
+        for market, day in (await self.session.execute(stmt)).all():
+            days.setdefault((market or "").upper(), set()).add(day)
+        _hcache_set(cache_key, days, 600)
+        return days
+
     async def get_batch_price_history(
         self,
         symbols: List[str],
@@ -409,9 +432,10 @@ class HistoricalPriceRepository:
             # Without this, a historical sync would not be reflected for up to 1 hour.
             try:
                 affected_symbols = {rec["symbol"] for rec in prepared_data}
+                # ...and the market calendar, which new bars can extend.
                 keys_to_delete = [
                     key for key in list(_hist_cache.keys())
-                    if any(sym in key for sym in affected_symbols)
+                    if ":market_days:" in key or any(sym in key for sym in affected_symbols)
                 ]
                 for key in keys_to_delete:
                     _hcache_delete(key)

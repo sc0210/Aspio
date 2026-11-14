@@ -335,7 +335,9 @@ export default function AddInvestmentPage() {
 
       if (quote.status === 'success' && quote.current_price) {
         // Auto-fill form fields
-        setValue('exchange', quote.exchange);
+        // Only an exchange the select offers: "NASDAQ/NYSE" showed blank and failed
+        // validation, so a US stock could not be saved. Empty asks the user to pick.
+        setValue('exchange', exchanges.find((e) => e.value.toUpperCase() === (quote.exchange || '').toUpperCase())?.value ?? '');
         setValue('currency', quote.currency);
         setValue('averageCost', quote.current_price);
 
