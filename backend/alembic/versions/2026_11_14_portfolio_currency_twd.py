@@ -37,7 +37,7 @@ def upgrade() -> None:
                      SELECT 1 FROM historical_prices
                       WHERE market = 'FX' AND symbol = 'TWD=X' AND close > 0))
           ) THEN
-            RAISE EXCEPTION 'portfolio totals to convert but no rate to convert them by: run a historical price sync (it stores TWD=X), then rerun';
+            RAISE EXCEPTION 'portfolio totals to convert but no rate to convert them by. USD: run a historical price sync (it stores TWD=X), then rerun. Any other currency: convert that row by hand, then rerun';
           END IF;
         END $$
         """

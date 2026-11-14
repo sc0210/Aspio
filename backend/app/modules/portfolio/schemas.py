@@ -58,6 +58,8 @@ class BasePortfolioSchema(BaseModel):
     def currency_is_twd(cls, v):
         # A USD portfolio stored USD totals that the LINE bot and rebalancing
         # read as TWD; holdings keep their own currencies regardless.
+        if (v or "").upper() != "TWD":
+            raise ValueError("a portfolio's currency is always TWD")
         return "TWD"
 
 
