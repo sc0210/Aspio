@@ -149,6 +149,7 @@ class GoalRepository:
         """The user's active emergency-fund goals, read fresh (over any loaded copy)."""
         from .models import GoalCategory
 
+        await self.db.flush()  # populate_existing must not drop a staged edit
         result = await self.db.execute(
             select(Goal)
             .where(Goal.user_id == user_id, Goal.category == GoalCategory.EMERGENCY_FUND,

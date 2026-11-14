@@ -579,18 +579,21 @@ async def update_holding(
                                 # (price with total, the last taking the rounding),
                                 # so their native total matches the leg exactly.
                                 old_native = sum((Decimal(str(b.total_amount or 0)) for b in buys), Decimal("0"))
-                                if old_native > 0:
+                                old_units = sum((Decimal(str(b.quantity or 0)) for b in buys), Decimal("0"))
+                                if old_native > 0 and old_units > 0:
                                     factor = Decimal(str(new_total)) / old_native
-                                    running = Decimal("0")
+                                    unit_factor = Decimal(str(new_qty)) / old_units
+                                    running, running_units = Decimal("0"), Decimal("0")
                                     for n, b in enumerate(buys):
-                                        if n == len(buys) - 1:
-                                            total = Decimal(str(new_total)) - running
-                                        else:
-                                            total = (Decimal(str(b.total_amount or 0)) * factor).quantize(Decimal("0.01"))
-                                        running += total
-                                        b.total_amount = total
+                                        last = n == len(buys) - 1
+                                        total = (Decimal(str(new_total)) - running) if last else (
+                                            Decimal(str(b.total_amount or 0)) * factor).quantize(Decimal("0.01"))
+                                        units = (Decimal(str(new_qty)) - running_units) if last else (
+                                            Decimal(str(b.quantity or 0)) * unit_factor).quantize(Decimal("0.00000001"))
+                                        running, running_units = running + total, running_units + units
+                                        b.total_amount, b.quantity = max(total, Decimal("0")), max(units, Decimal("0"))
                                         if b.quantity:
-                                            b.price = total / Decimal(str(b.quantity))
+                                            b.price = (b.total_amount / b.quantity).quantize(Decimal("0.0001"))
                         linked.description = (
                             f"Buy {holding.symbol} ×{Decimal(str(new_qty)):g} @ "
                             f"{Decimal(str(new_cost)):,.2f} "
