@@ -560,6 +560,14 @@ class TransactionService:
         """Update a transaction with category resolution"""
 
         data = update_data.model_dump(exclude_unset=True)
+
+        # The row as stored, read once: several guards below compare against it.
+        _stored: list = []
+
+        async def stored_row():
+            if not _stored:
+                _stored.append(await self.transaction_repo.get_by_id(transaction_id, user_id))
+            return _stored[0]
         logger.info(f"🔍 UPDATE TRANSACTION - Incoming data: {data}")
 
         # ✅ Ensure category_id is resolved (handles category_name if provided)
@@ -571,7 +579,7 @@ class TransactionService:
             # stored one so an income row does not get an expense category.
             lookup = data
             if data.get("category_name") and "type" not in data:
-                stored = await self.transaction_repo.get_by_id(transaction_id, user_id)
+                stored = await stored_row()
                 if stored:
                     lookup = {**data, "type": stored.type}
             category_id = await self._ensure_category_id(lookup)
@@ -598,7 +606,7 @@ class TransactionService:
         # what is the row's own (description, tags, notes, payment method) may change.
         # Values resent unchanged pass, so a form that sends every field still saves.
         if self._HOLDING_OWNED_FIELDS & data.keys():
-            stored = await self.transaction_repo.get_by_id(transaction_id, user_id)
+            stored = await stored_row()
             if stored is not None and stored.holding_id is not None:
                 changed = [
                     field for field in self._HOLDING_OWNED_FIELDS & data.keys()
@@ -617,7 +625,7 @@ class TransactionService:
         # loan: accepting or cancelling resizes the row, which would leave the
         # loan's balance out of step.
         if (self._HOLDING_OWNED_FIELDS | {"loan_id", "goal_id"}) & data.keys():
-            stored = await self.transaction_repo.get_by_id(transaction_id, user_id)
+            stored = await stored_row()
             if stored is not None and await self._split_is_open(stored):
                 changed = [
                     field for field in self._HOLDING_OWNED_FIELDS & data.keys()
@@ -692,7 +700,7 @@ class TransactionService:
             # must not be refused because an exchange rate moved since.
             goal_fields = {"goal_id", "amount", "currency", "type", "wallet_type"} & data.keys()
             if goal_fields:
-                stored = await self.transaction_repo.get_by_id(transaction_id, user_id)
+                stored = await stored_row()
                 if stored is not None:
                     next_goal = data["goal_id"] if "goal_id" in data else stored.goal_id
                     goal_changed = (str(next_goal) if next_goal else None) != (

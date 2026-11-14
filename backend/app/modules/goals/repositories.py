@@ -144,3 +144,11 @@ class GoalRepository:
         """Stage a new contribution in the session (no flush/commit)."""
         self.db.add(contribution)
         return contribution
+
+    async def contribution_total(self, goal_id: UUID) -> Decimal:
+        """Σ every contribution row of a goal, staged ones included (autoflush)."""
+        total = await self.db.scalar(
+            select(func.coalesce(func.sum(GoalContribution.amount), 0))
+            .where(GoalContribution.goal_id == goal_id)
+        )
+        return Decimal(str(total))

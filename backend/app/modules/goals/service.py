@@ -229,7 +229,7 @@ class GoalService:
         if cancelling:
             held = (await goal_money(self.session, user_id, [goal.id])).get(goal.id)
             if held and held.reserved > 0:
-                self._record(goal, ContributionKind.RELEASE, -held.reserved, None,
+                await self._record(goal, ContributionKind.RELEASE, -held.reserved, None,
                              "Released when the goal was cancelled")
 
         # Auto-complete if target reached
@@ -311,7 +311,7 @@ class GoalService:
                     f"Only NT${reserved:,.0f} is reserved for {goal.title}",
                     details={"reserved": str(reserved), "amount": str(data.amount)},
                 )
-            contribution = self._record(
+            contribution = await self._record(
                 goal, ContributionKind.RELEASE, -data.amount, data.contribution_date, data.notes
             )
             await self.session.commit()
@@ -343,9 +343,9 @@ class GoalService:
                 f"Only NT${max(cash.available, Decimal('0')):,.0f} of your Life Wallet is free to set aside",
                 details={"available": str(cash.available), "amount": str(amount)},
             )
-        return self._record(goal, ContributionKind.RESERVE, amount, when, notes)
+        return await self._record(goal, ContributionKind.RESERVE, amount, when, notes)
 
-    def _record(
+    async def _record(
         self,
         goal: Goal,
         kind: ContributionKind,
@@ -362,7 +362,10 @@ class GoalService:
             notes=notes,
         )
         self.repository.add_contribution(contribution)
-        goal.current_amount = (goal.current_amount or Decimal("0")) + amount
+        # Progress is every contribution row (reservations.py). Re-read the sum
+        # rather than adding to the loaded figure, so the column cannot drift
+        # from the rows whatever ran before.
+        goal.current_amount = await self.repository.contribution_total(goal.id)
         if goal.current_amount >= goal.target_amount and goal.status == GoalStatus.ACTIVE:
             goal.status = GoalStatus.COMPLETED
             goal.completed_at = datetime.now(timezone.utc)

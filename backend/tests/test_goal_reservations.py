@@ -455,3 +455,21 @@ def test_a_reservation_is_whole_cents():
     GoalContributionCreate(amount=D("12.34"))
     with pytest.raises(ValidationError):
         GoalContributionCreate(amount=D("0.004"))
+
+
+@pytest.mark.asyncio
+async def test_progress_is_the_rows_even_if_the_stored_figure_drifted(async_session, goals, funded):
+    from sqlalchemy import update
+
+    from app.modules.goals.models import Goal
+
+    goal = await _goal(goals, funded, target="100000")
+    await _reserve(goals, funded, goal, "1000")
+    # What a lost update would leave behind.
+    await async_session.execute(update(Goal).where(Goal.id == goal).values(current_amount=D("1")))
+    await async_session.commit()
+
+    await _reserve(goals, funded, goal, "500")
+    refreshed = await goals.get_goal(goal, funded)
+    await async_session.refresh(refreshed)
+    assert refreshed.current_amount == D("1500")
