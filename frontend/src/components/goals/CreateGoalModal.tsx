@@ -70,7 +70,10 @@ export function CreateGoalModal({ isOpen, onClose, defaults, returnToPortfolio }
     const router = useRouter();
     const { t } = useTranslation(['goals', 'common', 'portfolio']);
     const [formData, setFormData] = useState<CreateGoalData>(() => getInitialFormData(defaults));
-    const overAvailable = !!lifeCash && (formData.current_amount || 0) > Math.max(0, lifeCash.available) + 0.001;
+    // An emergency-fund goal follows the Emergency Wallet and reserves no Life
+    // cash, so it has no starting amount (the backend refuses one).
+    const tracksEmergency = formData.category === 'emergency_fund';
+    const overAvailable = !tracksEmergency && !!lifeCash && (formData.current_amount || 0) > Math.max(0, lifeCash.available) + 0.001;
 
     // Display strings for comma-formatted amount fields
     const [targetDisplay, setTargetDisplay] = useState(() => fmtAmt(defaults?.target_amount || 0));
@@ -95,7 +98,7 @@ export function CreateGoalModal({ isOpen, onClose, defaults, returnToPortfolio }
             category: formData.category,
             priority: formData.priority,
             target_amount: formData.target_amount,
-            current_amount: formData.current_amount,
+            current_amount: tracksEmergency ? 0 : formData.current_amount,
             currency: formData.currency,
         };
 
@@ -258,6 +261,11 @@ export function CreateGoalModal({ isOpen, onClose, defaults, returnToPortfolio }
                                             />
                                         </div>
 
+                                        {tracksEmergency ? (
+                                        <p className="self-end text-xs text-gray-500 dark:text-gray-400">
+                                            {t('goals:reserve.emergencyCreateHint')}
+                                        </p>
+                                        ) : (
                                         <div>
                                             <label htmlFor="goal-current-amount" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
                                                 {t('goals:fields.currentAmount')}
@@ -287,6 +295,7 @@ export function CreateGoalModal({ isOpen, onClose, defaults, returnToPortfolio }
                                                 </p>
                                             )}
                                         </div>
+                                        )}
                                     </div>
 
                                     {/* Target Date */}

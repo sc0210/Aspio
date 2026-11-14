@@ -192,7 +192,13 @@
     "portfolioLinked": "投資組合連結",
     "retirement": "財務目標",
     "title": "目標",
-    "viewAll": "查看全部 →"
+    "viewAll": "查看全部 →",
+    "topPriority": "優先目標",
+    "monthsLeft": "剩 {{count}} 個月",
+    "yearsLeft": "剩 {{count}} 年",
+    "overdue": "已過期限",
+    "perMonth": "每月需 {{amount}}",
+    "priorityLabel": "優先度：{{level}}"
   },
   "pause": "暫停目標",
   "priorities": {
@@ -314,7 +320,12 @@
     "summaryHint": "預留的錢仍在生活錢包中，只是不再算作可自由花用。",
     "summaryOverspent": "已花用到預留給目標的錢。可從目標釋出部分資金，或記錄收入。",
     "formReserved": "另有 {{amount}} 已預留給目標",
-    "formIntoGoals": "其中 {{amount}} 會用到預留給目標的錢。可改為從目標支付，或先釋出部分資金。"
+    "formIntoGoals": "其中 {{amount}} 會用到預留給目標的錢。可改為從目標支付，或先釋出部分資金。",
+    "mobileButton": "預留 / 釋出",
+    "mobileButtonFor": "為 {{title}} 預留或釋出資金",
+    "mobileMore": "里程碑與成就",
+    "tracksEmergency": "依緊急錢包餘額計算。用「生活 → 緊急」轉帳來增加。",
+    "emergencyCreateHint": "緊急預備金依緊急錢包的餘額計算，這裡不需要預留金額。"
   },
   "invest": {
     "fundFromGoal": "使用目標資金支付",

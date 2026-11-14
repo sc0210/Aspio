@@ -474,6 +474,64 @@ class PortfolioService:
         holding_responses = [HoldingResponse.model_validate(holding) for holding in holdings]
         return holding_responses, total_count
 
+    async def goal_sale_gain_twd(
+        self, consumptions, booked: Optional[Tuple[Decimal, str]], currency: str, on_day
+    ) -> Optional[Decimal]:
+        """A goal lot sale's realized gain in TWD, against what the goal paid.
+
+        ``booked`` is what credit_sale_proceeds_to_life put back in the goal's
+        reserve (None: nothing). The cost is what each lot's buy legs took from
+        the reserve, so the gain row keeps the goal's progress equal to its
+        money even when the rate moved between buy and sale. A TWD lot costs
+        its native amount; another currency costs at its buy legs' rate (TWD
+        legs over the native its buys paid), else at the sale day's rate. None
+        when the proceeds, or a cost, have no TWD rate.
+        """
+        from sqlalchemy import and_, func, select
+
+        from app.modules.transactions.models import Transaction, TransactionType
+        from app.modules.transactions.repositories import TransactionRepository
+
+        from .models import PortfolioTransaction
+
+        if booked is None:
+            proceeds_twd = Decimal("0")
+        elif booked[1] != "TWD":
+            return None
+        else:
+            proceeds_twd = Decimal(str(booked[0]))
+        native = (currency or "TWD").upper()
+        cost_twd = Decimal("0")
+        for consumption in consumptions:
+            lot = consumption.lot
+            native_cost = Decimal(str(consumption.quantity_taken)) * Decimal(str(lot.average_cost))
+            if native == "TWD":
+                cost_twd += native_cost
+                continue
+            legs_twd = await self.session.scalar(
+                select(func.coalesce(func.sum(Transaction.amount), 0)).where(and_(
+                    *TransactionRepository.counted_conditions(lot.user_id),
+                    Transaction.holding_id == lot.id,
+                    Transaction.type == TransactionType.EXPENSE,
+                    func.upper(Transaction.currency) == "TWD",
+                ))
+            )
+            paid_native = await self.session.scalar(
+                select(func.coalesce(func.sum(PortfolioTransaction.total_amount), 0)).where(and_(
+                    PortfolioTransaction.holding_id == lot.id,
+                    PortfolioTransaction.type == "buy",
+                ))
+            )
+            legs_twd, paid_native = Decimal(str(legs_twd)), Decimal(str(paid_native))
+            if legs_twd > 0 and paid_native > 0:
+                cost_twd += native_cost * legs_twd / paid_native
+            else:
+                twd, unit = await self._to_twd(native_cost, native, on_day=on_day)
+                if unit != "TWD":
+                    return None
+                cost_twd += twd
+        return (proceeds_twd - cost_twd).quantize(Decimal("0.01"))
+
     async def _check_goal_can_pay(self, user_id: UUID, goal_id: UUID, holding_data) -> None:
         """Refuse a goal-funded buy the goal's reserved cash cannot cover."""
         from app.modules.goals.reservations import assert_goal_can_cover
@@ -741,8 +799,11 @@ class PortfolioService:
         symbol: str,
         transaction_date: datetime,
         goal_id: Optional[UUID] = None,
-    ) -> None:
+    ) -> Optional[Tuple[Decimal, str]]:
         """Return asset-sale proceeds to the Life Wallet as INCOME.
+
+        Returns the (amount, currency) booked, or None when nothing was (net
+        proceeds of 0 or less): a goal's sale gain is measured against it.
 
         Proceeds of a goal's lots (goal_id) return to that goal's reserve.
 
@@ -753,7 +814,7 @@ class PortfolioService:
         fees/taxes and is converted to TWD so wallet totals share one currency.
         """
         if net_proceeds is None or Decimal(str(net_proceeds)) <= 0:
-            return
+            return None
         try:
             from app.modules.transactions.repositories import (
                 TransactionRepository,
@@ -801,6 +862,7 @@ class PortfolioService:
                 f"✅ Sale proceeds synced to Life Wallet: INCOME {twd_amount} "
                 f"{display_currency} from {symbol} (id={transaction.id})"
             )
+            return twd_amount, display_currency
         except Exception as e:
             logger.error(
                 f"❌ Failed to credit sale proceeds to Life Wallet: {str(e)}",

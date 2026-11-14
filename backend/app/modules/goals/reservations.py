@@ -198,6 +198,37 @@ async def reserved_total(db: AsyncSession, user_id) -> Decimal:
     return sum((max(ZERO, m.reserved) for m in money.values()), ZERO)
 
 
+async def emergency_balance(db: AsyncSession, user_id) -> Decimal:
+    """The Emergency Wallet in TWD: its cash plus holdings parked there.
+
+    What an emergency-fund goal tracks: that money is set aside by living in
+    the Emergency Wallet (a Life → Emergency transfer), not by reserving Life
+    cash. The dashboard's Emergency wallet adds the same parts but converts
+    foreign holdings at the live rate (ExchangeRateService); this uses the
+    stored rates every cash balance uses, so the two can differ by FX drift.
+    """
+    uid = _uuid(user_id)
+    cash = (await TransactionRepository(db).cash_balances_twd(uid)).get(
+        TransactionWalletType.EMERGENCY, ZERO
+    )
+    from app.modules.portfolio.models import HoldingWalletType
+
+    lots = [
+        PortfolioHolding.user_id == uid,
+        PortfolioHolding.is_active.is_(True),
+        PortfolioHolding.wallet_type == HoldingWalletType.EMERGENCY,
+    ]
+    currencies = (await db.execute(
+        select(PortfolioHolding.currency).where(and_(*lots)).distinct()
+    )).scalars().all()
+    held = ZERO
+    if currencies:
+        value = in_twd(PortfolioHolding.total_value, PortfolioHolding.currency,
+                       await twd_rates_for(db, currencies))
+        held = Decimal(str(await db.scalar(select(func.coalesce(func.sum(value), 0)).where(and_(*lots)))))
+    return (Decimal(str(cash)) + held).quantize(CENT, rounding=ROUND_HALF_UP)
+
+
 async def life_cash(db: AsyncSession, user_id) -> LifeCash:
     """The Life Wallet balance and how much of it goals hold (TWD)."""
     uid = _uuid(user_id)
@@ -252,4 +283,4 @@ async def lock_user_goals(db: AsyncSession, user_id) -> None:
     )
 
 
-__all__ = ["STEADY_TYPES", "GoalMoney", "assert_goal_can_cover", "LifeCash", "goal_money", "life_cash", "lock_user_goals", "reserved_total"]
+__all__ = ["STEADY_TYPES", "GoalMoney", "assert_goal_can_cover", "emergency_balance", "LifeCash", "goal_money", "life_cash", "lock_user_goals", "reserved_total"]

@@ -187,6 +187,8 @@ class GoalResponse(GoalBase):
     # Market value of the lots the goal's money bought, the part of it that
     # moves with a market, and progress at market value (reservations.py).
     shared_goal_id: Optional[UUID4] = Field(None, serialization_alias="sharedGoalId")
+    # An emergency-fund goal: value_amount is the Emergency Wallet balance.
+    tracks_emergency: bool = Field(False, serialization_alias="tracksEmergency")
     invested_amount: Decimal = Field(Decimal("0"), serialization_alias="investedAmount")
     at_risk_amount: Decimal = Field(Decimal("0"), serialization_alias="atRiskAmount")
     value_amount: Optional[Decimal] = Field(None, serialization_alias="valueAmount")

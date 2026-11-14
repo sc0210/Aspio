@@ -145,6 +145,19 @@ class GoalRepository:
         self.db.add(contribution)
         return contribution
 
+    async def active_emergency_goals(self, user_id: UUID) -> List[Goal]:
+        """The user's active emergency-fund goals, read fresh (over any loaded copy)."""
+        from .models import GoalCategory
+
+        await self.db.flush()  # populate_existing must not drop a staged edit
+        result = await self.db.execute(
+            select(Goal)
+            .where(Goal.user_id == user_id, Goal.category == GoalCategory.EMERGENCY_FUND,
+                   Goal.status == GoalStatus.ACTIVE)
+            .execution_options(populate_existing=True)
+        )
+        return list(result.scalars().all())
+
     async def linked_goal_id(self, user_id: UUID, shared_goal_id: UUID) -> Optional[UUID]:
         """The user's open goal backing their side of a shared goal, if any."""
         return await self.db.scalar(

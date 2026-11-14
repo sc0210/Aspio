@@ -7,6 +7,8 @@ import { MobileGoals } from '@/components/goals/MobileGoals';
 import { useGoals, useDeleteGoal, Goal, CreateGoalData, goalProgressPercent } from '@/hooks/useGoals';
 import { usePortfolio } from '@/hooks/usePortfolio';
 import { LifeCashSummary } from '@/components/goals/LifeCashSummary';
+import { createLinkDefaults } from '@/lib/goals/createLink';
+import { goalProgressAmount } from '@/lib/goals/goalMoney';
 import { AssetGoalCard } from '@/components/goals/AssetGoalCard';
 import dynamic from 'next/dynamic';
 
@@ -86,20 +88,10 @@ function DesktopGoalsPage() {
     React.useEffect(() => {
         if (typeof window !== 'undefined') {
             const searchParams = new URLSearchParams(window.location.search);
-            if (searchParams.get('create') === 'retirement') {
-                // Pre-fill with retirement defaults
-                const targetYear = new Date().getFullYear() + 10;
-                const targetDate = `${targetYear}-12-31`;
-                setCreateModalDefaults({
-                    title: 'Retirement Fund',
-                    category: 'retirement',
-                    priority: 'high',
-                    target_amount: 10000000, // 10M TWD default
-                    currency: 'TWD',
-                    target_date: targetDate,
-                    description: 'Financial independence and retirement goal',
-                });
-                setReturnToPortfolio(true);
+            const link = createLinkDefaults(searchParams.get('create'));
+            if (link.open) {
+                if (link.defaults) setCreateModalDefaults(link.defaults);
+                if (link.returnToPortfolio) setReturnToPortfolio(true);
                 setIsCreateModalOpen(true);
                 // Clean up URL
                 window.history.replaceState({}, '', '/goals');
@@ -198,14 +190,15 @@ function DesktopGoalsPage() {
 
             const targetMs = new Date(goal.targetDate).getTime();
             const inAlertWindow = targetMs - now <= alertWindowMs;
-            return inAlertWindow && goalProgressPercent(goal) < 70;
+            const target = Number(goal.targetAmount);
+            return inAlertWindow && (target > 0 ? (goalProgressAmount(goal) / target) * 100 : 0) < 70;
         });
     }, [activeGoals, preferences.goalAlertDays]);
 
     const monthlyRequiredContribution = useMemo(() => {
         const now = Date.now();
         return activeGoals.reduce((sum, goal) => {
-            const remaining = Math.max(0, Number(goal.targetAmount) - Number(goal.currentAmount));
+            const remaining = Math.max(0, Number(goal.targetAmount) - goalProgressAmount(goal));
             if (!goal.targetDate) {
                 return sum + remaining / 12;
             }
@@ -218,7 +211,7 @@ function DesktopGoalsPage() {
     const atRiskGoalIds = useMemo(() => new Set(atRiskGoals.map((g) => g.id)), [atRiskGoals]);
 
     const getMonthlyNeeded = useCallback((goal: Goal): number => {
-        const remaining = Math.max(0, Number(goal.targetAmount) - Number(goal.currentAmount));
+        const remaining = Math.max(0, Number(goal.targetAmount) - goalProgressAmount(goal));
         if (!goal.targetDate) return remaining / 12;
         const monthsLeft = Math.max(1, Math.ceil(
             (new Date(goal.targetDate).getTime() - Date.now()) / (30 * 24 * 60 * 60 * 1000)
@@ -228,7 +221,8 @@ function DesktopGoalsPage() {
 
     const activeCoverageRatio = useMemo(() => {
         const activeTargetTotal = activeGoals.reduce((sum, goal) => sum + Number(goal.targetAmount), 0);
-        const activeCurrentTotal = activeGoals.reduce((sum, goal) => sum + Number(goal.currentAmount), 0);
+        // As the cards read it: market value once invested, the Emergency Wallet for an emergency fund.
+        const activeCurrentTotal = activeGoals.reduce((sum, goal) => sum + goalProgressAmount(goal), 0);
         if (activeTargetTotal <= 0) {
             return 0;
         }
@@ -541,6 +535,7 @@ function DesktopGoalsPage() {
                                     investedAmount={goal.investedAmount}
                                     atRiskAmount={goal.atRiskAmount}
                                     valueAmount={goal.valueAmount}
+                                    tracksEmergency={goal.tracksEmergency}
                                     onContribute={() => handleContribute(goal)}
                                     onEdit={() => handleEdit(goal)}
                                     onDelete={() => handleDelete(goal.id)}
@@ -578,6 +573,7 @@ function DesktopGoalsPage() {
                                     investedAmount={goal.investedAmount}
                                     atRiskAmount={goal.atRiskAmount}
                                     valueAmount={goal.valueAmount}
+                                    tracksEmergency={goal.tracksEmergency}
                                     // A finished goal's leftover cash is released from here.
                                     onContribute={() => handleContribute(goal)}
                                     onEdit={() => handleEdit(goal)}

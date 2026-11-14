@@ -41,7 +41,7 @@ describe('demo goals', () => {
     it('are dated in the future, and one sits inside the default 90-day alert window', () => {
         const { result } = renderHook(() => useDemo(), { wrapper: DemoProvider });
         const now = Date.now();
-        const goals = result.current.demoGoals.map(demoGoalToGoal);
+        const goals = result.current.demoGoals.map((g) => demoGoalToGoal(g));
         for (const g of goals) expect(new Date(g.targetDate!).getTime()).toBeGreaterThan(now);
 
         const ninetyDays = 90 * 24 * 60 * 60 * 1000;

@@ -192,7 +192,15 @@
     "portfolioLinked": "Portfolio Linked",
     "retirement": "Financial Goal",
     "title": "Goals",
-    "viewAll": "View All →"
+    "viewAll": "View All →",
+    "topPriority": "Top priority",
+    "overdue": "Past its date",
+    "perMonth": "{{amount}} a month to make it",
+    "priorityLabel": "{{level}} priority",
+    "monthsLeft_one": "{{count}} month left",
+    "monthsLeft_other": "{{count}} months left",
+    "yearsLeft_one": "{{count}} year left",
+    "yearsLeft_other": "{{count}} years left"
   },
   "pause": "Pause Goal",
   "priorities": {
@@ -314,7 +322,12 @@
     "summaryHint": "Money set aside stays in your Life Wallet; it just stops counting as free to spend.",
     "summaryOverspent": "You have spent into money set aside for goals. Release some from a goal, or add income.",
     "formReserved": "{{amount}} more is set aside for goals",
-    "formIntoGoals": "{{amount}} of this would come out of money set aside for goals. Pay it from a goal, or release some first."
+    "formIntoGoals": "{{amount}} of this would come out of money set aside for goals. Pay it from a goal, or release some first.",
+    "mobileButton": "Reserve / Release",
+    "mobileButtonFor": "Reserve or release money for {{title}}",
+    "mobileMore": "Milestones & achievements",
+    "tracksEmergency": "Follows your Emergency Wallet. Add to it with a Life → Emergency transfer.",
+    "emergencyCreateHint": "An emergency fund follows your Emergency Wallet's balance, so there is nothing to set aside here."
   },
   "invest": {
     "fundFromGoal": "Pay with goal money",

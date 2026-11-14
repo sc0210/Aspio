@@ -561,6 +561,39 @@ async def update_holding(
                             )
                         linked.amount = twd_amount
                         linked.currency = display_currency
+                        if holding.goal_id is not None:
+                            # A goal lot's sale gain is measured at its buy rate:
+                            # leg TWD over the native its buy paid. Keep the buy
+                            # record in step with the leg, or the rate skews.
+                            from ..models import PortfolioTransaction as _PT
+
+                            buys = (await session.execute(select(_PT).where(
+                                _PT.holding_id == holding.id, _PT.type == "buy",
+                            ))).scalars().all()
+                            if len(buys) == 1:
+                                buys[0].quantity = Decimal(str(new_qty))
+                                buys[0].price = Decimal(str(new_cost))
+                                buys[0].total_amount = new_total
+                            elif buys:
+                                # Several buys behind one leg: scale them together
+                                # (price with total, the last taking the rounding),
+                                # so their native total matches the leg exactly.
+                                old_native = sum((Decimal(str(b.total_amount or 0)) for b in buys), Decimal("0"))
+                                old_units = sum((Decimal(str(b.quantity or 0)) for b in buys), Decimal("0"))
+                                if old_native > 0 and old_units > 0:
+                                    factor = Decimal(str(new_total)) / old_native
+                                    unit_factor = Decimal(str(new_qty)) / old_units
+                                    running, running_units = Decimal("0"), Decimal("0")
+                                    for n, b in enumerate(buys):
+                                        last = n == len(buys) - 1
+                                        total = (Decimal(str(new_total)) - running) if last else (
+                                            Decimal(str(b.total_amount or 0)) * factor).quantize(Decimal("0.01"))
+                                        units = (Decimal(str(new_qty)) - running_units) if last else (
+                                            Decimal(str(b.quantity or 0)) * unit_factor).quantize(Decimal("0.00000001"))
+                                        running, running_units = running + total, running_units + units
+                                        b.total_amount, b.quantity = max(total, Decimal("0")), max(units, Decimal("0"))
+                                        if b.quantity:
+                                            b.price = (b.total_amount / b.quantity).quantize(Decimal("0.0001"))
                         linked.description = (
                             f"Buy {holding.symbol} ×{Decimal(str(new_qty)):g} @ "
                             f"{Decimal(str(new_cost)):,.2f} "
@@ -1235,7 +1268,7 @@ async def sell_holding(
         # creates, so a buy→sell round trip nets to zero in the Life Wallet
         # (minus fees/taxes and ± realized gain/loss).
         portfolio_service = get_portfolio_service(session)
-        await portfolio_service.credit_sale_proceeds_to_life(
+        booked = await portfolio_service.credit_sale_proceeds_to_life(
             user_id=current_user.id,
             net_proceeds=net_proceeds,
             currency=holding.currency,
@@ -1249,11 +1282,16 @@ async def sell_holding(
             # goal has (goals/reservations.py). Position lock held, then goals'.
             from app.modules.goals.service import GoalService
 
-            gain_twd, gain_currency = await portfolio_service._to_twd(
-                realized_gain_loss, holding.currency or "TWD",
-                on_day=business_day_of(transaction_date or now),
+            gain_twd = await portfolio_service.goal_sale_gain_twd(
+                allocation.consumptions, booked, holding.currency or "TWD",
+                business_day_of(transaction_date or now),
             )
-            if gain_currency == "TWD" and gain_twd != 0:
+            if gain_twd is None:
+                logger.warning(
+                    "Goal lot %s sold with no %s→TWD rate; the goal's progress "
+                    "misses this sale's gain or loss", holding.id, holding.currency,
+                )
+            elif gain_twd != 0:
                 await GoalService(session).record_sale_gain(
                     holding.goal_id, current_user.id, gain_twd, transaction_date or now,
                     f"Sold {quantity} {holding.symbol}",

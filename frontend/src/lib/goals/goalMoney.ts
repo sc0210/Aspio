@@ -13,9 +13,12 @@ const MONTH_MS = 30.44 * 86_400_000;
 interface GoalMoneyFields {
   currentAmount: number | string;
   targetAmount: number | string;
+  reservedAmount?: number | string;
   investedAmount?: number | string;
   atRiskAmount?: number | string;
   valueAmount?: number | string | null;
+  /** An emergency-fund goal, whose valueAmount is the Emergency Wallet. */
+  tracksEmergency?: boolean;
   targetDate?: string | Date | null;
   status?: string;
 }
@@ -29,7 +32,7 @@ interface GoalMoneyFields {
  */
 export function goalProgressAmount(goal: GoalMoneyFields): number {
   const invested = Number(goal.investedAmount) || 0;
-  return invested > 0 && goal.valueAmount != null
+  return (invested > 0 || goal.tracksEmergency) && goal.valueAmount != null
     ? Number(goal.valueAmount)
     : Number(goal.currentAmount) || 0;
 }
@@ -40,11 +43,31 @@ export function monthsUntil(targetDate: GoalMoneyFields['targetDate']): number |
   return (new Date(targetDate).getTime() - Date.now()) / MONTH_MS;
 }
 
+/**
+ * Whether the goal is reached: on money put in (a market rise is not money
+ * saved), or, for an emergency fund, on the Emergency Wallet it follows.
+ */
+export function goalReached(goal: GoalMoneyFields): boolean {
+  const amount = goal.tracksEmergency ? goalProgressAmount(goal) : Number(goal.currentAmount) || 0;
+  return goal.status === 'completed' || amount >= Number(goal.targetAmount);
+}
+
+/**
+ * Whether Reserve / Release has anything to do: an open goal can take cash,
+ * and any goal holding reserved cash can give it back. An emergency fund
+ * takes none (it follows the Emergency Wallet).
+ */
+export function canMoveGoalCash(goal: GoalMoneyFields): boolean {
+  const reserved = Number(goal.reservedAmount) || 0;
+  // A cancelled goal holds nothing new; it can only give back what it holds.
+  if (goal.tracksEmergency || goal.status === 'cancelled') return reserved > 0;
+  return !goalReached(goal) || reserved > 0;
+}
+
 /** A goal not yet reached, due within HORIZON_MONTHS, with money in stocks,
  *  funds or crypto. */
 export function goalHorizonRisk(goal: GoalMoneyFields): boolean {
-  const reached =
-    goal.status === 'completed' || Number(goal.currentAmount) >= Number(goal.targetAmount);
+  const reached = goalReached(goal);
   const months = monthsUntil(goal.targetDate);
   return !reached && (Number(goal.atRiskAmount) || 0) > 0 && months !== null && months < HORIZON_MONTHS;
 }

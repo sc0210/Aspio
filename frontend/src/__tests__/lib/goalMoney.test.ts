@@ -1,4 +1,4 @@
-import { goalHorizonRisk, goalProgressAmount } from '@/lib/goals/goalMoney';
+import { canMoveGoalCash, goalHorizonRisk, goalProgressAmount, goalReached } from '@/lib/goals/goalMoney';
 
 const inMonths = (m: number) => new Date(Date.now() + m * 30.44 * 86_400_000).toISOString();
 
@@ -22,5 +22,31 @@ describe('goalHorizonRisk', () => {
     expect(goalHorizonRisk({ ...base, atRiskAmount: '0', targetDate: inMonths(18) })).toBe(false);
     expect(goalHorizonRisk({ ...base, status: 'completed', targetDate: inMonths(18) })).toBe(false);
     expect(goalHorizonRisk({ ...base, targetDate: null })).toBe(false);
+  });
+});
+
+describe('emergency-fund goals', () => {
+  it('read the Emergency Wallet balance as progress, invested or not', () => {
+    expect(goalProgressAmount({ currentAmount: 0, targetAmount: 180000, valueAmount: '120000.00', tracksEmergency: true })).toBe(120000);
+  });
+
+  it('count as reached once the wallet covers the target', () => {
+    const goal = { currentAmount: 0, targetAmount: 100000, valueAmount: 150000, tracksEmergency: true, atRiskAmount: 5000, targetDate: inMonths(6) };
+    expect(goalHorizonRisk(goal)).toBe(false);
+  });
+});
+
+describe('reached, and whether there is cash to move', () => {
+  it('judges an invested goal on money put in, not a market rise', () => {
+    const goal = { currentAmount: 80000, targetAmount: 100000, investedAmount: 50000, valueAmount: 120000, atRiskAmount: 50000, targetDate: inMonths(12) };
+    expect(goalReached(goal)).toBe(false);
+    expect(goalHorizonRisk(goal)).toBe(true);
+  });
+
+  it('offers Reserve / Release only when there is something to do', () => {
+    expect(canMoveGoalCash({ currentAmount: 100, targetAmount: 100, reservedAmount: 0 })).toBe(false);   // reached, holds nothing
+    expect(canMoveGoalCash({ currentAmount: 100, targetAmount: 100, reservedAmount: 40 })).toBe(true);   // reached, can release
+    expect(canMoveGoalCash({ currentAmount: 10, targetAmount: 100, reservedAmount: 0 })).toBe(true);     // open
+    expect(canMoveGoalCash({ currentAmount: 0, targetAmount: 100, reservedAmount: 0, tracksEmergency: true })).toBe(false);
   });
 });
