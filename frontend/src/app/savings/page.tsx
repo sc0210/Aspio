@@ -24,6 +24,7 @@ import {
   demoCompareData, demoPeerConnections, demoRecurringSplits, demoSavingRecords, demoSettlements, demoSharedGoals, demoSplitBalances, demoSplits,
 } from '@/data/demoData';
 import type { CompareDataResponse, PeerConnectionOut, SavingRecord, SharedGoalOut } from '@/shared/types';
+import type { Goal } from '@/hooks/useGoals';
 import { paceForecast } from '@/components/savings/savingsPace';
 import { businessToday } from '@/lib/portfolio/businessDate';
 import { formatCurrency as formatCurrencyUtil } from '@/utils/formatters';
@@ -32,6 +33,12 @@ import { useIsMobile } from '@/hooks/useMediaQuery';
 
 // CompareLineChart imports recharts (~386 kB) — loaded only once the Compare
 // tab is opened, so a visit for goals never pays for it.
+// Reserve / Release on the caller's own goal behind a shared goal.
+const ContributeModal = dynamic(
+  () => import('@/components/goals/ContributeModal').then((m) => ({ default: m.ContributeModal })),
+  { ssr: false },
+);
+
 const CompareLineChart = dynamic(() => import('@/components/compare/CompareLineChart'), {
   ssr: false,
   loading: () => (
@@ -118,6 +125,8 @@ function SavingsGroups() {
   const [isAddPeerOpen, setIsAddPeerOpen] = useState(false);
   const [isCreateGoalOpen, setIsCreateGoalOpen] = useState(false);
   const [recordsGoal, setRecordsGoal] = useState<SharedGoalOut | null>(null);
+  // The caller's own goal behind a shared goal, open in Reserve / Release.
+  const [setAsideGoal, setSetAsideGoal] = useState<Goal | null>(null);
   const [removingId, setRemovingId] = useState<string | null>(null);
   const [deletingGoalId, setDeletingGoalId] = useState<string | null>(null);
   // Both delete things for the partner too, so each asks first.
@@ -205,6 +214,17 @@ function SavingsGroups() {
       setGoals(res.data ?? []);
     } catch (err) {
       setError(err instanceof Error ? err.message : t('savings.errors.loadFailed', 'Failed to load savings goals'));
+    }
+  }, [t]);
+
+  // Opens Reserve / Release on the caller's own goal for this shared goal,
+  // making that goal on first use (it backs their side; see link_goal).
+  const handleSetAside = useCallback(async (goal: SharedGoalOut) => {
+    try {
+      const res = await apiClient.linkSharedGoal(goal.id);
+      if (res.data) setSetAsideGoal(res.data);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : t('savings.errors.setAsideFailed', 'Could not open your goal for this'));
     }
   }, [t]);
 
@@ -471,6 +491,7 @@ function SavingsGroups() {
                               onViewRecords={setRecordsGoal}
                               onDelete={setConfirmDeleteGoalId}
                               onEdit={isDemo ? undefined : setEditingGoal}
+                              onSetAside={isDemo ? undefined : handleSetAside}
                               deleting={deletingGoalId === goal.id}
                             />
                           ))}
@@ -545,6 +566,22 @@ function SavingsGroups() {
         }}
       />
 
+      {setAsideGoal && (
+        <ContributeModal
+          isOpen
+          onClose={() => {
+            setSetAsideGoal(null);
+            void refreshGoals();
+          }}
+          goalId={setAsideGoal.id}
+          goalTitle={setAsideGoal.title}
+          currentAmount={Number(setAsideGoal.currentAmount)}
+          targetAmount={Number(setAsideGoal.targetAmount)}
+          currency="TWD"
+          reservedAmount={Number(setAsideGoal.reservedAmount ?? 0)}
+        />
+      )}
+
       <SavingRecordsModal
         goal={recordsGoal}
         isDemo={isDemo}
@@ -604,7 +641,11 @@ function TabBar({ tab, onSelect, tabs = TABS }: { tab: Tab; onSelect: (tab: Tab)
 
 function CombinedProgress({ goals, paceRecords }: { goals: SharedGoalOut[]; paceRecords: SavingRecord[] | null }) {
   const { t, i18n } = useTranslation('common');
-  const forecast = paceRecords ? paceForecast(goals, paceRecords, businessToday()) : null;
+  // The pace reads saving records only. Money in a partner's linked goal (reserved,
+  // spent or invested through their own goal) has no dated record here, so a
+  // projection from records alone would understate the pace; none is shown then.
+  const backedByGoals = goals.some((g) => g.status === 'active' && (g.your_set_aside ?? 0) > 0);
+  const forecast = paceRecords && !backedByGoals ? paceForecast(goals, paceRecords, businessToday()) : null;
   const monthName = (ym: string) =>
     new Date(Date.UTC(+ym.slice(0, 4), +ym.slice(5, 7) - 1, 1)).toLocaleDateString(i18n?.language || 'en', { year: 'numeric', month: 'short', timeZone: 'UTC' });
   const totalSaved = goals.reduce((s, g) => s + g.total_amount, 0);

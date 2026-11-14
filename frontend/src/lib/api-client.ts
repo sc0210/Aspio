@@ -17,6 +17,7 @@ import {
   SplitCreate, SplitOut, PeerBalanceOut, PeerPrefsOut, SplitPolicy, SettlementCreate, SettlementOut, SplitFromTransaction, PeerPrefsUpdate, SplitAmend, RecurringSplitCreate, RecurringSplitOut } from '@/shared/types';
 import { getSession } from 'next-auth/react';
 import { getPublicApiUrl, getServerApiUrl } from '@/lib/api-url';
+import type { Goal } from '@/hooks/useGoals';
 export interface GamificationStats {
   user_id: string;
   level: number;
@@ -677,6 +678,11 @@ class ApiClient {
 
   async setPeerPrefs(connectionId: string, update: PeerPrefsUpdate): Promise<ApiResponse<PeerPrefsOut>> {
     return this.patch<PeerPrefsOut>(`/peers/${connectionId}/prefs`, update);
+  }
+
+  /** The caller's own goal backing their side of a shared goal, made if missing. */
+  async linkSharedGoal(goalId: string): Promise<ApiResponse<Goal>> {
+    return this.post<Goal>(`/peers/goals/${goalId}/link-goal`);
   }
 
   async deleteSharedGoal(goalId: string): Promise<ApiResponse<null>> {

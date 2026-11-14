@@ -721,7 +721,9 @@
       "viewRecords": "View saving records",
       "viewRecordsFor": "View saving records for {{title}}",
       "you": "You",
-      "pace": "{{amount}} a month between you reaches it on time"
+      "pace": "{{amount}} a month between you reaches it on time",
+      "setAside": "Set aside money",
+      "setAsideHint": "{{amount}} of it through your own goal"
     },
     "combined": "Combined",
     "completed": "Goal reached!",
@@ -750,7 +752,8 @@
       "inviteFailed": "Failed to send invite",
       "loadFailed": "Failed to load savings goals",
       "removeFailed": "Failed to remove peer",
-      "updateFailed": "Failed to update goal"
+      "updateFailed": "Failed to update goal",
+      "setAsideFailed": "Could not open your goal for this"
     },
     "estimatedCompletion": "Est. completion",
     "goalTitleLabel": "Goal Name",
