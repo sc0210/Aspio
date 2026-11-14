@@ -8,8 +8,10 @@ Portfolios were created with currency "USD" by default, but every page shows
 TWD. Anything converting into portfolio.currency was quietly in dollars: the
 dashboard P&L calendar read "+519" for a ~NT$16k day. New portfolios now default
 to TWD; this moves the existing ones. Stored totals (read by the LINE bot and
-rebalancing) are converted at the latest stored USD/TWD close; a portfolio with
-no rate to use is relabelled and recomputed on its next price refresh.
+rebalancing) are converted at the latest stored USD/TWD close. With totals to
+convert and no rate, it stops rather than relabel dollars as TWD: run a
+historical price sync (it stores TWD=X) and rerun. Empty portfolios are
+relabelled.
 Data only: no schema change, no RLS. Downgrade does nothing: the original
 labels were defaults, not choices.
 """
@@ -23,6 +25,23 @@ depends_on = None
 
 
 def upgrade() -> None:
+    op.execute(
+        """
+        DO $$
+        BEGIN
+          IF EXISTS (
+            SELECT 1 FROM portfolios
+             WHERE upper(currency) <> 'TWD'
+               AND (total_value <> 0 OR total_cost <> 0 OR total_gain_loss <> 0)
+               AND (upper(currency) <> 'USD' OR NOT EXISTS (
+                     SELECT 1 FROM historical_prices
+                      WHERE market = 'FX' AND symbol = 'TWD=X' AND close > 0))
+          ) THEN
+            RAISE EXCEPTION 'portfolio totals to convert but no rate to convert them by: run a historical price sync (it stores TWD=X), then rerun';
+          END IF;
+        END $$
+        """
+    )
     op.execute(
         """
         UPDATE portfolios p

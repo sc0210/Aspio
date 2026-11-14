@@ -16,9 +16,10 @@ from app.modules.portfolio.services import PortfolioService
 
 
 @pytest.mark.unit
-def test_a_new_portfolio_defaults_to_twd():
+def test_a_portfolio_is_always_twd():
     assert PortfolioCreate(name="P").currency == "TWD"
-    assert PortfolioCreate(name="P", currency="usd").currency == "USD"  # a choice still stands
+    # Not a choice: stored totals are read as TWD everywhere.
+    assert PortfolioCreate(name="P", currency="usd").currency == "TWD"
 
 
 @pytest.mark.asyncio

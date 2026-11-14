@@ -9,7 +9,22 @@
 --          < backend/scripts/prod_sql/2026_11_14_portfolio_currency_twd.sql
 --   3. On the backend: alembic stamp head
 -- Matches alembic/versions/2026_11_14_portfolio_currency_twd.py exactly. A second
--- run changes nothing: every row is TWD after the first.
+-- run changes nothing: every row is TWD after the first. If it stops with "no rate
+-- to convert them by", run a historical price sync first (it stores TWD=X).
+
+DO $$
+BEGIN
+  IF EXISTS (
+    SELECT 1 FROM portfolios
+     WHERE upper(currency) <> 'TWD'
+       AND (total_value <> 0 OR total_cost <> 0 OR total_gain_loss <> 0)
+       AND (upper(currency) <> 'USD' OR NOT EXISTS (
+             SELECT 1 FROM historical_prices
+              WHERE market = 'FX' AND symbol = 'TWD=X' AND close > 0))
+  ) THEN
+    RAISE EXCEPTION 'portfolio totals to convert but no rate to convert them by: run a historical price sync (it stores TWD=X), then rerun';
+  END IF;
+END $$;
 
 UPDATE portfolios p
    SET total_value = round(p.total_value * fx.rate, 2),
@@ -21,6 +36,5 @@ UPDATE portfolios p
          ORDER BY date DESC LIMIT 1) fx
  WHERE upper(p.currency) = 'USD';
 
--- Any other currency, or USD with no stored rate: relabel; the totals are
--- recomputed in TWD on the next price refresh (_update_portfolio_totals).
+-- What is left has nothing to convert (the guard above saw to that): relabel.
 UPDATE portfolios SET currency = 'TWD', updated_at = now() WHERE upper(currency) <> 'TWD';

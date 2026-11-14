@@ -47,17 +47,18 @@ class BasePortfolioSchema(BaseModel):
         None, max_length=1000, description="Portfolio description"
     )
     currency: str = Field(
-        "TWD", min_length=3, max_length=3, description="Base currency"
+        "TWD", min_length=3, max_length=3,
+        description="Base currency. Always TWD: stored totals are read as TWD everywhere",
     )
     is_default: bool = Field(False, description="Whether this is the default portfolio")
     auto_update: bool = Field(True, description="Enable automatic price updates")
 
     @field_validator("currency")
     @classmethod
-    def currency_must_be_uppercase(cls, v):
-        if v:
-            return v.upper()
-        return v
+    def currency_is_twd(cls, v):
+        # A USD portfolio stored USD totals that the LINE bot and rebalancing
+        # read as TWD; holdings keep their own currencies regardless.
+        return "TWD"
 
 
 class PortfolioCreate(BasePortfolioSchema):
