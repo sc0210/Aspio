@@ -306,6 +306,9 @@ interface CashFieldsProps {
   activeLoans: ActiveLoan[];
   /** Goals this expense can be paid from (see payableGoals). */
   goals?: PayableGoal[];
+  /** Life cash free to spend and the part goals hold (goals/reservations.py);
+   *  shown under the wallet for a Life expense. Absent in demo mode. */
+  lifeCash?: { available: number; reserved: number } | null;
   /** The transfer hint points at the Investment tab, which only the add form has. */
   showInvestmentHint?: boolean;
   /** Focus the amount on mount. For a new entry only: on edit it would open the
@@ -318,7 +321,7 @@ interface CashFieldsProps {
  * The entry panel (amount, description) first, then the category, then the
  * settings list: date, wallet, and More options (loan link, payment method, tags).
  */
-export function CashFields({ idPrefix: p, formData, errors, onChange, onTagsChange, activeLoans, goals: goalOptions = [], showInvestmentHint = false, autoFocusAmount = false }: CashFieldsProps) {
+export function CashFields({ idPrefix: p, formData, errors, onChange, onTagsChange, activeLoans, goals: goalOptions = [], lifeCash = null, showInvestmentHint = false, autoFocusAmount = false }: CashFieldsProps) {
   const { t } = useTranslation(['transactions', 'goals']);
   const categories = formData.type === 'transfer' ? [] : CATEGORIES[formData.type as keyof typeof CATEGORIES] || [];
   const tone = TYPE_TONE[formData.type] ?? TYPE_TONE.expense;
@@ -654,6 +657,34 @@ export function CashFields({ idPrefix: p, formData, errors, onChange, onTagsChan
               </div>
             </div>
           )}
+
+          {/* What a Life expense can spend without touching goal money. */}
+          {lifeCash && formData.type === 'expense' && formData.walletType === 'life' && (() => {
+            const amount = formData.currency === 'TWD' ? Number(formData.amount) || 0 : 0;
+            // Paid from a goal, the expense spends that goal's reserve instead.
+            const intoGoals = !formData.goalId && amount > Math.max(lifeCash.available, 0)
+              ? amount - Math.max(lifeCash.available, 0) : 0;
+            const money = (n: number) => formatCurrency(n, 'TWD', { precision: 0 });
+            return (
+              <div className={ROW}>
+                <span className={ROW_LABEL}>{t('goals:reserve.summaryAvailable', 'Available to spend')}</span>
+                <div className="sm:text-right">
+                  <p className={cn('text-sm font-semibold tabular-nums', lifeCash.available < 0 ? 'text-red-600 dark:text-red-400' : 'text-gray-900 dark:text-white')}>
+                    {money(lifeCash.available)}
+                  </p>
+                  {intoGoals > 0 ? (
+                    <p role="status" aria-live="polite" className="text-xs text-amber-700 dark:text-amber-400">
+                      {t('goals:reserve.formIntoGoals', { amount: money(intoGoals) })}
+                    </p>
+                  ) : lifeCash.reserved > 0 ? (
+                    <p className="text-xs text-gray-500 dark:text-gray-400">
+                      {t('goals:reserve.formReserved', { amount: money(lifeCash.reserved) })}
+                    </p>
+                  ) : null}
+                </div>
+              </div>
+            );
+          })()}
 
           {/* Everything optional, collapsed. While closed, chips say what is set inside,
               so nothing chosen is out of sight. Not for a transfer: its only optional

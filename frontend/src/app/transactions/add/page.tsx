@@ -28,7 +28,7 @@ import {
   ENTRY_PANEL, ENTRY_SECTION, ENTRY_CAPTION, ENTRY_INPUT, ENTRY_INPUT_INVALID, ERROR_TEXT, NOTE,
   ROW, ROW_LIST, ROW_LABEL, ROW_SEGMENTED, ROW_SEGMENT, payableGoals,
 } from '@/components/transactions/TransactionFormFields';
-import { useGoals } from '@/hooks/useGoals';
+import { useGoals, useLifeCash } from '@/hooks/useGoals';
 import { GoalFundingPicker } from '@/components/goals/GoalFundingPicker';
 
 // useSearchParams needs a Suspense boundary on a statically rendered route.
@@ -142,6 +142,7 @@ function AddTransactionForm() {
   const [activeLoans, setActiveLoans] = useState<{ id: string; name: string; current_balance: number; currency: string }[]>([]);
   // Goals holding Life cash, offered under "Pay from goal".
   const { data: allGoals = [] } = useGoals();
+  const { data: lifeCash } = useLifeCash();
   useEffect(() => {
     if (isDemo) return;
     loanService.getLoans()
@@ -786,6 +787,7 @@ function AddTransactionForm() {
                 onTagsChange={(tags) => setFormData(prev => ({ ...prev, tags }))}
                 activeLoans={activeLoans}
                 goals={payableGoals(allGoals, formData.goalId)}
+                lifeCash={lifeCash}
                 showInvestmentHint
                 autoFocusAmount
               />

@@ -16,6 +16,7 @@ import { LoadingSpinner } from '@/components/ui/LoadingSpinner';
 import { DataRefreshButton } from '@/components/ui/DataRefreshButton';
 import { DashboardViewToggle } from './DashboardViewToggle';
 import { useDashboardSummary } from '@/hooks/useDashboardSummary';
+import { useLifeCash } from '@/hooks/useGoals';
 import { useDashboardViewMode } from '@/hooks/useDashboardViewMode';
 import { useAppMode } from '@/hooks/useAppMode';
 import { greetingName } from '@/lib/dashboard/greetingName';
@@ -36,11 +37,14 @@ const hidden = '••••';
  * via useDashboardSummary so the two never diverge.
  */
 export function CompactDashboard() {
-    const { t } = useTranslation(['dashboard', 'common']);
+    const { t } = useTranslation(['dashboard', 'common', 'goals']);
     const { isDemo, user } = useAppMode();
     const { isValueVisible } = usePrivacy();
     const [, setMode] = useDashboardViewMode();
     const m = useDashboardSummary();
+    // Life cash goals hold (goals/reservations.py); before the early return.
+    const { data: lifeCash } = useLifeCash();
+    const lifeReserved = lifeCash && lifeCash.reserved > 0 ? lifeCash : null;
 
     if (m.isLoading && !m.stats) {
         return (
@@ -119,6 +123,14 @@ export function CompactDashboard() {
                                 <p className="text-[19px] font-extrabold tracking-tight tabular-nums text-gray-900 dark:text-white truncate">
                                     {isValueVisible ? formatTWDCompact(value) : hidden}
                                 </p>
+                                {Icon === BanknotesIcon && lifeReserved && (
+                                    <p
+                                        className={cn('text-xs tabular-nums truncate', lifeReserved.available < 0 ? 'text-red-600 dark:text-red-400' : 'text-gray-500 dark:text-gray-400')}
+                                        title={t('goals:reserve.lifeReserved', { amount: isValueVisible ? formatTWD(lifeReserved.reserved) : '•••' })}
+                                    >
+                                        {t('goals:reserve.lifeAvailable', 'Available')} {isValueVisible ? formatTWDCompact(lifeReserved.available) : hidden}
+                                    </p>
+                                )}
                             </div>
                         </Card>
                     ))}

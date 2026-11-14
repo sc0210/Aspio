@@ -306,7 +306,15 @@
     "payFromGoalLifeOnly": "Only a Life Wallet expense can be paid from a goal.",
     "initialHint": "Reserved out of your Life Wallet. {{amount}} is free.",
     "quickAriaReserve": "Set contribution to {{pct}}% of remaining amount",
-    "quickAriaRelease": "Set release to {{pct}}% of the reserved amount"
+    "quickAriaRelease": "Set release to {{pct}}% of the reserved amount",
+    "summaryAria": "Life Wallet and goal money",
+    "summaryLife": "Life Wallet",
+    "summaryReserved": "Set aside for goals",
+    "summaryAvailable": "Available to spend",
+    "summaryHint": "Money set aside stays in your Life Wallet; it just stops counting as free to spend.",
+    "summaryOverspent": "You have spent into money set aside for goals. Release some from a goal, or add income.",
+    "formReserved": "{{amount}} more is set aside for goals",
+    "formIntoGoals": "{{amount}} of this would come out of money set aside for goals. Pay it from a goal, or release some first."
   },
   "invest": {
     "fundFromGoal": "Pay with goal money",
