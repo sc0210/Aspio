@@ -206,8 +206,11 @@ async def test_an_emergency_fund_completes_on_the_wallet_it_follows(async_sessio
     goal = (await goals.create_goal(test_user.id, GoalCreate(
         title="Six months", category="emergency_fund", target_amount=D("180000")))).id
 
-    listed, _ = await goals.list_goals(test_user.id)
-    assert [g.status for g in listed if g.id == goal] == [GoalStatus.COMPLETED]
+    # The first, filtered list already finds it completed (settled before the filter).
+    completed, _ = await goals.list_goals(test_user.id, status="completed")
+    assert [g.id for g in completed] == [goal]
+    active, _ = await goals.list_goals(test_user.id, status="active")
+    assert goal not in [g.id for g in active]
 
 
 async def test_cancelling_a_linked_goal_reopens_the_shared_goal(

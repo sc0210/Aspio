@@ -258,13 +258,14 @@ export function useGoal(goalId: string) {
 
 export function useGoalsSummary() {
     const { data: session } = useSession();
-    const { isDemoMode, demoGoals, demoRevision } = useDemo();
+    const { isDemoMode, demoGoals, demoRevision, getDemoStats } = useDemo();
 
     return useQuery<GoalSummary>({
         queryKey: [QUERY_KEYS.GOALS_SUMMARY, isDemoMode ? `demo-${demoRevision ?? 0}` : (session?.user?.id || 'anon')],
         queryFn: async () => {
             if (isDemoMode) {
-                const goals = (demoGoals ?? []).map((g) => demoGoalToGoal(g));
+                const emergency = Number(getDemoStats?.().emergency_wallet) || 0;
+                const goals = (demoGoals ?? []).map((g) => demoGoalToGoal(g, emergency));
                 const active = goals.filter(g => g.status === 'active');
                 const completed = goals.filter(g => g.status === 'completed');
                 const totalTarget = goals.reduce((sum, g) => sum + Number(g.targetAmount), 0);

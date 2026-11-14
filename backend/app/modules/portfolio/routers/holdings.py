@@ -574,6 +574,14 @@ async def update_holding(
                                 buys[0].quantity = Decimal(str(new_qty))
                                 buys[0].price = Decimal(str(new_cost))
                                 buys[0].total_amount = new_total
+                            elif buys:
+                                # Several buys behind one leg: scale them together,
+                                # so their native total still matches the leg.
+                                old_native = sum((Decimal(str(b.total_amount or 0)) for b in buys), Decimal("0"))
+                                if old_native > 0:
+                                    factor = Decimal(str(new_total)) / old_native
+                                    for b in buys:
+                                        b.total_amount = (Decimal(str(b.total_amount or 0)) * factor).quantize(Decimal("0.01"))
                         linked.description = (
                             f"Buy {holding.symbol} ×{Decimal(str(new_qty)):g} @ "
                             f"{Decimal(str(new_cost)):,.2f} "

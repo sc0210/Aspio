@@ -178,6 +178,8 @@ class GoalService:
         limit: int = 50,
     ) -> Tuple[List[Goal], int]:
         """List goals for a user along with the total count matching the filters."""
+        # Before the status filter, so an emergency fund lands in the right list.
+        await self._settle_emergency_status(user_id)
         conditions = [Goal.user_id == user_id]
 
         if status:
@@ -204,33 +206,44 @@ class GoalService:
         )
         total = await self.repository.count_goals_for_user(conditions)
         await self.attach_money(goals, user_id)
-        await self._settle_emergency_status(goals)
         return goals, total
 
-    async def _settle_emergency_status(self, goals: List[Goal]) -> None:
+    async def _settle_emergency_status(self, user_id: UUID) -> None:
         """An emergency fund completes (or reopens) on the Emergency Wallet it follows.
 
         Nothing writes to such a goal when the wallet moves (a transfer, a
-        holding), so its status is settled when goals are read; achievements
-        and summaries count the stored status.
+        holding), so its stored status is settled when goals are listed, before
+        any status filter, under the goals' lock. A goal reached on money put in
+        (reserved or legacy progress) is never reopened by a smaller wallet.
         """
-        changed = False
-        for goal in goals:
-            if not getattr(goal, "tracks_emergency", False) or goal.value_amount is None:
-                continue
-            reached = goal.value_amount >= goal.target_amount
-            if reached and goal.status == GoalStatus.ACTIVE:
+        candidates = [
+            g for g in await self.repository.list_goals_for_user(
+                user_id,
+                [Goal.user_id == user_id, Goal.category == GoalCategory.EMERGENCY_FUND,
+                 Goal.status.in_([GoalStatus.ACTIVE, GoalStatus.COMPLETED])],
+                literal(1), skip=0, limit=50,
+            )
+        ]
+        if not candidates:
+            return
+        balance = await emergency_balance(self.session, user_id)
+        due = [
+            g for g in candidates
+            if (balance >= g.target_amount and g.status == GoalStatus.ACTIVE)
+            or (balance < g.target_amount and g.status == GoalStatus.COMPLETED
+                and (g.current_amount or Decimal("0")) < g.target_amount)
+        ]
+        if not due:
+            return
+        await lock_user_goals(self.session, user_id)
+        for goal in due:
+            if goal.status == GoalStatus.ACTIVE:
                 goal.status = GoalStatus.COMPLETED
                 goal.completed_at = datetime.now(timezone.utc)
-                changed = True
-            elif not reached and goal.status == GoalStatus.COMPLETED:
+            else:
                 goal.status = GoalStatus.ACTIVE
                 goal.completed_at = None
-                changed = True
-        if changed:
-            await self.session.commit()
-            for goal in goals:
-                await self.session.refresh(goal, ["status", "completed_at"])
+        await self.session.commit()
 
     async def update_goal(
         self, goal_id: UUID, user_id: UUID, goal_data: GoalUpdate
