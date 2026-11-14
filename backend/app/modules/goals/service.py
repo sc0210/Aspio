@@ -84,10 +84,13 @@ class GoalService:
         self.session = session
         self.repository = GoalRepository(session)
 
-    async def create_goal(self, user_id: UUID, goal_data: GoalCreate) -> Goal:
-        """Create a new goal"""
+    async def create_goal(
+        self, user_id: UUID, goal_data: GoalCreate, *, shared_goal_id: Optional[UUID] = None
+    ) -> Goal:
+        """Create a new goal (``shared_goal_id``: backing a side of a shared goal)."""
         try:
             goal = Goal(
+                shared_goal_id=shared_goal_id,
                 user_id=user_id,
                 title=goal_data.title,
                 description=goal_data.description,
@@ -198,10 +201,11 @@ class GoalService:
     ) -> Optional[Goal]:
         """Update a goal"""
         update_data = goal_data.model_dump(exclude_unset=True)
-        # Cancelling releases the goal's cash, so it reads the goal under the
-        # same lock as a reserve or release (see _locked_goal).
-        if update_data.get("status") is not None and _resolve_enum(
-                GoalStatus, update_data["status"]) == GoalStatus.CANCELLED:
+        # Cancelling releases the goal's cash, and a new target or status
+        # re-judges completion from its progress, so these read the goal under
+        # the same lock as a reserve or release (see _locked_goal); otherwise a
+        # concurrent reserve's progress could be judged, and written, stale.
+        if {"status", "target_amount"} & update_data.keys():
             goal = await self._locked_goal(goal_id, user_id)
         else:
             goal = await self.get_goal(goal_id, user_id)
@@ -230,6 +234,9 @@ class GoalService:
         # A cancelled goal gives its cash back to Life: nothing is set aside
         # for a goal that is no longer pursued.
         if cancelling:
+            # No longer pursued, so no longer anyone's side of a shared goal; the
+            # user may link a new goal to it.
+            goal.shared_goal_id = None
             held = (await goal_money(self.session, user_id, [goal.id])).get(goal.id)
             if held and held.reserved > 0:
                 await self._record(goal, ContributionKind.RELEASE, -held.reserved, None,

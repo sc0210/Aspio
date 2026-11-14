@@ -8,6 +8,7 @@ import uuid
 from datetime import datetime
 from decimal import Decimal
 from sqlalchemy import (
+    text,
     Boolean,
     Column,
     DateTime,
@@ -114,6 +115,12 @@ class Goal(Base):
     # Financial details
     target_amount = Column(Numeric(20, 2), nullable=False)
     current_amount = Column(Numeric(20, 2), nullable=False, default=Decimal("0.00"))
+    # The shared goal (peers) this goal backs the user's side of: its value
+    # counts toward that side. One per user per shared goal; cancelling unlinks.
+    shared_goal_id = Column(
+        UUID(as_uuid=True), ForeignKey("shared_goals.id", ondelete="SET NULL"),
+        nullable=True, index=False,
+    )
     currency = Column(String(3), nullable=False, default="TWD")
 
     # Timeline
@@ -152,6 +159,12 @@ class Goal(Base):
         Index("idx_goals_user_status", "user_id", "status"),
         Index("idx_goals_user_category", "user_id", "category"),
         Index("idx_goals_target_date", "target_date"),
+        # One linked goal per partner per shared goal (cancelling unlinks).
+        Index(
+            "uq_goals_user_shared_goal", "user_id", "shared_goal_id", unique=True,
+            postgresql_where=text("shared_goal_id IS NOT NULL"),
+            sqlite_where=text("shared_goal_id IS NOT NULL"),
+        ),
     )
 
     @property

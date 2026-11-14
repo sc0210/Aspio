@@ -179,7 +179,10 @@ WITH checks(sort, object, source_file, present) AS (
         NOT EXISTS (SELECT 1 FROM goals WHERE currency <> 'TWD')),
     (38, 'column portfolio_holdings.goal_id', '2026_11_15_goal_holdings.sql',
         EXISTS (SELECT 1 FROM information_schema.columns
-                 WHERE table_name = 'portfolio_holdings' AND column_name = 'goal_id'))
+                 WHERE table_name = 'portfolio_holdings' AND column_name = 'goal_id')),
+    (39, 'column goals.shared_goal_id', '2026_11_15_goal_shared.sql',
+        EXISTS (SELECT 1 FROM information_schema.columns
+                 WHERE table_name = 'goals' AND column_name = 'shared_goal_id'))
 )
 SELECT
     CASE WHEN present THEN 'OK     ' ELSE 'MISSING' END AS status,

@@ -721,7 +721,9 @@
       "viewRecords": "查看儲蓄紀錄",
       "viewRecordsFor": "查看「{{title}}」的儲蓄紀錄",
       "you": "你",
-      "pace": "兩人每月存 {{amount}} 就能如期達成"
+      "pace": "兩人每月存 {{amount}} 就能如期達成",
+      "setAside": "預留資金",
+      "setAsideHint": "其中 {{amount}} 來自你的目標"
     },
     "combined": "合計",
     "completed": "目標達成！",
@@ -750,7 +752,8 @@
       "inviteFailed": "發送邀請失敗",
       "loadFailed": "載入儲蓄目標失敗",
       "removeFailed": "移除夥伴失敗",
-      "updateFailed": "更新目標失敗"
+      "updateFailed": "更新目標失敗",
+      "setAsideFailed": "無法開啟此目標"
     },
     "estimatedCompletion": "預計達成",
     "goalTitleLabel": "目標名稱",

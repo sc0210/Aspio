@@ -200,6 +200,11 @@ class SharedGoalOut(BaseModel):
 
     created_at: str             # ISO datetime string
 
+    # The caller's own goal backing their side (POST /peers/goals/{id}/link-goal),
+    # and the money it holds, already counted in your_amount.
+    your_goal_id: Optional[str] = None
+    your_set_aside: float = 0.0
+
 
 # ---------------------------------------------------------------------------
 # Saving record schemas

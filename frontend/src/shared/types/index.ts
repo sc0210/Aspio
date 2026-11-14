@@ -520,6 +520,10 @@ export interface SharedGoalOut {
   progress_pct: number;
   is_creator: boolean;
   created_at: string;
+  /** The caller's own goal backing their side (POST /peers/goals/{id}/link-goal),
+   *  and the money it holds, already counted in your_amount. */
+  your_goal_id?: string | null;
+  your_set_aside?: number;
 }
 
 export interface SharedGoalCreate {

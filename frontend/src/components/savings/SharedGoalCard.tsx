@@ -10,6 +10,8 @@ interface SharedGoalCardProps {
   onViewRecords: (goal: SharedGoalOut) => void;
   onDelete: (goalId: string) => void;
   onEdit?: (goal: SharedGoalOut) => void;
+  /** Reserve your own Life cash for your side (absent in demo mode). */
+  onSetAside?: (goal: SharedGoalOut) => void;
   deleting?: boolean;
 }
 
@@ -17,7 +19,7 @@ const formatCurrency = (value: number) => formatCurrencyUtil(value, 'TWD', { pre
 
 const MILESTONES = [25, 50, 75];
 
-export default function SharedGoalCard({ goal, onViewRecords, onDelete, onEdit, deleting }: SharedGoalCardProps) {
+export default function SharedGoalCard({ goal, onViewRecords, onDelete, onEdit, onSetAside, deleting }: SharedGoalCardProps) {
   const { t } = useTranslation('common');
   const isCompleted = goal.status === 'completed';
 
@@ -172,6 +174,11 @@ export default function SharedGoalCard({ goal, onViewRecords, onDelete, onEdit, 
               {totalContributed > 0 && <span className="font-normal text-gray-600 dark:text-gray-400"> · {yourSplitPct.toFixed(0)}%</span>}
             </p>
             <p className="text-sm font-bold text-gray-900 dark:text-white tabular-nums">{formatCurrency(goal.your_amount)}</p>
+            {(goal.your_set_aside ?? 0) > 0 && (
+              <p className="text-xs text-gray-600 dark:text-gray-400 tabular-nums">
+                {t('savings.card.setAsideHint', '{{amount}} of it through your own goal', { amount: formatCurrency(goal.your_set_aside ?? 0) })}
+              </p>
+            )}
           </div>
           <div className="min-w-0 text-right">
             <p className="text-xs font-medium text-prosperity-700 dark:text-prosperity-400 truncate">
@@ -196,6 +203,16 @@ export default function SharedGoalCard({ goal, onViewRecords, onDelete, onEdit, 
               />
             </div>
           </div>
+        )}
+
+        {onSetAside && goal.status !== 'cancelled' && (
+          <button
+            type="button"
+            onClick={() => onSetAside(goal)}
+            className="w-full min-h-11 rounded-lg border border-primary-200 dark:border-primary-800 px-3 py-2 text-sm font-medium text-primary-700 dark:text-primary-300 hover:bg-primary-50 dark:hover:bg-primary-900/20 transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-primary-500"
+          >
+            {t('savings.card.setAside', 'Set aside money')}
+          </button>
         )}
       </div>
     </div>

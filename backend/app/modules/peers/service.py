@@ -389,9 +389,10 @@ class PeerService:
             all_user_ids.add(conn.receiver_id)
 
         users_by_id = await self._users.get_profiles(list(all_user_ids))
+        backing = await self._backing(rows)
 
         return [
-            self._goal_to_out(goal, conn, user_id, users_by_id)
+            self._goal_to_out(goal, conn, user_id, users_by_id, backing)
             for goal, conn in rows
         ]
 
@@ -399,7 +400,8 @@ class PeerService:
         """Return a single goal (calling user must be a participant)."""
         goal, conn = await self._get_goal_and_connection(goal_id, user_id)
         users_by_id = await self._users.get_profiles([conn.requester_id, conn.receiver_id])
-        return self._goal_to_out(goal, conn, user_id, users_by_id)
+        backing = await self._backing([(goal, conn)])
+        return self._goal_to_out(goal, conn, user_id, users_by_id, backing)
 
     async def update_goal(
         self, user_id: UUID, goal_id: UUID, data: SharedGoalUpdate
@@ -423,7 +425,81 @@ class PeerService:
         await self.session.commit()
         await self._goals.refresh(goal)
         users_by_id = await self._users.get_profiles([conn.requester_id, conn.receiver_id])
-        return self._goal_to_out(goal, conn, user_id, users_by_id)
+        backing = await self._backing([(goal, conn)])
+        return self._goal_to_out(goal, conn, user_id, users_by_id, backing)
+
+    async def link_goal(self, user_id: UUID, shared_goal_id: UUID):
+        """The caller's own goal backing their side of a shared goal, made if missing.
+
+        That goal reserves the caller's Life cash and can be spent from or
+        invested like any goal (goals/reservations.py); its value counts toward
+        their side. Made with the shared goal's title and date, and half its
+        target as the caller's share, which they can edit. Looked up and made
+        under the shared goal's row lock, in one commit, so a double click
+        cannot make two.
+        """
+        from datetime import date as _date
+
+        from sqlalchemy import select
+
+        from app.modules.goals.repositories import GoalRepository
+        from app.modules.goals.schemas import GoalCreate
+        from app.modules.goals.service import GoalService
+
+        shared, _conn = await self._get_goal_and_connection(shared_goal_id, user_id)
+        if shared.status == GoalStatus.cancelled:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="Cannot set money aside for a cancelled goal",
+            )
+        await self.session.execute(
+            select(SharedGoal.id).where(SharedGoal.id == shared.id).with_for_update()
+        )
+        goals = GoalService(self.session)
+        goal_id = await GoalRepository(self.session).linked_goal_id(user_id, shared.id)
+        if goal_id is None:
+            due = shared.target_date
+            if isinstance(due, str):  # some driver paths return the DATE as text
+                due = _date.fromisoformat(due[:10])
+            created = await goals.create_goal(user_id, GoalCreate(
+                title=shared.title,
+                category="savings",
+                target_amount=(Decimal(str(shared.target_amount)) / 2).quantize(Decimal("0.01")),
+                target_date=(
+                    datetime(due.year, due.month, due.day, tzinfo=timezone.utc) if due else None
+                ),
+                description="My side of a shared goal",
+            ), shared_goal_id=shared.id)
+            goal_id = created.id
+        goal = await goals.get_goal(goal_id, user_id)
+        await goals.attach_money([goal], user_id)
+        return goal
+
+    async def _backing(self, rows) -> dict:
+        """Each partner's linked goal on these shared goals: {(shared id, user id): (goal id, value)}.
+
+        Value is the goal's money at market value (reserved + spent + legacy +
+        invested), computed per owner: the partner sees only the total.
+        """
+        from collections import defaultdict
+
+        from app.modules.goals.repositories import GoalRepository
+        from app.modules.goals.reservations import goal_money
+
+        linked = await GoalRepository(self.session).linked_to_shared([goal.id for goal, _conn in rows])
+        by_owner: dict = defaultdict(list)
+        for goal_id, owner, _shared in linked:
+            by_owner[owner].append(goal_id)
+        values: dict = {}
+        for owner, goal_ids in by_owner.items():
+            values.update({
+                gid: m.value
+                for gid, m in (await goal_money(self.session, owner, goal_ids, with_holdings=True)).items()
+            })
+        return {
+            (shared, owner): (goal_id, values.get(goal_id, Decimal("0")))
+            for goal_id, owner, shared in linked
+        }
 
     async def delete_goal(self, user_id: UUID, goal_id: UUID) -> None:
         """Delete a shared goal.  Only the creator (created_by) may do this."""
@@ -575,7 +651,10 @@ class PeerService:
         """
         goal.requester_amount = await self._records.sum_for_user(goal.id, conn.requester_id)
         goal.receiver_amount = await self._records.sum_for_user(goal.id, conn.receiver_id)
-        combined = goal.requester_amount + goal.receiver_amount
+        # Stored per-side amounts are the records; completion counts the linked
+        # goals' money too, as every read does (_live_status).
+        backed = sum((value for _gid, value in (await self._backing([(goal, conn)])).values()), Decimal("0"))
+        combined = goal.requester_amount + goal.receiver_amount + backed
         if goal.status == GoalStatus.active and combined >= goal.target_amount:
             goal.status = GoalStatus.completed
         elif goal.status == GoalStatus.completed and combined < goal.target_amount:
@@ -714,6 +793,7 @@ class PeerService:
         conn: PeerConnection,
         user_id: UUID,
         users_by_id: dict[UUID, dict],
+        backing: dict | None = None,
     ) -> SharedGoalOut:
         """Map a SharedGoal ORM object + its connection to SharedGoalOut.
 
@@ -724,11 +804,16 @@ class PeerService:
         is_requester = conn.requester_id == user_id
         peer_id = conn.receiver_id if is_requester else conn.requester_id
 
+        # Each side: its saving records (tracked) plus the money its linked
+        # goal holds (link_goal). The partner sees only the side's total.
+        backing = backing or {}
+        your_goal_id, your_set_aside = backing.get((goal.id, user_id), (None, Decimal("0")))
+        _peer_goal, peer_set_aside = backing.get((goal.id, peer_id), (None, Decimal("0")))
         your_amount = float(
-            goal.requester_amount if is_requester else goal.receiver_amount
+            (goal.requester_amount if is_requester else goal.receiver_amount) + your_set_aside
         )
         peer_amount = float(
-            goal.receiver_amount if is_requester else goal.requester_amount
+            (goal.receiver_amount if is_requester else goal.requester_amount) + peer_set_aside
         )
 
         your_profile = users_by_id.get(user_id, {})
@@ -758,7 +843,7 @@ class PeerService:
             title=goal.title,
             target_amount=target,
             target_date=target_date_str,
-            status=goal.status if isinstance(goal.status, str) else goal.status.value,
+            status=self._live_status(goal, total, target),
             your_amount=your_amount,
             peer_amount=peer_amount,
             your_name=your_profile.get("name", "Unknown"),
@@ -769,7 +854,22 @@ class PeerService:
             progress_pct=round(progress_pct, 2),
             is_creator=(goal.created_by == user_id),
             created_at=created_at_str,
+            your_goal_id=str(your_goal_id) if your_goal_id else None,
+            your_set_aside=float(your_set_aside),
         )
+
+    @staticmethod
+    def _live_status(goal: SharedGoal, total: float, target: float) -> str:
+        """Stored status, with completion read from today's total.
+
+        Linked goals move without touching the shared goal (a reservation, a
+        market move), so reaching the target is judged at read time; the
+        records-only figure stored by _recalc_totals would lag it.
+        """
+        stored = goal.status if isinstance(goal.status, str) else goal.status.value
+        if stored == GoalStatus.cancelled.value:
+            return stored
+        return GoalStatus.completed.value if target > 0 and total >= target else GoalStatus.active.value
 
     async def _get_participant_connection(
         self, connection_id: UUID, user_id: UUID
