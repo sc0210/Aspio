@@ -32,6 +32,8 @@ interface CreateHoldingRequest {
   sector?: string;
   region?: string;
   walletType?: 'portfolio' | 'emergency' | string;
+  /** Pay with this goal's reserved cash; the lot then belongs to the goal. */
+  goalId?: string;
 }
 
 export interface HoldingInput {
@@ -46,6 +48,8 @@ export interface HoldingInput {
   walletType?: 'portfolio' | 'emergency' | string;
   purchaseDate?: string; // ISO date string (YYYY-MM-DD) for transaction tracking
   notes?: string;
+  /** Pay with this goal's reserved cash; the lot then belongs to the goal. */
+  goalId?: string;
 }
 
 interface UpdateHoldingRequest extends Partial<CreateHoldingRequest> {
@@ -254,6 +258,7 @@ class PortfolioService {
       wallet_type: walletTypeValue,
       purchase_date: ('purchaseDate' in holdingData && holdingData.purchaseDate) ? holdingData.purchaseDate : undefined,
       notes: ('notes' in holdingData && holdingData.notes) ? String(holdingData.notes).trim() : undefined,
+      goal_id: holdingData.goalId || undefined,
     };
 
     try {
@@ -985,6 +990,7 @@ class PortfolioService {
       sector: holding.sector as string | undefined,
       region: holding.region as string | undefined,
       walletType: (((holding.wallet_type ?? holding.walletType) as string) || 'portfolio') as 'portfolio' | 'emergency',
+      goalId: ((holding.goalId ?? holding.goal_id) as string | null | undefined) ?? null,
       previousClose,
       dayChange,
       dayChangePercentage,

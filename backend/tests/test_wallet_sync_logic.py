@@ -86,6 +86,7 @@ def _holding(
     h.currency     = currency
     h.notes        = notes
     h.purchase_date = purchase_date or datetime.now(timezone.utc)
+    h.goal_id      = None  # a bare MagicMock attribute would read as a goal
     return h
 
 

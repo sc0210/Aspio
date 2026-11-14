@@ -212,6 +212,8 @@ async def add_holding(
 
         return holding
 
+    except (HTTPException, AspiroException):
+        raise  # a refused goal-funded buy is the user's 422, not a 500
     except ValueError as e:
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(e))
     except Exception as e:
@@ -541,6 +543,22 @@ async def update_holding(
 
                         linked = legs[0]
                         previous_amount = linked.amount
+                        if holding.goal_id is not None:
+                            # A goal's lot costs the goal's reserve: a larger lot
+                            # must still fit it, the leg's current cost counting
+                            # as room (position lock held, then the goals').
+                            from app.modules.goals.reservations import assert_goal_can_cover
+
+                            if display_currency != "TWD":
+                                raise ValueError(
+                                    f"No {holding.currency}→TWD rate to check this "
+                                    "against the goal's reserve"
+                                )
+                            await assert_goal_can_cover(
+                                session, current_user.id, holding.goal_id, twd_amount,
+                                already=Decimal(str(previous_amount)),
+                                otherwise="edit it with a smaller amount",
+                            )
                         linked.amount = twd_amount
                         linked.currency = display_currency
                         linked.description = (
@@ -664,7 +682,8 @@ async def update_holding(
 
     except ValueError as e:
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(e))
-    except HTTPException:
+    except (HTTPException, AspiroException):
+        await session.rollback()
         raise
     except Exception as e:
         logger.error(f"Failed to update holding: {str(e)}", exc_info=True)
@@ -1131,6 +1150,8 @@ async def sell_holding(
             holding.symbol,
             current_user.id,
             wallet_type=holding.wallet_type,
+            # A goal's lots sell on their own, and the proceeds go back to it.
+            goal_id=holding.goal_id,
         )
         available = total_available(lots)
         if available < quantity:
@@ -1220,7 +1241,23 @@ async def sell_holding(
             currency=holding.currency,
             symbol=holding.symbol,
             transaction_date=transaction_date or now,
+            goal_id=holding.goal_id,
         )
+        if holding.goal_id is not None:
+            # The proceeds return to the goal's reserve; its progress moves by
+            # what the sale gained or lost, so it keeps matching the money the
+            # goal has (goals/reservations.py). Position lock held, then goals'.
+            from app.modules.goals.service import GoalService
+
+            gain_twd, gain_currency = await portfolio_service._to_twd(
+                realized_gain_loss, holding.currency or "TWD",
+                on_day=business_day_of(transaction_date or now),
+            )
+            if gain_currency == "TWD" and gain_twd != 0:
+                await GoalService(session).record_sale_gain(
+                    holding.goal_id, current_user.id, gain_twd, transaction_date or now,
+                    f"Sold {quantity} {holding.symbol}",
+                )
 
         # Commit all changes
         await session.commit()

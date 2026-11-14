@@ -71,7 +71,7 @@ function HoldingRowBase({
   onOpen,
   onSellHolding,
 }: HoldingRowProps) {
-  const { t } = useTranslation(['portfolio', 'common']);
+  const { t } = useTranslation(['portfolio', 'common', 'goals']);
   const isCash = isCashHolding(holding);
   
   const isGain = (holding.gainLoss || 0) >= 0;
@@ -117,6 +117,12 @@ function HoldingRowBase({
             <div className="text-sm font-medium text-gray-900 dark:text-gray-100">
               {holding.symbol}
             </div>
+            {/* Bought with a goal's money */}
+            {holding.goalId && (
+                <span className="inline-flex items-center px-1.5 py-0.5 rounded text-xs font-medium bg-amber-100 dark:bg-amber-900/30 text-amber-800 dark:text-amber-300" title={t('goals:invest.goalLotHint')}>
+                  🎯 {t('goals:invest.goalLot')}
+                </span>
+              )}
             {/* Combined Market + Currency Badge */}
             {marketBadge ? (
               <span className={cn(

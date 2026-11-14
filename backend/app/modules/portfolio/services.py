@@ -209,6 +209,8 @@ class PortfolioService:
             )
             portfolio = await self.create_portfolio(portfolio_create, user_id)
 
+        goal_id = getattr(holding_data, "goal_id", None)
+
         # Create holding data
         holding_create_data = {
             "portfolio_id": portfolio.id,
@@ -241,6 +243,7 @@ class PortfolioService:
                 else None
             ),
             "item_metadata": {},
+            "goal_id": goal_id,
         }
 
         # Create the holding directly, with aggregation control
@@ -250,6 +253,12 @@ class PortfolioService:
             holding_data=holding_create_data,
             aggregate=aggregate,  # ⚡ CSV FIX: Don't aggregate for CSV imports
         )
+
+        # Bought with a goal's reserved cash: the goal must hold it. After the
+        # position lock the lot write took, the order edit and sell use too
+        # (position, then goals); a refusal rolls the lot back with the request.
+        if goal_id is not None:
+            await self._check_goal_can_pay(user_id, goal_id, holding_data)
 
         # Create a buy transaction record for audit trail
         transaction_data = {
@@ -294,6 +303,7 @@ class PortfolioService:
             amount=sync_amount,
             transaction_date=holding_data.purchase_date or business_now(),
             holding_id=holding.id,
+            goal_id=goal_id,
         )
 
         # Price the new lot from the symbol's shared quote when there is one: it is
@@ -464,6 +474,23 @@ class PortfolioService:
         holding_responses = [HoldingResponse.model_validate(holding) for holding in holdings]
         return holding_responses, total_count
 
+    async def _check_goal_can_pay(self, user_id: UUID, goal_id: UUID, holding_data) -> None:
+        """Refuse a goal-funded buy the goal's reserved cash cannot cover."""
+        from app.modules.goals.reservations import assert_goal_can_cover
+
+        quantity = Decimal(str(holding_data.quantity))
+        cost = quantity if (holding_data.type or "").lower() == "cash" else (
+            quantity * Decimal(str(holding_data.average_cost)))
+        day = business_day_of(holding_data.purchase_date or business_now())
+        need, currency = await self._to_twd(cost, holding_data.currency or "TWD", on_day=day)
+        if currency != "TWD":
+            raise ValueError(
+                f"No {holding_data.currency}→TWD rate to check this against the goal's reserve"
+            )
+        await assert_goal_can_cover(
+            self.session, user_id, goal_id, need, otherwise="buy without the goal",
+        )
+
     async def _sync_wallet_transaction(
         self,
         user_id: UUID,
@@ -471,9 +498,15 @@ class PortfolioService:
         amount: Decimal,
         transaction_date: datetime,
         holding_id: Optional[UUID] = None,
+        goal_id: Optional[UUID] = None,
     ) -> None:
         """
         🔄 Bridge portfolio actions to the Transactions ledger.
+
+        Bought with a goal's money (goal_id): always a Life Wallet expense,
+        whatever the asset or wallet — the goal's reserve is Life cash, so a
+        fixed deposit (a cash or lending lot) paid from it must leave Life too,
+        or the goal's money would be counted twice. The leg carries goal_id.
 
         CASH holdings in emergency wallet:
           deposit  → EXPENSE in Life Wallet   (cash leaving daily funds)
@@ -491,18 +524,21 @@ class PortfolioService:
         is_cash = asset_type == "cash"
         is_investable = asset_type in ("stock", "etf", "crypto", "bond")
 
+        if goal_id is not None:
+            # Paid with a goal's reserve: always a Life expense, whatever the
+            # asset or wallet, so none of the skips below apply. Cash keeps the
+            # cash path (amount = quantity); everything else is a purchase.
+            is_investable = not is_cash
         # Cash holdings only sync from emergency wallet
-        if is_cash and wallet_type == "portfolio":
+        elif is_cash and wallet_type == "portfolio":
             logger.debug(f"Skipping wallet sync for cash in portfolio: {holding_data.symbol}")
             return
-
         # Non-cash holdings only sync when placed in portfolio
-        if is_investable and wallet_type != "portfolio":
+        elif is_investable and wallet_type != "portfolio":
             logger.debug(f"Skipping wallet sync for {asset_type} in {wallet_type}: {holding_data.symbol}")
             return
-
         # Skip unrecognised asset types
-        if not is_cash and not is_investable:
+        elif not is_cash and not is_investable:
             logger.debug(f"Skipping wallet sync for unknown asset type: {asset_type}")
             return
 
@@ -560,6 +596,8 @@ class PortfolioService:
                     # Links this ledger entry to the holding it paid for, so a later
                     # edit or delete of that holding can find and correct it.
                     "holding_id": holding_id,
+                    # Paid from a goal's reserve (goals/reservations.py).
+                    "goal_id": goal_id,
                 }
 
             else:
@@ -611,6 +649,8 @@ class PortfolioService:
                     # Links this ledger entry to the holding it paid for, so a later
                     # edit or delete of that holding can find and correct it.
                     "holding_id": holding_id,
+                    # Paid from a goal's reserve (goals/reservations.py).
+                    "goal_id": goal_id,
                 }
 
             transaction = await transaction_repo.create_flush(transaction_data, str(user_id))
@@ -700,8 +740,11 @@ class PortfolioService:
         currency: str,
         symbol: str,
         transaction_date: datetime,
+        goal_id: Optional[UUID] = None,
     ) -> None:
         """Return asset-sale proceeds to the Life Wallet as INCOME.
+
+        Proceeds of a goal's lots (goal_id) return to that goal's reserve.
 
         The Portfolio wallet holds assets only — never cash. This mirrors the
         Life-Wallet EXPENSE a buy creates (``_sync_wallet_transaction``): a buy
@@ -751,6 +794,7 @@ class PortfolioService:
                 "notes": f"Net proceeds from selling {symbol}",
                 "transaction_date": business_day_of(transaction_date),
                 "payment_method": "bank_transfer",
+                "goal_id": goal_id,
             }
             transaction = await transaction_repo.create_flush(transaction_data, str(user_id))
             logger.info(

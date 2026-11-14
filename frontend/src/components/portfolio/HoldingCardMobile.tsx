@@ -54,7 +54,7 @@ function HoldingCardMobileBase({
   onSelect,
   onToggleSelect,
 }: HoldingCardMobileProps) {
-  const { t } = useTranslation(['common', 'portfolio']);
+  const { t } = useTranslation(['common', 'portfolio', 'goals']);
   const isCash = isCashHolding(holding);
   const marketBadge = getMarketBadge(holding.market, holding.type, holding.currency);
   const walletBadge = getWalletTypeBadge(holding.walletType, t);
@@ -117,6 +117,12 @@ function HoldingCardMobileBase({
               {walletBadge && (
                 <span className="text-sm" title={`${walletBadge.label}錢包`}>
                   {walletBadge.icon}
+                </span>
+              )}
+{/* Bought with a goal's money */}
+              {holding.goalId && (
+                <span className="inline-flex items-center px-1.5 py-0.5 rounded text-xs font-medium bg-amber-100 dark:bg-amber-900/30 text-amber-800 dark:text-amber-300" title={t('goals:invest.goalLotHint')}>
+                  🎯 {t('goals:invest.goalLot')}
                 </span>
               )}
               {/* Lot Count - only if multiple */}

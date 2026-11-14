@@ -184,6 +184,11 @@ class GoalResponse(GoalBase):
     reserved_amount: Decimal = Field(Decimal("0"), serialization_alias="reservedAmount")
     spent_amount: Decimal = Field(Decimal("0"), serialization_alias="spentAmount")
     legacy_amount: Decimal = Field(Decimal("0"), serialization_alias="legacyAmount")
+    # Market value of the lots the goal's money bought, the part of it that
+    # moves with a market, and progress at market value (reservations.py).
+    invested_amount: Decimal = Field(Decimal("0"), serialization_alias="investedAmount")
+    at_risk_amount: Decimal = Field(Decimal("0"), serialization_alias="atRiskAmount")
+    value_amount: Optional[Decimal] = Field(None, serialization_alias="valueAmount")
     status: str
     started_at: datetime = Field(serialization_alias="startedAt")
     completed_at: Optional[datetime] = Field(None, serialization_alias="completedAt")

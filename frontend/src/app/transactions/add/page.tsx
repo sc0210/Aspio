@@ -29,6 +29,7 @@ import {
   ROW, ROW_LIST, ROW_LABEL, ROW_SEGMENTED, ROW_SEGMENT, payableGoals,
 } from '@/components/transactions/TransactionFormFields';
 import { useGoals } from '@/hooks/useGoals';
+import { GoalFundingPicker } from '@/components/goals/GoalFundingPicker';
 
 // useSearchParams needs a Suspense boundary on a statically rendered route.
 export default function AddTransactionPage() {
@@ -49,7 +50,7 @@ function AddTransactionForm() {
   const queryClient = useQueryClient();
   const { isDemo } = useModeAwareUI();
   const { addDemoTransaction } = useDemo();
-  const { t } = useTranslation(['transactions']);
+  const { t } = useTranslation(['transactions', 'goals']);
   const { data: currentUser } = useCurrentUser();
 
   const [formData, setFormData] = useState({
@@ -79,6 +80,8 @@ function AddTransactionForm() {
   // an explicit sell price after switching to Sell, and realized P/L with it.
   const [investSellPrice, setInvestSellPrice] = useState('');
   const [investCurrency, setInvestCurrency] = useState('TWD');
+  // A buy paid with a goal's reserved cash ('' = the user's own).
+  const [investGoalId, setInvestGoalId]     = useState('');
   // Sell side: pick a holding (the backend draws down all lots of its symbol,
   // oldest-first/FIFO) and a quantity; price is optional (defaults to market).
   const [investHoldingId, setInvestHoldingId] = useState('');
@@ -317,6 +320,7 @@ function AddTransactionForm() {
             currency: investCurrency,
             walletType: 'portfolio',
             purchaseDate: purchaseDateISO,
+            goalId: investGoalId || undefined,
           }, { aggregate: true });
 
           if (holdingResponse.success) {
@@ -628,6 +632,13 @@ function AddTransactionForm() {
                         </div>
                       </div>
 
+                      <GoalFundingPicker
+                        id="tx-invest-goal"
+                        goals={payableGoals(allGoals, investGoalId)}
+                        value={investGoalId}
+                        onChange={setInvestGoalId}
+                      />
+
                       <div className={ROW_LIST}>
                         <DateRow id="tx-invest-date" value={formData.date} onChange={(day) => handleInputChange('date', day)} />
                       </div>
@@ -691,6 +702,7 @@ function AddTransactionForm() {
                                   {investHoldingId === h.id && <CheckIcon className="w-4 h-4 shrink-0" aria-hidden="true" />}
                                   <span className="font-mono font-bold">{h.symbol}</span>
                                   <span className="font-normal opacity-70">{h.quantity} {t('transactions:form.invest.units', 'units')}</span>
+                                  {h.goalId && <span className="font-normal opacity-70">· 🎯 {t('goals:invest.goalLot')}</span>}
                                 </button>
                               ))}
                             </div>

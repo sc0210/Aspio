@@ -6,6 +6,7 @@ import { formatCashAmount } from '@/utils/formatters';
 import { usePrivacy } from '@/contexts/PrivacyContext';
 import { GOAL_CATEGORIES } from '@/utils/constants';
 import { Card } from '@/components/ui/Card';
+import { goalHorizonRisk, goalProgressAmount, monthsUntil } from '@/lib/goals/goalMoney';
 
 interface AssetGoalCardProps {
     title: string;
@@ -22,6 +23,11 @@ interface AssetGoalCardProps {
     reservedAmount?: number;
     spentAmount?: number;
     legacyAmount?: number;
+    /** Holdings bought with the goal's money, at market value (TWD); the part
+     *  that swings with a market; and progress counting them at that value. */
+    investedAmount?: number;
+    atRiskAmount?: number;
+    valueAmount?: number | null;
     onContribute?: () => void;
     onEdit?: () => void;
     onDelete?: () => void;
@@ -42,6 +48,9 @@ export function AssetGoalCard({
     reservedAmount,
     spentAmount,
     legacyAmount,
+    investedAmount,
+    atRiskAmount,
+    valueAmount,
     onContribute,
     onEdit,
     onDelete,
@@ -52,14 +61,20 @@ export function AssetGoalCard({
     const [confirmingDelete, setConfirmingDelete] = useState(false);
 
     const target = Number(targetAmount);
-    const current = Number(currentAmount);
-    const progress = target > 0 ? (current / target) * 100 : 0;
-    const remaining = Math.max(0, target - current);
-    const isCompleted = current >= target;
     // Decimals arrive as strings; a missing one is 0.
     const reserved = Number(reservedAmount) || 0;
     const spent = Number(spentAmount) || 0;
     const legacy = Number(legacyAmount) || 0;
+    const invested = Number(investedAmount) || 0;
+    const atRisk = Number(atRiskAmount) || 0;
+    const money = { currentAmount, targetAmount, investedAmount, atRiskAmount, valueAmount, targetDate };
+    // At market value once some of the goal's money is invested.
+    const current = goalProgressAmount(money);
+    const progress = target > 0 ? (current / target) * 100 : 0;
+    const remaining = Math.max(0, target - current);
+    const isCompleted = Number(currentAmount) >= target;
+    const monthsLeft = monthsUntil(targetDate);
+    const horizonWarning = goalHorizonRisk(money);
     // A finished goal can still hold cash to release, so it keeps the button.
     const canMoveCash = !isCompleted || reserved > 0;
 
@@ -278,7 +293,7 @@ export function AssetGoalCard({
             </div>
 
             {/* Where the progress is */}
-            {(reserved !== 0 || spent !== 0 || legacy !== 0) && (
+            {(reserved !== 0 || spent !== 0 || legacy !== 0 || invested !== 0) && (
                 <dl className="flex flex-wrap gap-x-3 gap-y-1 mb-3 text-xs text-gray-600 dark:text-gray-400">
                     <div className="flex gap-1">
                         <dt>{t('goals:reserve.reservedHere')}</dt>
@@ -286,6 +301,14 @@ export function AssetGoalCard({
                             {isValueVisible ? formatCashAmount(reserved, currency) : '•••••'}
                         </dd>
                     </div>
+                    {invested !== 0 && (
+                        <div className="flex gap-1">
+                            <dt>{t('goals:invest.invested')}</dt>
+                            <dd className="font-medium text-gray-900 dark:text-white tabular-nums">
+                                {isValueVisible ? formatCashAmount(invested, currency) : '•••••'}
+                            </dd>
+                        </div>
+                    )}
                     {spent !== 0 && (
                         <div className="flex gap-1">
                             <dt>{t('goals:reserve.spent')}</dt>
@@ -306,6 +329,14 @@ export function AssetGoalCard({
                         </div>
                     )}
                 </dl>
+            )}
+            {horizonWarning && (
+                <p role="note" className="mb-3 rounded-lg bg-amber-50 dark:bg-amber-900/20 px-3 py-2 text-xs text-amber-800 dark:text-amber-300">
+                    {t('goals:invest.horizonWarning', {
+                        amount: isValueVisible ? formatCashAmount(atRisk, currency) : '•••••',
+                        months: Math.max(0, Math.round(monthsLeft ?? 0)),
+                    })}
+                </p>
             )}
 
             {/* Date + Monthly Needed */}

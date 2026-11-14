@@ -307,5 +307,16 @@
     "initialHint": "從生活錢包預留。目前可用 {{amount}}。",
     "quickAriaReserve": "將金額設為尚差金額的 {{pct}}%",
     "quickAriaRelease": "將金額設為已預留金額的 {{pct}}%"
+  },
+  "invest": {
+    "fundFromGoal": "使用目標資金支付",
+    "fundNone": "自己的錢",
+    "fundHint": "最多使用此目標預留的 {{amount}}。生活錢包的可用金額不變，賣出後資金會回到此目標。",
+    "fundNoneHint": "從生活錢包的可用金額支付。",
+    "invested": "已投資（市值）",
+    "horizonWarning": "此目標有 {{amount}} 投入股票、基金或加密貨幣，且將在 {{months}} 個月後到期。3 年內要用的錢放在定存較安全：市場下跌可能來不及回升。",
+    "horizonShort": "3 年內到期，仍有資金投入股票、基金或加密貨幣。",
+    "goalLot": "目標",
+    "goalLotHint": "以目標預留的資金買入；賣出後資金會回到該目標。"
   }
 }

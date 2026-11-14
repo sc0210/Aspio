@@ -88,9 +88,11 @@ function calculateLotLevelXirr(lots: PortfolioHolding[], totalValue: number): nu
 export function aggregateHoldingsBySymbol(holdings: PortfolioHolding[]): PortfolioHolding[] {
   const symbolMap = new Map<string, PortfolioHolding[]>();
 
-  // Group holdings by symbol AND walletType (important for cash holdings)
+  // Group holdings by symbol AND walletType (important for cash holdings), and
+  // by goal: a goal's lots are the goal's money and sell on their own (the
+  // backend sells only lots of the chosen lot's goal), so they are their own row.
   holdings.forEach(holding => {
-    const key = `${holding.symbol}-${holding.walletType || 'portfolio'}`;
+    const key = `${holding.symbol}-${holding.walletType || 'portfolio'}${holding.goalId ? `-goal-${holding.goalId}` : ''}`;
     const lots = symbolMap.get(key) || [];
     lots.push(holding);
     symbolMap.set(key, lots);

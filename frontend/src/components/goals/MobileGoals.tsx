@@ -1,6 +1,7 @@
 'use client';
 
 import { useMemo } from 'react';
+import { goalHorizonRisk, goalProgressAmount } from '@/lib/goals/goalMoney';
 import { useRouter } from 'next/navigation';
 import { useTranslation } from 'react-i18next';
 import { PlusIcon } from '@heroicons/react/24/outline';
@@ -27,7 +28,7 @@ function pct(g: Goal) {
     // preferring it would discard the portfolio override applied upstream and put
     // the ring back at 0%.
     const target = Number(g.targetAmount) || 0;
-    const current = Number(g.currentAmount) || 0;
+    const current = goalProgressAmount(g);
     if (target > 0) return Math.min(100, Math.max(0, (current / target) * 100));
     if (typeof g.progressPercentage === 'number') return Math.min(100, Math.max(0, g.progressPercentage));
     return 0;
@@ -124,9 +125,14 @@ export function MobileGoals() {
                                         </div>
                                         <p className="mt-1 text-[30px] leading-none font-extrabold tracking-tight tabular-nums text-gray-900 dark:text-white">{Math.round(p)}%</p>
                                         <p className="mt-1.5 text-[12.5px] font-semibold text-gray-500 dark:text-gray-400 tabular-nums">
-                                            {isValueVisible ? formatTWD(g.currentAmount || 0) : hidden} / {isValueVisible ? formatTWDCompact(g.targetAmount || 0) : '•••'}
+                                            {isValueVisible ? formatTWD(goalProgressAmount(g)) : hidden} / {isValueVisible ? formatTWDCompact(g.targetAmount || 0) : '•••'}
                                         </p>
                                         {eta && <p className="mt-0.5 text-xs font-medium text-gray-500 dark:text-gray-400">🗓 {eta}</p>}
+                                        {goalHorizonRisk(g) && (
+                                            <p role="note" className="mt-1.5 text-xs font-medium text-amber-700 dark:text-amber-400">
+                                                {t('goals:invest.horizonShort')}
+                                            </p>
+                                        )}
                                     </div>
                                 </section>
                             );
@@ -146,7 +152,7 @@ export function MobileGoals() {
                                                 <div className="min-w-0 flex-1">
                                                     <p className="text-sm font-bold text-gray-900 dark:text-white truncate">{g.title}</p>
                                                     <p className="text-xs font-medium text-gray-500 dark:text-gray-400 tabular-nums">
-                                                        {isValueVisible ? formatTWDCompact(g.currentAmount || 0) : '•••'} / {isValueVisible ? formatTWDCompact(g.targetAmount || 0) : '•••'}
+                                                        {isValueVisible ? formatTWDCompact(goalProgressAmount(g)) : '•••'} / {isValueVisible ? formatTWDCompact(g.targetAmount || 0) : '•••'}
                                                     </p>
                                                 </div>
                                                 <span className="text-base font-extrabold tabular-nums text-prosperity-700 dark:text-prosperity-400 flex-shrink-0">{Math.round(p)}%</span>
@@ -154,6 +160,11 @@ export function MobileGoals() {
                                             <div className="mt-3 h-2 rounded-full bg-gray-100 dark:bg-gray-700 overflow-hidden">
                                                 <div className="h-full rounded-full transition-all" style={{ width: `${p}%`, background: RING }} />
                                             </div>
+                                            {goalHorizonRisk(g) && (
+                                                <p role="note" className="mt-2 text-xs font-medium text-amber-700 dark:text-amber-400">
+                                                    {t('goals:invest.horizonShort')}
+                                                </p>
+                                            )}
                                         </Card>
                                     );
                                 })}
