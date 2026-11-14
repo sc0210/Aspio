@@ -224,6 +224,13 @@ class PortfolioHolding(Base):
     purchase_date = Column(DateTime(timezone=True), nullable=False)
     notes = Column(Text)
 
+    # The goal whose reserved Life cash paid for this lot (goals/reservations.py).
+    # Its buy leg and sale proceeds carry the same goal_id; a goal lot never
+    # merges with, or sells as part of, a lot that is not the goal's.
+    goal_id = Column(
+        UUID(as_uuid=True), ForeignKey("goals.id", ondelete="SET NULL"), nullable=True, index=True
+    )
+
     # Metadata for additional data (e.g., regional investment specifics)
     item_metadata = Column(JSON, default=dict, nullable=False)
 

@@ -355,8 +355,13 @@ class HoldingRepository:
         symbol: str,
         user_id: UUID,
         wallet_type: Optional[Any] = None,
+        goal_id: Any = ...,
     ) -> List[PortfolioHolding]:
         """Active lots for a symbol, oldest purchase first (FIFO order).
+
+        ``goal_id`` (None included) scopes the sale to lots of that goal, or to
+        lots of no goal: selling the user's own shares must not draw down shares
+        a goal's money bought, nor credit the goal with them.
 
         Used by the sell flow to draw down lots oldest-first. Optionally scoped
         to a single wallet so positions held under different wallets are not
@@ -371,6 +376,11 @@ class HoldingRepository:
         ]
         if wallet_type is not None:
             conditions.append(PortfolioHolding.wallet_type == wallet_type)
+        if goal_id is not ...:
+            conditions.append(
+                PortfolioHolding.goal_id.is_(None) if goal_id is None
+                else PortfolioHolding.goal_id == goal_id
+            )
 
         stmt = (
             select(PortfolioHolding)
@@ -763,6 +773,9 @@ class HoldingRepository:
         return (
             norm(lot.currency) == norm(holding_data.get("currency") or lot.currency)
             and norm(lot.wallet_type) == norm(holding_data.get("wallet_type") or lot.wallet_type)
+            # A goal's lot holds that goal's money: it never merges with the
+            # user's own lot, or another goal's.
+            and str(lot.goal_id or "") == str(holding_data.get("goal_id") or "")
         )
 
     async def delete_holding(self, holding_id: UUID, user_id: UUID) -> bool:

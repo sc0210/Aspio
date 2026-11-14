@@ -180,6 +180,11 @@ class HoldingCreate(BaseHoldingSchema):
     notes: Optional[str] = Field(
         None, max_length=1000, description="Notes for this holding/lot"
     )
+    goal_id: Optional[UUID4] = Field(
+        None,
+        description="Pay with this goal's reserved Life cash (goals/reservations.py)",
+        validation_alias=AliasChoices("goal_id", "goalId"),
+    )
 
     model_config = ConfigDict(populate_by_name=True)
 
@@ -383,6 +388,9 @@ class HoldingResponse(BaseModel):
     annual_dividend: Optional[Decimal]
     purchase_date: Optional[datetime] = None
     notes: Optional[str] = None
+    goal_id: Optional[UUID4] = Field(
+        None, description="The goal whose money paid for this lot", serialization_alias="goalId"
+    )
     is_active: bool
     last_price_update_at: Optional[datetime]
     previous_close: Optional[Decimal] = Field(

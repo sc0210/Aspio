@@ -24,7 +24,7 @@ from .models import (
     GoalPriority,
 )
 from .repositories import GoalRepository
-from .reservations import LifeCash, goal_money, life_cash, lock_user_goals
+from .reservations import GoalMoney, LifeCash, goal_money, life_cash, lock_user_goals
 from .schemas import (
     GoalCreate,
     GoalUpdate,
@@ -141,12 +141,15 @@ class GoalService:
 
     async def attach_money(self, goals: List[Goal], user_id: UUID) -> List[Goal]:
         """Set reserved/spent/legacy (TWD) on each goal for GoalResponse."""
-        money = await goal_money(self.session, user_id, [g.id for g in goals])
+        money = await goal_money(self.session, user_id, [g.id for g in goals], with_holdings=True)
         for goal in goals:
-            m = money.get(goal.id)
-            goal.reserved_amount = m.reserved if m else Decimal("0")
-            goal.spent_amount = m.spent if m else Decimal("0")
-            goal.legacy_amount = m.legacy if m else Decimal("0")
+            m = money.get(goal.id) or GoalMoney()
+            goal.reserved_amount = m.reserved
+            goal.spent_amount = m.spent
+            goal.legacy_amount = m.legacy
+            goal.invested_amount = m.invested
+            goal.at_risk_amount = m.at_risk
+            goal.value_amount = m.value
         return goals
 
     async def life_cash(self, user_id: UUID) -> LifeCash:
@@ -320,6 +323,18 @@ class GoalService:
             raise
         await self.repository.refresh(contribution)
         return contribution
+
+    async def record_sale_gain(
+        self, goal_id: UUID, user_id: UUID, amount: Decimal, when: datetime, notes: str
+    ) -> None:
+        """Move a goal's progress by a sale's realized gain or loss (caller commits).
+
+        The proceeds already returned to the reserve; this keeps progress (Σ
+        rows) equal to the money the goal has, so releasing it all ends at 0.
+        """
+        goal = await self._locked_goal(goal_id, user_id)
+        if goal is not None:
+            await self._record(goal, ContributionKind.GAIN, amount.quantize(Decimal("0.01")), when, notes)
 
     async def _locked_goal(self, goal_id: UUID, user_id: UUID) -> Optional[Goal]:
         """The goal, read after its owner's goals are locked.

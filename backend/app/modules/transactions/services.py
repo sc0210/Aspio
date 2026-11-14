@@ -709,7 +709,27 @@ class TransactionService:
                         not self._same_value(getattr(stored, f), data[f])
                         for f in goal_fields - {"goal_id"}
                     )
-                    if next_goal and (goal_changed or values_changed):
+                    if goal_changed and stored.holding_id is not None:
+                        # Which goal paid for a holding follows the holding.
+                        raise BusinessLogicException(
+                            "This entry is the cash side of a portfolio holding; "
+                            "the goal that paid for it is the holding's."
+                        )
+                    # A sale's proceeds returning to a goal: income in Life before
+                    # and after the edit. Anything else linked to a goal must pass
+                    # the expense rule (an expense turned income would credit the
+                    # goal twice; proceeds moved out of Life would be reserved
+                    # cash that is not in Life).
+                    def _val(v):
+                        return str(getattr(v, "value", v) or "").lower()
+
+                    is_proceeds = (
+                        not goal_changed
+                        and _val(stored.type) == TransactionType.INCOME.value
+                        and _val(data.get("type", stored.type)) == TransactionType.INCOME.value
+                        and _val(data.get("wallet_type", stored.wallet_type)) == TransactionWalletType.LIFE.value
+                    )
+                    if next_goal and (goal_changed or values_changed) and not is_proceeds:
                         already = Decimal("0")
                         if stored.goal_id and str(stored.goal_id) == str(next_goal):
                             already = await self._goal_spend_twd(
@@ -908,15 +928,8 @@ class TransactionService:
         only a Life expense can spend it, and only up to what the goal holds:
         spending more would quietly take the excess from another goal's money.
         """
-        from app.modules.goals.repositories import GoalRepository
-        from app.modules.goals.reservations import goal_money, lock_user_goals
+        from app.modules.goals.reservations import assert_goal_can_cover
 
-        db = self.transaction_repo.db
-        uid = uuid.UUID(str(user_id))
-        gid = self._goal_uuid(goal_id)
-        goal = await GoalRepository(db).get_goal_by_id(gid, uid)
-        if goal is None:
-            raise ValidationException("Goal not found", details={"goal_id": str(gid)})
         if getattr(type_, "value", type_) != TransactionType.EXPENSE.value:
             raise ValidationException("Only an expense can be paid from a goal")
         wallet = getattr(wallet_type, "value", wallet_type) or TransactionWalletType.LIFE.value
@@ -928,17 +941,11 @@ class TransactionService:
             raise ValidationException(
                 "A transfer or an investment purchase cannot be paid from a goal"
             )
-
-        await lock_user_goals(db, uid)
-        held = (await goal_money(db, uid, [gid])).get(gid)
-        room = (held.reserved if held else Decimal("0")) + already_spent
-        need = await self._goal_spend_twd(type_, amount, currency)
-        if need > room:
-            raise ValidationException(
-                f"Only NT${max(room, Decimal('0')):,.0f} is reserved for {goal.title}. "
-                "Reserve more on Goals first, or pay without the goal.",
-                details={"reserved": str(room), "amount": str(need)},
-            )
+        await assert_goal_can_cover(
+            self.transaction_repo.db, user_id, self._goal_uuid(goal_id),
+            await self._goal_spend_twd(type_, amount, currency),
+            already=already_spent, otherwise="pay without the goal",
+        )
 
     async def _get_loan(self, loan_id: str, user_id: str):
         """The loan, locked until this request commits (every caller moves its balance)."""

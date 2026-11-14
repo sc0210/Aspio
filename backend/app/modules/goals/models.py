@@ -70,6 +70,9 @@ class ContributionKind(str, enum.Enum):
     RESERVE = "reserve"
     RELEASE = "release"
     LEGACY = "legacy"
+    # The realized gain (+) or loss (−) of a sale of the goal's lots: progress
+    # only, since the proceeds returning to the reserve already hold the cash.
+    GAIN = "gain"
 
 
 # Backwards-compatible alias — tests and older code that import GoalType map to GoalCategory
