@@ -473,3 +473,15 @@ async def test_progress_is_the_rows_even_if_the_stored_figure_drifted(async_sess
     refreshed = await goals.get_goal(goal, funded)
     await async_session.refresh(refreshed)
     assert refreshed.current_amount == D("1500")
+
+
+@pytest.mark.asyncio
+async def test_progress_counts_the_new_row_when_the_session_does_not_autoflush(async_session, goals, funded):
+    # The app's sessions are autoflush=False (core/database.py); the test
+    # session's default hid a progress of 0 after a reservation.
+    async_session.sync_session.autoflush = False
+    goal = await _goal(goals, funded, target="100000")
+    await _reserve(goals, funded, goal, "2500")
+    refreshed = await goals.get_goal(goal, funded)
+    await async_session.refresh(refreshed)
+    assert refreshed.current_amount == D("2500")
