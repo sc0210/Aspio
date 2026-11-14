@@ -100,13 +100,17 @@ class TestDemoCatalogues:
 
 
 class _FakeQuotes:
-    def __init__(self, price):
+    def __init__(self, price, us_exchange="NASDAQ"):
         self.price = price
+        self.us_exchange = us_exchange
         self.calls = []
 
     async def get_current_price(self, symbol, market):
         self.calls.append((symbol, market))
         return self.price
+
+    async def get_us_exchange(self, symbol):
+        return self.us_exchange
 
 
 class TestSymbolQuote:
@@ -115,8 +119,10 @@ class TestSymbolQuote:
         [
             ("2330.TW", "TW", "2330", "TWSE"),
             ("0050", "TW", "0050", "TWSE"),
-            ("BTC-USD", "CRYPTO", "BTC-USD", "Crypto"),
-            ("AAPL", "US", "AAPL", "NASDAQ/NYSE"),
+            ("BTC-USD", "CRYPTO", "BTC-USD", "CRYPTO"),
+            # A real listing the add form offers. "NASDAQ/NYSE" matched none, so
+            # the field went blank and a US stock could not be saved.
+            ("AAPL", "US", "AAPL", "NASDAQ"),
         ],
     )
     async def test_detects_market_from_symbol(self, client, monkeypatch, symbol, market, asked, exchange):
@@ -131,6 +137,12 @@ class TestSymbolQuote:
         assert data["exchange"] == exchange
         assert data["current_price"] == 12.5
         assert data["status"] == "success"
+
+    async def test_an_unknown_us_listing_leaves_the_exchange_to_the_user(self, client, monkeypatch):
+        monkeypatch.setattr(market_data_service, "get_market_data_service", lambda: _FakeQuotes(Decimal("1"), None))
+        monkeypatch.setattr(price_update_service.MarketHoursManager, "is_market_open", classmethod(lambda cls, m: False))
+        data = client.get(f"{BASE}/symbol/quote/ZZZZ", params={"market": "US"}).json()["data"]
+        assert data["exchange"] is None and data["currency"] == "USD"
 
     async def test_no_price_is_reported_not_raised(self, client, monkeypatch):
         monkeypatch.setattr(market_data_service, "get_market_data_service", lambda: _FakeQuotes(None))
@@ -216,3 +228,26 @@ class TestRefreshPrices:
     async def test_sync_failure_is_500(self, authenticated_client, monkeypatch):
         monkeypatch.setattr(market_data, "get_price_update_service", lambda s: _FakePriceSync(fail=True))
         assert authenticated_client.post(f"{BASE}/refresh-prices").status_code == 500
+
+
+class TestUsExchangeLookup:
+    """Yahoo's exchange codes, folded into the two names the add form offers."""
+
+    @pytest.mark.parametrize("code,expected", [
+        ("NMS", "NASDAQ"), ("NGM", "NASDAQ"), ("NYQ", "NYSE"), ("PCX", "NYSE"), ("XXX", None), (None, None),
+    ])
+    async def test_maps_yahoo_codes(self, monkeypatch, code, expected):
+        import sys
+        import types
+
+        from app.modules.portfolio.market_data_service import MarketDataService, _symbol_cache
+
+        class Ticker:
+            def __init__(self, symbol):
+                self.fast_info = {"exchange": code} if code else {}
+
+        monkeypatch.setitem(sys.modules, "yfinance", types.SimpleNamespace(Ticker=Ticker))
+        _symbol_cache.pop("yahoo_exchange:TEST", None)
+        service = MarketDataService.__new__(MarketDataService)
+        assert await service.get_us_exchange("TEST") == expected
+        _symbol_cache.pop("yahoo_exchange:TEST", None)

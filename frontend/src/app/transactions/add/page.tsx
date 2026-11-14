@@ -168,6 +168,19 @@ function AddTransactionForm() {
     }
   }, [currentUser?.preferred_currency]);
 
+  // A typed ticker decides the buy's currency unless the user picked one, as it
+  // already decides the exchange: a numeric TW code trades in TWD, anything else
+  // (US listings, crypto pairs) in USD. VOO otherwise defaulted to the preferred
+  // TWD and was bought as if priced in NT$. Declared after the effect above so
+  // a late profile load does not overwrite it.
+  useEffect(() => {
+    // Buys only: a sale takes the chosen holding's own currency.
+    const sym = investSymbol.trim();
+    if (investSide !== 'buy' || !sym || hasUserSetInvestCurrencyRef.current) return;
+    const byTicker = /^\d/.test(sym) ? 'TWD' : 'USD';
+    setInvestCurrency(prev => (prev === byTicker ? prev : byTicker));
+  }, [investSide, investSymbol, currentUser?.preferred_currency]);
+
   const handleInputChange = (field: string, value: string) => {
     if (field === 'currency') hasUserSetCurrencyRef.current = true;
     setFormData(prev => ({ ...prev, [field]: value }));

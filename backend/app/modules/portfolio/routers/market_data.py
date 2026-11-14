@@ -619,11 +619,13 @@ async def get_symbol_quote(
             currency = "TWD"
             name = None
         elif market == "CRYPTO":
-            exchange = "Crypto"
+            exchange = "CRYPTO"
             currency = "USD"
             name = symbol.upper()
         else:
-            exchange = "NASDAQ/NYSE"
+            # A real listing the form offers, or None so the form asks rather
+            # than keeping a wrong default. Currency stays USD either way.
+            exchange = await market_data_service.get_us_exchange(symbol)
             currency = "USD"
             name = None
 

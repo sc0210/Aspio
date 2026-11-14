@@ -54,6 +54,14 @@ def _sym_cache_get(key: str):
 def _sym_cache_set(key: str, value, ttl: int) -> None:
     _symbol_cache[key] = {"value": value, "expires_at": _time.time() + ttl}
 
+
+# Yahoo's exchange codes for US listings, folded into the two the holding form
+# offers (NYSE Arca and NYSE American count as NYSE).
+US_EXCHANGE_BY_YAHOO_CODE = {
+    "NMS": "NASDAQ", "NGM": "NASDAQ", "NCM": "NASDAQ", "NAS": "NASDAQ", "NGS": "NASDAQ", "NIM": "NASDAQ",
+    "NYQ": "NYSE", "NYS": "NYSE", "PCX": "NYSE", "ASE": "NYSE", "BTS": "NYSE",
+}
+
 # In-memory cache for FinLab market DataFrames (shared across requests)
 # This prevents multiple API calls when fetching data for multiple symbols.
 # ⚠️ MEMORY: frames stored here MUST be truncated to the FinLab window —
@@ -1096,6 +1104,38 @@ class MarketDataService:
         # TWSE throttles hard (roughly 3 requests / 5s); pace multi-month walks.
         await asyncio.sleep(TWSE_REQUEST_INTERVAL_SECONDS)
         return rows
+
+    async def get_us_exchange(self, symbol: str) -> Optional[str]:
+        """NASDAQ or NYSE for a US listing, from Yahoo's exchange code; None if unknown.
+
+        The add-holding form only offers those names, and the quote used to answer
+        "NASDAQ/NYSE" for every US symbol, which matched no option: the field went
+        blank and the form refused to save a US stock until one was picked.
+        """
+        key = f"yahoo_exchange:{symbol.upper()}"
+        cached = _sym_cache_get(key)
+        if cached is not None:
+            return cached or None
+
+        def _fetch():
+            import warnings
+
+            import yfinance as yf
+
+            warnings.filterwarnings("ignore", module="yfinance.*")
+            try:
+                return yf.Ticker(symbol).fast_info["exchange"]
+            except Exception:
+                return None
+
+        try:
+            code = await asyncio.wait_for(asyncio.to_thread(_fetch), timeout=5.0)
+        except Exception:
+            code = None
+        exchange = US_EXCHANGE_BY_YAHOO_CODE.get((code or "").upper())
+        # Listings do not move between exchanges: a day is plenty; misses retry sooner.
+        _sym_cache_set(key, exchange or "", 86400 if exchange else 600)
+        return exchange
 
     async def get_previous_close(self, symbol: str, market: str) -> Optional[Decimal]:
         """Previous session's close as the *provider* reports it.

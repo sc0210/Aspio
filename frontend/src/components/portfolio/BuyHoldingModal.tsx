@@ -8,6 +8,7 @@ import { Button } from '@/components/ui/Button';
 import { formatCurrency, localDateString } from '@/utils/formatters';
 import { cn } from '@/utils/cn';
 import symbolService from '@/services/symbolService';
+import { listingDefaults } from '@/lib/portfolio/holdingFormOptions';
 import { useScrollLock } from '@/hooks/useScrollLock';
 
 interface BuyHoldingModalProps {
@@ -37,6 +38,7 @@ interface StockSearchResult {
     quoteType?: string;
     currency?: string;
     exchange?: string;
+    market?: string;
     regularMarketPrice?: number;
 }
 
@@ -111,10 +113,25 @@ export function BuyHoldingModal({ isOpen, onClose, onBuy, existingHoldings = [] 
         setSymbol(stock.symbol || stock.ticker || '');
         setName(stock.name || stock.shortName || '');
         setType(stock.quoteType?.toLowerCase() === 'equity' ? 'stock' : 'etf');
-        setCurrency(stock.currency || 'TWD');
-        setExchange(stock.exchange || 'TWSE');
+        // The search list carries a market but no currency: a US pick used to
+        // fall back to TWD and be bought as if priced in NT$.
+        const defaults = listingDefaults(stock.market);
+        setCurrency(stock.currency || defaults.currency);
+        setExchange(stock.exchange || defaults.exchange || '');
         setPrice(stock.regularMarketPrice?.toString() || '');
         setStep('details');
+
+        // ...nor an exchange or price: the quote fills whichever is still empty.
+        const quoteSymbol = stock.symbol || stock.ticker;
+        if (quoteSymbol) {
+            symbolService.getQuote(quoteSymbol, stock.market)
+                .then((quote) => {
+                    if (quote?.status !== 'success') return;
+                    if (quote.exchange) setExchange((prev) => prev || quote.exchange);
+                    if (quote.current_price) setPrice((prev) => prev || String(quote.current_price));
+                })
+                .catch(() => { /* the fields stay editable */ });
+        }
     };
 
     const handleSelectExisting = (holding: { symbol: string; name: string; type: string; currency: string; exchange: string }) => {
