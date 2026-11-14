@@ -232,3 +232,19 @@ async def test_cancelling_a_linked_goal_reopens_the_shared_goal(
 
     status = (await async_session.execute(select(SharedGoal.status).where(SharedGoal.id == UUID(shared)))).scalar_one()
     assert status == "active"
+
+
+async def test_an_emergency_fund_marked_done_by_hand_stays_done(async_session, test_user, test_category):
+    from app.modules.goals.models import GoalStatus
+    from app.modules.goals.schemas import GoalUpdate
+
+    async_session.add(_income(test_user.id, test_category.id, "10000", TransactionWalletType.EMERGENCY))
+    await async_session.commit()
+    goals = GoalService(async_session)
+    goal = (await goals.create_goal(test_user.id, GoalCreate(
+        title="Six months", category="emergency_fund", target_amount=D("180000")))).id
+    await goals.update_goal(goal, test_user.id, GoalUpdate(status="completed"))
+
+    completed, _ = await goals.list_goals(test_user.id, status="completed")
+    assert [g.id for g in completed] == [goal]          # a small wallet does not reopen it
+    assert all(g.status == GoalStatus.COMPLETED for g in completed)
