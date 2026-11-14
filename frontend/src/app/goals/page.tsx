@@ -8,6 +8,7 @@ import { useGoals, useDeleteGoal, Goal, CreateGoalData, goalProgressPercent } fr
 import { usePortfolio } from '@/hooks/usePortfolio';
 import { LifeCashSummary } from '@/components/goals/LifeCashSummary';
 import { createLinkDefaults } from '@/lib/goals/createLink';
+import { goalProgressAmount } from '@/lib/goals/goalMoney';
 import { AssetGoalCard } from '@/components/goals/AssetGoalCard';
 import dynamic from 'next/dynamic';
 
@@ -189,14 +190,15 @@ function DesktopGoalsPage() {
 
             const targetMs = new Date(goal.targetDate).getTime();
             const inAlertWindow = targetMs - now <= alertWindowMs;
-            return inAlertWindow && goalProgressPercent(goal) < 70;
+            const target = Number(goal.targetAmount);
+            return inAlertWindow && (target > 0 ? (goalProgressAmount(goal) / target) * 100 : 0) < 70;
         });
     }, [activeGoals, preferences.goalAlertDays]);
 
     const monthlyRequiredContribution = useMemo(() => {
         const now = Date.now();
         return activeGoals.reduce((sum, goal) => {
-            const remaining = Math.max(0, Number(goal.targetAmount) - Number(goal.currentAmount));
+            const remaining = Math.max(0, Number(goal.targetAmount) - goalProgressAmount(goal));
             if (!goal.targetDate) {
                 return sum + remaining / 12;
             }
@@ -209,7 +211,7 @@ function DesktopGoalsPage() {
     const atRiskGoalIds = useMemo(() => new Set(atRiskGoals.map((g) => g.id)), [atRiskGoals]);
 
     const getMonthlyNeeded = useCallback((goal: Goal): number => {
-        const remaining = Math.max(0, Number(goal.targetAmount) - Number(goal.currentAmount));
+        const remaining = Math.max(0, Number(goal.targetAmount) - goalProgressAmount(goal));
         if (!goal.targetDate) return remaining / 12;
         const monthsLeft = Math.max(1, Math.ceil(
             (new Date(goal.targetDate).getTime() - Date.now()) / (30 * 24 * 60 * 60 * 1000)
@@ -219,7 +221,8 @@ function DesktopGoalsPage() {
 
     const activeCoverageRatio = useMemo(() => {
         const activeTargetTotal = activeGoals.reduce((sum, goal) => sum + Number(goal.targetAmount), 0);
-        const activeCurrentTotal = activeGoals.reduce((sum, goal) => sum + Number(goal.currentAmount), 0);
+        // As the cards read it: market value once invested, the Emergency Wallet for an emergency fund.
+        const activeCurrentTotal = activeGoals.reduce((sum, goal) => sum + goalProgressAmount(goal), 0);
         if (activeTargetTotal <= 0) {
             return 0;
         }

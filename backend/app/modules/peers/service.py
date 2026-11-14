@@ -482,12 +482,19 @@ class PeerService:
         saving record, so the stored status and the "reached" alert follow it
         here, the way add_record does for a record.
         """
+        from sqlalchemy import select
+
         row = await self._goals.get_with_connection(shared_goal_id, user_id)
         if row is None:
             return
         goal, conn = row
         if goal.status == GoalStatus.cancelled:
             return
+        # Both partners' moves re-judge the same row: lock it, so the second
+        # waits and then sees the first's committed money (no lost completion).
+        await self.session.execute(
+            select(SharedGoal.id).where(SharedGoal.id == goal.id).with_for_update()
+        )
         was_completed = goal.status == GoalStatus.completed
         await self._recalc_totals(goal, conn)
         if goal.status == GoalStatus.completed and not was_completed:

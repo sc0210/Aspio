@@ -159,7 +159,7 @@ export function goalProgressPercent(goal: Pick<Goal, 'currentAmount' | 'targetAm
  * them as the API's `Goal` rather than force-casting, so the derived fields
  * every consumer reads actually exist.
  */
-export function demoGoalToGoal(g: FinancialGoal): Goal {
+export function demoGoalToGoal(g: FinancialGoal, emergencyBalance?: number): Goal {
     const iso = (d: Date | string | undefined) =>
         d === undefined ? undefined : (d instanceof Date ? d.toISOString() : String(d));
     const targetAmount = Number(g.targetAmount) || 0;
@@ -180,6 +180,8 @@ export function demoGoalToGoal(g: FinancialGoal): Goal {
         // except an emergency fund, which follows the Emergency Wallet.
         reservedAmount: g.category === 'emergency_fund' ? 0 : currentAmount,
         tracksEmergency: g.category === 'emergency_fund',
+        // What an emergency fund follows: the demo's Emergency Wallet.
+        valueAmount: g.category === 'emergency_fund' && emergencyBalance !== undefined ? emergencyBalance : undefined,
         currency: g.currency,
         targetDate: iso(g.targetDate),
         startedAt: iso(g.createdAt) ?? new Date().toISOString(),
@@ -203,7 +205,7 @@ export function demoGoalToGoal(g: FinancialGoal): Goal {
 
 export function useGoals(status?: string, category?: string) {
     const { data: session } = useSession();
-    const { isDemoMode, demoGoals, demoRevision } = useDemo();
+    const { isDemoMode, demoGoals, demoRevision, getDemoStats } = useDemo();
 
     return useQuery<Goal[]>({
         // Include mode + user so demo and auth caches never collide; demo also
@@ -211,7 +213,8 @@ export function useGoals(status?: string, category?: string) {
         queryKey: [QUERY_KEYS.GOALS, status, category, isDemoMode ? `demo-${demoRevision ?? 0}` : (session?.user?.id || 'anon')],
         queryFn: async () => {
             if (isDemoMode) {
-                let filtered = (demoGoals ?? []).map(demoGoalToGoal);
+                const emergency = Number(getDemoStats?.().emergency_wallet) || 0;
+                let filtered = (demoGoals ?? []).map((g) => demoGoalToGoal(g, emergency));
                 if (status) filtered = filtered.filter(g => g.status === status);
                 if (category) filtered = filtered.filter(g => g.category === category);
                 return filtered;
@@ -261,7 +264,7 @@ export function useGoalsSummary() {
         queryKey: [QUERY_KEYS.GOALS_SUMMARY, isDemoMode ? `demo-${demoRevision ?? 0}` : (session?.user?.id || 'anon')],
         queryFn: async () => {
             if (isDemoMode) {
-                const goals = (demoGoals ?? []).map(demoGoalToGoal);
+                const goals = (demoGoals ?? []).map((g) => demoGoalToGoal(g));
                 const active = goals.filter(g => g.status === 'active');
                 const completed = goals.filter(g => g.status === 'completed');
                 const totalTarget = goals.reduce((sum, g) => sum + Number(g.targetAmount), 0);
@@ -445,7 +448,7 @@ export function useLifeCash() {
                 // The demo's Life Wallet less what its goals hold, as the API computes it.
                 const lifeBalance = Number(getDemoStats?.().life_wallet) || 0;
                 const reserved = (demoGoals ?? [])
-                    .map(demoGoalToGoal)
+                    .map((g) => demoGoalToGoal(g))
                     .reduce((sum, g) => sum + (Number(g.reservedAmount) || 0), 0);
                 return { lifeBalance, reserved, available: lifeBalance - reserved };
             }

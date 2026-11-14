@@ -561,6 +561,19 @@ async def update_holding(
                             )
                         linked.amount = twd_amount
                         linked.currency = display_currency
+                        if holding.goal_id is not None:
+                            # A goal lot's sale gain is measured at its buy rate:
+                            # leg TWD over the native its buy paid. Keep the buy
+                            # record in step with the leg, or the rate skews.
+                            from ..models import PortfolioTransaction as _PT
+
+                            buys = (await session.execute(select(_PT).where(
+                                _PT.holding_id == holding.id, _PT.type == "buy",
+                            ))).scalars().all()
+                            if len(buys) == 1:
+                                buys[0].quantity = Decimal(str(new_qty))
+                                buys[0].price = Decimal(str(new_cost))
+                                buys[0].total_amount = new_total
                         linked.description = (
                             f"Buy {holding.symbol} ×{Decimal(str(new_qty)):g} @ "
                             f"{Decimal(str(new_cost)):,.2f} "
@@ -1235,7 +1248,7 @@ async def sell_holding(
         # creates, so a buy→sell round trip nets to zero in the Life Wallet
         # (minus fees/taxes and ± realized gain/loss).
         portfolio_service = get_portfolio_service(session)
-        await portfolio_service.credit_sale_proceeds_to_life(
+        booked = await portfolio_service.credit_sale_proceeds_to_life(
             user_id=current_user.id,
             net_proceeds=net_proceeds,
             currency=holding.currency,
@@ -1250,7 +1263,7 @@ async def sell_holding(
             from app.modules.goals.service import GoalService
 
             gain_twd = await portfolio_service.goal_sale_gain_twd(
-                allocation.consumptions, net_proceeds, holding.currency or "TWD",
+                allocation.consumptions, booked, holding.currency or "TWD",
                 business_day_of(transaction_date or now),
             )
             if gain_twd is None:

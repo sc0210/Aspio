@@ -59,7 +59,9 @@ export function goalReached(goal: GoalMoneyFields): boolean {
  */
 export function canMoveGoalCash(goal: GoalMoneyFields): boolean {
   const reserved = Number(goal.reservedAmount) || 0;
-  return goal.tracksEmergency ? reserved > 0 : (!goalReached(goal) || reserved > 0);
+  // A cancelled goal holds nothing new; it can only give back what it holds.
+  if (goal.tracksEmergency || goal.status === 'cancelled') return reserved > 0;
+  return !goalReached(goal) || reserved > 0;
 }
 
 /** A goal not yet reached, due within HORIZON_MONTHS, with money in stocks,

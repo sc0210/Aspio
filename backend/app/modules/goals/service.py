@@ -204,7 +204,33 @@ class GoalService:
         )
         total = await self.repository.count_goals_for_user(conditions)
         await self.attach_money(goals, user_id)
+        await self._settle_emergency_status(goals)
         return goals, total
+
+    async def _settle_emergency_status(self, goals: List[Goal]) -> None:
+        """An emergency fund completes (or reopens) on the Emergency Wallet it follows.
+
+        Nothing writes to such a goal when the wallet moves (a transfer, a
+        holding), so its status is settled when goals are read; achievements
+        and summaries count the stored status.
+        """
+        changed = False
+        for goal in goals:
+            if not getattr(goal, "tracks_emergency", False) or goal.value_amount is None:
+                continue
+            reached = goal.value_amount >= goal.target_amount
+            if reached and goal.status == GoalStatus.ACTIVE:
+                goal.status = GoalStatus.COMPLETED
+                goal.completed_at = datetime.now(timezone.utc)
+                changed = True
+            elif not reached and goal.status == GoalStatus.COMPLETED:
+                goal.status = GoalStatus.ACTIVE
+                goal.completed_at = None
+                changed = True
+        if changed:
+            await self.session.commit()
+            for goal in goals:
+                await self.session.refresh(goal, ["status", "completed_at"])
 
     async def update_goal(
         self, goal_id: UUID, user_id: UUID, goal_data: GoalUpdate
@@ -243,14 +269,21 @@ class GoalService:
 
         # A cancelled goal gives its cash back to Life: nothing is set aside
         # for a goal that is no longer pursued.
+        unlinked_from = None
         if cancelling:
             # No longer pursued, so no longer anyone's side of a shared goal; the
             # user may link a new goal to it.
-            goal.shared_goal_id = None
+            unlinked_from, goal.shared_goal_id = goal.shared_goal_id, None
             held = (await goal_money(self.session, user_id, [goal.id])).get(goal.id)
             if held and held.reserved > 0:
                 await self._record(goal, ContributionKind.RELEASE, -held.reserved, None,
                              "Released when the goal was cancelled")
+            if unlinked_from is not None:
+                # That side's money has left the shared goal: re-judge it.
+                from app.modules.peers.service import PeerService
+
+                await self.session.flush()
+                await PeerService(self.session).sync_backed_goal(unlinked_from, user_id)
 
         # Auto-complete if target reached
         if (
@@ -293,7 +326,14 @@ class GoalService:
         if not goal:
             return False
 
+        shared_goal_id = goal.shared_goal_id
         await self.repository.delete_goal(goal)
+        if shared_goal_id is not None:
+            # The deleted goal backed a side of a shared goal: re-judge it.
+            from app.modules.peers.service import PeerService
+
+            await self.session.flush()
+            await PeerService(self.session).sync_backed_goal(shared_goal_id, user_id)
         await self.session.commit()
         return True
 

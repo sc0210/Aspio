@@ -147,3 +147,85 @@ async def test_an_emergency_fund_goal_follows_the_emergency_wallet(async_session
 
     with pytest.raises(BusinessLogicException, match="Emergency Wallet"):
         await goals.reserve(goal, test_user.id, GoalContributionCreate(amount=D("1000")))
+
+
+async def _goal_with_cash(async_session, test_user, test_category, reserve="50000"):
+    async_session.add(_income(test_user.id, test_category.id, "100000"))
+    await async_session.commit()
+    goals = GoalService(async_session)
+    goal = (await goals.create_goal(test_user.id, GoalCreate(title="Flat", category="savings", target_amount=D("1000000")))).id
+    await goals.reserve(goal, test_user.id, GoalContributionCreate(amount=D(reserve)))
+    return goals, goal
+
+
+async def _progress(goals, async_session, user, goal):
+    stored = await goals.get_goal(goal, user)
+    await async_session.refresh(stored)
+    return stored.current_amount
+
+
+async def test_a_resized_twd_goal_lot_sells_with_no_phantom_gain(async_session, test_user, test_category):
+    from app.modules.portfolio.routers.holdings import update_holding
+    from app.modules.portfolio.schemas import HoldingUpdate
+
+    user = test_user.id
+    goals, goal = await _goal_with_cash(async_session, test_user, test_category)
+    lot = (await get_portfolio_service(async_session).add_holding(user, HoldingCreate(
+        symbol="0050", name="Yuanta 50", type="etf", exchange="TWSE", currency="TWD", market="TW",
+        quantity=D("10"), average_cost=D("100"), purchase_date=BUY_DAY, goal_id=goal,
+    ))).id
+    await update_holding(holding_id=lot, holding_updates=HoldingUpdate(quantity=D("20")),
+                         current_user=SimpleNamespace(id=user), session=async_session)
+    await sell_holding(holding_id=lot, quantity=D("20"), price=D("100"), fees=D("0"), taxes=D("0"),
+                       notes=None, transaction_date=SELL_DAY, current_user=SimpleNamespace(id=user),
+                       session=async_session)
+    assert await _progress(goals, async_session, user, goal) == D("50000")   # sold at cost: no gain
+
+
+async def test_a_sale_whose_fees_eat_the_proceeds_still_matches_the_goals_money(async_session, test_user, test_category):
+    user = test_user.id
+    goals, goal = await _goal_with_cash(async_session, test_user, test_category)
+    lot = (await get_portfolio_service(async_session).add_holding(user, HoldingCreate(
+        symbol="0050", name="Yuanta 50", type="etf", exchange="TWSE", currency="TWD", market="TW",
+        quantity=D("10"), average_cost=D("100"), purchase_date=BUY_DAY, goal_id=goal,
+    ))).id
+    await sell_holding(holding_id=lot, quantity=D("10"), price=D("1"), fees=D("50"), taxes=D("0"),
+                       notes=None, transaction_date=SELL_DAY, current_user=SimpleNamespace(id=user),
+                       session=async_session)
+    money = (await goal_money(async_session, user, [goal])).get(goal)
+    assert money.reserved == D("49000")                                     # nothing came back
+    assert await _progress(goals, async_session, user, goal) == D("49000")   # the 1,000 is lost
+
+
+async def test_an_emergency_fund_completes_on_the_wallet_it_follows(async_session, test_user, test_category):
+    from app.modules.goals.models import GoalStatus
+
+    async_session.add(_income(test_user.id, test_category.id, "200000", TransactionWalletType.EMERGENCY))
+    await async_session.commit()
+    goals = GoalService(async_session)
+    goal = (await goals.create_goal(test_user.id, GoalCreate(
+        title="Six months", category="emergency_fund", target_amount=D("180000")))).id
+
+    listed, _ = await goals.list_goals(test_user.id)
+    assert [g.status for g in listed if g.id == goal] == [GoalStatus.COMPLETED]
+
+
+async def test_cancelling_a_linked_goal_reopens_the_shared_goal(
+        authenticated_client, seed_categories, partner, async_session):
+    from app.modules.peers.models import SharedGoal
+
+    client = authenticated_client
+    connection = _ok(client.post("/api/v1/peers/invite", json={"username": "partner"}), 201)["id"]
+    _ok(client.patch(f"/api/v1/peers/{connection}/respond", json={"action": "accept"}, headers=partner))
+    _ok(client.post("/api/v1/transactions/", json={
+        "type": "income", "wallet_type": "life", "amount": "50000", "currency": "TWD",
+        "description": "Salary", "transaction_date": "2026-01-01", "category_name": "Salary"}), 201)
+    shared = _ok(client.post("/api/v1/peers/goals", json={
+        "connection_id": connection, "title": "Wedding", "target_amount": "20000"}), 201)["id"]
+    mine = _ok(client.post(f"/api/v1/peers/goals/{shared}/link-goal"))
+    _ok(client.post(f"/api/v1/goals/{mine['id']}/reserve", json={"amount": "20000"}), 201)
+
+    _ok(client.put(f"/api/v1/goals/{mine['id']}", json={"status": "cancelled"}))
+
+    status = (await async_session.execute(select(SharedGoal.status).where(SharedGoal.id == UUID(shared)))).scalar_one()
+    assert status == "active"

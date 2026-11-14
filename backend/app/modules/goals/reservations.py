@@ -203,7 +203,9 @@ async def emergency_balance(db: AsyncSession, user_id) -> Decimal:
 
     What an emergency-fund goal tracks: that money is set aside by living in
     the Emergency Wallet (a Life → Emergency transfer), not by reserving Life
-    cash. The same figure as the dashboard's Emergency wallet.
+    cash. The dashboard's Emergency wallet adds the same parts but converts
+    foreign holdings at the live rate (ExchangeRateService); this uses the
+    stored rates every cash balance uses, so the two can differ by FX drift.
     """
     uid = _uuid(user_id)
     cash = (await TransactionRepository(db).cash_balances_twd(uid)).get(
