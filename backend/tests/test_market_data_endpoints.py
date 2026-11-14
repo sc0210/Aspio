@@ -251,3 +251,28 @@ class TestUsExchangeLookup:
         service = MarketDataService.__new__(MarketDataService)
         assert await service.get_us_exchange("TEST") == expected
         _symbol_cache.pop("yahoo_exchange:TEST", None)
+
+
+class TestQuoteExchangeTask:
+    async def test_a_failing_price_call_cancels_the_exchange_lookup(self, client, monkeypatch):
+        import asyncio
+
+        started, cancelled = asyncio.Event(), []
+
+        class Quotes:
+            async def get_current_price(self, symbol, market):
+                await started.wait()
+                raise RuntimeError("provider down")
+
+            async def get_us_exchange(self, symbol):
+                started.set()
+                try:
+                    await asyncio.sleep(30)
+                except asyncio.CancelledError:
+                    cancelled.append(symbol)
+                    raise
+
+        monkeypatch.setattr(market_data_service, "get_market_data_service", lambda: Quotes())
+        r = client.get(f"{BASE}/symbol/quote/MSFT", params={"market": "US"})
+        assert r.status_code == 500
+        assert cancelled == ["MSFT"]

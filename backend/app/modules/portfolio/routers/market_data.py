@@ -616,6 +616,11 @@ async def get_symbol_quote(
         except asyncio.TimeoutError:
             logger.warning(f"Timeout fetching price for {symbol} after 10s")
             current_price = None
+        except BaseException:
+            # A failed or cancelled request must not leave the lookup running.
+            if us_exchange_task:
+                us_exchange_task.cancel()
+            raise
 
         # Check if market is currently open
         market_open = MarketHoursManager.is_market_open(market)
@@ -632,7 +637,10 @@ async def get_symbol_quote(
         else:
             # A real listing the form offers, or None so the form asks rather
             # than keeping a wrong default. Currency stays USD either way.
-            exchange = await us_exchange_task
+            try:
+                exchange = await asyncio.wait_for(us_exchange_task, timeout=5.0)
+            except Exception:
+                exchange = None  # the form asks the user to pick
             currency = "USD"
             name = None
 
