@@ -766,11 +766,9 @@ class DashboardService:
                         from app.utils.exchange_rate_service import ExchangeRateService
 
                         exchange_service = ExchangeRateService(self.db)
-                        base_currency = (
-                            portfolio.currency
-                            if hasattr(portfolio, "currency")
-                            else "TWD"
-                        )
+                        # TWD: these values join TWD wallet balances in the
+                        # net-worth trend (see the daily-performance note).
+                        base_currency = "TWD"
 
                         # Pre-fetch all unique exchange rates before the date loop
                         _currencies_needed = {

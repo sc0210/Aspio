@@ -76,7 +76,7 @@ async def _seed_portfolio(session: AsyncSession, user_id: uuid.UUID) -> None:
         user_id=user_id,
         name="Demo Portfolio",
         description="Sample investment portfolio",
-        currency="USD",
+        currency="TWD",
         is_default=True,
         is_active=True,
         auto_update=True,

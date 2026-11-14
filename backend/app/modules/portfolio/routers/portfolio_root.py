@@ -136,7 +136,7 @@ async def get_portfolio(
             portfolio_create = PortfolioCreate(
                 name="My Portfolio",
                 description="Default investment portfolio",
-                currency="USD",
+                currency="TWD",
                 is_default=True,
             )
             portfolio = await portfolio_service.create_portfolio(

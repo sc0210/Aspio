@@ -181,6 +181,9 @@ ORDER BY present, sort;
 SELECT 'cash lots not at face value' AS what, count(*)::text AS value
 FROM portfolio_holdings
 WHERE lower(type::text) = 'cash' AND (average_cost <> 1 OR current_price <> 1);
+-- 2026_11_14_portfolio_currency_twd: expect 0.
+SELECT 'portfolios not in TWD' AS what, count(*)::text AS value
+FROM portfolios WHERE upper(currency) <> 'TWD';
 
 -- ── alembic bookkeeping ────────────────────────────────────────────────────
 -- Should equal the single head in backend/alembic/versions (check with
