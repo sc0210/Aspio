@@ -2,6 +2,7 @@
 
 import { useMemo } from 'react';
 import { goalHorizonRisk, goalProgressAmount } from '@/lib/goals/goalMoney';
+import { LifeCashSummary } from '@/components/goals/LifeCashSummary';
 import { useRouter } from 'next/navigation';
 import { useTranslation } from 'react-i18next';
 import { PlusIcon } from '@heroicons/react/24/outline';
@@ -93,6 +94,9 @@ export function MobileGoals() {
                 </div>
 
                 <BiggerScreenHint />
+
+                {/* Life Wallet: what goals hold and what is left to spend */}
+                <LifeCashSummary compact />
 
                 {model.count === 0 ? (
                     <div className="rounded-3xl bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 p-8 text-center space-y-3">

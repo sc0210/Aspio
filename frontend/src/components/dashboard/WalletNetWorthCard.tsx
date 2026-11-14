@@ -690,9 +690,26 @@ export function WalletNetWorthCard({
                                             {isValueVisible ? formatTWD(value) : '•••'}
                                         </span>
                                     </div>
-                                    {/* Own line, full width: inside the amount column it was cut to "Available NT$…". */}
-                                    {key === 'life_wallet' && lifeAvailableLine && (
-                                        <div className="pl-5 pr-1 text-right">{lifeAvailableLine}</div>
+                                    {/* A sub-row on the same grid: label under the wallet's
+                                        name, amount in the amount column, one step quieter. */}
+                                    {key === 'life_wallet' && lifeReserved && (
+                                        <div
+                                            className="flex items-center gap-2 px-1 mt-0.5"
+                                            title={tg('reserve.lifeReserved', { amount: isValueVisible ? formatTWD(lifeReserved.reserved) : '•••' })}
+                                        >
+                                            <div className="w-2.5 flex-shrink-0" aria-hidden="true" />
+                                            <span className="text-[11px] text-gray-500 dark:text-gray-400 flex-1 truncate">
+                                                {tg('reserve.lifeAvailable')}
+                                            </span>
+                                            <span
+                                                className={cn(
+                                                    'text-[11px] font-medium tabular-nums w-24 text-right',
+                                                    lifeReserved.available < 0 ? 'text-red-600 dark:text-red-400' : 'text-gray-500 dark:text-gray-400',
+                                                )}
+                                            >
+                                                {isValueVisible ? formatTWD(lifeReserved.available) : '•••'}
+                                            </span>
+                                        </div>
                                     )}
                                     </div>
                                 );

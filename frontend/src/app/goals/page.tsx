@@ -6,6 +6,7 @@ import { useIsMobile } from '@/hooks/useMediaQuery';
 import { MobileGoals } from '@/components/goals/MobileGoals';
 import { useGoals, useDeleteGoal, Goal, CreateGoalData, goalProgressPercent } from '@/hooks/useGoals';
 import { usePortfolio } from '@/hooks/usePortfolio';
+import { LifeCashSummary } from '@/components/goals/LifeCashSummary';
 import { AssetGoalCard } from '@/components/goals/AssetGoalCard';
 import dynamic from 'next/dynamic';
 
@@ -405,6 +406,9 @@ function DesktopGoalsPage() {
                         )}
                     </div>
                 )}
+
+                {/* Life Wallet: what goals hold and what is left to spend */}
+                <LifeCashSummary />
 
                 {/* Filters */}
                 <div data-tour="goals-filters" className="grid grid-cols-2 gap-2 sm:flex sm:flex-wrap sm:gap-3 bg-white dark:bg-gray-800 p-3 sm:p-4 rounded-lg border border-gray-200 dark:border-gray-700">

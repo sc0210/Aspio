@@ -306,7 +306,15 @@
     "payFromGoalLifeOnly": "只有生活錢包的支出可以從目標支付。",
     "initialHint": "從生活錢包預留。目前可用 {{amount}}。",
     "quickAriaReserve": "將金額設為尚差金額的 {{pct}}%",
-    "quickAriaRelease": "將金額設為已預留金額的 {{pct}}%"
+    "quickAriaRelease": "將金額設為已預留金額的 {{pct}}%",
+    "summaryAria": "生活錢包與目標資金",
+    "summaryLife": "生活錢包",
+    "summaryReserved": "已預留給目標",
+    "summaryAvailable": "可自由花用",
+    "summaryHint": "預留的錢仍在生活錢包中，只是不再算作可自由花用。",
+    "summaryOverspent": "已花用到預留給目標的錢。可從目標釋出部分資金，或記錄收入。",
+    "formReserved": "另有 {{amount}} 已預留給目標",
+    "formIntoGoals": "其中 {{amount}} 會用到預留給目標的錢。可改為從目標支付，或先釋出部分資金。"
   },
   "invest": {
     "fundFromGoal": "使用目標資金支付",
