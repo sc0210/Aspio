@@ -192,7 +192,13 @@
     "portfolioLinked": "投資組合連結",
     "retirement": "財務目標",
     "title": "目標",
-    "viewAll": "查看全部 →"
+    "viewAll": "查看全部 →",
+    "topPriority": "優先目標",
+    "monthsLeft": "剩 {{count}} 個月",
+    "yearsLeft": "剩 {{count}} 年",
+    "overdue": "已過期限",
+    "perMonth": "每月需 {{amount}}",
+    "priorityLabel": "優先度：{{level}}"
   },
   "pause": "暫停目標",
   "priorities": {

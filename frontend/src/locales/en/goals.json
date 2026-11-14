@@ -192,7 +192,13 @@
     "portfolioLinked": "Portfolio Linked",
     "retirement": "Financial Goal",
     "title": "Goals",
-    "viewAll": "View All →"
+    "viewAll": "View All →",
+    "topPriority": "Top priority",
+    "monthsLeft": "{{count}} months left",
+    "yearsLeft": "{{count}} years left",
+    "overdue": "Past its date",
+    "perMonth": "{{amount}} a month to make it",
+    "priorityLabel": "{{level}} priority"
   },
   "pause": "Pause Goal",
   "priorities": {

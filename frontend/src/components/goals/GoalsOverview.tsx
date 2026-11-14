@@ -3,13 +3,14 @@
 import React, { useMemo } from 'react';
 import Link from 'next/link';
 import { formatCashAmount } from '@/utils/formatters';
-import { DEFAULT_CURRENCY } from '@/utils/constants';
+import { DEFAULT_CURRENCY, GOAL_CATEGORIES } from '@/utils/constants';
 import { AssetGoalCard } from './AssetGoalCard';
 import { usePrivacy } from '@/contexts/PrivacyContext';
 import { usePortfolio } from '@/hooks/usePortfolio';
 import { useTranslation } from 'react-i18next';
 import { portfolioCreditedGoal } from '@/utils/goalMatchers';
 import { Card } from '@/components/ui/Card';
+import { canMoveGoalCash, goalProgressAmount } from '@/lib/goals/goalMoney';
 
 interface Goal {
     id: string;
@@ -21,6 +22,27 @@ interface Goal {
     category?: string;
     priority?: 'high' | 'medium' | 'low';
     status?: 'active' | 'completed' | 'paused' | 'cancelled';
+    // Goal money (goals/reservations.py), when the list carries it.
+    reservedAmount?: number;
+    investedAmount?: number;
+    atRiskAmount?: number;
+    valueAmount?: number | null;
+    tracksEmergency?: boolean;
+}
+
+const PRIORITY_RANK: Record<string, number> = { high: 0, medium: 1, low: 2 };
+
+/** Highest priority first, then the nearest date, then the most left to save. */
+function rankByPriority<T extends { priority?: string; targetDate?: string; targetAmount: number; currentAmount: number }>(goals: T[]): T[] {
+    return [...goals].sort((a, b) =>
+        (PRIORITY_RANK[a.priority ?? 'medium'] ?? 1) - (PRIORITY_RANK[b.priority ?? 'medium'] ?? 1)
+        || (a.targetDate ? new Date(a.targetDate).getTime() : Infinity) - (b.targetDate ? new Date(b.targetDate).getTime() : Infinity)
+        || (b.targetAmount - b.currentAmount) - (a.targetAmount - a.currentAmount),
+    );
+}
+
+function categoryIcon(category?: string): string {
+    return GOAL_CATEGORIES.find((c) => c.id === category)?.icon ?? '🎯';
 }
 
 interface GoalsOverviewProps {
@@ -199,10 +221,25 @@ export function GoalsOverview({ goals = [], isLoading = false, onEdit, onContrib
     }
 
     // ── Compact (dashboard) layout ──────────────────────────────────────────
+    // One line of overall progress, the goal that matters most in full, the
+    // rest as one row each: the dashboard is a glance, not the goals page.
     if (compact) {
-        const firstRetirement = retirementGoals[0];
-        const retirementPct = firstRetirement && firstRetirement.targetAmount > 0
-            ? Math.min(100, (firstRetirement.currentAmount / firstRetirement.targetAmount) * 100) : 0;
+        const money = (n: number, currency?: string) =>
+            isValueVisible ? formatCashAmount(n, currency || DEFAULT_CURRENCY) : '•••';
+        // Progress as the goal cards read it (goalMoney.ts); the retirement
+        // goal keeps the portfolio value credited above.
+        const shown = (g: typeof normalizedGoals[number]) =>
+            g.id === creditedGoalId ? g.currentAmount : goalProgressAmount(g);
+        const pctOf = (g: typeof normalizedGoals[number]) =>
+            g.targetAmount > 0 ? Math.min(100, (shown(g) / g.targetAmount) * 100) : 0;
+        const open = normalizedGoals.filter((g) => g.status !== 'completed' && g.status !== 'cancelled' && pctOf(g) < 100);
+        const top = rankByPriority(open)[0] ?? rankByPriority(normalizedGoals)[0];
+        const rest = rankByPriority(normalizedGoals.filter((g) => g.id !== top?.id && g.status !== 'cancelled'));
+        const overallPct = Math.min(100, overallProgress);
+        const months = top?.targetDate ? (new Date(top.targetDate).getTime() - Date.now()) / (30.44 * 86_400_000) : null;
+        const remaining = top ? Math.max(0, top.targetAmount - shown(top)) : 0;
+        const perMonth = months !== null && months > 0 && remaining > 0 ? remaining / Math.max(1, months) : null;
+        const isRetirement = top?.id === creditedGoalId;
 
         return (
             <Card padding="none" clip className="h-full flex flex-col">
@@ -222,80 +259,114 @@ export function GoalsOverview({ goals = [], isLoading = false, onEdit, onContrib
                 </div>
 
                 <div className="p-4 space-y-4">
-                    {/* Summary + Retirement stacked */}
-                    <div className="space-y-3">
-                        {/* Overall Progress — semicircular gauge */}
-                        <div className="bg-gradient-to-br from-primary-50 to-primary-100 dark:from-primary-900/20 dark:to-primary-800/20 rounded-xl p-4 border border-primary-200 dark:border-primary-700/50">
-                            <p className="text-xs font-medium text-gray-500 dark:text-gray-400 mb-1">{t('goals:overview.overallProgress')}</p>
-                            <HalfCircleGauge
-                                percent={overallProgress}
-                                valueVisible={isValueVisible}
-                                gradientFrom="#0ea5e9"
-                                gradientTo="#0284c7"
-                                label={t('goals:overview.overallProgress')}
-                            />
-                            <div className="flex justify-between text-xs text-gray-500 dark:text-gray-400 -mt-1">
-                                <span>{isValueVisible ? formatCashAmount(totalCurrent, goals[0]?.currency || DEFAULT_CURRENCY) : '•••'}</span>
-                                <span>{isValueVisible ? formatCashAmount(totalTarget, goals[0]?.currency || DEFAULT_CURRENCY) : '•••'}</span>
-                            </div>
+                    {/* Overall progress — one line, every goal together */}
+                    <div>
+                        <div className="flex items-baseline justify-between gap-2">
+                            <span className="text-xs font-medium text-gray-500 dark:text-gray-400">{t('goals:overview.overallProgress')}</span>
+                            <span className="text-sm font-bold tabular-nums text-gray-900 dark:text-white">
+                                {isValueVisible ? `${overallPct.toFixed(1)}%` : '•••%'}
+                            </span>
                         </div>
-
-                        {/* Retirement mini tracker — only when a retirement goal exists
-                            (drop the dashed filler to keep the dashboard column compact) */}
-                        {firstRetirement && (
-                            <div className="rounded-xl p-4 border border-prosperity-200 dark:border-prosperity-700/50 bg-gradient-to-br from-prosperity-50 to-prosperity-100/60 dark:from-prosperity-900/20 dark:to-prosperity-800/10">
-                                <div className="flex items-center gap-1 mb-1">
-                                    <span className="text-xs font-semibold uppercase tracking-wide text-prosperity-700 dark:text-prosperity-400">{t('goals:overview.retirement')}</span>
-                                    <svg className="w-3 h-3 text-prosperity-700 dark:text-prosperity-500 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 7h8m0 0v8m0-8l-8 8-4-4-6 6" /></svg>
-                                </div>
-                                <p className="text-2xl font-bold text-prosperity-700 dark:text-prosperity-400 mb-2">
-                                    {isValueVisible ? `${retirementPct.toFixed(1)}%` : '•••%'}
-                                </p>
-                                <div
-                                    role="progressbar"
-                                    aria-valuenow={Math.round(Math.min(100, retirementPct))}
-                                    aria-valuemin={0}
-                                    aria-valuemax={100}
-                                    aria-label="Retirement goal progress"
-                                    className="w-full h-2 bg-white/60 dark:bg-gray-700/60 rounded-full overflow-hidden mb-2"
-                                >
-                                    <div
-                                        className="h-full bg-gradient-to-r from-prosperity-500 to-prosperity-600 rounded-full transition-all duration-500"
-                                        style={{ width: `${retirementPct}%` }}
-                                    />
-                                </div>
-                                <div className="flex justify-between text-xs text-gray-500 dark:text-gray-400">
-                                    <span className="truncate mr-1">{isValueVisible ? formatCashAmount(firstRetirement.currentAmount, firstRetirement.currency || DEFAULT_CURRENCY) : '•••'}</span>
-                                    <span className="shrink-0">{isValueVisible ? formatCashAmount(firstRetirement.targetAmount, firstRetirement.currency || DEFAULT_CURRENCY) : '•••'}</span>
-                                </div>
-                            </div>
-                        )}
+                        <div
+                            role="progressbar"
+                            aria-valuenow={Math.round(overallPct)}
+                            aria-valuemin={0}
+                            aria-valuemax={100}
+                            aria-label={t('goals:overview.overallProgress')}
+                            className="mt-1.5 h-1.5 w-full rounded-full bg-gray-200 dark:bg-gray-700 overflow-hidden"
+                        >
+                            <div className="h-full rounded-full bg-primary-500 transition-all duration-500" style={{ width: `${overallPct}%` }} />
+                        </div>
+                        <p className="mt-1 text-xs tabular-nums text-gray-500 dark:text-gray-400">
+                            {money(totalCurrent, goals[0]?.currency)} / {money(totalTarget, goals[0]?.currency)}
+                        </p>
                     </div>
 
-                    {/* Regular goal cards — stacked list, max 3 */}
-                    {regularGoals.length > 0 && (
-                        <div className="space-y-2">
-                            {regularGoals.slice(0, 3).map((goal) => (
-                                <AssetGoalCard
-                                    key={goal.id}
-                                    title={goal.title}
-                                    currentAmount={goal.currentAmount}
-                                    targetAmount={goal.targetAmount}
-                                    currency={goal.currency}
-                                    targetDate={goal.targetDate ? new Date(goal.targetDate) : undefined}
-                                    category={goal.category}
-                                    priority={goal.priority}
-                                    dense
-                                    onEdit={onEdit ? () => onEdit(goal) : undefined}
-                                    onContribute={onContribute && goal.status !== 'completed' ? () => onContribute(goal) : undefined}
-                                />
-                            ))}
-                        </div>
+                    {/* Top priority — the goal that matters most, in full */}
+                    {top && (
+                        <section aria-label={t('goals:overview.topPriority')} className="rounded-xl border border-primary-200 dark:border-primary-800/60 bg-primary-50/60 dark:bg-primary-900/15 p-4">
+                            <div className="flex items-center justify-between gap-2">
+                                <p className="text-[11px] font-semibold uppercase tracking-wide text-primary-700 dark:text-primary-300">
+                                    {t('goals:overview.topPriority')}
+                                </p>
+                                {isRetirement ? (
+                                    <span className="text-[11px] font-medium text-prosperity-700 dark:text-prosperity-400">{t('goals:overview.portfolioLinked')}</span>
+                                ) : top.priority ? (
+                                    <span className="text-[11px] font-medium text-gray-500 dark:text-gray-400">{t('goals:overview.priorityLabel', { level: t(`goals:priorities.${top.priority}`) })}</span>
+                                ) : null}
+                            </div>
+                            <div className="mt-1.5 flex items-center gap-2 min-w-0">
+                                <span aria-hidden="true">{categoryIcon(top.category)}</span>
+                                <p className="text-base font-semibold text-gray-900 dark:text-white truncate">{top.title}</p>
+                            </div>
+                            <div className="mt-2 flex items-baseline justify-between gap-2">
+                                <span className="text-lg font-bold tabular-nums text-gray-900 dark:text-white truncate">{money(shown(top), top.currency)}</span>
+                                <span className="text-xs tabular-nums text-gray-500 dark:text-gray-400 shrink-0">/ {money(top.targetAmount, top.currency)}</span>
+                            </div>
+                            <div
+                                role="progressbar"
+                                aria-valuenow={Math.round(pctOf(top))}
+                                aria-valuemin={0}
+                                aria-valuemax={100}
+                                aria-label={t('goals:card.aria.progress', { title: top.title })}
+                                className="mt-2 h-2 w-full rounded-full bg-white/80 dark:bg-gray-700 overflow-hidden"
+                            >
+                                <div className="h-full rounded-full bg-primary-500 transition-all duration-500" style={{ width: `${pctOf(top)}%` }} />
+                            </div>
+                            <div className="mt-2 flex items-center justify-between gap-2">
+                                <p className="text-xs tabular-nums text-gray-600 dark:text-gray-400 min-w-0 truncate">
+                                    {isValueVisible ? `${pctOf(top).toFixed(0)}%` : '•••%'}
+                                    {months !== null && (
+                                        <> · {months < 0
+                                            ? t('goals:overview.overdue')
+                                            : months >= 24
+                                                ? t('goals:overview.yearsLeft', { count: Math.round(months / 12) })
+                                                : t('goals:overview.monthsLeft', { count: Math.max(1, Math.round(months)) })}</>
+                                    )}
+                                    {perMonth !== null && isValueVisible && (
+                                        <> · {t('goals:overview.perMonth', { amount: formatCashAmount(Math.ceil(perMonth), top.currency || DEFAULT_CURRENCY) })}</>
+                                    )}
+                                </p>
+                                {onContribute && !isRetirement && canMoveGoalCash(top) && (
+                                    <button
+                                        type="button"
+                                        onClick={() => onContribute(top)}
+                                        className="shrink-0 inline-flex min-h-9 items-center rounded-lg bg-primary-700 hover:bg-primary-800 px-3 text-xs font-semibold text-white focus:outline-none focus-visible:ring-2 focus-visible:ring-primary-500"
+                                    >
+                                        {t('goals:reserve.mobileButton')}
+                                    </button>
+                                )}
+                            </div>
+                        </section>
                     )}
 
-                    {goals.length > 3 && (
+                    {/* The rest — one row each, by priority */}
+                    {rest.length > 0 && (
+                        <ul className="space-y-3">
+                            {rest.slice(0, 3).map((g) => (
+                                <li key={g.id}>
+                                    <Link href="/goals" className="block rounded-lg focus:outline-none focus-visible:ring-2 focus-visible:ring-primary-500">
+                                        <div className="flex items-center justify-between gap-2">
+                                            <span className="flex items-center gap-2 min-w-0">
+                                                <span aria-hidden="true" className="text-sm">{categoryIcon(g.category)}</span>
+                                                <span className="text-sm font-medium text-gray-800 dark:text-gray-200 truncate">{g.title}</span>
+                                            </span>
+                                            <span className="text-xs font-semibold tabular-nums text-gray-600 dark:text-gray-400 shrink-0">
+                                                {isValueVisible ? `${pctOf(g).toFixed(0)}%` : '•••%'}
+                                            </span>
+                                        </div>
+                                        <div className="mt-1.5 h-1 w-full rounded-full bg-gray-200 dark:bg-gray-700 overflow-hidden" aria-hidden="true">
+                                            <div className="h-full rounded-full bg-gray-400 dark:bg-gray-500" style={{ width: `${pctOf(g)}%` }} />
+                                        </div>
+                                    </Link>
+                                </li>
+                            ))}
+                        </ul>
+                    )}
+
+                    {rest.length > 3 && (
                         <p className="text-center text-xs text-primary-700 hover:text-primary-800 dark:text-primary-400">
-                            <Link href="/goals">{t('goals:overview.moreGoals', { count: goals.length - 3 })}</Link>
+                            <Link href="/goals">{t('goals:overview.moreGoals', { count: rest.length - 3 })}</Link>
                         </p>
                     )}
                 </div>
