@@ -16,6 +16,7 @@ Endpoints:
   GET    /peers/goals/{goal_id}                           → get a single shared goal
   PATCH  /peers/goals/{goal_id}                           → edit title, target or date (either participant)
   DELETE /peers/goals/{goal_id}                           → delete a shared goal (creator only)
+  POST   /peers/goals/{goal_id}/link-goal                 → the caller's own goal backing their side
 
   GET    /peers/goals/{goal_id}/records                   → list saving records for a goal
   POST   /peers/goals/{goal_id}/records                   → add a saving record
@@ -38,6 +39,7 @@ from uuid import UUID
 from fastapi import APIRouter, Depends, HTTPException, Query, status
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.modules.goals.schemas import GoalResponse
 from app.common.schemas import ApiResponse
 from app.core.database import get_db
 from app.modules.peers.schemas import (
@@ -272,6 +274,30 @@ async def delete_goal(
     """
     svc = get_peer_service(session)
     await svc.delete_goal(current_user.id, goal_id)
+
+
+@router.post(
+    "/goals/{goal_id}/link-goal",
+    response_model=ApiResponse[GoalResponse],
+    summary="Back your side of a shared goal with your own goal",
+)
+async def link_goal(
+    goal_id: UUID,
+    current_user: CurrentUser,
+    session: AsyncSession = Depends(get_db),
+):
+    """Return the caller's own goal for this shared goal, making it if missing.
+
+    That goal reserves the caller's Life cash (POST /goals/{id}/reserve) and its
+    value counts toward their side. Raises 404 if the caller is not a
+    participant, 400 if the shared goal is cancelled.
+    """
+    svc = get_peer_service(session)
+    goal = await svc.link_goal(current_user.id, goal_id)
+    return ApiResponse.success_response(
+        data=GoalResponse.model_validate(goal),
+        message="Your goal for this shared goal",
+    )
 
 
 @router.get(

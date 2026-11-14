@@ -84,10 +84,13 @@ class GoalService:
         self.session = session
         self.repository = GoalRepository(session)
 
-    async def create_goal(self, user_id: UUID, goal_data: GoalCreate) -> Goal:
-        """Create a new goal"""
+    async def create_goal(
+        self, user_id: UUID, goal_data: GoalCreate, *, shared_goal_id: Optional[UUID] = None
+    ) -> Goal:
+        """Create a new goal (``shared_goal_id``: backing a side of a shared goal)."""
         try:
             goal = Goal(
+                shared_goal_id=shared_goal_id,
                 user_id=user_id,
                 title=goal_data.title,
                 description=goal_data.description,
@@ -230,6 +233,9 @@ class GoalService:
         # A cancelled goal gives its cash back to Life: nothing is set aside
         # for a goal that is no longer pursued.
         if cancelling:
+            # No longer pursued, so no longer anyone's side of a shared goal; the
+            # user may link a new goal to it.
+            goal.shared_goal_id = None
             held = (await goal_money(self.session, user_id, [goal.id])).get(goal.id)
             if held and held.reserved > 0:
                 await self._record(goal, ContributionKind.RELEASE, -held.reserved, None,

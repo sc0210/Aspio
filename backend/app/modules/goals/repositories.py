@@ -145,6 +145,25 @@ class GoalRepository:
         self.db.add(contribution)
         return contribution
 
+    async def linked_goal_id(self, user_id: UUID, shared_goal_id: UUID) -> Optional[UUID]:
+        """The user's open goal backing their side of a shared goal, if any."""
+        return await self.db.scalar(
+            select(Goal.id).where(
+                Goal.user_id == user_id, Goal.shared_goal_id == shared_goal_id,
+                Goal.status != GoalStatus.CANCELLED,
+            )
+        )
+
+    async def linked_to_shared(self, shared_goal_ids: List[UUID]) -> list:
+        """(goal id, owner, shared goal id) of every open goal backing these shared goals."""
+        if not shared_goal_ids:
+            return []
+        return (await self.db.execute(
+            select(Goal.id, Goal.user_id, Goal.shared_goal_id).where(
+                Goal.shared_goal_id.in_(shared_goal_ids), Goal.status != GoalStatus.CANCELLED,
+            )
+        )).all()
+
     async def contribution_total(self, goal_id: UUID) -> Decimal:
         """Σ every contribution row of a goal, the ones staged in this session included."""
         # The app's sessions do not autoflush (core/database.py), so a row just
