@@ -9,6 +9,11 @@ jest.mock('@/hooks/useGoals', () => ({
     mutateAsync: jest.fn().mockResolvedValue({}),
     isPending: false,
   }),
+  useReleaseFromGoal: () => ({
+    mutateAsync: jest.fn().mockResolvedValue({}),
+    isPending: false,
+  }),
+  useLifeCash: () => ({ data: { lifeBalance: 10000, reserved: 2000, available: 8000 } }),
 }));
 
 jest.mock('@/contexts/PrivacyContext', () => ({
@@ -90,14 +95,17 @@ describe('ContributeModal — mobile UX fixes', () => {
   // Each preset carries aria-label="Set contribution to N% of remaining amount",
   // which REPLACES the visible "N%" as the button's accessible name. Querying
   // by the visible text finds nothing; match what a screen reader announces.
-  const presetName = (percentage: number) =>
-    new RegExp(`Set contribution to ${percentage}% of remaining amount`, 'i');
+  // Found by the percentage they show: their accessible name is translated
+  // ("Set contribution to 25% of remaining amount"), and this suite has no
+  // translations loaded.
+  const preset = (percentage: number) =>
+    screen.getByText(`${percentage}%`, { selector: 'button' });
 
   describe('Quick-amount preset buttons', () => {
     it('renders four quick-amount preset buttons (25%, 50%, 75%, 100%)', () => {
       render(<ContributeModal {...defaultProps} />);
       [25, 50, 75, 100].forEach((percentage) => {
-        expect(screen.getByRole('button', { name: presetName(percentage) })).toBeInTheDocument();
+        expect(preset(percentage)).toBeInTheDocument();
       });
     });
 
@@ -105,7 +113,7 @@ describe('ContributeModal — mobile UX fixes', () => {
       render(<ContributeModal {...defaultProps} />);
       [25, 50, 75, 100].forEach((percentage) => {
         expect(
-          screen.getByRole('button', { name: presetName(percentage) }).textContent,
+          preset(percentage).textContent,
         ).toContain(`${percentage}%`);
       });
     });
@@ -113,7 +121,7 @@ describe('ContributeModal — mobile UX fixes', () => {
     it('each quick-amount button has min-h-[44px] class for 44px touch target', () => {
       render(<ContributeModal {...defaultProps} />);
       [25, 50, 75, 100].forEach((percentage) => {
-        const btn = screen.getByRole('button', { name: presetName(percentage) });
+        const btn = preset(percentage);
         expect(btn.className).toContain('min-h-[44px]');
       });
     });

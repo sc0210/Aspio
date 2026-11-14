@@ -106,6 +106,26 @@ export interface CashFormData {
   date: string;
   tags: string[];
   loanId: string;
+  /** The goal whose reserved cash pays this Life expense ('' or absent: none). */
+  goalId?: string;
+}
+
+/** A goal an expense can be paid from (holds Life cash, or this row already uses it). */
+export interface PayableGoal {
+  id: string;
+  title: string;
+  /** TWD still reserved for the goal. */
+  reservedAmount: number;
+}
+
+/** The goals a cash form offers under "Pay from goal": those holding cash, plus the row's own. */
+export function payableGoals(
+  goals: { id: string; title: string; status: string; reservedAmount?: number | string }[],
+  currentGoalId?: string,
+): PayableGoal[] {
+  return goals
+    .filter((g) => g.id === currentGoalId || (g.status !== 'cancelled' && (Number(g.reservedAmount) || 0) > 0))
+    .map((g) => ({ id: g.id, title: g.title, reservedAmount: Number(g.reservedAmount) || 0 }));
 }
 
 export interface ActiveLoan {
@@ -284,6 +304,8 @@ interface CashFieldsProps {
   errors: Record<string, string>;
   onChange: (field: keyof CashFormData, value: string) => void;
   activeLoans: ActiveLoan[];
+  /** Goals this expense can be paid from (see payableGoals). */
+  goals?: PayableGoal[];
   /** The transfer hint points at the Investment tab, which only the add form has. */
   showInvestmentHint?: boolean;
   /** Focus the amount on mount. For a new entry only: on edit it would open the
@@ -296,8 +318,8 @@ interface CashFieldsProps {
  * The entry panel (amount, description) first, then the category, then the
  * settings list: date, wallet, and More options (loan link, payment method, tags).
  */
-export function CashFields({ idPrefix: p, formData, errors, onChange, onTagsChange, activeLoans, showInvestmentHint = false, autoFocusAmount = false }: CashFieldsProps) {
-  const { t } = useTranslation(['transactions']);
+export function CashFields({ idPrefix: p, formData, errors, onChange, onTagsChange, activeLoans, goals: goalOptions = [], showInvestmentHint = false, autoFocusAmount = false }: CashFieldsProps) {
+  const { t } = useTranslation(['transactions', 'goals']);
   const categories = formData.type === 'transfer' ? [] : CATEGORIES[formData.type as keyof typeof CATEGORIES] || [];
   const tone = TYPE_TONE[formData.type] ?? TYPE_TONE.expense;
 
@@ -307,6 +329,12 @@ export function CashFields({ idPrefix: p, formData, errors, onChange, onTagsChan
   const loanEligible = formData.type === 'expense' && activeLoans.length > 0;
   const loanInline = loanEligible && formData.category === LOAN_CATEGORY;
   const linkedLoan = activeLoans.find((loan) => loan.id === formData.loanId);
+
+  // Paying from a goal spends cash reserved for it, so Life's free cash does
+  // not drop a second time. Only a Life expense can, and only a goal that holds
+  // cash (or the one this row already pays from, on edit).
+  const goalEligible = formData.type === 'expense' && formData.walletType === 'life' && goalOptions.length > 0;
+  const linkedGoal = goalOptions.find((g) => g.id === formData.goalId);
   const payment = PAYMENT_METHODS.find((method) => method.value === formData.paymentMethod);
   // A category this form does not list (an older or imported row) gets its own
   // pressed chip, so an edit shows what the row is and saves it unchanged.
@@ -335,10 +363,12 @@ export function CashFields({ idPrefix: p, formData, errors, onChange, onTagsChan
   // mounts this only once the transaction has loaded).
   const [moreOpen, setMoreOpen] = useState(
     () => !!formData.paymentMethod || formData.tags.length > 0 || (!!formData.loanId && formData.category !== LOAN_CATEGORY)
+      || !!formData.goalId
   );
   const moreSummary = [
     ...(payment ? [t(`transactions:form.paymentMethods.${payment.value}`, payment.label)] : []),
     ...(linkedLoan && !loanInline ? [linkedLoan.name] : []),
+    ...(linkedGoal && goalEligible ? [`🎯 ${linkedGoal.title}`] : []),
     ...formData.tags.map((tag) => `#${tag}`),
   ];
 
@@ -374,6 +404,45 @@ export function CashFields({ idPrefix: p, formData, errors, onChange, onTagsChan
       {loanInline && !formData.loanId && (
         <p className="mt-1.5 text-xs text-amber-700 dark:text-amber-400">
           {t('transactions:form.loanPickHint', "Pick the loan this repays, or no loan balance goes down.")}
+        </p>
+      )}
+    </div>
+  );
+
+  const goalPicker = (
+    <div>
+      <div id={`${p}-group-goal`} className={FIELD_LABEL}>
+        {t('goals:reserve.payFromGoal', 'Pay from goal')}
+      </div>
+      <div role="group" aria-labelledby={`${p}-group-goal`} ref={revealSelected} className={CHIP_ROW}>
+        <button
+          aria-pressed={!formData.goalId}
+          type="button"
+          onClick={() => onChange('goalId', '')}
+          className={cn(CHIP, !formData.goalId ? CHIP_ON : CHIP_OFF)}
+        >
+          {!formData.goalId && <ChipCheck />}
+          {t('goals:reserve.payFromGoalNone', 'Not from a goal')}
+        </button>
+        {goalOptions.map((goal) => (
+          <button
+            aria-pressed={formData.goalId === goal.id}
+            key={goal.id}
+            type="button"
+            onClick={() => onChange('goalId', goal.id)}
+            className={cn(CHIP, formData.goalId === goal.id ? CHIP_ON : CHIP_OFF)}
+          >
+            {formData.goalId === goal.id && <ChipCheck />}
+            {goal.title}
+            <span className="font-normal opacity-70">{formatCurrency(goal.reservedAmount, 'TWD', { precision: 0 })}</span>
+          </button>
+        ))}
+      </div>
+      {linkedGoal && (
+        <p className="mt-1.5 text-xs text-gray-500 dark:text-gray-400">
+          {t('goals:reserve.payFromGoalHint', {
+            amount: formatCurrency(linkedGoal.reservedAmount, 'TWD', { precision: 0 }),
+          })}
         </p>
       )}
     </div>
@@ -611,6 +680,7 @@ export function CashFields({ idPrefix: p, formData, errors, onChange, onTagsChan
               {/* hidden, not unmounted: a half-typed tag survives closing the section. */}
               <div id={`${p}-more`} hidden={!moreOpen} className="pt-1 pb-4 space-y-5">
                 {loanEligible && !loanInline && loanPicker}
+                {goalEligible && goalPicker}
 
                 <div>
                   <div id={`${p}-group-payment`} className={FIELD_LABEL}>

@@ -18,6 +18,7 @@ import { useDashboardSummary } from '@/hooks/useDashboardSummary';
 import { useAppMode } from '@/hooks/useAppMode';
 import { greetingName } from '@/lib/dashboard/greetingName';
 import { usePrivacy } from '@/contexts/PrivacyContext';
+import { useLifeCash } from '@/hooks/useGoals';
 import { formatTWD, formatTWDCompact } from '@/utils/formatters';
 import { cn } from '@/utils/cn';
 import { ARROW, DIRECTION_TEXT, SIGN, direction } from './direction';
@@ -26,12 +27,17 @@ import { Card } from '@/components/ui/Card';
 const NW_COLOR = '#10b981'; // emerald — matches the desktop net-worth chart
 
 export function MobileDashboard() {
-    const { t } = useTranslation(['dashboard', 'common', 'transactions']);
+    const { t } = useTranslation(['dashboard', 'common', 'transactions', 'goals']);
     const { isDemo, user } = useAppMode();
     const { isValueVisible } = usePrivacy();
 
     // Shared with the desktop CompactDashboard so the two focused views never drift.
     const model = useDashboardSummary();
+    // Life cash set aside for goals: still Life's, but not free to spend.
+    // Above the early return below: a hook after it crashed the page
+    // ("Rendered more hooks than during the previous render").
+    const { data: lifeCash } = useLifeCash();
+    const lifeReserved = lifeCash && lifeCash.reserved > 0 ? lifeCash : null;
 
     if (model.isLoading && !model.stats) {
         return (
@@ -130,6 +136,11 @@ export function MobileDashboard() {
                                 <p className="text-[14.5px] font-extrabold tracking-tight tabular-nums text-gray-900 dark:text-white truncate">
                                     {isValueVisible ? formatTWDCompact(value) : hidden}
                                 </p>
+                                {Icon === BanknotesIcon && lifeReserved && (
+                                    <p className={`mt-0.5 text-xs leading-tight tabular-nums break-words ${lifeReserved.available < 0 ? 'text-red-600 dark:text-red-400' : 'text-gray-500 dark:text-gray-400'}`}>
+                                        {t('goals:reserve.lifeAvailable', 'Available')} {isValueVisible ? formatTWDCompact(lifeReserved.available) : hidden}
+                                    </p>
+                                )}
                             </div>
                         </Card>
                     ))}

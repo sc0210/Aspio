@@ -272,6 +272,8 @@ export interface FinancialGoal {
   description?: string;
   targetAmount: number;
   currentAmount: number;
+  /** Life Wallet cash this goal holds (goals/reservations.py); TWD. */
+  reservedAmount?: number;
   currency: string;
   targetDate: Date;
   category: GoalCategory;

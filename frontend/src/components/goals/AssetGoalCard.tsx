@@ -17,6 +17,11 @@ interface AssetGoalCardProps {
     priority?: 'high' | 'medium' | 'low';
     isAtRisk?: boolean;
     monthlyNeeded?: number;
+    /** Where the progress is (TWD): Life cash still reserved, cash spent from
+     *  the goal, and progress recorded before reservations, which holds no cash. */
+    reservedAmount?: number;
+    spentAmount?: number;
+    legacyAmount?: number;
     onContribute?: () => void;
     onEdit?: () => void;
     onDelete?: () => void;
@@ -34,6 +39,9 @@ export function AssetGoalCard({
     priority = 'medium',
     isAtRisk = false,
     monthlyNeeded,
+    reservedAmount,
+    spentAmount,
+    legacyAmount,
     onContribute,
     onEdit,
     onDelete,
@@ -48,6 +56,12 @@ export function AssetGoalCard({
     const progress = target > 0 ? (current / target) * 100 : 0;
     const remaining = Math.max(0, target - current);
     const isCompleted = current >= target;
+    // Decimals arrive as strings; a missing one is 0.
+    const reserved = Number(reservedAmount) || 0;
+    const spent = Number(spentAmount) || 0;
+    const legacy = Number(legacyAmount) || 0;
+    // A finished goal can still hold cash to release, so it keeps the button.
+    const canMoveCash = !isCompleted || reserved > 0;
 
     const categoryMeta = GOAL_CATEGORIES.find((c) => c.id === category);
     const categoryIcon = categoryMeta?.icon ?? '🎯';
@@ -149,7 +163,7 @@ export function AssetGoalCard({
                         )}
                     </div>
                     <div className="flex items-center gap-1.5 flex-shrink-0">
-                        {onContribute && !isCompleted && (
+                        {onContribute && canMoveCash && (
                             <button
                                 type="button"
                                 onClick={(e) => { e.stopPropagation(); onContribute(); }}
@@ -263,6 +277,37 @@ export function AssetGoalCard({
                 </div>
             </div>
 
+            {/* Where the progress is */}
+            {(reserved !== 0 || spent !== 0 || legacy !== 0) && (
+                <dl className="flex flex-wrap gap-x-3 gap-y-1 mb-3 text-xs text-gray-600 dark:text-gray-400">
+                    <div className="flex gap-1">
+                        <dt>{t('goals:reserve.reservedHere')}</dt>
+                        <dd className="font-medium text-gray-900 dark:text-white tabular-nums">
+                            {isValueVisible ? formatCashAmount(reserved, currency) : '•••••'}
+                        </dd>
+                    </div>
+                    {spent !== 0 && (
+                        <div className="flex gap-1">
+                            <dt>{t('goals:reserve.spent')}</dt>
+                            <dd className="font-medium text-gray-900 dark:text-white tabular-nums">
+                                {isValueVisible ? formatCashAmount(spent, currency) : '•••••'}
+                            </dd>
+                        </div>
+                    )}
+                    {legacy !== 0 && (
+                        <div
+                            className="flex gap-1 text-amber-700 dark:text-amber-400"
+                            title={t('goals:reserve.legacyHint', { amount: isValueVisible ? formatCashAmount(legacy, currency) : '•••••' })}
+                        >
+                            <dt>{t('goals:reserve.legacy')}</dt>
+                            <dd className="font-medium tabular-nums">
+                                {isValueVisible ? formatCashAmount(legacy, currency) : '•••••'}
+                            </dd>
+                        </div>
+                    )}
+                </dl>
+            )}
+
             {/* Date + Monthly Needed */}
             <div className="flex items-center justify-between mb-3 gap-2 min-h-[1.25rem]">
                 {targetDate && !isCompleted ? (
@@ -308,7 +353,7 @@ export function AssetGoalCard({
                 </div>
             ) : (
                 <div className="flex gap-2">
-                    {onContribute && !isCompleted && (
+                    {onContribute && canMoveCash && (
                         <button
                             type="button"
                             onClick={(e) => { e.stopPropagation(); onContribute(); }}

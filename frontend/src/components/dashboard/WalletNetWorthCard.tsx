@@ -22,6 +22,7 @@ import { cn } from '@/utils/cn';
 import { netWorthOf } from '@/lib/dashboard/periodChange';
 import { Card } from '@/components/ui/Card';
 import { niceAxis } from '@/utils/niceAxis';
+import type { LifeCash } from '@/hooks/useGoals';
 
 interface WalletNetWorthCardProps {
     stats: {
@@ -38,6 +39,8 @@ interface WalletNetWorthCardProps {
     netWorthChangeAmount?: number;
     loading?: boolean;
     isPeriodSwitching?: boolean;
+    /** Life cash set aside for goals; the Life row shows what is still free. */
+    lifeCash?: LifeCash | null;
 }
 
 /**
@@ -155,9 +158,25 @@ export function WalletNetWorthCard({
     netWorthChangeAmount,
     loading = false,
     isPeriodSwitching = false,
+    lifeCash,
 }: WalletNetWorthCardProps) {
     const { t, i18n } = useTranslation('dashboard');
+    const { t: tg } = useTranslation('goals');
     const { isValueVisible } = usePrivacy();
+    // Life cash set aside for goals: still in Life (and Total Asset), but not
+    // free to spend. Shown only when some is reserved.
+    const lifeReserved = lifeCash && lifeCash.reserved > 0 ? lifeCash : null;
+    const lifeAvailableLine = lifeReserved && (
+        <span
+            className={cn(
+                'block text-xs font-normal tabular-nums truncate',
+                lifeReserved.available < 0 ? 'text-red-600 dark:text-red-400' : 'text-gray-500 dark:text-gray-400',
+            )}
+            title={tg('reserve.lifeReserved', { amount: isValueVisible ? formatTWD(lifeReserved.reserved) : '•••' })}
+        >
+            {tg('reserve.lifeAvailable')} {isValueVisible ? formatTWD(lifeReserved.available) : '•••'}
+        </span>
+    );
 
     const [lineVisibility, setLineVisibility] = useState({
         lifeWallet: false,
@@ -528,6 +547,7 @@ export function WalletNetWorthCard({
                                     <p className="text-xs font-bold text-gray-900 dark:text-white tabular-nums leading-tight mt-0.5 truncate" title={isValueVisible ? formatTWD(value) : ''}>
                                         {isValueVisible ? formatTWD(value) : '•••'}
                                     </p>
+                                    {key === 'life_wallet' && lifeAvailableLine}
                                     {change !== undefined ? (
                                         <span className={cn(
                                             'mt-0.5 inline-flex items-center gap-0.5 text-xs font-semibold px-1 py-0.5 rounded-full',
@@ -659,7 +679,8 @@ export function WalletNetWorthCard({
                                 const value = stats[key];
                                 const pct = composition[changeKey];
                                 return (
-                                    <div key={label} className="flex items-center gap-2 px-1">
+                                    <div key={label}>
+                                    <div className="flex items-center gap-2 px-1">
                                         <div className="w-2.5 h-2.5 rounded-full flex-shrink-0" style={{ background: color }} />
                                         <span className="text-xs text-gray-600 dark:text-gray-400 flex-1 truncate">{label}</span>
                                         <span className="text-xs font-semibold tabular-nums text-gray-700 dark:[color:var(--legend)]" style={{ '--legend': DONUT_TEXT_DARK[i] } as CSSProperties}>
@@ -668,6 +689,11 @@ export function WalletNetWorthCard({
                                         <span className="text-xs font-bold text-gray-900 dark:text-white tabular-nums w-24 text-right">
                                             {isValueVisible ? formatTWD(value) : '•••'}
                                         </span>
+                                    </div>
+                                    {/* Own line, full width: inside the amount column it was cut to "Available NT$…". */}
+                                    {key === 'life_wallet' && lifeAvailableLine && (
+                                        <div className="pl-5 pr-1 text-right">{lifeAvailableLine}</div>
+                                    )}
                                     </div>
                                 );
                             })}

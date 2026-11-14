@@ -81,15 +81,22 @@ describe('a transaction or portfolio change invalidates everything derived from 
         expect(isStale(client, key)).toBe(true);
     });
 
-    it('leaves goals and the profile alone', () => {
-        // Goals have no link to transactions on the backend — a contribution
-        // goes through its own endpoint, which invalidates its own queries.
-        // Sweeping them in here would be a refetch nobody asked for on every
-        // transaction edit. The first version of this test named GOALS in the
-        // comment and asserted USER_PROFILE, so it would not have caught that.
-        seed(client, [QUERY_KEYS.GOALS, QUERY_KEYS.USER_PROFILE]);
+    it('refreshes goals and Life cash, since an expense can spend a goal\'s reserve', () => {
+        // An expense paid from a goal (transactions.goal_id) moves that goal's
+        // money from reserved to spent, and every Life expense changes what is
+        // free. Both read the ledger now.
+        seed(client, [QUERY_KEYS.GOALS, QUERY_KEYS.LIFE_CASH]);
         invalidateDashboardData(client);
-        expect(isStale(client, QUERY_KEYS.GOALS)).toBe(false);
+        expect(isStale(client, QUERY_KEYS.GOALS)).toBe(true);
+        expect(isStale(client, QUERY_KEYS.LIFE_CASH)).toBe(true);
+    });
+
+    it('leaves goal progress totals and the profile alone', () => {
+        // Progress moves only by reserving or releasing (their own endpoints),
+        // never by spending, so the summary is not ledger-derived.
+        seed(client, [QUERY_KEYS.GOALS_SUMMARY, QUERY_KEYS.USER_PROFILE]);
+        invalidateDashboardData(client);
+        expect(isStale(client, QUERY_KEYS.GOALS_SUMMARY)).toBe(false);
         expect(isStale(client, QUERY_KEYS.USER_PROFILE)).toBe(false);
     });
 

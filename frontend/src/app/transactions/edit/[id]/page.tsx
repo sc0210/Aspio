@@ -14,7 +14,9 @@ import { LoadingSpinner } from '@/components/ui/LoadingSpinner';
 import {
   CATEGORIES, CURRENCIES, PAYMENT_METHODS, TYPE_TONE, CashFields, TagsField, TypeToggle, DateRow, validateCashFields, StickySubmitBar, revealFirstError,
   ENTRY_PANEL, ENTRY_SECTION, ENTRY_CAPTION, ENTRY_INPUT, ENTRY_INPUT_INVALID, ERROR_TEXT, NOTE, ROW_LIST, SEGMENTED, SEGMENT, SEGMENT_ON,
+  payableGoals,
 } from '@/components/transactions/TransactionFormFields';
+import { useGoals } from '@/hooks/useGoals';
 import { cn } from '@/utils/cn';
 import { transactionService } from '@/services/transactionService';
 import { Transaction } from '@/shared/types';
@@ -103,9 +105,12 @@ export default function EditTransactionPage() {
     date: localDateString(),
     tags: [] as string[],
     loanId: '',
+    goalId: '',
   });
   const [loaded, setLoaded] = useState<LoadedRow | null>(null);
   const [activeLoans, setActiveLoans] = useState<{ id: string; name: string; current_balance: number; currency: string }[]>([]);
+  // Goals holding Life cash, offered under "Pay from goal" (plus this row's own).
+  const { data: allGoals = [] } = useGoals();
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [confirmingDelete, setConfirmingDelete] = useState(false);
@@ -176,6 +181,7 @@ export default function EditTransactionPage() {
           const txType = txn.type as 'expense' | 'income' | 'transfer';
           const day = toDateInputValue(txn.date);
           const txnLoanId = (txn as Transaction & { loan_id?: string | null }).loan_id ?? txn.loanId ?? undefined;
+          const txnGoalId = (txn as Transaction & { goal_id?: string | null }).goal_id ?? undefined;
           setLoaded({
             type: txType,
             amount: Number(txn.amount),
@@ -243,6 +249,7 @@ export default function EditTransactionPage() {
               date: day,
               tags: txn.tags || [],
               loanId: '',
+              goalId: '',
             });
           } else if (txn.category === INVESTMENT_SALE) {
             setIsSaleMode(true);
@@ -257,6 +264,7 @@ export default function EditTransactionPage() {
               date: day,
               tags: txn.tags || [],
               loanId: '',
+              goalId: '',
             }));
           } else if (txType === 'transfer' || !!txn.transferGroupId || txn.category === 'Transfer') {
             // A wallet transfer's two legs are persisted as separate
@@ -293,6 +301,7 @@ export default function EditTransactionPage() {
                 date: toDateInputValue(transfer.date),
                 tags: txn.tags || [],
                 loanId: '',
+                goalId: '',
               });
             } else {
               // Demo mode, or a legacy/unlinked transfer leg (predates the
@@ -321,6 +330,7 @@ export default function EditTransactionPage() {
                 date: day,
                 tags: txn.tags || [],
                 loanId: '',
+                goalId: '',
               });
             }
           } else {
@@ -364,6 +374,8 @@ export default function EditTransactionPage() {
               tags: txn.tags || [],
               // Pre-fill the loan link if this expense is tied to a loan.
               loanId: txnLoanId ?? '',
+              // …and the goal whose reserved cash paid it.
+              goalId: txnGoalId ?? '',
             };
             setFormData(initial);
             setBaseline(initial);
@@ -564,7 +576,7 @@ export default function EditTransactionPage() {
         return;
       }
 
-      let updateData: Partial<Transaction> & { loan_id?: string | null };
+      let updateData: Partial<Transaction> & { loan_id?: string | null; goal_id?: string | null };
 
       if (isSaleMode || (isInvestMode && investLink === 'lot')) {
         // Only what is this row's own: the money and the day follow the holding.
@@ -604,6 +616,13 @@ export default function EditTransactionPage() {
           // Link/unlink the loan (expenses only). Sending null unlinks and
           // restores the loan balance; the backend re-syncs on any change.
           ...(formData.type === 'expense' ? { loan_id: formData.loanId || null } : {}),
+          // Pay from a goal (a Life expense only); '' unlinks and the money goes
+          // back to the goal. Sent only when it changed, so an untouched row
+          // never re-checks the goal's reserve.
+          ...((formData.goalId ?? '') !== (baseline?.goalId ?? '')
+            || (!!formData.goalId && (formData.type !== 'expense' || formData.walletType !== 'life'))
+            ? { goal_id: formData.type === 'expense' && formData.walletType === 'life' ? (formData.goalId || '') : '' }
+            : {}),
         };
       }
 
@@ -698,6 +717,7 @@ export default function EditTransactionPage() {
     || !same(formData.category, baseline.category) || !same(formData.currency, baseline.currency)
     || formData.type !== baseline.type || formData.date !== baseline.date
     || !same(formData.loanId, baseline.loanId) || !same(formData.paymentMethod, baseline.paymentMethod)
+    || !same(formData.goalId, baseline.goalId)
     || !same(formData.walletType, baseline.walletType)
     || (formData.tags ?? []).join('\u0000') !== (baseline.tags ?? []).join('\u0000')
   );
@@ -995,6 +1015,7 @@ export default function EditTransactionPage() {
                 onChange={handleInputChange}
                 onTagsChange={(tags) => setFormData(prev => ({ ...prev, tags }))}
                 activeLoans={activeLoans}
+                goals={payableGoals(allGoals, formData.goalId)}
               />
             )}
 

@@ -5,7 +5,6 @@ import { Dialog, DialogPanel, DialogTitle, Transition, TransitionChild } from '@
 import { Fragment } from 'react';
 import { useUpdateGoal, UpdateGoalData, Goal } from '@/hooks/useGoals';
 import { useTranslation } from 'react-i18next';
-import { DEFAULT_CURRENCY } from '@/utils/constants';
 import { useScrollLock } from '@/hooks/useScrollLock';
 
 // Format a number to a comma-separated string, e.g. 1000000 → "1,000,000"
@@ -70,18 +69,12 @@ export function EditGoalModal({ isOpen, onClose, goal }: EditGoalModalProps) {
         priority: goal.priority,
         status: goal.status,
         target_amount: Number(goal.targetAmount),
-        current_amount: Number(goal.currentAmount),
-        currency: goal.currency,
         target_date: toDateInput(goal.targetDate),
     });
 
     // Display strings for comma-formatted amount fields
     // Always show a value (including '0') since this is existing saved data
     const [targetDisplay, setTargetDisplay] = useState(() => fmtAmt(Number(goal.targetAmount) || 0));
-    const [currentDisplay, setCurrentDisplay] = useState(() => {
-        const n = Number(goal.currentAmount);
-        return n > 0 ? fmtAmt(n) : '0';
-    });
 
     // Sync form data when goal prop changes
     useEffect(() => {
@@ -92,15 +85,9 @@ export function EditGoalModal({ isOpen, onClose, goal }: EditGoalModalProps) {
             priority: goal.priority,
             status: goal.status,
             target_amount: Number(goal.targetAmount),
-            current_amount: Number(goal.currentAmount),
-            currency: goal.currency,
             target_date: toDateInput(goal.targetDate),
         });
         setTargetDisplay(fmtAmt(Number(goal.targetAmount) || 0));
-        setCurrentDisplay(() => {
-            const n = Number(goal.currentAmount);
-            return n > 0 ? fmtAmt(n) : '0';
-        });
     }, [goal]);
 
     const handleSubmit = async (e: React.FormEvent) => {
@@ -114,8 +101,6 @@ export function EditGoalModal({ isOpen, onClose, goal }: EditGoalModalProps) {
         if (formData.priority !== goal.priority) changes.priority = formData.priority;
         if (formData.status !== goal.status) changes.status = formData.status;
         if (formData.target_amount !== goal.targetAmount) changes.target_amount = formData.target_amount;
-        if (formData.current_amount !== goal.currentAmount) changes.current_amount = formData.current_amount;
-        if (formData.currency !== goal.currency) changes.currency = formData.currency;
 
         const originalDate = toDateInput(goal.targetDate);
         if (formData.target_date !== originalDate) {
@@ -142,7 +127,7 @@ export function EditGoalModal({ isOpen, onClose, goal }: EditGoalModalProps) {
     };
 
     const progress = formData.target_amount && formData.target_amount > 0
-        ? ((formData.current_amount || 0) / formData.target_amount) * 100
+        ? ((Number(goal.currentAmount) || 0) / formData.target_amount) * 100
         : 0;
 
     return (
@@ -286,22 +271,17 @@ export function EditGoalModal({ isOpen, onClose, goal }: EditGoalModalProps) {
                                         </div>
 
                                         <div>
-                                            <label htmlFor="edit-goal-current-amount" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                                            <label id="edit-goal-current-amount-label" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
                                                 {t('goals:fields.currentAmount')}
                                             </label>
-                                            <input
+                                            {/* Progress moves only by reserving or releasing Life Wallet cash
+                                                (Contribute on the goal card), never by typing a number. */}
+                                            <p
                                                 id="edit-goal-current-amount"
-                                                type="text"
-                                                inputMode="decimal"
-                                                value={currentDisplay}
-                                                onChange={(e) => {
-                                                    const formatted = liveFormat(e.target.value);
-                                                    setCurrentDisplay(formatted);
-                                                    handleChange('current_amount', parseAmt(formatted));
-                                                }}
-                                                onFocus={(e) => e.target.select()}
-                                                className="w-full px-4 py-2.5 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus-visible:ring-2 focus-visible:ring-primary-500 focus-visible:border-transparent"
-                                            />
+                                                className="w-full px-4 py-2.5 border border-dashed border-gray-300 dark:border-gray-600 rounded-lg bg-gray-50 dark:bg-gray-700/50 text-gray-900 dark:text-white tabular-nums"
+                                            >
+                                                {fmtAmt(Number(goal.currentAmount) || 0)}
+                                            </p>
                                         </div>
                                     </div>
 
@@ -321,25 +301,8 @@ export function EditGoalModal({ isOpen, onClose, goal }: EditGoalModalProps) {
                                         </div>
                                     </div>
 
-                                    {/* Currency and Target Date */}
+                                    {/* Target Date */}
                                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                                        <div>
-                                            <label htmlFor="edit-goal-currency" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                                                {t('portfolio:fields.currency')}
-                                            </label>
-                                            <select
-                                                id="edit-goal-currency"
-                                                value={formData.currency || DEFAULT_CURRENCY}
-                                                onChange={(e) => handleChange('currency', e.target.value)}
-                                                className="w-full px-4 py-2.5 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus-visible:ring-2 focus-visible:ring-primary-500 focus-visible:border-transparent"
-                                            >
-                                                <option value="USD">{t('common:currency.USD')}</option>
-                                                <option value="TWD">{t('common:currency.TWD')}</option>
-                                                <option value="EUR">{t('common:currency.EUR')}</option>
-                                                <option value="GBP">{t('common:currency.GBP')}</option>
-                                                <option value="JPY">{t('common:currency.JPY')}</option>
-                                            </select>
-                                        </div>
 
                                         <div>
                                             <label htmlFor="edit-goal-target-date" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">

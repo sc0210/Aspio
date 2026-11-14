@@ -3,7 +3,9 @@
 import React, { useState, useEffect } from 'react';
 import { Dialog, DialogPanel, DialogTitle, Transition, TransitionChild } from '@headlessui/react';
 import { Fragment } from 'react';
-import { useCreateGoal, CreateGoalData } from '@/hooks/useGoals';
+import { useCreateGoal, useLifeCash, CreateGoalData } from '@/hooks/useGoals';
+import { usePrivacy } from '@/contexts/PrivacyContext';
+import { formatCurrency } from '@/utils/formatters';
 import { useRouter } from 'next/navigation';
 import { useTranslation } from 'react-i18next';
 import { useScrollLock } from '@/hooks/useScrollLock';
@@ -38,7 +40,8 @@ const getInitialFormData = (defaults?: Partial<CreateGoalData>): CreateGoalData 
     priority: defaults?.priority || 'medium',
     target_amount: defaults?.target_amount || 0,
     current_amount: defaults?.current_amount || 0,
-    currency: defaults?.currency || 'TWD',
+    // Goals are kept in TWD: what they reserve is Life Wallet cash.
+    currency: 'TWD',
     target_date: defaults?.target_date || '',
 });
 
@@ -62,9 +65,12 @@ export function CreateGoalModal({ isOpen, onClose, defaults, returnToPortfolio }
     // container — lock that too or the page slides behind the dialog.
     useScrollLock(isOpen);
     const createGoal = useCreateGoal();
+    const { data: lifeCash } = useLifeCash();
+    const { isValueVisible } = usePrivacy();
     const router = useRouter();
     const { t } = useTranslation(['goals', 'common', 'portfolio']);
     const [formData, setFormData] = useState<CreateGoalData>(() => getInitialFormData(defaults));
+    const overAvailable = !!lifeCash && (formData.current_amount || 0) > Math.max(0, lifeCash.available) + 0.001;
 
     // Display strings for comma-formatted amount fields
     const [targetDisplay, setTargetDisplay] = useState(() => fmtAmt(defaults?.target_amount || 0));
@@ -270,29 +276,21 @@ export function CreateGoalModal({ isOpen, onClose, defaults, returnToPortfolio }
                                                 placeholder="0"
                                                 className="w-full px-4 py-2.5 min-h-[44px] border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus-visible:ring-2 focus-visible:ring-primary-500 focus-visible:border-transparent"
                                             />
+                                            {lifeCash && (
+                                                <p
+                                                    role={overAvailable ? 'alert' : undefined}
+                                                    className={`mt-1.5 text-xs ${overAvailable ? 'text-red-600 dark:text-red-400' : 'text-gray-500 dark:text-gray-400'}`}
+                                                >
+                                                    {overAvailable
+                                                        ? t('goals:reserve.overAvailable', { amount: isValueVisible ? formatCurrency(Math.max(0, lifeCash.available), 'TWD') : '•••••' })
+                                                        : t('goals:reserve.initialHint', { amount: isValueVisible ? formatCurrency(lifeCash.available, 'TWD') : '•••••' })}
+                                                </p>
+                                            )}
                                         </div>
                                     </div>
 
-                                    {/* Currency and Target Date */}
+                                    {/* Target Date */}
                                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                                        <div>
-                                            <label htmlFor="goal-currency" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                                                {t('portfolio:fields.currency')}
-                                            </label>
-                                            <select
-                                                id="goal-currency"
-                                                value={formData.currency}
-                                                onChange={(e) => handleChange('currency', e.target.value)}
-                                                className="w-full px-4 py-2.5 min-h-[44px] border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus-visible:ring-2 focus-visible:ring-primary-500 focus-visible:border-transparent"
-                                            >
-                                                <option value="USD">{t('common:currency.USD')}</option>
-                                                <option value="TWD">{t('common:currency.TWD')}</option>
-                                                <option value="EUR">{t('common:currency.EUR')}</option>
-                                                <option value="GBP">{t('common:currency.GBP')}</option>
-                                                <option value="JPY">{t('common:currency.JPY')}</option>
-                                            </select>
-                                        </div>
-
                                         <div>
                                             <label htmlFor="goal-target-date" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
                                                 {t('goals:fields.targetDate')}
@@ -318,8 +316,8 @@ export function CreateGoalModal({ isOpen, onClose, defaults, returnToPortfolio }
                                         </button>
                                         <button
                                             type="submit"
-                                            disabled={createGoal.isPending}
-                                            aria-disabled={createGoal.isPending}
+                                            disabled={createGoal.isPending || overAvailable}
+                                            aria-disabled={createGoal.isPending || overAvailable}
                                             className="px-6 py-2.5 min-h-[44px] bg-primary-700 hover:bg-primary-800 text-white rounded-lg transition-colors font-medium disabled:opacity-50 disabled:cursor-not-allowed focus:outline-none focus-visible:ring-2 focus-visible:ring-primary-500 focus-visible:ring-offset-2"
                                         >
                                             {createGoal.isPending ? t('common:common.loading') : t('goals:create')}
