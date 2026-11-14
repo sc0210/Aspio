@@ -22,6 +22,7 @@ from .repositories import (
 from .models import (
     Transaction,
     TransactionType,
+    TransactionWalletType,
     PaymentMethod,
     TransactionStatus,
     RecurringFrequency,
@@ -189,6 +190,18 @@ class TransactionService:
                 )
                 if cap is not None:
                     data["principal_portion"] = cap
+            # Paid from a goal: the goal must hold the cash. Checked under the
+            # goals' lock, taken after the loan's as update_transaction does, so
+            # the two paths never wait on each other in opposite orders.
+            data["goal_id"] = self._goal_uuid(data.get("goal_id"))
+            if data["goal_id"]:
+                await self._check_goal_spend(
+                    user_id, data["goal_id"],
+                    type_=data.get("type"),
+                    wallet_type=data.get("wallet_type"),
+                    amount=data["amount"],
+                    currency=data.get("currency"),
+                )
             transaction = await self.transaction_repo.create(data, user_id, commit=False)
             await self.category_repo.increment_usage(transaction.category_id, commit=False)
             if data.get("loan_id") and transaction.type == TransactionType.EXPENSE:
@@ -603,16 +616,17 @@ class TransactionService:
         # tags, category, payment method) change here. Nor may it gain or lose a
         # loan: accepting or cancelling resizes the row, which would leave the
         # loan's balance out of step.
-        if (self._HOLDING_OWNED_FIELDS | {"loan_id"}) & data.keys():
+        if (self._HOLDING_OWNED_FIELDS | {"loan_id", "goal_id"}) & data.keys():
             stored = await self.transaction_repo.get_by_id(transaction_id, user_id)
             if stored is not None and await self._split_is_open(stored):
                 changed = [
                     field for field in self._HOLDING_OWNED_FIELDS & data.keys()
                     if not self._same_value(getattr(stored, field), data[field])
                 ]
-                if "loan_id" in data and (str(data["loan_id"]) if data["loan_id"] else None) != (
-                        str(stored.loan_id) if stored.loan_id else None):
-                    changed.append("loan_id")
+                for link in ("loan_id", "goal_id"):
+                    if link in data and (str(data[link]) if data[link] else None) != (
+                            str(getattr(stored, link)) if getattr(stored, link) else None):
+                        changed.append(link)
                 if changed:
                     raise BusinessLogicException(
                         "This entry is your share of a bill split with your partner. "
@@ -669,6 +683,40 @@ class TransactionService:
         # The row and the loan balance moves it causes are one commit (see create).
         db = self.transaction_repo.db
         try:
+            if "goal_id" in data:
+                data["goal_id"] = self._goal_uuid(data["goal_id"])
+            # A row paid from a goal (or becoming one) must still fit the goal's
+            # reserve after the edit. Its own current spend is already off the
+            # reserve, so it counts as room. The edit form resends every field,
+            # so only a value that actually changes re-checks: renaming a row
+            # must not be refused because an exchange rate moved since.
+            goal_fields = {"goal_id", "amount", "currency", "type", "wallet_type"} & data.keys()
+            if goal_fields:
+                stored = await self.transaction_repo.get_by_id(transaction_id, user_id)
+                if stored is not None:
+                    next_goal = data["goal_id"] if "goal_id" in data else stored.goal_id
+                    goal_changed = (str(next_goal) if next_goal else None) != (
+                        str(stored.goal_id) if stored.goal_id else None)
+                    values_changed = any(
+                        not self._same_value(getattr(stored, f), data[f])
+                        for f in goal_fields - {"goal_id"}
+                    )
+                    if next_goal and (goal_changed or values_changed):
+                        already = Decimal("0")
+                        if stored.goal_id and str(stored.goal_id) == str(next_goal):
+                            already = await self._goal_spend_twd(
+                                stored.type, stored.amount, stored.currency
+                            )
+                        await self._check_goal_spend(
+                            user_id, next_goal,
+                            type_=data.get("type", stored.type),
+                            wallet_type=data.get("wallet_type", stored.wallet_type),
+                            amount=data.get("amount", stored.amount),
+                            currency=data.get("currency", stored.currency),
+                            holding_id=stored.holding_id,
+                            transfer_group_id=stored.transfer_group_id,
+                            already_spent=already,
+                        )
             transaction = await self.transaction_repo.update(transaction_id, user_id, data, commit=False)
 
             if transaction:
@@ -813,6 +861,76 @@ class TransactionService:
             logger.info(f"Transaction deleted: {transaction_id} by user: {user_id}")
 
         return success
+
+    @staticmethod
+    def _goal_uuid(value) -> Optional[uuid.UUID]:
+        """A goal id from the API ('' or None unlinks) as a UUID."""
+        if not value:
+            return None
+        try:
+            return value if isinstance(value, uuid.UUID) else uuid.UUID(str(value))
+        except ValueError:
+            raise ValidationException("Invalid goal id", details={"goal_id": str(value)})
+
+    async def _goal_spend_twd(self, type_, amount, currency) -> Decimal:
+        """What a row takes from its goal's reserve, in TWD (expenses only)."""
+        if getattr(type_, "value", type_) != TransactionType.EXPENSE.value:
+            return Decimal("0")
+        from app.utils.fx_sql import to_twd, twd_rates_for
+
+        rates = await twd_rates_for(self.transaction_repo.db, [currency or "TWD"])
+        return to_twd(Decimal(str(amount)), currency, rates)
+
+    async def _check_goal_spend(
+        self,
+        user_id: str,
+        goal_id,
+        *,
+        type_,
+        wallet_type,
+        amount,
+        currency,
+        holding_id=None,
+        transfer_group_id=None,
+        already_spent: Decimal = Decimal("0"),
+    ) -> None:
+        """Reject a goal link the goal's reserved cash cannot cover.
+
+        Goal cash is reserved inside the Life Wallet (goals/reservations.py), so
+        only a Life expense can spend it, and only up to what the goal holds:
+        spending more would quietly take the excess from another goal's money.
+        """
+        from app.modules.goals.repositories import GoalRepository
+        from app.modules.goals.reservations import goal_money, lock_user_goals
+
+        db = self.transaction_repo.db
+        uid = uuid.UUID(str(user_id))
+        gid = self._goal_uuid(goal_id)
+        goal = await GoalRepository(db).get_goal_by_id(gid, uid)
+        if goal is None:
+            raise ValidationException("Goal not found", details={"goal_id": str(gid)})
+        if getattr(type_, "value", type_) != TransactionType.EXPENSE.value:
+            raise ValidationException("Only an expense can be paid from a goal")
+        wallet = getattr(wallet_type, "value", wallet_type) or TransactionWalletType.LIFE.value
+        if str(wallet).lower() != TransactionWalletType.LIFE.value:
+            raise ValidationException(
+                "Goal money is reserved in the Life Wallet; pay it from Life"
+            )
+        if holding_id or transfer_group_id:
+            raise ValidationException(
+                "A transfer or an investment purchase cannot be paid from a goal"
+            )
+
+        await lock_user_goals(db, uid)
+        held = (await goal_money(db, uid, [gid])).get(gid)
+        room = (held.reserved if held else Decimal("0")) + already_spent
+        need = await self._goal_spend_twd(type_, amount, currency)
+        if need > room:
+            raise ValidationException(
+                f"Only NT${max(room, Decimal('0')):,.0f} is reserved for {goal.title}. "
+                "Reserve more on Goals first, or pay without the goal.",
+                details={"reserved": str(room), "amount": str(need)},
+            )
 
     async def _get_loan(self, loan_id: str, user_id: str):
         """The loan, locked until this request commits (every caller moves its balance)."""

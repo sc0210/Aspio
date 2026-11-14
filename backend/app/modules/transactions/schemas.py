@@ -286,6 +286,11 @@ class TransactionCreate(TransactionBase):
         gt=0,
         description="Portion that reduces the loan principal; defaults to the full amount",
     )
+    goal_id: Optional[str] = Field(
+        None,
+        max_length=36,
+        description="Pay this Life Wallet expense from the cash reserved for a goal",
+    )
 
 
 class TransactionUpdate(BaseModel):
@@ -322,6 +327,13 @@ class TransactionUpdate(BaseModel):
         None,
         max_length=36,
         description="Link this expense to a loan (reduces its balance); '' unlinks and restores it",
+    )
+    # Pay this expense from a goal's reserved cash; '' unlinks (the money goes
+    # back to the goal's reserve).
+    goal_id: Optional[str] = Field(
+        None,
+        max_length=36,
+        description="Pay this expense from a goal's reserved cash; '' unlinks",
     )
 
     @field_validator("tags")
@@ -367,6 +379,10 @@ class TransactionResponse(TransactionBase, TimestampMixin):
         None,
         description="The portfolio holding this row is the cash leg of; null otherwise",
     )
+    goal_id: Optional[str] = Field(
+        None,
+        description="The goal whose reserved cash paid for this expense; null otherwise",
+    )
     holding_sole_purchase: Optional[bool] = Field(
         None,
         description=(
@@ -384,6 +400,7 @@ class TransactionResponse(TransactionBase, TimestampMixin):
         "loan_id",
         "holding_id",
         "peer_split_share_id",
+        "goal_id",
         mode="before",
     )
     @classmethod

@@ -260,6 +260,10 @@ async def create_transaction(
 
 
             return result
+    except (HTTPException, AspiroException):
+        # A refusal with its own status (a goal that does not hold the cash, an
+        # unknown category): the message is for the user, not a 500.
+        raise
     except ValueError as e:
         raise HTTPException(status_code=400, detail=str(e))
     except Exception as e:

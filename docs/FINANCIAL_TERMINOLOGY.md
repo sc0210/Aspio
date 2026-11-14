@@ -204,6 +204,17 @@ Split bills are recorded on a **share basis** (`peers/splits.py`):
 - **Settling up writes no transactions.** The payer's ledger already shows only their share, so it already reads as if they had been paid back. A repayment row would count the money twice. A settlement only lowers the balance.
 - A row linked to an open split can't be deleted, and its amount can't be edited. Closing a split (cancel, or removing the partner) unlinks its rows, and they become ordinary expenses.
 
+### Goal money: reserved, not moved (`goals/reservations.py`)
+
+A goal never holds money of its own and is not a wallet. It **reserves** Life Wallet cash:
+
+- **Reserve / release** (`POST /goals/{id}/reserve`, `/release`) write a `goal_contributions` row (`kind` = `reserve` / `release`, signed amount) and **no transaction**. The cash stays in Life, so Life, Total Asset and Net Worth never change because of a goal.
+- **Life available = Life balance − Σ reserved over the user's goals** (`GET /goals/life-cash`; a cancelled goal holds nothing). A reservation can't exceed what is available. Spending can: Available then goes negative, and the UI says so rather than blocking the expense.
+- **Paying from a goal** is an ordinary Life expense carrying `transactions.goal_id`. It counts as spending everywhere, and moves the goal's money from *reserved* to *spent*, so Available does not drop a second time. It can't exceed what the goal holds. Unlinking, editing or deleting the expense gives the money back to the goal: every figure is derived from rows.
+- **Progress** (`goals.current_amount`) = Σ contribution rows = reserved + spent + legacy. Spending does not lower it; releasing does (and reopens a completed goal that falls below target). Cancelling a goal releases what it holds.
+- **Legacy** rows are progress recorded before reservations existed (2026-11-14 migration): they count toward the goal but hold no cash.
+- Goals are kept in **TWD**, the currency of every wallet balance. A foreign-currency expense is converted at the same rates the wallets use.
+
 ## Returns & Risk (Portfolio Wallet)
 
 All of these measure the **Portfolio wallet only**, in **TWD**, with your own deposits taken out. They share one source: the time-weighted return's daily returns. Never compute a portfolio return from `value / cost` or from a value series rebuilt from today's quantities. Both were in the code until 2026-10, and both were wrong (see "Data rules" below).

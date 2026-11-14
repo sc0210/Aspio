@@ -378,6 +378,15 @@ class Transaction(BaseModel):
         UUID(as_uuid=True), ForeignKey("peer_split_shares.id", ondelete="SET NULL"), nullable=True
     )
 
+    # Paid out of a goal's reserved cash (goals.ContributionKind.RESERVE): a Life
+    # Wallet expense that spends money set aside for the goal. It is still an
+    # ordinary expense everywhere; the link only moves the goal's money from
+    # "reserved" to "spent", so Life's available figure does not drop twice.
+    # SET NULL: deleting a goal leaves the spending on record.
+    goal_id: Mapped[Optional[uuid.UUID]] = mapped_column(
+        UUID(as_uuid=True), ForeignKey("goals.id", ondelete="SET NULL"), nullable=True, index=True
+    )
+
     # Loan repayment tracking (optional — only set when this transaction is a loan payment)
     loan_id: Mapped[Optional[uuid.UUID]] = mapped_column(
         UUID(as_uuid=True), ForeignKey("debt_accounts.id", ondelete="SET NULL"), nullable=True

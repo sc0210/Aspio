@@ -65,6 +65,12 @@ async def test_goal_crud_and_isolation(authenticated_client, stranger):
 
     updated = _ok(client.put(f"{API}/goals/{goal_id}", json={"title": "Kyoto trip"}))
     assert updated["title"] == "Kyoto trip"
+    # A contribution reserves Life Wallet cash, so Life needs some first (the
+    # refusal with an empty Life is in test_goal_reservations.py).
+    _ok(client.post(f"{API}/transactions/", json={
+        "type": "income", "wallet_type": "life", "amount": "5000", "currency": "TWD",
+        "description": "Salary", "transaction_date": "2026-01-01", "category_name": "Salary",
+    }), 201)
     _ok(client.post(f"{API}/goals/{goal_id}/contributions", json={"amount": "2500"}), 201)
 
     other = _headers(stranger)
