@@ -16,6 +16,9 @@ jest.mock('react-i18next', () => {
   return { initReactI18next: { type: '3rdParty', init: () => {} }, useTranslation: () => ({ t, i18n: { language: 'en' } }) };
 });
 
+let mockDemo = false;
+jest.mock('@/hooks/useAppMode', () => ({ useAppMode: () => ({ isDemo: mockDemo }) }));
+
 const mockSearch = jest.fn();
 const mockQuote = jest.fn();
 jest.mock('@/services/symbolService', () => ({
@@ -47,6 +50,7 @@ async function pick(symbol: string, market: string) {
 }
 
 beforeEach(() => {
+  mockDemo = false;
   mockSearch.mockReset();
   mockQuote.mockReset();
 });
@@ -75,4 +79,38 @@ it('a failed quote leaves the fields editable, still in USD', async () => {
 
   expect(screen.getByLabelText('buy.field.currency')).toHaveValue('USD');
   expect(screen.getByLabelText('buy.field.exchange')).toHaveValue('');
+});
+
+it('a slow quote for an earlier pick does not fill the next one', async () => {
+  let resolveVoo: (q: unknown) => void = () => {};
+  mockQuote.mockImplementation((sym: string) =>
+    sym === 'VOO'
+      ? new Promise((resolve) => { resolveVoo = resolve; })
+      : Promise.reject(new Error('offline')));
+  mockSearch.mockResolvedValue({
+    success: true,
+    data: [
+      { symbol: 'VOO', name: 'VOO name', type: 'etf', market: 'US' },
+      { symbol: 'AAPL', name: 'AAPL name', type: 'stock', market: 'US' },
+    ],
+  });
+  render(<BuyHoldingModal isOpen onClose={jest.fn()} onBuy={jest.fn()} />);
+  await act(async () => {});
+  fireEvent.change(screen.getByPlaceholderText('buy.searchPlaceholder'), { target: { value: 'VO' } });
+  fireEvent.click(await screen.findByText('VOO name'));
+  // Back to search (the reset), then AAPL, before VOO's quote lands.
+  fireEvent.click(screen.getByText('buy.back'));
+  fireEvent.change(screen.getByPlaceholderText('buy.searchPlaceholder'), { target: { value: 'AA' } });
+  fireEvent.click(await screen.findByText('AAPL name'));
+  await act(async () => { resolveVoo({ status: 'success', exchange: 'NYSE', current_price: 600 }); });
+
+  expect(screen.getByLabelText('buy.field.exchange')).toHaveValue('');
+  expect(screen.getByLabelText('buy.field.price')).not.toHaveValue(600);
+});
+
+it('demo mode does not ask the backend for a quote', async () => {
+  mockDemo = true;
+  await pick('VOO', 'US');
+  expect(screen.getByLabelText('buy.field.currency')).toHaveValue('USD');
+  expect(mockQuote).not.toHaveBeenCalled();
 });

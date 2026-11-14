@@ -162,7 +162,7 @@ async def get_market_data(
         ),
         MarketDataResponse(
             symbol="BTC-USD",
-            exchange="Crypto",
+            exchange="CRYPTO",
             price=Decimal("48500.00"),
             open_price=Decimal("47000.00"),
             high_price=Decimal("49200.00"),
@@ -223,7 +223,7 @@ async def search_instruments(
             "symbol": "BTC-USD",
             "name": "Bitcoin",
             "type": "crypto",
-            "exchange": "Crypto",
+            "exchange": "CRYPTO",
             "currency": "USD",
             "sector": "Cryptocurrency",
         },
@@ -601,6 +601,13 @@ async def get_symbol_quote(
         # Get market data service
         market_data_service = get_market_data_service()
 
+        # A US listing's exchange is looked up alongside the price, not after it.
+        us_exchange_task = (
+            asyncio.create_task(market_data_service.get_us_exchange(symbol))
+            if market not in ("TW", "CRYPTO")
+            else None
+        )
+
         # Fetch current price with 10 second timeout
         try:
             current_price = await asyncio.wait_for(
@@ -625,7 +632,7 @@ async def get_symbol_quote(
         else:
             # A real listing the form offers, or None so the form asks rather
             # than keeping a wrong default. Currency stays USD either way.
-            exchange = await market_data_service.get_us_exchange(symbol)
+            exchange = await us_exchange_task
             currency = "USD"
             name = None
 

@@ -1,7 +1,7 @@
 'use client';
 
 import { useTranslation } from 'react-i18next';
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { Dialog, DialogPanel, DialogTitle } from '@headlessui/react';
 import { XMarkIcon, MagnifyingGlassIcon, ArrowPathIcon } from '@heroicons/react/24/outline';
 import { Button } from '@/components/ui/Button';
@@ -9,6 +9,7 @@ import { formatCurrency, localDateString } from '@/utils/formatters';
 import { cn } from '@/utils/cn';
 import symbolService from '@/services/symbolService';
 import { listingDefaults } from '@/lib/portfolio/holdingFormOptions';
+import { useAppMode } from '@/hooks/useAppMode';
 import { useScrollLock } from '@/hooks/useScrollLock';
 
 interface BuyHoldingModalProps {
@@ -65,6 +66,9 @@ export function BuyHoldingModal({ isOpen, onClose, onBuy, existingHoldings = [] 
     useScrollLock(isOpen);
     const [step, setStep] = useState<'search' | 'details'>('search');
     const [searchQuery, setSearchQuery] = useState('');
+    const { isDemo } = useAppMode();
+    // The symbol whose quote may still fill the form; cleared on reset.
+    const quoteForRef = useRef<string | undefined>(undefined);
     const [searchResults, setSearchResults] = useState<StockSearchResult[]>([]);
     const [isSearching, setIsSearching] = useState(false);
     const [_selectedStock, setSelectedStock] = useState<StockSearchResult | null>(null);
@@ -121,12 +125,15 @@ export function BuyHoldingModal({ isOpen, onClose, onBuy, existingHoldings = [] 
         setPrice(stock.regularMarketPrice?.toString() || '');
         setStep('details');
 
-        // ...nor an exchange or price: the quote fills whichever is still empty.
+        // ...nor an exchange or price: the quote fills whichever is still empty,
+        // for this pick only (a slow quote must not land on the next one). Demo
+        // mode does not reach the backend.
         const quoteSymbol = stock.symbol || stock.ticker;
-        if (quoteSymbol) {
+        quoteForRef.current = quoteSymbol;
+        if (quoteSymbol && !isDemo) {
             symbolService.getQuote(quoteSymbol, stock.market)
                 .then((quote) => {
-                    if (quote?.status !== 'success') return;
+                    if (quoteForRef.current !== quoteSymbol || quote?.status !== 'success') return;
                     if (quote.exchange) setExchange((prev) => prev || quote.exchange);
                     if (quote.current_price) setPrice((prev) => prev || String(quote.current_price));
                 })
@@ -189,6 +196,7 @@ export function BuyHoldingModal({ isOpen, onClose, onBuy, existingHoldings = [] 
     };
 
     const handleReset = () => {
+        quoteForRef.current = undefined;
         setStep('search');
         setSearchQuery('');
         setSearchResults([]);
