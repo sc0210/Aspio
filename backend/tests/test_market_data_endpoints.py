@@ -257,7 +257,7 @@ class TestQuoteExchangeTask:
     async def test_a_failing_price_call_cancels_the_exchange_lookup(self, client, monkeypatch):
         import asyncio
 
-        started, cancelled = asyncio.Event(), []
+        started, lookups = asyncio.Event(), []
 
         class Quotes:
             async def get_current_price(self, symbol, market):
@@ -265,14 +265,14 @@ class TestQuoteExchangeTask:
                 raise RuntimeError("provider down")
 
             async def get_us_exchange(self, symbol):
+                lookups.append(asyncio.current_task())
                 started.set()
-                try:
-                    await asyncio.sleep(30)
-                except asyncio.CancelledError:
-                    cancelled.append(symbol)
-                    raise
+                await asyncio.sleep(30)
 
         monkeypatch.setattr(market_data_service, "get_market_data_service", lambda: Quotes())
         r = client.get(f"{BASE}/symbol/quote/MSFT", params={"market": "US"})
         assert r.status_code == 500
-        assert cancelled == ["MSFT"]
+        # cancelling() counts the request the moment cancel() is called, so this
+        # does not depend on the loop having delivered it yet.
+        (task,) = lookups
+        assert task.cancelled() or task.cancelling() > 0
