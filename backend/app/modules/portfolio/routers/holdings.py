@@ -543,12 +543,17 @@ async def update_holding(
 
                         linked = legs[0]
                         previous_amount = linked.amount
-                        if holding.goal_id is not None and display_currency == "TWD":
+                        if holding.goal_id is not None:
                             # A goal's lot costs the goal's reserve: a larger lot
                             # must still fit it, the leg's current cost counting
                             # as room (position lock held, then the goals').
                             from app.modules.goals.reservations import assert_goal_can_cover
 
+                            if display_currency != "TWD":
+                                raise ValueError(
+                                    f"No {holding.currency}→TWD rate to check this "
+                                    "against the goal's reserve"
+                                )
                             await assert_goal_can_cover(
                                 session, current_user.id, holding.goal_id, twd_amount,
                                 already=Decimal(str(previous_amount)),
