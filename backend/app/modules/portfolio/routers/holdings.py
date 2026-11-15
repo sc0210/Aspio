@@ -506,7 +506,7 @@ async def update_holding(
             )
             new_cost = (
                 holding_updates.average_cost
-                if holding_updates.average_cost is not None
+                if cost_changed  # an untouched cost stays the stored one, as on the lot
                 else previous_cost
             )
             old_qty = previous_quantity
