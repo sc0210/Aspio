@@ -382,11 +382,17 @@ async def update_holding(
         # from the units left, so the ledger and the realized gain would no
         # longer agree. The date can still be corrected, but not to after the
         # sale (units sold before they were bought, and FIFO order upset).
+        # The edit form re-sends both fields on every save, its cost read back
+        # through a JS number, so a cost is compared at 6 places: an untouched
+        # field must not read as a change.
+        def _cost(value) -> Decimal:
+            return Decimal(str(value)).quantize(Decimal("0.000001"))
+
         resizing = (
             (holding_updates.quantity is not None
              and Decimal(str(holding_updates.quantity)) != Decimal(str(original_holding.quantity)))
             or (holding_updates.average_cost is not None
-                and Decimal(str(holding_updates.average_cost)) != Decimal(str(original_holding.average_cost)))
+                and _cost(holding_updates.average_cost) != _cost(original_holding.average_cost))
         )
         if resizing or holding_updates.purchase_date is not None:
             first_sale = await holding_service.first_sale_of_lot(original_holding)
@@ -466,7 +472,7 @@ async def update_holding(
         )
         cost_changed = (
             holding_updates.average_cost is not None
-            and Decimal(str(holding_updates.average_cost)) != previous_cost
+            and _cost(holding_updates.average_cost) != _cost(previous_cost)
         )
         # Compared as business DAYS, not instants: the ledger leg stores a day, so
         # two stamps that differ only in wall-clock time are not a change to it.

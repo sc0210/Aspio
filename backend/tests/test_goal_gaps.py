@@ -334,6 +334,13 @@ async def test_a_partly_sold_lot_keeps_its_quantity_and_cost(async_session, test
                        notes=None, transaction_date=SELL_DAY, current_user=SimpleNamespace(id=user),
                        session=async_session)
 
+    # Re-sending the same figures (as the edit form does on every save) is no
+    # change: the buy leg, and so the goal's reserve, stay as they were.
+    before = (await goal_money(async_session, user, [goal])).get(goal).reserved
+    await update_holding(holding_id=lot, holding_updates=HoldingUpdate(quantity=D("6"), average_cost=D("100.0000001")),
+                         current_user=SimpleNamespace(id=user), session=async_session)
+    assert (await goal_money(async_session, user, [goal])).get(goal).reserved == before
+
     for change in (HoldingUpdate(quantity=D("8")), HoldingUpdate(average_cost=D("90"))):
         with pytest.raises(HTTPException) as refused:
             await update_holding(holding_id=lot, holding_updates=change,
