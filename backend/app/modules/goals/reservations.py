@@ -229,6 +229,30 @@ async def emergency_balance(db: AsyncSession, user_id) -> Decimal:
     return (Decimal(str(cash)) + held).quantize(CENT, rounding=ROUND_HALF_UP)
 
 
+async def live_statuses(db: AsyncSession, user_id, goals) -> Dict:
+    """Each goal's status as it stands now, read without locking or writing.
+
+    The stored status, except for an active or completed emergency-fund goal:
+    that one is completed exactly while the Emergency Wallet covers its target.
+    GoalService.settle_emergency_goals stores the same rule; a reader that must
+    not lock or write (achievements, the month review) uses this instead.
+    """
+    from .models import GoalCategory, GoalStatus
+
+    def follows_wallet(goal) -> bool:
+        category = getattr(goal.category, "value", goal.category)
+        return category == GoalCategory.EMERGENCY_FUND.value and goal.status in (
+            GoalStatus.ACTIVE, GoalStatus.COMPLETED)
+
+    funds = [g for g in goals if follows_wallet(g)]
+    balance = await emergency_balance(db, user_id) if funds else ZERO
+    return {
+        g.id: ((GoalStatus.COMPLETED if balance >= g.target_amount else GoalStatus.ACTIVE)
+               if follows_wallet(g) else g.status)
+        for g in goals
+    }
+
+
 async def life_cash(db: AsyncSession, user_id) -> LifeCash:
     """The Life Wallet balance and how much of it goals hold (TWD)."""
     uid = _uuid(user_id)

@@ -317,18 +317,28 @@ class GamificationRepository:
             return 0
 
     async def _count_completed_goals(self, user_id: UUID) -> int:
-        """Count user's completed goals"""
-        try:
-            from ..goals.models import Goal, GoalStatus
+        """Count user's completed goals (an emergency fund's status read live)"""
+        return await self._completed_goal_count(user_id, emergency_only=False)
 
-            query = select(func.count(Goal.id)).where(
-                and_(
-                    Goal.user_id == user_id,
-                    Goal.status == GoalStatus.COMPLETED,
-                )
-            )
-            result = await self.session.execute(query)
-            return result.scalar() or 0
+    async def _completed_goal_count(self, user_id: UUID, emergency_only: bool) -> int:
+        """Completed goals, with each emergency fund judged on its wallet now.
+
+        Read-only (reservations.live_statuses): this runs on login and token
+        refresh, which must not lock the user's goals or write them.
+        """
+        try:
+            from ..goals.models import Goal, GoalCategory, GoalStatus
+            from ..goals.reservations import live_statuses
+
+            conditions = [Goal.user_id == user_id,
+                          Goal.status.in_((GoalStatus.ACTIVE, GoalStatus.COMPLETED))]
+            if emergency_only:
+                conditions.append(Goal.category == GoalCategory.EMERGENCY_FUND)
+            goals = (await self.session.execute(
+                select(Goal.id, Goal.category, Goal.status, Goal.target_amount).where(and_(*conditions))
+            )).all()
+            live = await live_statuses(self.session, user_id, goals)
+            return sum(1 for status in live.values() if status == GoalStatus.COMPLETED)
         except Exception:
             return 0
 
@@ -426,21 +436,8 @@ class GamificationRepository:
             return 0
 
     async def _count_completed_emergency_goals(self, user_id: UUID) -> int:
-        """Count completed emergency-fund goals"""
-        try:
-            from ..goals.models import Goal, GoalCategory, GoalStatus
-
-            query = select(func.count(Goal.id)).where(
-                and_(
-                    Goal.user_id == user_id,
-                    Goal.category == GoalCategory.EMERGENCY_FUND,
-                    Goal.status == GoalStatus.COMPLETED,
-                )
-            )
-            result = await self.session.execute(query)
-            return result.scalar() or 0
-        except Exception:
-            return 0
+        """Count completed emergency-fund goals (judged on the wallet now)"""
+        return await self._completed_goal_count(user_id, emergency_only=True)
 
     async def _count_holdings(self, user_id: UUID) -> int:
         """Count the user's portfolio holdings"""
