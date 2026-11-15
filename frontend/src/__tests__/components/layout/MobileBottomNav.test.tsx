@@ -9,6 +9,7 @@ import '@testing-library/jest-dom';
 
 const mockFeatures = { lineBot: true, isLoading: false, isError: false };
 jest.mock('@/hooks/useFeatures', () => ({ useFeatures: () => mockFeatures }));
+jest.mock('@/hooks/useAccessTier', () => ({ useAccessTier: () => ({ tier: 'premium', isPremium: true, isLoading: false, isError: false }) }));
 jest.mock('next/navigation', () => ({ usePathname: () => '/dashboard' }));
 
 jest.mock('react-i18next', () => ({

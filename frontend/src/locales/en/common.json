@@ -1533,5 +1533,12 @@
         "body": "Spending by category, and where the income came from."
       }
     }
+  },
+  "access": {
+    "premiumTitle": "This page needs Premium",
+    "premiumBody": "Your account is on the Free plan. Ask your admin to upgrade it to use this page.",
+    "backToDashboard": "Back to dashboard",
+    "planFree": "Free",
+    "planPremium": "Premium"
   }
 }

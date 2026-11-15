@@ -23,6 +23,7 @@ import { Transaction } from '@/shared/types';
 import { useDemo } from '@/contexts/DemoContext';
 import { useModeAwareUI } from '@/hooks/useAppMode';
 import { useCurrentUser } from '@/hooks/useCurrentUser';
+import { useAccessTier } from '@/hooks/useAccessTier';
 import { useDeleteTransaction } from '@/hooks/api-hooks';
 import { DashboardLayout } from '@/components/layout/DashboardLayout';
 import { PageHeader } from '@/components/layout/PageHeader';
@@ -402,9 +403,12 @@ export default function EditTransactionPage() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [transactionId, router, isDemo, demoTransactions, t, reloadKey]);
 
+  // Loans and splits are premium; a free account is never offered either.
+  const { isPremium } = useAccessTier();
+
   // Active loans for the "Link to Loan" selector (authed only — avoids a demo 401).
   useEffect(() => {
-    if (isDemo) return;
+    if (isDemo || !isPremium) return;
     loanService.getLoans()
       .then((res) => {
         const loans = (res.data ?? []).filter((l) => l.status === 'active');
@@ -416,7 +420,7 @@ export default function EditTransactionPage() {
         })));
       })
       .catch(() => setActiveLoans([]));
-  }, [isDemo]);
+  }, [isDemo, isPremium]);
 
   const handleInputChange = (field: string, value: string) => {
     setFormData(prev => ({ ...prev, [field]: value }));
@@ -708,7 +712,7 @@ export default function EditTransactionPage() {
   } as Transaction) : null;
   // Only a plain expense: an investment purchase, a sale or a transfer is not a bill to share, and
   // only the plain branch of the load records the baseline the save-first check below reads.
-  const canSplitHere = !isDemo && !!savedRow && canSplit(savedRow) && !isInvestMode && !isSaleMode && !isTransferRow && !!baseline;
+  const canSplitHere = !isDemo && isPremium && !!savedRow && canSplit(savedRow) && !isInvestMode && !isSaleMode && !isTransferRow && !!baseline;
   // A split takes the saved amount and reloads the row, so unsaved edits would be split wrong, then lost.
   // Every field the form saves, against the form as loaded; text compared as '' when missing.
   const same = (a?: string | null, b?: string | null) => (a ?? '') === (b ?? '');
@@ -1015,6 +1019,7 @@ export default function EditTransactionPage() {
                 onChange={handleInputChange}
                 onTagsChange={(tags) => setFormData(prev => ({ ...prev, tags }))}
                 activeLoans={activeLoans}
+                loansAvailable={isPremium}
                 goals={payableGoals(allGoals, formData.goalId)}
               />
             )}

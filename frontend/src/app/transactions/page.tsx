@@ -11,6 +11,7 @@ import {
   ArrowDownTrayIcon,
 } from '@heroicons/react/24/outline';
 import { useIsMobile } from '@/hooks/useMediaQuery';
+import { useAccessTier } from '@/hooks/useAccessTier';
 import { useAddHref } from '@/lib/transactions/returnTo';
 import { MobileTransactions } from '@/components/transactions/MobileTransactions';
 import { Button } from '@/components/ui/Button';
@@ -112,6 +113,8 @@ function DesktopTransactionsPage() {
   // Saving a new entry comes back to this view, filters and all.
   const addHref = useAddHref();
   const { getModeMessage, isDemo } = useModeAwareUI();
+  // Splitting a bill uses peers, a premium feature.
+  const { isPremium } = useAccessTier();
 
   const {
     filters,
@@ -464,6 +467,7 @@ function DesktopTransactionsPage() {
                   // filter hides rows, and another sort column isn't that order.
                   canReorder={!searchQuery && activeFilters.length === 0 && (filters.sortBy || 'date') === 'date'}
                   isDemo={isDemo}
+                  canSplit={isPremium}
                   dayTotals={dayTotals}
                 />
                 {totalPages > 1 && (

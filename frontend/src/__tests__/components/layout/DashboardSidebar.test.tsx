@@ -11,6 +11,8 @@ import '@testing-library/jest-dom';
 let mockPathname = '/dashboard';
 const mockFeatures = { lineBot: true, isLoading: false, isError: false };
 jest.mock('@/hooks/useFeatures', () => ({ useFeatures: () => mockFeatures }));
+const mockAccess = { tier: 'premium', isPremium: true, isLoading: false, isError: false };
+jest.mock('@/hooks/useAccessTier', () => ({ useAccessTier: () => mockAccess }));
 jest.mock('next/navigation', () => ({
   usePathname: () => mockPathname,
 }));
@@ -130,6 +132,22 @@ describe('DashboardSidebar without the LINE bot', () => {
 
     expect(hrefs).toContain('/transactions');
     expect(hrefs).not.toContain('/groups');
+  });
+});
+
+describe('DashboardSidebar for a free account', () => {
+  afterEach(() => {
+    Object.assign(mockAccess, { tier: 'premium', isPremium: true });
+  });
+
+  it('shows no premium page, and no heading over a lone row', () => {
+    Object.assign(mockAccess, { tier: 'free', isPremium: false });
+    const { container } = renderSidebar();
+    const desktop = container.firstElementChild as HTMLElement;
+    const hrefs = [...desktop.querySelectorAll('nav a')].map((a) => a.getAttribute('href'));
+
+    expect(hrefs).toEqual(['/dashboard', '/transactions', '/portfolio', '/goals', '/review', '/achievements']);
+    expect(desktop.querySelectorAll('nav button[aria-expanded]')).toHaveLength(0);
   });
 });
 
