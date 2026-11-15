@@ -4,6 +4,7 @@ import { getServerApiUrl } from '@/lib/api-url';
 import { NextRequest, NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth';
+import { isAccessTier } from '@/lib/access';
 
 type RouteContext = { params: Promise<{ userId: string }> };
 
@@ -18,7 +19,11 @@ export async function POST(request: NextRequest, context: RouteContext) {
 
     const apiBaseUrl = getServerApiUrl();
 
-    const response = await fetch(`${apiBaseUrl}/admin/approve-user/${userId}`, {
+    // The tier picked beside Approve; anything else is dropped, not forwarded.
+    const tier = request.nextUrl.searchParams.get('access_tier');
+    const query = isAccessTier(tier) ? `?access_tier=${tier}` : '';
+
+    const response = await fetch(`${apiBaseUrl}/admin/approve-user/${userId}${query}`, {
       method: 'POST',
       headers: {
         Authorization: `Bearer ${session.accessToken}`,

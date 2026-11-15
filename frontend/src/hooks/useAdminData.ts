@@ -11,6 +11,7 @@ import type {
   StatusFilter,
   VacuumResult,
 } from '@/types/admin';
+import type { AccessTier } from '@/lib/access';
 
 const PAGE_SIZE = 50;
 
@@ -40,6 +41,7 @@ export function useAdminData() {
   const [searchQuery, setSearchQuery] = useState('');
   const [statusFilter, setStatusFilter] = useState<StatusFilter>('all');
   const [deactivating, setDeactivating] = useState<string | null>(null);
+  const [settingTier, setSettingTier] = useState<string | null>(null);
   const [deleting, setDeleting] = useState(false);
   const [pendingDeleteId, setPendingDeleteId] = useState<string | null>(null);
 
@@ -47,6 +49,8 @@ export function useAdminData() {
   const [pendingUsers, setPendingUsers] = useState<PendingUser[]>([]);
   const [selectedPending, setSelectedPending] = useState<Set<string>>(new Set());
   const [approving, setApproving] = useState<string | null>(null);
+  // The tier picked beside each pending user's Approve button; unset means free.
+  const [approvalTiers, setApprovalTiers] = useState<Record<string, AccessTier>>({});
   const [rejecting, setRejecting] = useState<string | null>(null);
   const [pendingRejectId, setPendingRejectId] = useState<string | null>(null);
   const [bulkProcessing, setBulkProcessing] = useState(false);
@@ -162,6 +166,31 @@ export function useAdminData() {
     }
   };
 
+  const handleSetAccessTier = async (userId: string, tier: AccessTier) => {
+    try {
+      setSettingTier(userId);
+      const res = await fetch(`/api/admin/users/${userId}/access-tier`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ access_tier: tier }),
+      });
+      if (!res.ok) {
+        const err = await res.json().catch(() => ({}));
+        throw new Error(err.error?.message || err.detail || err.message || 'Failed to change plan');
+      }
+      const data = await res.json();
+      setUsers(prev => prev.map(u => u.id === userId ? { ...u, access_tier: data.access_tier } : u));
+      toast.success(data.access_tier === 'premium' ? 'Upgraded to Premium' : 'Moved to Free');
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : 'Failed to change plan');
+    } finally {
+      setSettingTier(null);
+    }
+  };
+
+  const setApprovalTier = (userId: string, tier: AccessTier) =>
+    setApprovalTiers(prev => ({ ...prev, [userId]: tier }));
+
   const handleDeleteUser = async (userId: string) => {
     setPendingDeleteId(null);
     try {
@@ -186,7 +215,8 @@ export function useAdminData() {
   const handleApproveUser = async (userId: string) => {
     try {
       setApproving(userId);
-      const res = await fetch(`/api/admin/approve-user/${userId}`, { method: 'POST' });
+      const tier = approvalTiers[userId] ?? 'free';
+      const res = await fetch(`/api/admin/approve-user/${userId}?access_tier=${tier}`, { method: 'POST' });
       if (!res.ok) {
         const err = await res.json();
         throw new Error(err.detail || err.message || 'Failed to approve user');
@@ -339,9 +369,11 @@ export function useAdminData() {
     page, totalUsers, totalPages, goToPage,
     handleSearchSubmit, handleStatusFilterChange,
     handleToggleActive, handleDeleteUser,
+    settingTier, handleSetAccessTier,
     toggleUserSelection, toggleAllUsers, clearSelectedUsers,
     // Pending users
     pendingUsers, selectedPending, approving, rejecting,
+    approvalTiers, setApprovalTier,
     pendingRejectId, setPendingRejectId, bulkProcessing,
     handleApproveUser, handleRejectUser, handleBulkApprove, handleBulkDelete,
     clearSelectedPending,

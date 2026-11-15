@@ -136,3 +136,83 @@ async def test_the_demo_account_is_premium(async_session):
     await init_demo_user(async_session)
     await async_session.refresh(demo)
     assert demo.access_tier == AccessTier.PREMIUM.value
+
+
+# ── registration and the admin panel ─────────────────────────────────────────
+
+async def test_registration_creates_a_free_account(async_session):
+    from app.modules.users.schemas import UserRegistration
+    from app.modules.users.services import UserService
+
+    await UserService(async_session).register_user(UserRegistration(
+        email="signup@example.com", password="StrongPass123!", confirm_password="StrongPass123!",
+        name="Sign Up", terms_accepted=True,
+    ))
+
+    user = (await async_session.execute(select(User).where(User.email == "signup@example.com"))).scalar_one()
+    assert user.access_tier == AccessTier.FREE.value
+
+
+async def _admin(async_session, role):
+    from app.modules.admin.models import AdminUser
+
+    user = await _account(async_session, f"admin_{role}", AccessTier.PREMIUM.value)
+    async_session.add(AdminUser(id=uuid.uuid4(), user_id=user.id, role=role, is_active=True))
+    await async_session.commit()
+    return user
+
+
+async def test_a_super_admin_sets_a_tier_and_it_is_audited(client, async_session):
+    from app.modules.admin.models import AdminAuditLog as AuditLog
+
+    boss = await _admin(async_session, "super_admin")
+    member = await _account(async_session, "member", AccessTier.FREE.value)
+    url = f"/api/v1/admin/users/{member.id}/access-tier"
+
+    response = client.patch(url, json={"access_tier": "premium"}, headers=_auth(boss))
+
+    assert response.status_code == 200, response.text
+    assert response.json()["data"]["access_tier"] == "premium"
+    # The member's next request sees it, with no sign-out.
+    assert client.get("/api/v1/loans/", headers=_auth(member)).status_code == 200
+
+    log = (await async_session.execute(
+        select(AuditLog).where(AuditLog.action == "set_access_tier"))).scalar_one()
+    assert log.resource_id == str(member.id)
+
+
+async def test_only_a_super_admin_sets_a_tier(client, async_session):
+    plain_admin = await _admin(async_session, "admin")
+    member = await _account(async_session, "member2", AccessTier.FREE.value)
+    url = f"/api/v1/admin/users/{member.id}/access-tier"
+
+    assert client.patch(url, json={"access_tier": "premium"}, headers=_auth(plain_admin)).status_code == 403
+    assert client.patch(url, json={"access_tier": "premium"}, headers=_auth(member)).status_code == 403
+    await async_session.refresh(member)
+    assert member.access_tier == AccessTier.FREE.value
+
+
+async def test_an_unknown_tier_is_rejected(client, async_session):
+    boss = await _admin(async_session, "super_admin")
+    member = await _account(async_session, "member3", AccessTier.FREE.value)
+
+    response = client.patch(f"/api/v1/admin/users/{member.id}/access-tier",
+                            json={"access_tier": "gold"}, headers=_auth(boss))
+
+    assert response.status_code == 422
+
+
+@pytest.mark.parametrize(("query", "expected"), [("?access_tier=premium", "premium"), ("", "free")])
+async def test_approval_can_pick_the_tier(client, async_session, query, expected):
+    boss = await _admin(async_session, "super_admin")
+    pending = await _account(async_session, f"pending_{expected}")
+    pending.status = UserStatus.PENDING_APPROVAL
+    pending.is_active = False
+    await async_session.commit()
+
+    response = client.post(f"/api/v1/admin/approve-user/{pending.id}{query}", headers=_auth(boss))
+
+    assert response.status_code == 200, response.text
+    await async_session.refresh(pending)
+    assert pending.access_tier == expected
+    assert pending.status == UserStatus.ACTIVE

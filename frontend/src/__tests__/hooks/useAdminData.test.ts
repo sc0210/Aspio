@@ -154,6 +154,48 @@ describe('user actions', () => {
   });
 });
 
+describe('access tiers', () => {
+  it('changes a user plan and shows it in the row', async () => {
+    routes['PATCH /api/admin/users/u1/access-tier'] = { body: { access_tier: 'premium' } };
+    const { result } = await loaded();
+
+    await act(() => result.current.handleSetAccessTier('u1', 'premium'));
+
+    expect(fetchMock).toHaveBeenCalledWith('/api/admin/users/u1/access-tier', expect.objectContaining({
+      method: 'PATCH', body: JSON.stringify({ access_tier: 'premium' }),
+    }));
+    expect(result.current.users[0].access_tier).toBe('premium');
+    expect(toastMock.success).toHaveBeenCalledWith('Upgraded to Premium');
+    expect(result.current.settingTier).toBeNull();
+  });
+
+  it('keeps the row and reports the server message when a plan change is refused', async () => {
+    // The backend's AspiroException shape: { error: { code, message } }.
+    routes['PATCH /api/admin/users/u1/access-tier'] = {
+      status: 403, body: { error: { code: 'FORBIDDEN', message: 'super_admin only' } },
+    };
+    const { result } = await loaded();
+
+    await act(() => result.current.handleSetAccessTier('u1', 'premium'));
+
+    expect(result.current.users[0].access_tier).toBeUndefined();
+    expect(toastMock.error).toHaveBeenCalledWith('super_admin only');
+  });
+
+  it('approves with the plan picked beside Approve, free when none was picked', async () => {
+    routes['POST /api/admin/approve-user/p1'] = {};
+    routes['POST /api/admin/approve-user/p2'] = {};
+    const { result } = await loaded();
+
+    act(() => result.current.setApprovalTier('p1', 'premium'));
+    await act(() => result.current.handleApproveUser('p1'));
+    await act(() => result.current.handleApproveUser('p2'));
+
+    expect(calls).toContain('POST /api/admin/approve-user/p1?access_tier=premium');
+    expect(calls).toContain('POST /api/admin/approve-user/p2?access_tier=free');
+  });
+});
+
 describe('selection and bulk actions', () => {
   it('select-all toggles between everything and nothing', async () => {
     const { result } = await loaded();
