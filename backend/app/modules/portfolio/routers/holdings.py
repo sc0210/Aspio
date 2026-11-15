@@ -580,6 +580,7 @@ async def update_holding(
                             new_total,
                             holding.currency or "TWD",
                             on_day=legs[0].transaction_date,
+                            stale_ok=holding.goal_id is not None,
                         )
 
                         linked = legs[0]
@@ -1344,9 +1345,8 @@ async def sell_holding(
                 raise HTTPException(
                     status_code=status.HTTP_400_BAD_REQUEST,
                     detail=(
-                        f"No {currency}→TWD rate to "
-                        "credit this sale to its goal. Try again once exchange "
-                        "rates have refreshed."
+                        f"No {currency}→TWD exchange rate is available right now, "
+                        "so this sale can't be credited to its goal. Try again later."
                     ),
                 )
             if gain_twd != 0:

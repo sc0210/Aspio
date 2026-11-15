@@ -571,6 +571,11 @@ class ReportsService:
         stmt = select(Goal).where(Goal.user_id == user_uuid)
         result = await self.db.execute(stmt)
         goals = result.scalars().all()
+        # An emergency fund's status follows its wallet; read it live (no lock,
+        # no write: this is a GET).
+        from app.modules.goals.reservations import live_statuses
+
+        status_of = await live_statuses(self.db, user_uuid, goals)
 
         # Portfolio total (TWD) for retirement goal progress — mirrors goals page.
         if portfolio_total_twd is None:
@@ -594,8 +599,8 @@ class ReportsService:
 
         # Calculate summary stats
         total_goals = len(goals)
-        active_goals = sum(1 for g in goals if g.status == GoalStatus.ACTIVE)
-        completed_goals = sum(1 for g in goals if g.status == GoalStatus.COMPLETED)
+        active_goals = sum(1 for g in goals if status_of[g.id] == GoalStatus.ACTIVE)
+        completed_goals = sum(1 for g in goals if status_of[g.id] == GoalStatus.COMPLETED)
 
         total_target = sum(float(g.target_amount) for g in goals)
         total_current = sum(effective_current(g) for g in goals)
@@ -609,7 +614,7 @@ class ReportsService:
         goals_behind = 0
 
         for goal in goals:
-            if goal.status != GoalStatus.ACTIVE:
+            if status_of[goal.id] != GoalStatus.ACTIVE:
                 continue
 
             target = float(goal.target_amount)
@@ -655,7 +660,7 @@ class ReportsService:
                     target_amount=target,
                     current_amount=current,
                     progress_percentage=round(progress_pct, 2),
-                    status=goal.status.value,
+                    status=status_of[goal.id].value,
                     target_date=(
                         goal.target_date.isoformat() if goal.target_date else None
                     ),

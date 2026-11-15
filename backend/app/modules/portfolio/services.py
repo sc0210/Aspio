@@ -526,7 +526,7 @@ class PortfolioService:
             if legs_twd > 0 and paid_native > 0:
                 cost_twd += native_cost * legs_twd / paid_native
             else:
-                twd, unit = await self._to_twd(native_cost, native, on_day=on_day)
+                twd, unit = await self._to_twd(native_cost, native, on_day=on_day, stale_ok=True)
                 if unit != "TWD":
                     return None
                 cost_twd += twd
@@ -540,7 +540,7 @@ class PortfolioService:
         cost = quantity if (holding_data.type or "").lower() == "cash" else (
             quantity * Decimal(str(holding_data.average_cost)))
         day = business_day_of(holding_data.purchase_date or business_now())
-        need, currency = await self._to_twd(cost, holding_data.currency or "TWD", on_day=day)
+        need, currency = await self._to_twd(cost, holding_data.currency or "TWD", on_day=day, stale_ok=True)
         if currency != "TWD":
             raise ValueError(
                 f"No {holding_data.currency}→TWD rate to check this against the goal's reserve"
@@ -683,8 +683,17 @@ class PortfolioService:
                 # Booked at the trade day's rate from the same source that values
                 # the holding, so a buy moves no money between wallets on its own.
                 twd_amount, display_currency = await self._to_twd(
-                    amount, asset_currency, on_day=business_day_of(transaction_date)
+                    amount, asset_currency, on_day=business_day_of(transaction_date),
+                    stale_ok=goal_id is not None,
                 )
+                if goal_id is not None and display_currency != "TWD":
+                    # A goal's reserve is TWD: a leg in another currency would
+                    # leave its progress short of its money (the rate vanished
+                    # after _check_goal_can_pay found one).
+                    raise ValueError(
+                        f"No {asset_currency}→TWD exchange rate is available right now, "
+                        "so this can't be paid from the goal. Try again later."
+                    )
 
                 description = (
                     f"Buy {holding_data.symbol} ×{qty:g} @ "
@@ -739,8 +748,12 @@ class PortfolioService:
     _FX_SERIES = {"USD": "TWD=X"}
     # A dated close older than this before the trade day is not that day's rate.
     _FX_SERIES_MAX_AGE_DAYS = 7
+    # Goal money's last resort (stale_ok): a stored close no older than this.
+    _FX_STALE_MAX_AGE_DAYS = 31
 
-    async def _to_twd(self, amount: Decimal, currency: str, on_day: Optional[date] = None):
+    async def _to_twd(
+        self, amount: Decimal, currency: str, on_day: Optional[date] = None, stale_ok: bool = False,
+    ):
         """Convert ``amount`` in ``currency`` to TWD → (twd_amount, "TWD").
 
         One rate source for the cash bridge and for valuation, so a buy or sale
@@ -750,6 +763,11 @@ class PortfolioService:
         portfolio page. (This used to read the seeded ``currencies`` table, which
         nothing updates — 31.25 TWD/USD — so every USD trade booked a fake gain or
         loss against the live-rate valuation.)
+
+        ``stale_ok`` (goal money): with neither, the latest stored FX close of
+        the last _FX_STALE_MAX_AGE_DAYS (USD only: the series stored), so the
+        trade books in TWD. A goal's reserve is TWD; a leg left
+        in another currency would leave its progress short of its money.
 
         Returns ``(amount, currency)`` unchanged only when no rate is known at all.
         """
@@ -788,6 +806,27 @@ class PortfolioService:
                 return amount * Decimal(str(rate)), "TWD"
         except Exception as conv_err:
             logger.warning(f"Currency conversion to TWD failed for {cur}: {conv_err}")
+        if stale_ok and cur in self._FX_SERIES:
+            try:
+                from app.modules.portfolio.models import HistoricalPrice
+
+                async with self.session.begin_nested():
+                    last = (await self.session.execute(
+                        select(HistoricalPrice.close, HistoricalPrice.date)
+                        .where(
+                            HistoricalPrice.symbol == self._FX_SERIES[cur],
+                            HistoricalPrice.close > 0,
+                            HistoricalPrice.date
+                            >= business_today() - timedelta(days=self._FX_STALE_MAX_AGE_DAYS),
+                        )
+                        .order_by(HistoricalPrice.date.desc())
+                        .limit(1)
+                    )).first()
+                if last is not None:
+                    logger.warning(f"No current {cur}->TWD rate; using the last stored close ({last.date})")
+                    return amount * Decimal(str(last.close)), "TWD"
+            except Exception as fx_err:
+                logger.warning(f"Last stored FX lookup failed for {cur}: {fx_err}")
         logger.warning(f"No {cur}->TWD rate; booking {amount} {cur} in its own currency")
         return amount, cur
 
@@ -841,7 +880,8 @@ class PortfolioService:
                 logger.info(f"Created 'Investment Sale' category for user {user_id}")
 
             twd_amount, display_currency = await self._to_twd(
-                net_proceeds, currency, on_day=business_day_of(transaction_date)
+                net_proceeds, currency, on_day=business_day_of(transaction_date),
+                stale_ok=goal_id is not None,
             )
 
             transaction_data = {

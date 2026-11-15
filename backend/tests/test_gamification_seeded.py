@@ -47,7 +47,7 @@ A = AchievementType
 @pytest_asyncio.fixture
 async def world(async_session, test_user, test_category):
     """One expense paid by LINE Pay in TWD, one USD income on another day,
-    a completed emergency-fund goal with a reached milestone, and a holding."""
+    1,000 TWD in the Emergency Wallet, a completed emergency-fund goal with a reached milestone, and a holding."""
     now = datetime.now(timezone.utc)
 
     def txn(kind, amount, days_ago, **kw):
@@ -56,11 +56,10 @@ async def world(async_session, test_user, test_category):
             user_id=test_user.id,
             amount=Decimal(amount),
             type=kind,
-            wallet_type=TransactionWalletType.LIFE,
             category_id=test_category.id,
             transaction_date=now - timedelta(days=days_ago),
             description="seed",
-            **kw,
+            **{"wallet_type": TransactionWalletType.LIFE, **kw},
         )
 
     goal = Goal(
@@ -82,6 +81,9 @@ async def world(async_session, test_user, test_category):
         [
             txn(TransactionType.EXPENSE, "120", 1, payment_method=PaymentMethod.LINE_PAY, currency="TWD"),
             txn(TransactionType.INCOME, "50", 2, currency="USD"),
+            # The fund is completed because the Emergency Wallet covers it: its
+            # status follows that wallet (goals/service.py).
+            txn(TransactionType.INCOME, "1000", 3, currency="TWD", wallet_type=TransactionWalletType.EMERGENCY),
             goal,
             portfolio,
         ]
@@ -117,7 +119,7 @@ class TestCounters:
         current = {k: v["current_progress"] for k, v in progress.items()}
 
         assert current[A.FIRST_TRANSACTION.value] == 1
-        assert current[A.HUNDRED_TRANSACTIONS.value] == 2
+        assert current[A.HUNDRED_TRANSACTIONS.value] == 3
         assert current[A.FIRST_GOAL.value] == 1
         assert current[A.GOAL_COMPLETED.value] == 1
         assert current[A.EMERGENCY_FUND_BUILT.value] == 1

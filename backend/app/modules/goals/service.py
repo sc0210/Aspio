@@ -25,7 +25,7 @@ from .models import (
     GoalPriority,
 )
 from .repositories import GoalRepository
-from .reservations import GoalMoney, LifeCash, emergency_balance, goal_money, life_cash, lock_user_goals
+from .reservations import GoalMoney, LifeCash, emergency_balance, goal_money, life_cash, live_statuses, lock_user_goals
 from .schemas import (
     GoalCreate,
     GoalUpdate,
@@ -180,7 +180,7 @@ class GoalService:
     ) -> Tuple[List[Goal], int]:
         """List goals for a user along with the total count matching the filters."""
         # Before the status filter, so an emergency fund lands in the right list.
-        await self._settle_emergency_status(user_id)
+        await self.settle_emergency_goals(user_id)
         conditions = [Goal.user_id == user_id]
 
         if status:
@@ -209,7 +209,7 @@ class GoalService:
         await self.attach_money(goals, user_id)
         return goals, total
 
-    async def _settle_emergency_status(self, user_id: UUID) -> None:
+    async def settle_emergency_goals(self, user_id: UUID) -> None:
         """An emergency fund is completed exactly while the Emergency Wallet covers it.
 
         Nothing writes to such a goal when the wallet moves (a transfer, a
@@ -220,16 +220,17 @@ class GoalService:
         target, so no manual choice is undone here. Decided again under the
         goals' lock on fresh rows, so a concurrent edit or cancel is not
         overwritten.
+
+        The goal list, summary and edits settle here; readers that must not
+        lock or write (achievements, the month review) read the same rule
+        through reservations.live_statuses.
         """
         async def due() -> List[Goal]:
             funds = await self.repository.open_emergency_goals(user_id)
             if not funds:
                 return []
-            balance = await emergency_balance(self.session, user_id)
-            return [
-                g for g in funds
-                if (balance >= g.target_amount) != (g.status == GoalStatus.COMPLETED)
-            ]
+            live = await live_statuses(self.session, user_id, funds)
+            return [g for g in funds if live[g.id] != g.status]
 
         if not await due():
             return
@@ -351,7 +352,7 @@ class GoalService:
 
         await self.session.commit()
         if _is_emergency_goal(goal):
-            await self._settle_emergency_status(user_id)
+            await self.settle_emergency_goals(user_id)
         await self.repository.refresh(goal, ["milestones", "contributions"])
         await self.attach_money([goal], user_id)
         return goal
@@ -480,7 +481,7 @@ class GoalService:
         # from the rows whatever ran before.
         goal.current_amount = await self.repository.contribution_total(goal.id)
         if _is_emergency_goal(goal):
-            pass  # its status follows the Emergency Wallet (_settle_emergency_status)
+            pass  # its status follows the Emergency Wallet (settle_emergency_goals)
         elif goal.current_amount >= goal.target_amount and goal.status == GoalStatus.ACTIVE:
             goal.status = GoalStatus.COMPLETED
             goal.completed_at = datetime.now(timezone.utc)
@@ -510,7 +511,7 @@ class GoalService:
 
     async def get_summary(self, user_id: UUID) -> GoalSummary:
         """Get goals summary using a single DB aggregation query (was: load all + Python loops)."""
-        await self._settle_emergency_status(user_id)
+        await self.settle_emergency_goals(user_id)
         row = await self.repository.get_summary_row(user_id)
 
         total_target = Decimal(str(row.total_target)) if row else Decimal("0")

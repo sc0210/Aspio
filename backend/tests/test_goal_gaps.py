@@ -57,7 +57,7 @@ def _income(user_id, category_id, amount, wallet=TransactionWalletType.LIFE):
 async def test_a_usd_goal_lot_books_its_gain_against_what_the_goal_paid(async_session, test_user, test_category, monkeypatch):
     # USD/TWD 30 when bought, 32 when sold: the lot's price did not move, so
     # the whole gain is the rate, measured against the 30,000 the goal paid.
-    async def to_twd(self, amount, currency, on_day=None):
+    async def to_twd(self, amount, currency, on_day=None, stale_ok=False):
         if (currency or "TWD").upper() == "TWD":
             return D(amount), "TWD"
         rate = D("30") if on_day is not None and on_day < SELL_DAY.date() else D("32")
@@ -285,11 +285,11 @@ async def test_a_goal_lot_sale_with_no_rate_is_refused_and_changes_nothing(async
 
     from app.modules.portfolio.models import PortfolioHolding
 
-    async def to_twd(self, amount, currency, on_day=None):
+    async def to_twd(self, amount, currency, on_day=None, stale_ok=False):
         if (currency or "TWD").upper() == "TWD":
             return D(amount), "TWD"
         if on_day is not None and on_day >= SELL_DAY.date():
-            return D(amount), currency            # the rate is gone by the sale
+            return D(amount), currency            # no rate was ever stored
         return D(amount) * D("30"), "TWD"
 
     monkeypatch.setattr(PortfolioService, "_to_twd", to_twd)
@@ -411,3 +411,97 @@ async def test_a_resend_of_an_untouched_cost_books_the_stored_one(async_session,
     assert D(str(kept)) == D("10.1234567")
     after = (await goal_money(async_session, user, [goal])).get(goal).reserved
     assert reserved - after == (D("2") * D("10.1234567")).quantize(D("0.01"))   # the leg grew by 2 units at the stored cost
+
+
+async def test_goal_money_falls_back_to_the_last_stored_rate(async_session, monkeypatch):
+    from datetime import timedelta
+
+    from app.modules.portfolio.models import HistoricalPrice
+    from app.utils import exchange_rate_service
+    from app.utils.datetime_helpers import business_today
+
+    class NoLiveRate:
+        async def get_exchange_rate(self, *args, **kwargs):
+            return None
+
+    monkeypatch.setattr(exchange_rate_service, "get_exchange_rate_service", lambda session: NoLiveRate())
+    service = PortfolioService(async_session)
+    today = business_today()
+
+    # A close older than a month is not used even for goal money.
+    async_session.add(HistoricalPrice(symbol="TWD=X", market="FX", date=today - timedelta(days=40),
+                                      close=D("29"), source="t", currency="TWD"))
+    await async_session.commit()
+    assert await service._to_twd(D("100"), "USD", on_day=today, stale_ok=True) == (D("100"), "USD")
+
+    # Too old to be today's rate, and no live one: ordinary money stays in USD,
+    # goal money books in TWD at the last close of the month.
+    async_session.add(HistoricalPrice(symbol="TWD=X", market="FX", date=today - timedelta(days=20),
+                                      close=D("31.5"), source="t", currency="TWD"))
+    await async_session.commit()
+    assert await service._to_twd(D("100"), "USD", on_day=today) == (D("100"), "USD")
+    assert await service._to_twd(D("100"), "USD", on_day=today, stale_ok=True) == (D("3150.0"), "TWD")
+
+
+async def test_status_readers_see_an_emergency_fund_reopen(async_session, test_user, test_category):
+    from app.modules.goals.models import GoalStatus
+    from app.modules.reports.services import ReportsService
+    from app.modules.users.gamification_repository import GamificationRepository
+
+    user = test_user.id
+    async_session.add(_income(user, test_category.id, "200000", TransactionWalletType.EMERGENCY))
+    await async_session.commit()
+    goals = GoalService(async_session)
+    goal = (await goals.create_goal(user, GoalCreate(
+        title="Six months", category="emergency_fund", target_amount=D("180000")))).id
+    assert (await goals.get_summary(user)).completed_goals == 1
+
+    async_session.add(Transaction(
+        user_id=user, type=TransactionType.EXPENSE, wallet_type=TransactionWalletType.EMERGENCY,
+        amount=D("50000"), currency="TWD", description="Hospital", transaction_date=date(2026, 2, 1),
+        category_id=test_category.id))
+    await async_session.commit()
+
+    # Neither reader goes through the goal list, and both see it reopened,
+    # without writing it (they run on GETs and on login).
+    report = await ReportsService(async_session).get_goals_report(str(user), date(2026, 1, 1), date(2026, 12, 31))
+    assert (report.completed_goals, report.active_goals) == (0, 1)
+    gamification = GamificationRepository(async_session)
+    assert await gamification._count_completed_goals(user) == 0
+    assert await gamification._count_completed_emergency_goals(user) == 0
+    stored = await goals.get_goal(goal, user)
+    await async_session.refresh(stored)
+    assert stored.status == GoalStatus.COMPLETED
+    listed, _ = await goals.list_goals(user, status="active")   # the list stores it
+    assert [g.id for g in listed] == [goal]
+
+
+async def test_an_emergency_fund_reopening_reopens_the_shared_goal_it_backs(
+        authenticated_client, seed_categories, partner, async_session):
+    from app.modules.peers.models import SharedGoal
+
+    client = authenticated_client
+    connection = _ok(client.post("/api/v1/peers/invite", json={"username": "partner"}), 201)["id"]
+    _ok(client.patch(f"/api/v1/peers/{connection}/respond", json={"action": "accept"}, headers=partner))
+    _ok(client.post("/api/v1/transactions/", json={
+        "type": "income", "wallet_type": "emergency", "amount": "30000", "currency": "TWD",
+        "description": "Rainy day", "transaction_date": "2026-01-01", "category_name": "Salary"}), 201)
+    shared = _ok(client.post("/api/v1/peers/goals", json={
+        "connection_id": connection, "title": "Safety net", "target_amount": "20000"}), 201)["id"]
+    mine = _ok(client.post(f"/api/v1/peers/goals/{shared}/link-goal"))
+    _ok(client.put(f"/api/v1/goals/{mine['id']}", json={"category": "emergency_fund"}))
+    _ok(client.get("/api/v1/goals/"))
+
+    async def shared_status():
+        return (await async_session.execute(
+            select(SharedGoal.status).where(SharedGoal.id == UUID(shared))
+            .execution_options(populate_existing=True))).scalar_one()
+
+    assert await shared_status() == "completed"           # my side is the 30,000 Emergency Wallet
+
+    _ok(client.post("/api/v1/transactions/", json={
+        "type": "expense", "wallet_type": "emergency", "amount": "25000", "currency": "TWD",
+        "description": "Hospital", "transaction_date": "2026-02-01", "category_name": "Salary"}), 201)
+    _ok(client.get("/api/v1/goals/"))                     # settles: my fund reopens
+
+    assert await shared_status() == "active"

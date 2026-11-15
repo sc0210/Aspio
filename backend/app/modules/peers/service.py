@@ -511,23 +511,36 @@ class PeerService:
         """Each partner's linked goal on these shared goals: {(shared id, user id): (goal id, value)}.
 
         Value is the goal's money at market value (reserved + spent + legacy +
-        invested), computed per owner: the partner sees only the total.
+        invested), computed per owner: the partner sees only the total. An
+        emergency-fund goal is worth its owner's Emergency Wallet, as on its card.
         """
         from collections import defaultdict
 
+        from sqlalchemy import select
+
+        from app.modules.goals.models import Goal, GoalCategory
         from app.modules.goals.repositories import GoalRepository
-        from app.modules.goals.reservations import goal_money
+        from app.modules.goals.reservations import emergency_balance, goal_money
 
         linked = await GoalRepository(self.session).linked_to_shared([goal.id for goal, _conn in rows])
+        emergency = set((await self.session.scalars(select(Goal.id).where(
+            Goal.id.in_([goal_id for goal_id, _owner, _shared in linked]),
+            Goal.category == GoalCategory.EMERGENCY_FUND,
+        ))).all()) if linked else set()
         by_owner: dict = defaultdict(list)
         for goal_id, owner, _shared in linked:
             by_owner[owner].append(goal_id)
         values: dict = {}
         for owner, goal_ids in by_owner.items():
-            values.update({
-                gid: m.value
-                for gid, m in (await goal_money(self.session, owner, goal_ids, with_holdings=True)).items()
-            })
+            wallet = (await emergency_balance(self.session, owner)
+                      if emergency.intersection(goal_ids) else None)
+            money = await goal_money(self.session, owner, [g for g in goal_ids if g not in emergency],
+                                     with_holdings=True)
+            for gid in goal_ids:  # a goal with no money rows has no entry
+                if gid in emergency:
+                    values[gid] = wallet
+                elif gid in money:
+                    values[gid] = money[gid].value
         return {
             (shared, owner): (goal_id, values.get(goal_id, Decimal("0")))
             for goal_id, owner, shared in linked
