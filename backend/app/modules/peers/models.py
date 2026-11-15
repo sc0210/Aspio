@@ -4,10 +4,10 @@ SQLAlchemy models for peer connections and shared savings goals.
 PeerConnection  — directional invite record: requester → receiver.
                   Once accepted, both users can view comparison data and
                   create shared savings goals together.
-SharedGoal      — joint savings goal tied to an accepted peer connection.
-                  Each side tracks its own contribution (requester_amount /
-                  receiver_amount); the goal auto-completes when the sum
-                  reaches target_amount.
+SharedGoal      — a savings goal two partners pursue together. It holds no
+                  money and no target: each partner backs their side with a
+                  personal goal (goals.shared_goal_id), and the shared goal's
+                  target and amount are the sums of those two goals.
 """
 
 import enum
@@ -110,13 +110,12 @@ class GoalStatus(str, enum.Enum):
 
 
 class SharedGoal(BaseModel):
-    """Joint savings goal linked to an accepted peer connection.
+    """A goal two partners pursue together, on an accepted peer connection.
 
-    requester_amount  — cumulative contribution from the connection's requester.
-    receiver_amount   — cumulative contribution from the connection's receiver.
-
-    When (requester_amount + receiver_amount) >= target_amount the service
-    layer automatically transitions status to 'completed'.
+    Each side is one partner's personal goal (goals.shared_goal_id): its target
+    is that partner's part, its value their money. The target and amount shown
+    are the sums of the two (peers/service.py _backing). status stores the last
+    judgement, kept for the "reached" alert; reads judge it live.
     """
 
     __tablename__ = "shared_goals"
@@ -130,9 +129,6 @@ class SharedGoal(BaseModel):
         nullable=False,
     )
     title: Mapped[str] = mapped_column(String(100), nullable=False)
-    target_amount: Mapped[Decimal] = mapped_column(
-        Numeric(15, 2), nullable=False
-    )
     target_date: Mapped[Optional[str]] = mapped_column(Date, nullable=True)
     created_by: Mapped[uuid.UUID] = mapped_column(
         UUID(as_uuid=True),
@@ -142,14 +138,6 @@ class SharedGoal(BaseModel):
     status: Mapped[GoalStatus] = mapped_column(
         String(20), nullable=False, default=GoalStatus.active
     )
-    # Per-side contributions
-    requester_amount: Mapped[Decimal] = mapped_column(
-        Numeric(15, 2), nullable=False, default=Decimal("0")
-    )
-    receiver_amount: Mapped[Decimal] = mapped_column(
-        Numeric(15, 2), nullable=False, default=Decimal("0")
-    )
-
     # Relationship back to the owning PeerConnection
     connection: Mapped["PeerConnection"] = relationship(
         "PeerConnection", back_populates="goals"
@@ -166,54 +154,6 @@ class SharedGoal(BaseModel):
             f"connection={self.connection_id}, "
             f"title={self.title!r}, "
             f"status={self.status})>"
-        )
-
-
-# ---------------------------------------------------------------------------
-# Saving records — per-deposit audit trail for shared goals
-# ---------------------------------------------------------------------------
-
-
-class SavingRecord(BaseModel):
-    """Individual saving deposit for a SharedGoal.
-
-    Each row represents a single deposit made by one participant.
-    The service layer recalculates requester_amount / receiver_amount on
-    the parent SharedGoal whenever a record is added, updated, or deleted.
-    """
-
-    __tablename__ = "saving_records"
-
-    id: Mapped[uuid.UUID] = mapped_column(
-        UUID(as_uuid=True), primary_key=True, default=uuid.uuid4
-    )
-    goal_id: Mapped[uuid.UUID] = mapped_column(
-        UUID(as_uuid=True),
-        ForeignKey("shared_goals.id", ondelete="CASCADE"),
-        nullable=False,
-    )
-    user_id: Mapped[uuid.UUID] = mapped_column(
-        UUID(as_uuid=True),
-        ForeignKey("users.id", ondelete="CASCADE"),
-        nullable=False,
-    )
-    amount: Mapped[Decimal] = mapped_column(Numeric(15, 2), nullable=False)
-    record_date: Mapped[date] = mapped_column(Date, nullable=False)
-    note: Mapped[Optional[str]] = mapped_column(String(200), nullable=True)
-
-    __table_args__ = (
-        CheckConstraint("amount > 0", name="saving_record_positive_amount"),
-        Index("idx_saving_records_goal_id", "goal_id"),
-        Index("idx_saving_records_user_id", "user_id"),
-    )
-
-    def __repr__(self) -> str:
-        return (
-            f"<SavingRecord(id={self.id}, "
-            f"goal_id={self.goal_id}, "
-            f"user_id={self.user_id}, "
-            f"amount={self.amount}, "
-            f"record_date={self.record_date})>"
         )
 
 

@@ -130,9 +130,11 @@ WITH checks(sort, object, source_file, present) AS (
         to_regclass('public.system_alerts') IS NULL),
 
     -- 2026_11_06_saving_records_rls.sql
-    (22, 'RLS on saving_records', '2026_11_06_saving_records_rls.sql',
+    -- Retired by 2026_11_16_shared_goal_sides.sql: a dropped table passes too.
+    (22, 'RLS on saving_records (or retired)', '2026_11_06_saving_records_rls.sql',
         COALESCE((SELECT relrowsecurity FROM pg_class
-                   WHERE oid = to_regclass('public.saving_records')), false)),
+                   WHERE oid = to_regclass('public.saving_records')),
+                 to_regclass('public.saving_records') IS NULL)),
 
     -- 2026_11_07_peer_splits.sql
     (23, 'table peer_connection_prefs (RLS on)', '2026_11_07_peer_splits.sql',
@@ -182,7 +184,12 @@ WITH checks(sort, object, source_file, present) AS (
                  WHERE table_name = 'portfolio_holdings' AND column_name = 'goal_id')),
     (39, 'column goals.shared_goal_id', '2026_11_15_goal_shared.sql',
         EXISTS (SELECT 1 FROM information_schema.columns
-                 WHERE table_name = 'goals' AND column_name = 'shared_goal_id'))
+                 WHERE table_name = 'goals' AND column_name = 'shared_goal_id')),
+    (40, 'saving_records retired', '2026_11_16_shared_goal_sides.sql',
+        NOT EXISTS (SELECT 1 FROM information_schema.tables
+                     WHERE table_schema = 'public' AND table_name = 'saving_records')
+        AND NOT EXISTS (SELECT 1 FROM information_schema.columns
+                         WHERE table_name = 'shared_goals' AND column_name = 'target_amount'))
 )
 SELECT
     CASE WHEN present THEN 'OK     ' ELSE 'MISSING' END AS status,
@@ -217,3 +224,8 @@ SELECT 'public tables without RLS' AS what, count(*)::text AS value
 FROM pg_class c
 JOIN pg_namespace n ON n.oid = c.relnamespace
 WHERE n.nspname = 'public' AND c.relkind = 'r' AND NOT c.relrowsecurity;
+-- 2026_11_16_shared_goal_sides: expect 0 (open shared goals missing a partner's part).
+SELECT 'shared goals without two parts' AS what, count(*)::text AS value
+FROM shared_goals sg
+WHERE sg.status <> 'cancelled'
+  AND (SELECT count(*) FROM goals g WHERE g.shared_goal_id = sg.id AND g.status <> 'cancelled') < 2;

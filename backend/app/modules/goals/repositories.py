@@ -14,7 +14,7 @@ from decimal import Decimal
 from typing import List, Optional
 from uuid import UUID
 
-from sqlalchemy import select, func, and_, case
+from sqlalchemy import select, func, and_, case, update
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
@@ -168,13 +168,29 @@ class GoalRepository:
         )
 
     async def linked_to_shared(self, shared_goal_ids: List[UUID]) -> list:
-        """(goal id, owner, shared goal id) of every open goal backing these shared goals."""
+        """(goal id, owner, shared goal id, target) of every open goal backing these shared goals."""
         if not shared_goal_ids:
             return []
         return (await self.db.execute(
-            select(Goal.id, Goal.user_id, Goal.shared_goal_id).where(
+            select(Goal.id, Goal.user_id, Goal.shared_goal_id, Goal.target_amount).where(
                 Goal.shared_goal_id.in_(shared_goal_ids), Goal.status != GoalStatus.CANCELLED,
             )
+        )).all()
+
+    async def unlink_shared(self, shared_goal_id: UUID) -> None:
+        """Every goal that was a part of this shared goal stands alone again (caller commits)."""
+        await self.db.execute(
+            update(Goal).where(Goal.shared_goal_id == shared_goal_id).values(shared_goal_id=None)
+        )
+
+    async def contribution_rows(self, goal_ids: List[UUID]) -> list:
+        """(goal id, when, signed amount) of every contribution row of these goals, oldest first."""
+        if not goal_ids:
+            return []
+        return (await self.db.execute(
+            select(GoalContribution.goal_id, GoalContribution.contribution_date, GoalContribution.amount)
+            .where(GoalContribution.goal_id.in_(goal_ids))
+            .order_by(GoalContribution.contribution_date)
         )).all()
 
     async def contribution_total(self, goal_id: UUID) -> Decimal:

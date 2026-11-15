@@ -350,6 +350,14 @@ class GoalService:
                     "Failed to create goal-completion notification", exc_info=True
                 )
 
+        if "target_amount" in update_data and goal.shared_goal_id is not None:
+            # This goal's target is the user's part of a shared goal, whose
+            # target is the sum of both parts: re-judge it.
+            from app.modules.peers.service import PeerService
+
+            await self.session.flush()
+            await PeerService(self.session).sync_backed_goal(goal.shared_goal_id, user_id)
+
         await self.session.commit()
         if _is_emergency_goal(goal):
             await self.settle_emergency_goals(user_id)
@@ -383,6 +391,11 @@ class GoalService:
             return None
         try:
             contribution = await self._reserve(goal, data.amount, data.contribution_date, data.notes)
+            if goal.shared_goal_id is not None:
+                # This goal is the user's part of a shared goal: tell the partner.
+                from app.modules.peers.service import PeerService
+
+                await PeerService(self.session).notify_set_aside(goal.shared_goal_id, user_id, data.amount)
             await self.session.commit()
         except Exception:
             await self.session.rollback()

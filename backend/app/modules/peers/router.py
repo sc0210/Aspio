@@ -14,14 +14,10 @@ Endpoints:
   GET    /peers/goals                                     → list active and completed shared goals for the caller
   POST   /peers/goals                                     → create a shared goal
   GET    /peers/goals/{goal_id}                           → get a single shared goal
-  PATCH  /peers/goals/{goal_id}                           → edit title, target or date (either participant)
-  DELETE /peers/goals/{goal_id}                           → delete a shared goal (creator only)
-  POST   /peers/goals/{goal_id}/link-goal                 → the caller's own goal backing their side
-
-  GET    /peers/goals/{goal_id}/records                   → list saving records for a goal
-  POST   /peers/goals/{goal_id}/records                   → add a saving record
-  PATCH  /peers/goals/{goal_id}/records/{record_id}       → update a saving record (owner only)
-  DELETE /peers/goals/{goal_id}/records/{record_id}       → delete a saving record (owner only)
+  PATCH  /peers/goals/{goal_id}                           → edit title or date (either participant)
+  DELETE /peers/goals/{goal_id}                           → delete a shared goal (creator only; parts stay)
+  POST   /peers/goals/{goal_id}/link-goal                 → the caller's part: their own goal, made or linked
+  GET    /peers/goals/{goal_id}/history                   → each side's progress by day
 
   POST   /peers/splits                                    → split a bill with a partner
   GET    /peers/splits                                    → list your split bills
@@ -47,12 +43,11 @@ from app.modules.peers.schemas import (
     PeerConnectionOut,
     PeerInviteRequest,
     PeerRespondRequest,
-    SavingRecordCreate,
-    SavingRecordOut,
-    SavingRecordUpdate,
-    SharedGoalUpdate,
+    LinkGoalIn,
     SharedGoalCreate,
+    SharedGoalHistoryPoint,
     SharedGoalOut,
+    SharedGoalUpdate,
     UserSearchResult,
     PeerBalanceOut,
     PeerPrefsOut,
@@ -235,7 +230,7 @@ async def get_goal(
 @router.patch(
     "/goals/{goal_id}",
     response_model=ApiResponse[SharedGoalOut],
-    summary="Edit a shared goal's title, target or date",
+    summary="Edit a shared goal's title or date",
 )
 async def update_goal(
     goal_id: UUID,
@@ -243,7 +238,7 @@ async def update_goal(
     current_user: CurrentUser,
     session: AsyncSession = Depends(get_db),
 ):
-    """Either participant may edit. Raising the target re-opens a completed goal.
+    """Either participant may edit. The target is each partner's part, edited on their own goal.
 
     Raises:
       - 404 if the goal is not found or the caller is not a participant
@@ -279,21 +274,27 @@ async def delete_goal(
 @router.post(
     "/goals/{goal_id}/link-goal",
     response_model=ApiResponse[GoalResponse],
-    summary="Back your side of a shared goal with your own goal",
+    summary="Your part of a shared goal: your own goal",
 )
 async def link_goal(
     goal_id: UUID,
     current_user: CurrentUser,
+    body: LinkGoalIn | None = None,
     session: AsyncSession = Depends(get_db),
 ):
-    """Return the caller's own goal for this shared goal, making it if missing.
+    """Return the caller's own goal for their part, making or linking it if missing.
 
-    That goal reserves the caller's Life cash (POST /goals/{id}/reserve) and its
-    value counts toward their side. Raises 404 if the caller is not a
-    participant, 400 if the shared goal is cancelled.
+    That goal reserves the caller's Life cash (POST /goals/{id}/reserve); its
+    target is their part and its value their side. Body (optional): goal_id
+    links a goal they already have; target_amount sets a new goal's target
+    (default: the partner's part).
+
+    Raises 404 if the caller is not a participant or the goal is not theirs,
+    400 if the shared goal or the given goal is cancelled, 409 if the given
+    goal is already a part elsewhere or the caller already has a part.
     """
     svc = get_peer_service(session)
-    goal = await svc.link_goal(current_user.id, goal_id)
+    goal = await svc.link_goal(current_user.id, goal_id, body)
     return ApiResponse.success_response(
         data=GoalResponse.model_validate(goal),
         message="Your goal for this shared goal",
@@ -301,102 +302,21 @@ async def link_goal(
 
 
 @router.get(
-    "/goals/{goal_id}/records",
-    response_model=ApiResponse[list[SavingRecordOut]],
-    summary="List saving records for a shared goal",
+    "/goals/{goal_id}/history",
+    response_model=ApiResponse[list[SharedGoalHistoryPoint]],
+    summary="Each side's progress by day",
 )
-async def list_records(
+async def goal_history(
     goal_id: UUID,
     current_user: CurrentUser,
     session: AsyncSession = Depends(get_db),
 ):
-    """Return all saving records for a goal, newest first.
-
-    Both participants may view records.
+    """Net change to each side's progress per day, oldest first (amounts only, no notes).
 
     Raises 404 if the goal does not exist or the caller is not a participant.
     """
     svc = get_peer_service(session)
-    records = await svc.list_records(current_user.id, goal_id)
-    return ApiResponse.success_response(
-        data=records,
-        message=f"{len(records)} record(s) found",
-    )
-
-
-@router.post(
-    "/goals/{goal_id}/records",
-    response_model=ApiResponse[SavingRecordOut],
-    status_code=status.HTTP_201_CREATED,
-    summary="Add a saving record to a shared goal",
-)
-async def add_record(
-    goal_id: UUID,
-    body: SavingRecordCreate,
-    current_user: CurrentUser,
-    session: AsyncSession = Depends(get_db),
-):
-    """Record a new individual deposit for the calling user on a shared goal.
-
-    The goal's running total (requester_amount or receiver_amount) is
-    recalculated automatically from the sum of all records.
-
-    Raises:
-      - 404 if the goal does not exist or the caller is not a participant
-      - 400 if the goal is not in 'active' status
-    """
-    svc = get_peer_service(session)
-    record = await svc.add_record(current_user.id, goal_id, body)
-    return ApiResponse.success_response(data=record, message="Saving record added")
-
-
-@router.patch(
-    "/goals/{goal_id}/records/{record_id}",
-    response_model=ApiResponse[SavingRecordOut],
-    summary="Update a saving record",
-)
-async def update_record(
-    goal_id: UUID,
-    record_id: UUID,
-    body: SavingRecordUpdate,
-    current_user: CurrentUser,
-    session: AsyncSession = Depends(get_db),
-):
-    """Update the amount, date, or note of an existing saving record.
-
-    Only the user who created the record may edit it.
-
-    Raises:
-      - 404 if the record or goal is not found
-      - 403 if the caller did not create the record
-    """
-    svc = get_peer_service(session)
-    record = await svc.update_record(current_user.id, goal_id, record_id, body)
-    return ApiResponse.success_response(data=record, message="Saving record updated")
-
-
-@router.delete(
-    "/goals/{goal_id}/records/{record_id}",
-    status_code=status.HTTP_204_NO_CONTENT,
-    summary="Delete a saving record",
-)
-async def delete_record(
-    goal_id: UUID,
-    record_id: UUID,
-    current_user: CurrentUser,
-    session: AsyncSession = Depends(get_db),
-):
-    """Permanently delete a saving record.
-
-    Only the user who created the record may delete it.
-    The goal's running total is recalculated automatically after deletion.
-
-    Raises:
-      - 404 if the record or goal is not found
-      - 403 if the caller did not create the record
-    """
-    svc = get_peer_service(session)
-    await svc.delete_record(current_user.id, goal_id, record_id)
+    return ApiResponse.success_response(data=await svc.side_history(current_user.id, goal_id))
 
 
 # ---------------------------------------------------------------------------

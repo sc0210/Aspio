@@ -153,21 +153,15 @@ def _make_goal(
     connection_id: uuid.UUID | None = None,
     created_by: uuid.UUID | None = None,
     status: GoalStatus = GoalStatus.active,
-    target_amount: Decimal = Decimal("10000"),
-    requester_amount: Decimal = Decimal("0"),
-    receiver_amount: Decimal = Decimal("0"),
     target_date=None,
 ) -> MagicMock:
     g = MagicMock()
     g.id = goal_id or uuid.uuid4()
     g.connection_id = connection_id or uuid.uuid4()
     g.title = "Emergency Fund"
-    g.target_amount = target_amount
     g.target_date = target_date
     g.created_by = created_by or uuid.uuid4()
     g.status = status
-    g.requester_amount = requester_amount
-    g.receiver_amount = receiver_amount
     g.created_at = datetime.now(timezone.utc)
     g.updated_at = datetime.now(timezone.utc)
     return g
@@ -399,7 +393,7 @@ class TestCreateGoal:
         return SharedGoalCreate(
             connection_id=connection_id,
             title="Holiday Fund",
-            target_amount=Decimal("5000"),
+            my_target=Decimal("5000"),
             target_date=date(2027, 12, 31),
         )
 
@@ -496,7 +490,7 @@ class TestDeleteGoal:
 # ===========================================================================
 
 class TestGoalToOut:
-    """_goal_to_out must correctly assign your_/peer_ amounts based on side."""
+    """_goal_to_out must assign your_/peer_ parts by user, and sum them."""
 
     def _build_goal_and_conn(
         self,
@@ -513,14 +507,14 @@ class TestGoalToOut:
             receiver_id=receiver_id,
             status=PeerStatus.ACCEPTED,
         )
-        goal = _make_goal(
-            connection_id=conn_id,
-            created_by=requester_id,
-            target_amount=target_amount,
-            requester_amount=requester_amount,
-            receiver_amount=receiver_amount,
-        )
-        return goal, conn
+        goal = _make_goal(connection_id=conn_id, created_by=requester_id)
+        # Each side is that partner's personal goal: (goal id, value, target).
+        half = target_amount / 2
+        backing = {
+            (goal.id, requester_id): (uuid.uuid4(), requester_amount, half),
+            (goal.id, receiver_id): (uuid.uuid4(), receiver_amount, half),
+        }
+        return goal, conn, backing
 
     def _users_by_id(
         self,
@@ -536,7 +530,7 @@ class TestGoalToOut:
         requester_id = uuid.uuid4()
         receiver_id = uuid.uuid4()
 
-        goal, conn = self._build_goal_and_conn(
+        goal, conn, backing = self._build_goal_and_conn(
             requester_id=requester_id,
             receiver_id=receiver_id,
             requester_amount=Decimal("3000"),
@@ -546,9 +540,9 @@ class TestGoalToOut:
         session = _make_session()
         svc = PeerService(session)
 
-        out = svc._goal_to_out(goal, conn, requester_id, users_by_id)
+        out = svc._goal_to_out(goal, conn, requester_id, users_by_id, backing)
 
-        # Requester looks at goal: "your" = requester_amount, "peer" = receiver_amount
+        # Requester looks at goal: "your" = their own part, "peer" = the other
         assert out.your_amount == float(Decimal("3000"))
         assert out.peer_amount == float(Decimal("1500"))
         assert out.your_user_id == str(requester_id)
@@ -561,7 +555,7 @@ class TestGoalToOut:
         requester_id = uuid.uuid4()
         receiver_id = uuid.uuid4()
 
-        goal, conn = self._build_goal_and_conn(
+        goal, conn, backing = self._build_goal_and_conn(
             requester_id=requester_id,
             receiver_id=receiver_id,
             requester_amount=Decimal("3000"),
@@ -571,9 +565,9 @@ class TestGoalToOut:
         session = _make_session()
         svc = PeerService(session)
 
-        out = svc._goal_to_out(goal, conn, receiver_id, users_by_id)
+        out = svc._goal_to_out(goal, conn, receiver_id, users_by_id, backing)
 
-        # Receiver looks at goal: "your" = receiver_amount, "peer" = requester_amount
+        # Receiver looks at goal: the two parts swap
         assert out.your_amount == float(Decimal("1500"))
         assert out.peer_amount == float(Decimal("3000"))
         assert out.your_user_id == str(receiver_id)
@@ -587,7 +581,7 @@ class TestGoalToOut:
         requester_id = uuid.uuid4()
         receiver_id = uuid.uuid4()
 
-        goal, conn = self._build_goal_and_conn(
+        goal, conn, backing = self._build_goal_and_conn(
             requester_id=requester_id,
             receiver_id=receiver_id,
             requester_amount=Decimal("4000"),
@@ -598,16 +592,17 @@ class TestGoalToOut:
         session = _make_session()
         svc = PeerService(session)
 
-        out = svc._goal_to_out(goal, conn, requester_id, users_by_id)
+        out = svc._goal_to_out(goal, conn, requester_id, users_by_id, backing)
 
         assert out.total_amount == 6000.0
+        assert (out.your_target, out.peer_target, out.target_amount) == (5000.0, 5000.0, 10000.0)
         assert out.progress_pct == pytest.approx(60.0)
 
     def test_progress_pct_capped_at_100_when_over_target(self):
         requester_id = uuid.uuid4()
         receiver_id = uuid.uuid4()
 
-        goal, conn = self._build_goal_and_conn(
+        goal, conn, backing = self._build_goal_and_conn(
             requester_id=requester_id,
             receiver_id=receiver_id,
             requester_amount=Decimal("8000"),
@@ -618,7 +613,23 @@ class TestGoalToOut:
         session = _make_session()
         svc = PeerService(session)
 
-        out = svc._goal_to_out(goal, conn, requester_id, users_by_id)
+        out = svc._goal_to_out(goal, conn, requester_id, users_by_id, backing)
 
         assert out.progress_pct == 100.0
         assert out.total_amount == 13000.0
+        assert out.status == "completed"
+
+    def test_one_part_alone_does_not_reach_the_goal(self):
+        requester_id = uuid.uuid4()
+        receiver_id = uuid.uuid4()
+        goal, conn, backing = self._build_goal_and_conn(
+            requester_id=requester_id,
+            receiver_id=receiver_id,
+            requester_amount=Decimal("8000"),
+            receiver_amount=Decimal("0"),
+        )
+        del backing[(goal.id, receiver_id)]
+        out = PeerService(_make_session())._goal_to_out(
+            goal, conn, requester_id, self._users_by_id(requester_id, receiver_id), backing)
+
+        assert (out.target_amount, out.peer_joined, out.status) == (5000.0, False, "active")

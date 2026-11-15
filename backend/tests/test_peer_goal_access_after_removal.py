@@ -1,11 +1,10 @@
 """Removing a peer ends what you share with them.
 
 The shared-goal queries checked only that the user had been part of the
-connection, so after "Remove" the ex-peer still listed the goal, read the other
-person's saving records and could add their own. Runs the real queries.
+connection, so after "Remove" the ex-peer still listed the goal and read the
+other person's side of it. Runs the real queries.
 """
 
-from decimal import Decimal
 from uuid import uuid4
 
 import pytest
@@ -27,8 +26,7 @@ async def _shared_goal(session, owner):
         id=uuid4(), requester_id=owner.id, receiver_id=peer.id, status=PeerStatus.ACCEPTED,
     )
     goal = SharedGoal(
-        id=uuid4(), connection_id=conn.id, title="Trip",
-        target_amount=Decimal("1000"), created_by=owner.id,
+        id=uuid4(), connection_id=conn.id, title="Trip", created_by=owner.id,
     )
     session.add_all([peer, conn, goal])
     await session.commit()
