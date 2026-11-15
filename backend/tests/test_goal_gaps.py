@@ -340,6 +340,10 @@ async def test_a_partly_sold_lot_keeps_its_quantity_and_cost(async_session, test
     await update_holding(holding_id=lot, holding_updates=HoldingUpdate(quantity=D("6"), average_cost=D("100.0000001")),
                          current_user=SimpleNamespace(id=user), session=async_session)
     assert (await goal_money(async_session, user, [goal])).get(goal).reserved == before
+    from app.modules.portfolio.models import PortfolioHolding
+    kept = (await async_session.execute(
+        select(PortfolioHolding.average_cost).where(PortfolioHolding.id == lot))).scalar_one()
+    assert D(str(kept)) == D("100")                      # the untouched cost is not rewritten
 
     for change in (HoldingUpdate(quantity=D("8")), HoldingUpdate(average_cost=D("90"))):
         with pytest.raises(HTTPException) as refused:

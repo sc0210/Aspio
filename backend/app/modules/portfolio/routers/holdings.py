@@ -434,7 +434,12 @@ async def update_holding(
         holding = await holding_service.update_holding(
             holding_id=holding_id,
             user_id=current_user.id,
-            updates=holding_updates.model_dump(exclude_unset=True, exclude={"expected_quantity"}),
+            # An untouched cost (equal at 6 places) is not written back, so the
+            # lot keeps the figure its buy leg was booked from.
+            updates=holding_updates.model_dump(exclude_unset=True, exclude={"expected_quantity"} | (
+                {"average_cost"} if holding_updates.average_cost is not None
+                and _cost(holding_updates.average_cost) == _cost(previous_cost) else set()
+            )),
         )
 
         if not holding:
