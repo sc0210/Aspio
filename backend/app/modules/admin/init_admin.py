@@ -10,7 +10,7 @@ from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.config import get_settings
-from app.modules.users.models import User, UserStatus
+from app.modules.users.models import AccessTier, User, UserStatus
 from .models import AdminRole, AdminUser
 from .repositories import AdminRepository
 
@@ -41,6 +41,13 @@ async def grant_admin(session: AsyncSession, email: str, role: str) -> Optional[
 
         invalidate_user_auth_cache(user.id)
         logger.info(f"Approved {user.email} while granting {role}")
+
+    # Staff see every page. Only raised, never lowered: an admin who set their
+    # own account to free (to see what a free account sees) keeps it across
+    # restarts only if they are not listed in ADMIN_EMAILS.
+    if user.access_tier != AccessTier.PREMIUM.value:
+        user.access_tier = AccessTier.PREMIUM.value
+        await session.commit()
 
     repo = AdminRepository(session)
     admin = await repo.get_by_user_id(user.id)

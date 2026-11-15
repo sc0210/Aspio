@@ -182,7 +182,10 @@ WITH checks(sort, object, source_file, present) AS (
                  WHERE table_name = 'portfolio_holdings' AND column_name = 'goal_id')),
     (39, 'column goals.shared_goal_id', '2026_11_15_goal_shared.sql',
         EXISTS (SELECT 1 FROM information_schema.columns
-                 WHERE table_name = 'goals' AND column_name = 'shared_goal_id'))
+                 WHERE table_name = 'goals' AND column_name = 'shared_goal_id')),
+    (40, 'column users.access_tier', '2026_11_15_access_tier.sql',
+        EXISTS (SELECT 1 FROM information_schema.columns
+                 WHERE table_name = 'users' AND column_name = 'access_tier'))
 )
 SELECT
     CASE WHEN present THEN 'OK     ' ELSE 'MISSING' END AS status,
@@ -198,6 +201,10 @@ WHERE lower(type::text) = 'cash' AND (average_cost <> 1 OR current_price <> 1);
 -- 2026_11_14_portfolio_currency_twd: expect 0.
 SELECT 'portfolios not in TWD' AS what, count(*)::text AS value
 FROM portfolios WHERE upper(currency) <> 'TWD';
+-- 2026_11_15_access_tier: right after the first apply, expect 0 (every
+-- account that existed was made premium). Later, free accounts are normal.
+SELECT 'free-tier accounts' AS what, count(*)::text AS value
+FROM users WHERE access_tier = 'free';
 
 -- ── alembic bookkeeping ────────────────────────────────────────────────────
 -- Should equal the single head in backend/alembic/versions (check with

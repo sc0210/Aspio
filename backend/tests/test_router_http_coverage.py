@@ -39,7 +39,7 @@ def _headers(user):
 @pytest_asyncio.fixture
 async def stranger(async_session):
     user = User(id=uuid4(), email="stranger@example.com", name="Stranger", username="stranger",
-                hashed_password="x", is_active=True, is_verified=True, role=UserRole.USER,
+                hashed_password="x", is_active=True, is_verified=True, role=UserRole.USER, access_tier="premium",
                 status=UserStatus.ACTIVE, preferred_currency="TWD", timezone="UTC",
                 experience_points=0, level=1)
     async_session.add(user)
@@ -182,7 +182,7 @@ async def test_an_outsider_cannot_see_a_shared_goal(authenticated_client, async_
     client = authenticated_client
     test_user.username = "tester"
     outsider = User(id=uuid4(), email="outsider@example.com", name="Outsider", username="outsider",
-                    hashed_password="x", is_active=True, is_verified=True, role=UserRole.USER,
+                    hashed_password="x", is_active=True, is_verified=True, role=UserRole.USER, access_tier="premium",
                     status=UserStatus.ACTIVE, preferred_currency="TWD", timezone="UTC",
                     experience_points=0, level=1)
     async_session.add(outsider)

@@ -83,6 +83,7 @@ class UserResponse(UserBase, TimestampMixin):
     is_verified: bool
     experience_points: int = 0
     level: int = 1
+    access_tier: str = "free"
     preferences: Optional[Dict[str, Any]] = None
     profile: Optional[UserProfile] = None
     

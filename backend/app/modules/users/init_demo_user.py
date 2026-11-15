@@ -16,7 +16,7 @@ import uuid
 from sqlalchemy import select, and_, or_
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.modules.users.models import User, UserStatus
+from app.modules.users.models import AccessTier, User, UserStatus
 from app.modules.users.security import security_utils
 
 logger = logging.getLogger(__name__)
@@ -48,6 +48,8 @@ async def init_demo_user(session: AsyncSession) -> None:
             hashed_password=security_utils.hash_password(DEMO_PASSWORD),
             is_active=True,
             status=UserStatus.ACTIVE,
+            # The public showcase: it shows every page.
+            access_tier=AccessTier.PREMIUM.value,
             referral_code=security_utils.generate_secure_token(8),
         )
         session.add(user)
@@ -58,6 +60,7 @@ async def init_demo_user(session: AsyncSession) -> None:
         user.hashed_password = security_utils.hash_password(DEMO_PASSWORD)
         user.status = UserStatus.ACTIVE
         user.is_active = True
+        user.access_tier = AccessTier.PREMIUM.value
         if not user.username:
             user.username = DEMO_USERNAME
         await session.commit()

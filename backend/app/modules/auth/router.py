@@ -48,6 +48,7 @@ async def validate_token(current_user: CurrentUser):
             "is_verified": current_user.is_verified,
             "role": current_user.role.value,
             "status": current_user.status.value,
+            "access_tier": current_user.access_tier,
         },
         message="Token is valid",
     )

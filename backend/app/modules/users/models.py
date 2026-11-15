@@ -54,6 +54,17 @@ class UserRole(enum.Enum):
     ADMIN = "admin"
 
 
+class AccessTier(str, enum.Enum):
+    """Which pages an account may use. Assigned by a super admin; not a payment plan.
+
+    Separate from `role`, which is staff level: an admin can hold the free tier
+    to see what a free account sees.
+    """
+
+    FREE = "free"
+    PREMIUM = "premium"
+
+
 class PreferredLanguage(enum.Enum):
     """User preferred language enumeration"""
 
@@ -102,6 +113,15 @@ class User(BaseModel):
     )
     role: Mapped[UserRole] = mapped_column(
         SQLEnum(UserRole), default=UserRole.USER, nullable=False
+    )
+    # Plain text with a CHECK (migration 2026_11_15_access_tier), not a Postgres
+    # enum: the stored value is the lowercase string itself, so it cannot drift
+    # between member names and values the way the loan enums did.
+    access_tier: Mapped[str] = mapped_column(
+        String(16),
+        default=AccessTier.FREE.value,
+        server_default=AccessTier.FREE.value,
+        nullable=False,
     )
 
     # OAuth fields

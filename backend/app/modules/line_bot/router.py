@@ -39,10 +39,15 @@ from app.modules.line_bot.schemas import (
     SettleRequest,
     SettleResponse,
 )
-from app.modules.users.dependencies import CurrentUser
+from app.modules.users.dependencies import CurrentUser, require_premium
 from app.modules.users.dependencies import CurrentAdminUser
 
 router = APIRouter()
+
+# The web /groups page is a premium feature. Only its endpoints are gated: the
+# webhook, LIFF sign-in and account linking serve every tier, and group commands
+# typed in LINE itself run through the webhook, where members need no account.
+_PREMIUM = [Depends(require_premium)]
 logger = logging.getLogger(__name__)
 
 
@@ -193,6 +198,7 @@ async def get_activity(
 
 @router.get(
     "/groups",
+    dependencies=_PREMIUM,
     response_model=ApiResponse[list[GroupOut]],
     summary="List LINE expense groups the current user belongs to",
 )
@@ -206,6 +212,7 @@ async def list_groups(
 
 @router.get(
     "/groups/{group_id}/balances",
+    dependencies=_PREMIUM,
     response_model=ApiResponse[GroupBalanceResponse],
     summary="Net balances for a LINE expense group",
 )
@@ -221,6 +228,7 @@ async def group_balances(
 
 @router.get(
     "/groups/{group_id}/members",
+    dependencies=_PREMIUM,
     response_model=ApiResponse[list[MemberOut]],
     summary="List members of a LINE expense group with display names",
 )
@@ -236,6 +244,7 @@ async def group_members(
 
 @router.get(
     "/groups/{group_id}/expenses",
+    dependencies=_PREMIUM,
     response_model=ApiResponse[list[schemas.ExpenseOut]],
     summary="Expense history for a LINE expense group",
 )
@@ -258,6 +267,7 @@ async def group_expenses(
 
 @router.post(
     "/groups/{group_id}/expenses",
+    dependencies=_PREMIUM,
     response_model=ApiResponse[ExpenseOut],
     status_code=status.HTTP_201_CREATED,
     summary="Add a shared expense to a LINE expense group",
@@ -274,6 +284,7 @@ async def add_group_expense(
 
 @router.patch(
     "/groups/{group_id}/expenses/{expense_id}",
+    dependencies=_PREMIUM,
     response_model=ApiResponse[ExpenseOut],
     summary="Edit an existing shared expense in a LINE expense group",
 )
@@ -292,6 +303,7 @@ async def update_group_expense(
 
 @router.delete(
     "/groups/{group_id}/expenses/{expense_id}",
+    dependencies=_PREMIUM,
     response_model=ApiResponse[None],
     summary="Delete a shared expense from a LINE expense group",
 )
@@ -307,6 +319,7 @@ async def delete_group_expense(
 
 @router.post(
     "/groups/{group_id}/settle",
+    dependencies=_PREMIUM,
     response_model=ApiResponse[SettleResponse],
     summary="Settle a debt between two members of a LINE expense group",
 )
