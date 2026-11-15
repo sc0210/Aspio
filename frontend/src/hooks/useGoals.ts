@@ -398,7 +398,7 @@ export function useUpdateGoal() {
         },
         onError: (error: MutationError) => {
             console.error('[useUpdateGoal] onError called:', error);
-            toast.error(error.response?.data?.message || t('goals:toast.updateFailed'));
+            toast.error(serverMessage(error, t('goals:toast.updateFailed')));
         },
     });
 }
@@ -428,7 +428,7 @@ export function useDeleteGoal() {
             toast.success(t('goals:toast.deleted'));
         },
         onError: (error: MutationError) => {
-            toast.error(error.response?.data?.message || t('goals:toast.deleteFailed'));
+            toast.error(serverMessage(error, t('goals:toast.deleteFailed')));
         },
     });
 }

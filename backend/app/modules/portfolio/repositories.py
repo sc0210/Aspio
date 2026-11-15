@@ -306,6 +306,29 @@ class HoldingRepository:
         )
         return (await self.session.execute(stmt)).scalar_one_or_none()
 
+    async def first_sale_of_lot(self, lot: PortfolioHolding) -> Optional[datetime]:
+        """When a sale first took units from this lot, or None if none has.
+
+        A sell lists the lots it consumed (``lot_ids``). One from before that
+        list was kept says nothing, so any such sell of the symbol on or after
+        the lot's purchase counts too: refusing an edit is the safe reading.
+        """
+        from sqlalchemy import String, cast, or_
+
+        listed = cast(PortfolioTransaction.lot_ids, String)
+        unlisted = or_(PortfolioTransaction.lot_ids.is_(None), listed == "null")
+        if lot.purchase_date is not None:
+            unlisted = and_(unlisted, PortfolioTransaction.transaction_date >= lot.purchase_date)
+        return await self.session.scalar(
+            select(func.min(PortfolioTransaction.transaction_date)).where(
+                PortfolioTransaction.portfolio_id == lot.portfolio_id,
+                PortfolioTransaction.user_id == lot.user_id,
+                PortfolioTransaction.symbol == lot.symbol,
+                PortfolioTransaction.type == "sell",
+                or_(listed.like(f"%{lot.id}%"), unlisted),
+            )
+        )
+
     async def get_by_portfolio_symbol(
         self, portfolio_id: UUID, symbol: str, user_id: UUID
     ) -> Optional[PortfolioHolding]:
