@@ -78,7 +78,9 @@ const DASHBOARD: NavItem = {
 };
 
 // The pages most readers open every week. Each is a standalone row at the top,
-// never behind a heading, so a first look shows these and little else.
+// never behind a heading, so a first look shows these and little else. /review
+// is the one without a mobile tab: the bar holds four and More, and a monthly
+// page is the one that can afford the extra tap.
 const TRANSACTIONS: NavItem = {
   nameKey: 'navigation.transactions', href: '/transactions',
   icon: CreditCardIcon, iconSolid: CreditCardIconSolid, primary: true,

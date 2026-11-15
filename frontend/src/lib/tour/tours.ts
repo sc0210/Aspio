@@ -26,7 +26,7 @@ export interface Tour {
 /** Steps about the app shell, shared by every tour that ends with them. */
 const SHELL: TourStep[] = [
   { target: 'nav', key: 'shell.nav', title: 'Getting around',
-    body: 'Every page lives here: Transactions, Portfolio, Savings with partners, Goals, Loans and Month in Review.' },
+    body: 'Your everyday pages are at the top: Transactions, Portfolio, Goals and Month in Review. Loans, shared savings and planning tools open from the headings below.' },
   { target: 'nav-mobile', key: 'shell.navMobile', title: 'Getting around',
     body: 'The main pages are one tap away; More holds the rest.' },
   { target: 'search', key: 'shell.search', title: 'Search anything',
