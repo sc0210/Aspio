@@ -54,6 +54,8 @@ interface TransactionListProps {
   canReorder?: boolean;
   /** Demo mode reorders on screen only; nothing is saved. */
   isDemo?: boolean;
+  /** Offer "Split" on a row: needs a premium account (peers), and never in demo. */
+  canSplit?: boolean;
   /**
    * Per day key (`Date#toDateString`), the day's net across the whole filtered
    * set. A day split by a page break would otherwise total only its visible rows.
@@ -61,7 +63,7 @@ interface TransactionListProps {
   dayTotals?: Record<string, number>;
 }
 
-export function TransactionList({ transactions, isLoading, isFetching, isSearching = false, searchQuery, canReorder = false, isDemo = false, dayTotals }: TransactionListProps) {
+export function TransactionList({ transactions, isLoading, isFetching, isSearching = false, searchQuery, canReorder = false, isDemo = false, canSplit = false, dayTotals }: TransactionListProps) {
   const [selectedTransactions, setSelectedTransactions] = useState<string[]>([]);
   const [expandedDays, setExpandedDays] = useState<Set<string>>(new Set());
   const [pendingDeleteId, setPendingDeleteId] = useState<string | null>(null);
@@ -587,7 +589,7 @@ export function TransactionList({ transactions, isLoading, isFetching, isSearchi
                       searchQuery={searchQuery}
                       onSelect={handleSelectTransaction}
                       onDelete={handleDeleteTransaction}
-                      onSplit={isDemo ? undefined : handleSplitTransaction}
+                      onSplit={isDemo || !canSplit ? undefined : handleSplitTransaction}
                     />
                   )}
                 />

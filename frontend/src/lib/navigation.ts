@@ -63,6 +63,8 @@ export interface NavItem {
   keywords?: string[];
   /** An optional add-on the page depends on; hidden when the instance lacks it. */
   feature?: keyof Features;
+  /** Shown only to a premium account (lib/access.ts); the route's layout gates it too. */
+  premium?: true;
 }
 
 export interface NavSection {
@@ -77,19 +79,45 @@ const DASHBOARD: NavItem = {
   keywords: ['home', '首頁', '儀表板', '總覽'],
 };
 
-const FINANCE: NavItem[] = [
-  {
-    nameKey: 'navigation.transactions', href: '/transactions',
-    icon: CreditCardIcon, iconSolid: CreditCardIconSolid, primary: true,
-    keywords: ['expenses', 'income', 'spending', '交易', '記帳', '支出', '收入'],
-  },
-  {
-    nameKey: 'navigation.portfolio', href: '/portfolio',
-    icon: ChartBarIcon, iconSolid: ChartBarIconSolid, primary: true,
-    keywords: ['holdings', 'stocks', 'etf', '投資', '持股'],
-  },
+// The pages most readers open every week. Each is a standalone row at the top,
+// never behind a heading, so a first look shows these and little else. /review
+// is the one without a mobile tab: the bar holds four and More, and a monthly
+// page is the one that can afford the extra tap.
+const TRANSACTIONS: NavItem = {
+  nameKey: 'navigation.transactions', href: '/transactions',
+  icon: CreditCardIcon, iconSolid: CreditCardIconSolid, primary: true,
+  keywords: ['expenses', 'income', 'spending', '交易', '記帳', '支出', '收入'],
+};
+
+const PORTFOLIO: NavItem = {
+  nameKey: 'navigation.portfolio', href: '/portfolio',
+  icon: ChartBarIcon, iconSolid: ChartBarIconSolid, primary: true,
+  keywords: ['holdings', 'stocks', 'etf', '投資', '持股'],
+};
+
+const GOALS: NavItem = {
+  nameKey: 'navigation.goals', href: '/goals',
+  icon: TrophyIcon, iconSolid: TrophyIconSolid, primary: true,
+  keywords: ['fire', 'target', '目標', '理財目標'],
+};
+
+// The other page you open on a schedule. It led an Analysis section beside
+// /reports and /chat until both were retired (2026-09-17). The old /reports
+// keywords come with it, since a reader searching "報表" now wants this page.
+const REVIEW: NavItem = {
+  nameKey: 'navigation.review', href: '/review',
+  icon: CalendarDaysIcon, iconSolid: CalendarDaysIconSolid,
+  keywords: ['month', 'recap', 'monthly', 'report', '回顧', '月報', '本月', '報表'],
+};
+
+const CORE: NavItem[] = [DASHBOARD, TRANSACTIONS, PORTFOLIO, GOALS, REVIEW];
+
+// Money that involves other people or debt. Useful once you have it, noise
+// before, so it sits behind a heading that stays shut until you are inside it.
+const LOANS_SHARING: NavItem[] = [
   {
     nameKey: 'navigation.loans', href: '/loans',
+    premium: true,
     icon: BanknotesIcon, iconSolid: BanknotesIconSolid,
     keywords: ['debt', 'borrow', '貸款', '負債'],
   },
@@ -98,6 +126,7 @@ const FINANCE: NavItem[] = [
     // sidebar renders one row apart with nothing else to tell them apart. A
     // stack of coins says what the page is for rather than who is in it.
     nameKey: 'navigation.savings', href: '/savings',
+    premium: true,
     icon: CircleStackIcon, iconSolid: CircleStackIconSolid,
     // /compare folded in as this page's second tab; its search terms came with it.
     keywords: ['shared', 'pot', '共同儲蓄', '存錢', 'compare', 'peers', 'benchmark', '比較', '同儕'],
@@ -106,6 +135,7 @@ const FINANCE: NavItem[] = [
     // Was ChatBubbleLeftRightIcon — the same glyph as /chat, which the
     // collapsed sidebar renders with nothing else to tell them apart.
     nameKey: 'navigation.groups', href: '/groups',
+    premium: true,
     icon: UserGroupIcon, iconSolid: UserGroupIconSolid,
     keywords: ['split', 'line', '群組', '分帳'],
     // Groups are LINE groups: without a configured bot there are none to show.
@@ -113,19 +143,18 @@ const FINANCE: NavItem[] = [
   },
 ];
 
-const GOALS_GROWTH: NavItem[] = [
-  {
-    nameKey: 'navigation.goals', href: '/goals',
-    icon: TrophyIcon, iconSolid: TrophyIconSolid, primary: true,
-    keywords: ['fire', 'target', '目標', '理財目標'],
-  },
+// Simulators and extras. /housing and /lifecycle model specific strategies, and
+// shown up front to a new reader they read as advice, so they stay closed by default.
+const MORE_TOOLS: NavItem[] = [
   {
     nameKey: 'navigation.housing', href: '/housing',
+    premium: true,
     icon: HomeModernIcon, iconSolid: HomeModernIconSolid,
     keywords: ['buy', 'rent', 'mortgage', '買房', '租屋', '房貸'],
   },
   {
     nameKey: 'navigation.lifecycle', href: '/lifecycle',
+    premium: true,
     icon: ArrowTrendingUpIcon, iconSolid: ArrowTrendingUpIconSolid,
     keywords: ['leverage', 'borrow to invest', '槓桿', '生命週期'],
   },
@@ -136,40 +165,42 @@ const GOALS_GROWTH: NavItem[] = [
   },
 ];
 
-// A standalone row under the dashboard. It led an Analysis section beside
-// /reports and /chat until both were retired (2026-09-17); a heading above one
-// row states nothing. It sits next to the dashboard because it is the other
-// page you open on a schedule. The old /reports keywords come with it, since a
-// reader searching "報表" now wants this page.
-const REVIEW: NavItem = {
-  nameKey: 'navigation.review', href: '/review',
-  icon: CalendarDaysIcon, iconSolid: CalendarDaysIconSolid,
-  keywords: ['month', 'recap', 'monthly', 'report', '回顧', '月報', '本月', '報表'],
-};
-
 const ADMIN: NavItem = {
   nameKey: 'navigation.admin', href: '/admin',
   icon: ShieldCheckIcon, iconSolid: ShieldCheckIconSolid,
   keywords: ['users', 'admin', '管理'],
 };
 
+/** Who is reading: what the nav may show them. */
+export interface NavAccess {
+  isAdmin: boolean;
+  isPremium: boolean;
+  features: Features;
+}
+
 /**
  * The sidebar's sections for this reader on this instance. Items whose add-on
- * is not configured are dropped here, once, so no nav surface can forget to.
+ * is not configured, or that need a tier the account lacks, are dropped here,
+ * once, so no nav surface can forget to.
  */
-export function getNavigationSections(isAdmin: boolean, features: Features): NavSection[] {
+export function getNavigationSections({ isAdmin, isPremium, features }: NavAccess): NavSection[] {
   const sections: NavSection[] = [
-    { items: [DASHBOARD] },
-    { items: [REVIEW] },
-    { titleKey: 'navigation.sections.finance', items: FINANCE },
-    { titleKey: 'navigation.sections.goals_growth', items: GOALS_GROWTH },
+    ...CORE.map((item) => ({ items: [item] })),
+    { titleKey: 'navigation.sections.loans_sharing', items: LOANS_SHARING },
+    { titleKey: 'navigation.sections.more_tools', items: MORE_TOOLS },
   ];
 
   if (isAdmin) sections.push({ items: [ADMIN] });
 
   return sections
-    .map((section) => ({ ...section, items: section.items.filter((item) => isNavItemAvailable(item, features)) }))
-    .filter((section) => section.items.length > 0);
+    .map((section) => ({
+      ...section,
+      items: section.items.filter((item) => isNavItemAvailable(item, features) && (isPremium || !item.premium)),
+    }))
+    .filter((section) => section.items.length > 0)
+    // Filtering can leave one row under a heading (a free account's More Tools
+    // keeps only Achievements); a heading above one row states nothing.
+    .map((section) => (section.items.length === 1 ? { items: section.items } : section));
 }
 
 /** Whether `item`'s add-on, if it has one, is configured on this instance. */
@@ -178,14 +209,16 @@ export function isNavItemAvailable(item: NavItem, features: Features): boolean {
 }
 
 /** Flat list, in sidebar order — what the ⌘K palette searches. */
-export function getNavigationItems(isAdmin: boolean, features: Features): NavItem[] {
-  return getNavigationSections(isAdmin, features).flatMap((section) => section.items);
+export function getNavigationItems(access: NavAccess): NavItem[] {
+  return getNavigationSections(access).flatMap((section) => section.items);
 }
 
-/** The bottom bar's own tabs; everything else goes in its More sheet. None depends on an add-on. */
-export const primaryNavItems: NavItem[] = getNavigationItems(false, ALL_FEATURES).filter((i) => i.primary);
+/** The bottom bar's own tabs; everything else goes in its More sheet. None depends on an add-on or a tier. */
+export const primaryNavItems: NavItem[] = getNavigationItems({
+  isAdmin: false, isPremium: false, features: ALL_FEATURES,
+}).filter((i) => i.primary);
 
 /** The More sheet's links. */
-export function getSecondaryNavItems(features: Features): NavItem[] {
-  return getNavigationItems(false, features).filter((i) => !i.primary);
+export function getSecondaryNavItems(access: Omit<NavAccess, 'isAdmin'>): NavItem[] {
+  return getNavigationItems({ ...access, isAdmin: false }).filter((i) => !i.primary);
 }

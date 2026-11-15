@@ -15,10 +15,11 @@ from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from .models import User, UserStatus, UserRole
+from .models import AccessTier, User, UserStatus, UserRole
 from .repositories import get_user_repository
 from .security import jwt_manager
 from ...core.database import get_async_session
+from ...core.exceptions import PremiumRequiredException
 from ...utils.client_ip import get_client_ip
 
 logger = logging.getLogger(__name__)
@@ -395,6 +396,17 @@ async def rate_limit_check(request: Request) -> None:
 
 # Type aliases for dependency injection
 CurrentUser = Annotated[User, Depends(get_current_active_user)]
+
+
+async def require_premium(current_user: CurrentUser) -> User:
+    """Refuse a free-tier account. Mount on a router or route with `dependencies=`.
+
+    Reads the user loaded fresh for this request (CurrentUser hits the database,
+    not the 30-second auth cache), so a tier change applies on the next call.
+    """
+    if current_user.access_tier != AccessTier.PREMIUM.value:
+        raise PremiumRequiredException()
+    return current_user
 CurrentVerifiedUser = Annotated[User, Depends(get_current_verified_user)]
 CurrentAdminUser = Annotated[User, Depends(get_current_admin_user)]
 OptionalCurrentUser = Annotated[Optional[User], Depends(get_optional_current_user)]

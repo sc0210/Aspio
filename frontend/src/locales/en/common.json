@@ -648,8 +648,8 @@
     "review": "Month in Review",
     "savings": "Savings Groups",
     "sections": {
-      "finance": "Finance",
-      "goals_growth": "Goals & Growth"
+      "loans_sharing": "Loans & Sharing",
+      "more_tools": "More Tools"
     },
     "settings": "Settings",
     "showValues": "Show values",
@@ -1342,7 +1342,7 @@
     "shell": {
       "nav": {
         "title": "Getting around",
-        "body": "Every page lives here: Transactions, Portfolio, Savings with partners, Goals, Loans and Month in Review."
+        "body": "Your everyday pages are at the top: Transactions, Portfolio, Goals and Month in Review. Loans, shared savings and planning tools open from the headings below."
       },
       "navMobile": {
         "title": "Getting around",
@@ -1523,5 +1523,12 @@
         "body": "Spending by category, and where the income came from."
       }
     }
+  },
+  "access": {
+    "premiumTitle": "This page needs Premium",
+    "premiumBody": "Your account is on the Free plan. Ask your admin to upgrade it to use this page.",
+    "backToDashboard": "Back to dashboard",
+    "planFree": "Free",
+    "planPremium": "Premium"
   }
 }

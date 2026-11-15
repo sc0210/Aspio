@@ -140,7 +140,8 @@ async def other_user(async_session):
     from app.modules.users.models import User, UserRole, UserStatus
 
     user = User(id=uuid4(), email="other@example.com", name="Other", hashed_password="x",
-                is_active=True, is_verified=True, role=UserRole.USER, status=UserStatus.ACTIVE)
+                is_active=True, is_verified=True, role=UserRole.USER, status=UserStatus.ACTIVE,
+                access_tier="premium")
     async_session.add(user)
     await async_session.commit()
     return user

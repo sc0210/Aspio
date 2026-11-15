@@ -95,7 +95,8 @@
     "portfolios": "投資組合",
     "status": "狀態",
     "transactions": "交易",
-    "user": "使用者"
+    "user": "使用者",
+    "plan": "方案"
   },
   "waiting": "已等待",
   "yes": "確定",
@@ -196,5 +197,10 @@
       "failure": "失敗",
       "partial": "部分完成"
     }
+  },
+  "approveAs": "核准為",
+  "tier": {
+    "free": "免費",
+    "premium": "進階"
   }
 }

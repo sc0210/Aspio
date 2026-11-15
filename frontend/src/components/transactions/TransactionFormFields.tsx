@@ -304,6 +304,8 @@ interface CashFieldsProps {
   errors: Record<string, string>;
   onChange: (field: keyof CashFormData, value: string) => void;
   activeLoans: ActiveLoan[];
+  /** False for a free account: Loans is premium, so never point at it. */
+  loansAvailable?: boolean;
   /** Goals this expense can be paid from (see payableGoals). */
   goals?: PayableGoal[];
   /** Life cash free to spend and the part goals hold (goals/reservations.py);
@@ -321,7 +323,7 @@ interface CashFieldsProps {
  * The entry panel (amount, description) first, then the category, then the
  * settings list: date, wallet, and More options (loan link, payment method, tags).
  */
-export function CashFields({ idPrefix: p, formData, errors, onChange, onTagsChange, activeLoans, goals: goalOptions = [], lifeCash = null, showInvestmentHint = false, autoFocusAmount = false }: CashFieldsProps) {
+export function CashFields({ idPrefix: p, formData, errors, onChange, onTagsChange, activeLoans, loansAvailable = true, goals: goalOptions = [], lifeCash = null, showInvestmentHint = false, autoFocusAmount = false }: CashFieldsProps) {
   const { t } = useTranslation(['transactions', 'goals']);
   const categories = formData.type === 'transfer' ? [] : CATEGORIES[formData.type as keyof typeof CATEGORIES] || [];
   const tone = TYPE_TONE[formData.type] ?? TYPE_TONE.expense;
@@ -574,9 +576,11 @@ export function CashFields({ idPrefix: p, formData, errors, onChange, onTagsChan
           {formData.type === 'expense' && formData.category === LOAN_CATEGORY && activeLoans.length === 0 && (
             <p className="mt-1.5 text-xs text-gray-500 dark:text-gray-400">
               {t('transactions:form.noActiveLoans', 'No active loans to link.')}{' '}
-              <Link href="/loans" className="font-medium text-primary-700 dark:text-primary-400 underline-offset-2 hover:underline focus-visible:ring-2 focus-visible:ring-primary-500 rounded">
-                {t('transactions:form.addLoanLink', 'Add one on Loans')}
-              </Link>
+              {loansAvailable && (
+                <Link href="/loans" className="font-medium text-primary-700 dark:text-primary-400 underline-offset-2 hover:underline focus-visible:ring-2 focus-visible:ring-primary-500 rounded">
+                  {t('transactions:form.addLoanLink', 'Add one on Loans')}
+                </Link>
+              )}
             </p>
           )}
         </div>

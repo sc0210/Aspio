@@ -130,6 +130,7 @@ def _make_user(
     u.name = name
     u.avatar_url = None
     u.deleted_at = deleted_at
+    u.access_tier = "premium"
     return u
 
 

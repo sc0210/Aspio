@@ -95,7 +95,8 @@
     "portfolios": "Portfolios",
     "status": "Status",
     "transactions": "Transactions",
-    "user": "User"
+    "user": "User",
+    "plan": "Plan"
   },
   "waiting": "Waiting",
   "yes": "Yes",
@@ -196,5 +197,10 @@
       "failure": "Failed",
       "partial": "Partial"
     }
+  },
+  "approveAs": "Approve as",
+  "tier": {
+    "free": "Free",
+    "premium": "Premium"
   }
 }

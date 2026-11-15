@@ -1,7 +1,7 @@
 """A shared goal is two personal goals: saving records retire
 
 Revision ID: 2026_11_16_shared_goal_sides
-Revises: 2026_11_15_goal_shared
+Revises: 2026_11_15_access_tier
 Create Date: 2026-11-16
 
 A shared goal (peers) counted each side from two places: saving records (typed
@@ -43,7 +43,7 @@ Drops a table, adds none, so no RLS. Take a pg_dump first.
 from alembic import op
 
 revision = "2026_11_16_shared_goal_sides"
-down_revision = "2026_11_15_goal_shared"
+down_revision = "2026_11_15_access_tier"
 branch_labels = None
 depends_on = None
 

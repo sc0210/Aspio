@@ -2,6 +2,8 @@
 
 import { useState, useEffect, useCallback, useRef } from 'react';
 import { useRouter } from 'next/navigation';
+import { useQueryClient } from '@tanstack/react-query';
+import { QUERY_KEYS } from './useDataSynchronization';
 import toast from 'react-hot-toast';
 import type {
   SystemStats,
@@ -11,6 +13,7 @@ import type {
   StatusFilter,
   VacuumResult,
 } from '@/types/admin';
+import type { AccessTier } from '@/lib/access';
 
 const PAGE_SIZE = 50;
 
@@ -25,6 +28,7 @@ function buildUserParams(search: string, filter: StatusFilter, page: number, pag
 
 export function useAdminData() {
   const router = useRouter();
+  const queryClient = useQueryClient();
 
   // ── Stats ──────────────────────────────────────────────────────────────────
   const [stats, setStats] = useState<SystemStats | null>(null);
@@ -40,6 +44,7 @@ export function useAdminData() {
   const [searchQuery, setSearchQuery] = useState('');
   const [statusFilter, setStatusFilter] = useState<StatusFilter>('all');
   const [deactivating, setDeactivating] = useState<string | null>(null);
+  const [settingTier, setSettingTier] = useState<string | null>(null);
   const [deleting, setDeleting] = useState(false);
   const [pendingDeleteId, setPendingDeleteId] = useState<string | null>(null);
 
@@ -47,6 +52,8 @@ export function useAdminData() {
   const [pendingUsers, setPendingUsers] = useState<PendingUser[]>([]);
   const [selectedPending, setSelectedPending] = useState<Set<string>>(new Set());
   const [approving, setApproving] = useState<string | null>(null);
+  // The tier picked beside each pending user's Approve button; unset means free.
+  const [approvalTiers, setApprovalTiers] = useState<Record<string, AccessTier>>({});
   const [rejecting, setRejecting] = useState<string | null>(null);
   const [pendingRejectId, setPendingRejectId] = useState<string | null>(null);
   const [bulkProcessing, setBulkProcessing] = useState(false);
@@ -162,6 +169,34 @@ export function useAdminData() {
     }
   };
 
+  const handleSetAccessTier = async (userId: string, tier: AccessTier) => {
+    try {
+      setSettingTier(userId);
+      const res = await fetch(`/api/admin/users/${userId}/access-tier`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ access_tier: tier }),
+      });
+      if (!res.ok) {
+        const err = await res.json().catch(() => ({}));
+        throw new Error(err.error?.message || err.detail || err.message || 'Failed to change plan');
+      }
+      const data = await res.json();
+      setUsers(prev => prev.map(u => u.id === userId ? { ...u, access_tier: data.access_tier } : u));
+      // If that was the admin's own account, their sidebar and badge follow now
+      // rather than on the next reload. Cheap either way: one profile refetch.
+      queryClient.invalidateQueries({ queryKey: [QUERY_KEYS.USER_PROFILE] });
+      toast.success(data.access_tier === 'premium' ? 'Upgraded to Premium' : 'Moved to Free');
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : 'Failed to change plan');
+    } finally {
+      setSettingTier(null);
+    }
+  };
+
+  const setApprovalTier = (userId: string, tier: AccessTier) =>
+    setApprovalTiers(prev => ({ ...prev, [userId]: tier }));
+
   const handleDeleteUser = async (userId: string) => {
     setPendingDeleteId(null);
     try {
@@ -186,7 +221,8 @@ export function useAdminData() {
   const handleApproveUser = async (userId: string) => {
     try {
       setApproving(userId);
-      const res = await fetch(`/api/admin/approve-user/${userId}`, { method: 'POST' });
+      const tier = approvalTiers[userId] ?? 'free';
+      const res = await fetch(`/api/admin/approve-user/${userId}?access_tier=${tier}`, { method: 'POST' });
       if (!res.ok) {
         const err = await res.json();
         throw new Error(err.detail || err.message || 'Failed to approve user');
@@ -257,10 +293,26 @@ export function useAdminData() {
         throw new Error(err.detail || err.message || 'Bulk approve failed');
       }
       const data = await res.json();
-      const approvedIds = new Set(selectedPending);
+      // What the server approved, which can be fewer than were selected (a row
+      // approved elsewhere meanwhile); only those are upgraded or cleared.
+      const approvedIds = new Set<string>(Array.isArray(data.approved) ? data.approved : selectedPending);
+      // Bulk approve has no per-user tier, so the rows set to Premium beside
+      // their Approve button are upgraded right after; the rest stay free.
+      const upgrades = Array.from(approvedIds).filter(id => approvalTiers[id] === 'premium');
+      const upgraded = await Promise.all(upgrades.map(id =>
+        fetch(`/api/admin/users/${id}/access-tier`, {
+          method: 'PATCH',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ access_tier: 'premium' }),
+        }).then(r => r.ok, () => false)
+      ));
       setPendingUsers(prev => prev.filter(u => !approvedIds.has(u.id)));
-      setSelectedPending(new Set());
-      toast.success(`Approved ${data.approved?.length || approvedIds.size} users`);
+      setSelectedPending(prev => new Set(Array.from(prev).filter(id => !approvedIds.has(id))));
+      toast.success(`Approved ${approvedIds.size} users`);
+      const failed = upgraded.filter(ok => !ok).length;
+      if (failed > 0) {
+        toast.error(`${failed} approved as Free: the Premium upgrade failed. Set their plan on the Users tab.`);
+      }
     } catch (err) {
       toast.error(err instanceof Error ? err.message : 'Bulk approve failed');
     } finally {
@@ -339,9 +391,11 @@ export function useAdminData() {
     page, totalUsers, totalPages, goToPage,
     handleSearchSubmit, handleStatusFilterChange,
     handleToggleActive, handleDeleteUser,
+    settingTier, handleSetAccessTier,
     toggleUserSelection, toggleAllUsers, clearSelectedUsers,
     // Pending users
     pendingUsers, selectedPending, approving, rejecting,
+    approvalTiers, setApprovalTier,
     pendingRejectId, setPendingRejectId, bulkProcessing,
     handleApproveUser, handleRejectUser, handleBulkApprove, handleBulkDelete,
     clearSelectedPending,

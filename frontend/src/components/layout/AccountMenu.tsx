@@ -19,6 +19,7 @@ import { useDemo } from '@/contexts/DemoContext';
 import { useAuthContext } from '@/contexts/AuthContext';
 import { usePrivacy } from '@/contexts/PrivacyContext';
 import { useWhatsNew } from '@/hooks/useWhatsNew';
+import { useAccessTier } from '@/hooks/useAccessTier';
 import { useGamificationStats } from '@/hooks/api-hooks';
 import { languages } from '@/lib/i18n';
 import { changeAppLanguage, signOutCompletely } from '@/lib/session-actions';
@@ -40,6 +41,8 @@ interface AccountMenuProps {
  */
 export function AccountMenu({ collapsed, onNavigate }: AccountMenuProps) {
   const { t, i18n } = useTranslation('common');
+  // The account's real plan (was a hard-coded Premium/Basic by demo mode).
+  const { tier } = useAccessTier();
   const pathname = usePathname();
   const { session, isAuthenticated } = useAuthContext();
   const { isDemoMode, exitDemo } = useDemo();
@@ -110,7 +113,9 @@ export function AccountMenu({ collapsed, onNavigate }: AccountMenuProps) {
             <span className="min-w-0 flex-1 text-left">
               <span className="block truncate text-sm font-semibold text-gray-900 dark:text-white">{name}</span>
               <span className="block text-xs font-medium text-primary-700 dark:text-primary-400">
-                {isDemoMode ? '✨ Premium' : '🔰 Basic'}
+                {tier === 'premium'
+                  ? `✨ ${t('access.planPremium', 'Premium')}`
+                  : tier === 'free' ? t('access.planFree', 'Free') : '\u00a0'}
               </span>
             </span>
             <ChevronUpDownIcon className="w-4 h-4 flex-shrink-0 text-gray-500 dark:text-gray-400" />

@@ -2,7 +2,7 @@
 --
 -- Flow:
 --   0. pg_dump first: this drops saving_records (copied into goal_contributions first).
---   1. After 2026_11_15_goal_shared.sql, run:
+--   1. After 2026_11_15_access_tier.sql, run:
 --        docker exec -i aspiro-postgres psql -U aspiro_user -d aspiro_db -f - \
 --          < backend/scripts/prod_sql/2026_11_16_shared_goal_sides.sql
 --   2. On the backend: alembic stamp head

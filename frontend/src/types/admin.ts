@@ -1,3 +1,5 @@
+import type { AccessTier } from '@/lib/access';
+
 export interface SystemStats {
   total_users: number;
   active_users: number;
@@ -18,6 +20,7 @@ export interface AdminUser {
   email: string;
   full_name: string;
   is_active: boolean;
+  access_tier?: AccessTier;
   created_at: string;
   last_login_at?: string;
   portfolio_count?: number;

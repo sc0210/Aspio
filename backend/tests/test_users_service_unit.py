@@ -33,6 +33,7 @@ def make_mock_user(
 ):
     u = MagicMock()
     u.id = user_id or uuid4()
+    u.access_tier = "free"
     u.email = email
     u.name = "Test User"
     u.avatar_url = None

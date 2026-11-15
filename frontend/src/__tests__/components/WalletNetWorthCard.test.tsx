@@ -4,6 +4,8 @@ import { WalletNetWorthCard } from '@/components/dashboard/WalletNetWorthCard';
 
 // ── Module mocks ─────────────────────────────────────────────────────────────
 
+const mockAccess = { tier: 'premium', isPremium: true, isLoading: false, isError: false };
+jest.mock('@/hooks/useAccessTier', () => ({ useAccessTier: () => mockAccess }));
 jest.mock('react-i18next', () => ({
   // i18next calls .use(initReactI18next) at import time; a mock without it
   // makes lib/i18n throw and the whole suite dies before any test runs.

@@ -261,6 +261,9 @@ async def test_user(async_session: AsyncSession) -> User:
         is_verified=True,
         role=UserRole.USER,
         status=UserStatus.ACTIVE,
+        # Premium, so loans/peers routes answer; a new account's real default
+        # (free) and the 403 it earns are tested in test_access_tier.py.
+        access_tier="premium",
         preferred_currency="USD",
         timezone="UTC",
         experience_points=0,

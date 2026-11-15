@@ -24,7 +24,7 @@ import { ALL_FEATURES } from '@/lib/features';
 
 /** href → nameKey, for everything the sidebar can reach. */
 const DESTINATIONS: Record<string, string> = Object.fromEntries(
-  getNavigationItems(true, ALL_FEATURES).map((item) => [item.href, item.nameKey]),
+  getNavigationItems({ isAdmin: true, isPremium: true, features: ALL_FEATURES }).map((item) => [item.href, item.nameKey]),
 );
 
 interface SubRoute {

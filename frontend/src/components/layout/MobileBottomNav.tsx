@@ -19,6 +19,7 @@ import { useAuthContext } from '@/contexts/AuthContext';
 import { languages } from '@/lib/i18n';
 import { getSecondaryNavItems, primaryNavItems } from '@/lib/navigation';
 import { useFeatures } from '@/hooks/useFeatures';
+import { useAccessTier } from '@/hooks/useAccessTier';
 import { changeAppLanguage, signOutCompletely } from '@/lib/session-actions';
 import { useDialog } from '@/hooks/useDialog';
 
@@ -80,6 +81,7 @@ function MoreSheet({ open, onClose, isDemoMode, onExitDemo }: MoreSheetProps) {
   const { t, i18n } = useTranslation('common');
   const pathname = usePathname();
   const features = useFeatures();
+  const { isPremium } = useAccessTier();
 
   const handleSignOut = async () => {
     onClose();
@@ -92,7 +94,7 @@ function MoreSheet({ open, onClose, isDemoMode, onExitDemo }: MoreSheetProps) {
   // hand-written list had five entries and silently omitted loans, groups,
   // housing, lifecycle and achievements.
   const sheetLinks = [
-    ...getSecondaryNavItems(features).map((item) => ({
+    ...getSecondaryNavItems({ features, isPremium }).map((item) => ({
       href: item.href,
       icon: item.icon,
       labelKey: item.nameKey,

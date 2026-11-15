@@ -10,7 +10,7 @@ from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.config import get_settings
-from app.modules.users.models import User, UserStatus
+from app.modules.users.models import AccessTier, User, UserStatus
 from .models import AdminRole, AdminUser
 from .repositories import AdminRepository
 
@@ -41,6 +41,15 @@ async def grant_admin(session: AsyncSession, email: str, role: str) -> Optional[
 
         invalidate_user_auth_cache(user.id)
         logger.info(f"Approved {user.email} while granting {role}")
+
+    # Admins granted here (ADMIN_EMAILS, `aspiro admin grant`) get premium, so
+    # the owner of a fresh instance sees every page. Admins added in the panel
+    # do not: a super admin sets their plan there like anyone's. Only raised,
+    # never lowered; a listed admin who sets themselves to free is raised again
+    # at the next start.
+    if user.access_tier != AccessTier.PREMIUM.value:
+        user.access_tier = AccessTier.PREMIUM.value
+        await session.commit()
 
     repo = AdminRepository(session)
     admin = await repo.get_by_user_id(user.id)

@@ -16,6 +16,7 @@ import { loanService } from '@/services/loanService';
 import { Transaction, PortfolioHolding } from '@/shared/types';
 import { useModeAwareUI } from '@/hooks/useAppMode';
 import { useCurrentUser } from '@/hooks/useCurrentUser';
+import { useAccessTier } from '@/hooks/useAccessTier';
 import { useDemo } from '@/contexts/DemoContext';
 import { DashboardLayout } from '@/components/layout/DashboardLayout';
 import { PageHeader } from '@/components/layout/PageHeader';
@@ -143,8 +144,10 @@ function AddTransactionForm() {
   // Goals holding Life cash, offered under "Pay from goal".
   const { data: allGoals = [] } = useGoals();
   const { data: lifeCash } = useLifeCash();
+  // Loans are premium; a free account has none to link and the API would 403.
+  const { isPremium } = useAccessTier();
   useEffect(() => {
-    if (isDemo) return;
+    if (isDemo || !isPremium) return;
     loanService.getLoans()
       .then(res => {
         if (res.success && res.data) {
@@ -156,7 +159,7 @@ function AddTransactionForm() {
         }
       })
       .catch(() => {});
-  }, [isDemo, loansReload]);
+  }, [isDemo, isPremium, loansReload]);
 
   // Default the currency selectors to the user's account preference (falls
   // back to 'TWD' if unset/unauthenticated) instead of always starting on
@@ -786,6 +789,7 @@ function AddTransactionForm() {
                 onChange={handleInputChange}
                 onTagsChange={(tags) => setFormData(prev => ({ ...prev, tags }))}
                 activeLoans={activeLoans}
+                loansAvailable={isPremium}
                 goals={payableGoals(allGoals, formData.goalId)}
                 lifeCash={lifeCash}
                 showInvestmentHint

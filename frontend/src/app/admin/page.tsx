@@ -36,6 +36,7 @@ import { cn } from '@/utils/cn';
 import { useAdminData } from '@/hooks/useAdminData';
 import { apiClient } from '@/lib/api-client';
 import type { TableStat, IndexStat, ActiveConnection } from '@/types/admin';
+import { ACCESS_TIERS, type AccessTier } from '@/lib/access';
 import { useTranslation } from 'react-i18next';
 import { Card } from '@/components/ui/Card';
 import { formatTimeAgo } from '@/components/admin/formatTimeAgo';
@@ -86,8 +87,10 @@ export default function AdminPage() {
     page, totalUsers, totalPages, goToPage,
     handleSearchSubmit, handleStatusFilterChange,
     handleToggleActive, handleDeleteUser,
+    settingTier, handleSetAccessTier,
     toggleUserSelection, toggleAllUsers, clearSelectedUsers,
     pendingUsers, selectedPending, approving, rejecting,
+    approvalTiers, setApprovalTier,
     pendingRejectId, setPendingRejectId, bulkProcessing,
     handleApproveUser, handleRejectUser, handleBulkApprove, handleBulkDelete,
     clearSelectedPending,
@@ -338,6 +341,7 @@ export default function AdminPage() {
                         </th>
                         <th className="px-3 sm:px-6 py-3 text-left text-xs font-bold text-gray-600 dark:text-gray-400 uppercase tracking-wider">{t('admin:usersTable.user')}</th>
                         <th className="px-3 sm:px-6 py-3 text-left text-xs font-bold text-gray-600 dark:text-gray-400 uppercase tracking-wider">{t('admin:usersTable.status')}</th>
+                        <th className="px-3 sm:px-6 py-3 text-left text-xs font-bold text-gray-600 dark:text-gray-400 uppercase tracking-wider">{t('admin:usersTable.plan', 'Plan')}</th>
                         <th className="hidden lg:table-cell px-6 py-3 text-right text-xs font-bold text-gray-600 dark:text-gray-400 uppercase tracking-wider">{t('admin:usersTable.portfolios')}</th>
                         <th className="hidden lg:table-cell px-6 py-3 text-right text-xs font-bold text-gray-600 dark:text-gray-400 uppercase tracking-wider">{t('admin:usersTable.transactions')}</th>
                         <th className="hidden sm:table-cell px-6 py-3 text-left text-xs font-bold text-gray-600 dark:text-gray-400 uppercase tracking-wider">{t('admin:usersTable.joined')}</th>
@@ -377,6 +381,14 @@ export default function AdminPage() {
                           </td>
                           <td className="px-3 sm:px-6 py-3 whitespace-nowrap">
                             <UserStatusBadge isActive={user.is_active} />
+                          </td>
+                          <td className="px-3 sm:px-6 py-3 whitespace-nowrap">
+                            <AccessTierSelect
+                              value={user.access_tier ?? 'free'}
+                              onChange={(tier) => handleSetAccessTier(user.id, tier)}
+                              disabled={settingTier === user.id || bulkProcessing}
+                              label={`${t('admin:usersTable.plan', 'Plan')} ${user.email}`}
+                            />
                           </td>
                           <td className="hidden lg:table-cell px-6 py-3 whitespace-nowrap text-sm text-gray-600 dark:text-gray-400 text-right tabular-nums">
                             {user.portfolio_count ?? 0}
@@ -644,6 +656,12 @@ export default function AdminPage() {
                               </div>
                             ) : (
                               <div className="flex items-center justify-end gap-1.5 sm:gap-2">
+                                <AccessTierSelect
+                                  value={approvalTiers[user.id] ?? 'free'}
+                                  onChange={(tier) => setApprovalTier(user.id, tier)}
+                                  disabled={approving === user.id || rejecting === user.id || bulkProcessing}
+                                  label={`${t('admin:approveAs', 'Approve as')} ${user.email}`}
+                                />
                                 <button
                                   onClick={() => handleApproveUser(user.id)}
                                   disabled={approving === user.id || rejecting === user.id || bulkProcessing}
@@ -1280,6 +1298,34 @@ function ConnectionStateBadge({ state, waitEvent }: { state: string; waitEvent?:
       <span className={cn('inline-block px-1.5 py-0.5 text-xs font-semibold rounded', cls)}>{label}</span>
       {waitEvent && <span className="text-xs text-gray-500 dark:text-gray-400">{waitEvent}</span>}
     </div>
+  );
+}
+
+function AccessTierSelect({ value, onChange, disabled, label }: {
+  value: AccessTier;
+  onChange: (tier: AccessTier) => void;
+  disabled?: boolean;
+  label: string;
+}) {
+  const { t } = useTranslation(['admin']);
+  return (
+    <select
+      aria-label={label}
+      value={value}
+      disabled={disabled}
+      onChange={(e) => onChange(e.target.value as AccessTier)}
+      className={cn(
+        'rounded-lg border py-1 pl-2 pr-7 text-xs font-bold transition-colors disabled:opacity-50 disabled:cursor-not-allowed',
+        'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-500',
+        value === 'premium'
+          ? 'border-primary-200 bg-primary-50 text-primary-800 dark:border-primary-700 dark:bg-primary-900/30 dark:text-primary-300'
+          : 'border-gray-200 bg-white text-gray-700 dark:border-gray-600 dark:bg-gray-800 dark:text-gray-300',
+      )}
+    >
+      {ACCESS_TIERS.map((tier) => (
+        <option key={tier} value={tier}>{t(`admin:tier.${tier}`, tier === 'premium' ? 'Premium' : 'Free')}</option>
+      ))}
+    </select>
   );
 }
 

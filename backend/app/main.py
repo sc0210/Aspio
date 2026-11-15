@@ -15,7 +15,7 @@ from pathlib import Path
 from typing import Optional
 
 import uvicorn
-from fastapi import FastAPI, Header, HTTPException, status as http_status
+from fastapi import Depends, FastAPI, Header, HTTPException, status as http_status
 from fastapi.middleware.cors import CORSMiddleware
 
 # Add the app directory to the Python path
@@ -41,6 +41,7 @@ from app.modules.transactions.router import router as transactions_router
 from app.modules.users.router_simple import router as users_router
 from app.modules.users.enhanced_router import router as enhanced_users_router
 from app.modules.loans.router import router as loans_router
+from app.modules.users.dependencies import require_premium
 from app.modules.peers.router import router as peers_router
 from app.modules.line_bot.router import router as line_bot_router
 from app.common.schemas import ApiResponse
@@ -239,8 +240,12 @@ def create_app() -> FastAPI:
         prefix=f"{api_prefix}/notifications",
         tags=["Notifications"],
     )
-    app.include_router(loans_router, prefix=f"{api_prefix}/loans", tags=["Loans"])
-    app.include_router(peers_router, prefix=f"{api_prefix}/peers", tags=["Peers"])
+    # Premium-tier features: the whole router refuses a free account (403
+    # PREMIUM_REQUIRED). The frontend hides their pages and widgets for free
+    # accounts; this is the enforcement, since a hidden link is not a lock.
+    premium_only = [Depends(require_premium)]
+    app.include_router(loans_router, prefix=f"{api_prefix}/loans", tags=["Loans"], dependencies=premium_only)
+    app.include_router(peers_router, prefix=f"{api_prefix}/peers", tags=["Peers"], dependencies=premium_only)
     if settings.line_bot_enabled:
         app.include_router(line_bot_router, prefix=f"{api_prefix}/line-bot", tags=["LINE Bot"])
     else:
