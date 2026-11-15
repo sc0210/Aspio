@@ -293,7 +293,9 @@ export function useAdminData() {
         throw new Error(err.detail || err.message || 'Bulk approve failed');
       }
       const data = await res.json();
-      const approvedIds = new Set(selectedPending);
+      // What the server approved, which can be fewer than were selected (a row
+      // approved elsewhere meanwhile); only those are upgraded or cleared.
+      const approvedIds = new Set<string>(Array.isArray(data.approved) ? data.approved : selectedPending);
       // Bulk approve has no per-user tier, so the rows set to Premium beside
       // their Approve button are upgraded right after; the rest stay free.
       const upgrades = Array.from(approvedIds).filter(id => approvalTiers[id] === 'premium');
@@ -305,8 +307,8 @@ export function useAdminData() {
         }).then(r => r.ok, () => false)
       ));
       setPendingUsers(prev => prev.filter(u => !approvedIds.has(u.id)));
-      setSelectedPending(new Set());
-      toast.success(`Approved ${data.approved?.length || approvedIds.size} users`);
+      setSelectedPending(prev => new Set(Array.from(prev).filter(id => !approvedIds.has(id))));
+      toast.success(`Approved ${approvedIds.size} users`);
       const failed = upgraded.filter(ok => !ok).length;
       if (failed > 0) {
         toast.error(`${failed} approved as Free: the Premium upgrade failed. Set their plan on the Users tab.`);

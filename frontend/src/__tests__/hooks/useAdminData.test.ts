@@ -220,6 +220,22 @@ describe('bulk approval keeps each row\'s plan', () => {
     expect(toastMock.error).not.toHaveBeenCalled();
   });
 
+  it('upgrades and clears only the rows the server approved', async () => {
+    // p2 was approved elsewhere meanwhile; the server skips it.
+    routes['POST /api/admin/bulk-approve'] = { body: { approved: ['p1'] } };
+    routes['PATCH /api/admin/users/p1/access-tier'] = { body: { access_tier: 'premium' } };
+    const { result } = await loaded();
+
+    act(() => { result.current.setApprovalTier('p1', 'premium'); result.current.setApprovalTier('p2', 'premium'); });
+    act(() => result.current.toggleAllUsers('pending'));
+    await act(() => result.current.handleBulkApprove());
+
+    expect(calls).toContain('PATCH /api/admin/users/p1/access-tier');
+    expect(calls).not.toContain('PATCH /api/admin/users/p2/access-tier');
+    expect(result.current.pendingUsers.map((u) => u.id)).toEqual(['p2']);
+    expect([...result.current.selectedPending]).toEqual(['p2']);
+  });
+
   it('says which approvals stayed free when an upgrade fails', async () => {
     routes['POST /api/admin/bulk-approve'] = { body: { approved: ['p1'] } };
     routes['PATCH /api/admin/users/p1/access-tier'] = { status: 500, body: {} };

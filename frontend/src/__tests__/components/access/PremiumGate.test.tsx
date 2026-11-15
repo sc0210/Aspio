@@ -6,7 +6,7 @@ import React from 'react';
 import { render, screen } from '@testing-library/react';
 import { renderHook } from '@testing-library/react';
 
-const mockMode = { isDemo: false };
+const mockMode = { isDemo: false, isAuthenticated: true, isLoading: false };
 const mockUser: { data?: { access_tier?: 'free' | 'premium' }; isLoading: boolean; isError: boolean } = {
   data: undefined, isLoading: true, isError: false,
 };
@@ -28,7 +28,7 @@ function signedIn(data: typeof mockUser['data'], extra: Partial<typeof mockUser>
 }
 
 beforeEach(() => {
-  mockMode.isDemo = false;
+  Object.assign(mockMode, { isDemo: false, isAuthenticated: true, isLoading: false });
   Object.assign(mockUser, { data: undefined, isLoading: true, isError: false });
 });
 
@@ -47,6 +47,12 @@ describe('useAccessTier', () => {
   it('treats a profile without the field as premium: that backend has no gate', () => {
     signedIn({});
     expect(renderHook(() => useAccessTier()).result.current.isPremium).toBe(true);
+  });
+
+  it('settles, not premium and not loading, when signed out', () => {
+    Object.assign(mockMode, { isAuthenticated: false, isLoading: false });
+    Object.assign(mockUser, { data: undefined, isLoading: false, isError: false });
+    expect(renderHook(() => useAccessTier()).result.current).toMatchObject({ isPremium: false, isLoading: false });
   });
 
   it('is premium in demo mode, the full showcase, without asking', () => {
@@ -74,6 +80,7 @@ describe('PremiumGate', () => {
 
   it('waits while the session is still resolving and the profile query is off', () => {
     // A disabled TanStack query reports isLoading=false with no data.
+    Object.assign(mockMode, { isAuthenticated: false, isLoading: true });
     Object.assign(mockUser, { data: undefined, isLoading: false, isError: false });
     render(<PremiumGate>{page}</PremiumGate>);
     expect(screen.queryByText('This page needs Premium')).not.toBeInTheDocument();
