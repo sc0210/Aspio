@@ -29,5 +29,8 @@ export function useAccessTier(): AccessTierState {
   // A backend older than the tier column sends nothing; it also has no gate,
   // so it is treated as premium rather than hiding pages that still work.
   const tier: AccessTier | null = data ? (data.access_tier ?? 'premium') : null;
-  return { tier, isPremium: tier === 'premium', isLoading, isError };
+  // Unknown counts as loading even when the query is disabled: on a hard load
+  // the session resolves first, and a disabled query reports isLoading=false,
+  // which told premium users their page needs Premium until it settled.
+  return { tier, isPremium: tier === 'premium', isLoading: isLoading || (tier === null && !isError), isError };
 }

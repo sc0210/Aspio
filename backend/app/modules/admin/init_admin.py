@@ -42,9 +42,11 @@ async def grant_admin(session: AsyncSession, email: str, role: str) -> Optional[
         invalidate_user_auth_cache(user.id)
         logger.info(f"Approved {user.email} while granting {role}")
 
-    # Staff see every page. Only raised, never lowered: an admin who set their
-    # own account to free (to see what a free account sees) keeps it across
-    # restarts only if they are not listed in ADMIN_EMAILS.
+    # Admins granted here (ADMIN_EMAILS, `aspiro admin grant`) get premium, so
+    # the owner of a fresh instance sees every page. Admins added in the panel
+    # do not: a super admin sets their plan there like anyone's. Only raised,
+    # never lowered; a listed admin who sets themselves to free is raised again
+    # at the next start.
     if user.access_tier != AccessTier.PREMIUM.value:
         user.access_tier = AccessTier.PREMIUM.value
         await session.commit()

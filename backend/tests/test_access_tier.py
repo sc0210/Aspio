@@ -216,3 +216,63 @@ async def test_approval_can_pick_the_tier(client, async_session, query, expected
     await async_session.refresh(pending)
     assert pending.access_tier == expected
     assert pending.status == UserStatus.ACTIVE
+
+
+# ── splits with a partner moved to free ──────────────────────────────────────
+
+async def _connected_pair(async_session):
+    from app.modules.peers.models import PeerConnection, PeerStatus
+
+    me = await _account(async_session, "payer", AccessTier.PREMIUM.value)
+    partner = await _account(async_session, "partner", AccessTier.PREMIUM.value)
+    conn = PeerConnection(id=uuid.uuid4(), requester_id=me.id, receiver_id=partner.id,
+                          status=PeerStatus.ACCEPTED)
+    async_session.add(conn)
+    await async_session.commit()
+    return me, partner, conn
+
+
+async def test_no_split_reaches_a_partner_moved_to_free(async_session):
+    """They could never open /peers to accept or settle it. This is the path the
+    recurring runner takes too (split_transaction → _propose), where a refusal
+    leaves the occurrence an ordinary expense."""
+    from fastapi import HTTPException
+
+    from app.modules.peers.splits import SplitService
+
+    me, partner, conn = await _connected_pair(async_session)
+    partner.access_tier = AccessTier.FREE.value
+    await async_session.commit()
+
+    with pytest.raises(HTTPException) as refused:
+        await SplitService(async_session)._require_premium_pair(me.id, partner.id)
+    assert refused.value.status_code == 403
+    assert "partner" in refused.value.detail
+
+    # And the payer's own plan counts, for the runner that has no router gate.
+    partner.access_tier = AccessTier.PREMIUM.value
+    me.access_tier = AccessTier.FREE.value
+    await async_session.commit()
+    with pytest.raises(HTTPException):
+        await SplitService(async_session)._require_premium_pair(me.id, partner.id)
+
+    me.access_tier = AccessTier.PREMIUM.value
+    await async_session.commit()
+    await SplitService(async_session)._require_premium_pair(me.id, partner.id)  # both premium: allowed
+
+
+async def test_a_split_through_the_api_names_the_downgraded_partner(client, async_session):
+    from app.modules.users.models import User as U  # noqa: F401
+
+    me, partner, conn = await _connected_pair(async_session)
+    partner.access_tier = AccessTier.FREE.value
+    await async_session.commit()
+
+    response = client.post("/api/v1/peers/splits", headers=_auth(me), json={
+        "connection_id": str(conn.id), "total_amount": 1000, "currency": "TWD",
+        "description": "dinner", "category_id": str(uuid.uuid4()), "split_date": "2026-11-15",
+        "method": "equal", "payer": "me",
+    })
+
+    assert response.status_code == 403, response.text
+    assert "partner's plan" in response.text

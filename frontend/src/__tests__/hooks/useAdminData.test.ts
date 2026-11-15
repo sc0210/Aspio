@@ -4,7 +4,14 @@
  */
 import { act, renderHook, waitFor } from '@testing-library/react';
 import toast from 'react-hot-toast';
+import React from 'react';
+import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { useAdminData } from '@/hooks/useAdminData';
+
+const queryClient = new QueryClient();
+const invalidate = jest.spyOn(queryClient, 'invalidateQueries');
+const wrapper = ({ children }: { children: React.ReactNode }) =>
+  React.createElement(QueryClientProvider, { client: queryClient }, children);
 
 const push = jest.fn();
 jest.mock('next/navigation', () => ({ useRouter: () => ({ push }) }));
@@ -47,7 +54,7 @@ beforeEach(() => {
 });
 
 async function loaded() {
-  const hook = renderHook(() => useAdminData());
+  const hook = renderHook(() => useAdminData(), { wrapper });
   await act(() => hook.result.current.loadData());
   return hook;
 }
@@ -166,6 +173,8 @@ describe('access tiers', () => {
     }));
     expect(result.current.users[0].access_tier).toBe('premium');
     expect(toastMock.success).toHaveBeenCalledWith('Upgraded to Premium');
+    // The admin may have changed their own plan: their sidebar follows.
+    expect(invalidate).toHaveBeenCalledWith({ queryKey: ['user-profile'] });
     expect(result.current.settingTier).toBeNull();
   });
 
@@ -193,6 +202,34 @@ describe('access tiers', () => {
 
     expect(calls).toContain('POST /api/admin/approve-user/p1?access_tier=premium');
     expect(calls).toContain('POST /api/admin/approve-user/p2?access_tier=free');
+  });
+});
+
+describe('bulk approval keeps each row\'s plan', () => {
+  it('upgrades the rows set to Premium, and leaves the rest free', async () => {
+    routes['POST /api/admin/bulk-approve'] = { body: { approved: ['p1', 'p2'] } };
+    routes['PATCH /api/admin/users/p1/access-tier'] = { body: { access_tier: 'premium' } };
+    const { result } = await loaded();
+
+    act(() => result.current.setApprovalTier('p1', 'premium'));
+    act(() => result.current.toggleAllUsers('pending'));
+    await act(() => result.current.handleBulkApprove());
+
+    expect(calls).toContain('PATCH /api/admin/users/p1/access-tier');
+    expect(calls).not.toContain('PATCH /api/admin/users/p2/access-tier');
+    expect(toastMock.error).not.toHaveBeenCalled();
+  });
+
+  it('says which approvals stayed free when an upgrade fails', async () => {
+    routes['POST /api/admin/bulk-approve'] = { body: { approved: ['p1'] } };
+    routes['PATCH /api/admin/users/p1/access-tier'] = { status: 500, body: {} };
+    const { result } = await loaded();
+
+    act(() => result.current.setApprovalTier('p1', 'premium'));
+    act(() => result.current.toggleUserSelection('p1', 'pending'));
+    await act(() => result.current.handleBulkApprove());
+
+    expect(toastMock.error).toHaveBeenCalledWith(expect.stringContaining('1 approved as Free'));
   });
 });
 

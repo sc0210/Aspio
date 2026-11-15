@@ -47,6 +47,8 @@ router = APIRouter()
 # The web /groups page is a premium feature. Only its endpoints are gated: the
 # webhook, LIFF sign-in and account linking serve every tier, and group commands
 # typed in LINE itself run through the webhook, where members need no account.
+# LIFF signs a free account in, but the group view it opens is premium, so it
+# lands on the "needs Premium" page (or the dashboard when there is no ?gid=).
 _PREMIUM = [Depends(require_premium)]
 logger = logging.getLogger(__name__)
 

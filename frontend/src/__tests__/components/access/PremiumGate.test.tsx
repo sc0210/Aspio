@@ -72,6 +72,13 @@ describe('PremiumGate', () => {
     expect(screen.getByRole('link', { name: 'Back to dashboard' })).toHaveAttribute('href', '/dashboard');
   });
 
+  it('waits while the session is still resolving and the profile query is off', () => {
+    // A disabled TanStack query reports isLoading=false with no data.
+    Object.assign(mockUser, { data: undefined, isLoading: false, isError: false });
+    render(<PremiumGate>{page}</PremiumGate>);
+    expect(screen.queryByText('This page needs Premium')).not.toBeInTheDocument();
+  });
+
   it('waits, rather than flash the refusal, while the profile loads', () => {
     render(<PremiumGate>{page}</PremiumGate>);
     expect(screen.queryByText('the premium page')).not.toBeInTheDocument();

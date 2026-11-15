@@ -2,6 +2,8 @@
 
 import { useState, useEffect, useCallback, useRef } from 'react';
 import { useRouter } from 'next/navigation';
+import { useQueryClient } from '@tanstack/react-query';
+import { QUERY_KEYS } from './useDataSynchronization';
 import toast from 'react-hot-toast';
 import type {
   SystemStats,
@@ -26,6 +28,7 @@ function buildUserParams(search: string, filter: StatusFilter, page: number, pag
 
 export function useAdminData() {
   const router = useRouter();
+  const queryClient = useQueryClient();
 
   // ── Stats ──────────────────────────────────────────────────────────────────
   const [stats, setStats] = useState<SystemStats | null>(null);
@@ -180,6 +183,9 @@ export function useAdminData() {
       }
       const data = await res.json();
       setUsers(prev => prev.map(u => u.id === userId ? { ...u, access_tier: data.access_tier } : u));
+      // If that was the admin's own account, their sidebar and badge follow now
+      // rather than on the next reload. Cheap either way: one profile refetch.
+      queryClient.invalidateQueries({ queryKey: [QUERY_KEYS.USER_PROFILE] });
       toast.success(data.access_tier === 'premium' ? 'Upgraded to Premium' : 'Moved to Free');
     } catch (err) {
       toast.error(err instanceof Error ? err.message : 'Failed to change plan');
@@ -288,9 +294,23 @@ export function useAdminData() {
       }
       const data = await res.json();
       const approvedIds = new Set(selectedPending);
+      // Bulk approve has no per-user tier, so the rows set to Premium beside
+      // their Approve button are upgraded right after; the rest stay free.
+      const upgrades = Array.from(approvedIds).filter(id => approvalTiers[id] === 'premium');
+      const upgraded = await Promise.all(upgrades.map(id =>
+        fetch(`/api/admin/users/${id}/access-tier`, {
+          method: 'PATCH',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ access_tier: 'premium' }),
+        }).then(r => r.ok, () => false)
+      ));
       setPendingUsers(prev => prev.filter(u => !approvedIds.has(u.id)));
       setSelectedPending(new Set());
       toast.success(`Approved ${data.approved?.length || approvedIds.size} users`);
+      const failed = upgraded.filter(ok => !ok).length;
+      if (failed > 0) {
+        toast.error(`${failed} approved as Free: the Premium upgrade failed. Set their plan on the Users tab.`);
+      }
     } catch (err) {
       toast.error(err instanceof Error ? err.message : 'Bulk approve failed');
     } finally {
