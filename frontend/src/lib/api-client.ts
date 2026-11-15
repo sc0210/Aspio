@@ -13,7 +13,7 @@ import {
   CompareDataResponse,
   SharedGoalOut,
   SharedGoalCreate,
-  SavingRecord, SharedGoalUpdate,
+  SharedGoalHistoryPoint, SharedGoalUpdate,
   SplitCreate, SplitOut, PeerBalanceOut, PeerPrefsOut, SplitPolicy, SettlementCreate, SettlementOut, SplitFromTransaction, PeerPrefsUpdate, SplitAmend, RecurringSplitCreate, RecurringSplitOut } from '@/shared/types';
 import { getSession } from 'next-auth/react';
 import { getPublicApiUrl, getServerApiUrl } from '@/lib/api-url';
@@ -680,29 +680,17 @@ class ApiClient {
     return this.patch<PeerPrefsOut>(`/peers/${connectionId}/prefs`, update);
   }
 
-  /** The caller's own goal backing their side of a shared goal, made if missing. */
-  async linkSharedGoal(goalId: string): Promise<ApiResponse<Goal>> {
-    return this.post<Goal>(`/peers/goals/${goalId}/link-goal`);
+  /** Your part of a shared goal: your own goal, made (or linked: goal_id) on first use. */
+  async linkSharedGoal(goalId: string, body?: { goal_id?: string; target_amount?: number }): Promise<ApiResponse<Goal>> {
+    return this.post<Goal>(`/peers/goals/${goalId}/link-goal`, body);
   }
 
   async deleteSharedGoal(goalId: string): Promise<ApiResponse<null>> {
     return this.delete<null>(`/peers/goals/${goalId}`);
   }
 
-  async listSavingRecords(goalId: string): Promise<ApiResponse<SavingRecord[]>> {
-    return this.get<SavingRecord[]>(`/peers/goals/${goalId}/records`);
-  }
-
-  async addSavingRecord(goalId: string, data: { amount: number; record_date: string; note?: string }): Promise<ApiResponse<SavingRecord>> {
-    return this.post<SavingRecord>(`/peers/goals/${goalId}/records`, data);
-  }
-
-  async updateSavingRecord(goalId: string, recordId: string, data: { amount?: number; record_date?: string; note?: string | null }): Promise<ApiResponse<SavingRecord>> {
-    return this.patch<SavingRecord>(`/peers/goals/${goalId}/records/${recordId}`, data);
-  }
-
-  async deleteSavingRecord(goalId: string, recordId: string): Promise<ApiResponse<null>> {
-    return this.delete<null>(`/peers/goals/${goalId}/records/${recordId}`);
+  async getSharedGoalHistory(goalId: string): Promise<ApiResponse<SharedGoalHistoryPoint[]>> {
+    return this.get<SharedGoalHistoryPoint[]>(`/peers/goals/${goalId}/history`);
   }
 }
 

@@ -1,16 +1,16 @@
 'use client';
 
 import { useTranslation } from 'react-i18next';
-import { TrashIcon, CheckCircleIcon, ListBulletIcon, PencilSquareIcon } from '@heroicons/react/24/outline';
+import { TrashIcon, CheckCircleIcon, ChartBarIcon, PencilSquareIcon } from '@heroicons/react/24/outline';
 import type { SharedGoalOut } from '@/shared/types';
 import { formatCurrency as formatCurrencyUtil } from '@/utils/formatters';
 
 interface SharedGoalCardProps {
   goal: SharedGoalOut;
-  onViewRecords: (goal: SharedGoalOut) => void;
+  onViewHistory: (goal: SharedGoalOut) => void;
   onDelete: (goalId: string) => void;
   onEdit?: (goal: SharedGoalOut) => void;
-  /** Reserve your own Life cash for your side (absent in demo mode). */
+  /** Reserve your own Life cash for your part, adding the part on first use (absent in demo mode). */
   onSetAside?: (goal: SharedGoalOut) => void;
   deleting?: boolean;
 }
@@ -19,7 +19,7 @@ const formatCurrency = (value: number) => formatCurrencyUtil(value, 'TWD', { pre
 
 const MILESTONES = [25, 50, 75];
 
-export default function SharedGoalCard({ goal, onViewRecords, onDelete, onEdit, onSetAside, deleting }: SharedGoalCardProps) {
+export default function SharedGoalCard({ goal, onViewHistory, onDelete, onEdit, onSetAside, deleting }: SharedGoalCardProps) {
   const { t } = useTranslation('common');
   const isCompleted = goal.status === 'completed';
 
@@ -70,12 +70,12 @@ export default function SharedGoalCard({ goal, onViewRecords, onDelete, onEdit, 
         <div className="flex items-center gap-1 shrink-0">
           <button
             type="button"
-            onClick={() => onViewRecords(goal)}
-            title={t('savings.card.viewRecords', 'View saving records')}
-            aria-label={t('savings.card.viewRecordsFor', 'View saving records for {{title}}', { title: goal.title })}
+            onClick={() => onViewHistory(goal)}
+            title={t('savings.card.viewHistory', 'View history')}
+            aria-label={t('savings.card.viewHistoryFor', 'View the history of {{title}}', { title: goal.title })}
             className="p-1.5 min-w-[44px] min-h-[44px] flex items-center justify-center text-gray-500 dark:text-gray-400 hover:text-primary-600 dark:hover:text-primary-400 rounded-lg hover:bg-primary-50 dark:hover:bg-primary-900/20 transition-colors"
           >
-            <ListBulletIcon className="w-4 h-4" aria-hidden="true" />
+            <ChartBarIcon className="w-4 h-4" aria-hidden="true" />
           </button>
           {onEdit && (
             <button
@@ -174,11 +174,11 @@ export default function SharedGoalCard({ goal, onViewRecords, onDelete, onEdit, 
               {totalContributed > 0 && <span className="font-normal text-gray-600 dark:text-gray-400"> · {yourSplitPct.toFixed(0)}%</span>}
             </p>
             <p className="text-sm font-bold text-gray-900 dark:text-white tabular-nums">{formatCurrency(goal.your_amount)}</p>
-            {(goal.your_set_aside ?? 0) > 0 && (
-              <p className="text-xs text-gray-600 dark:text-gray-400 tabular-nums">
-                {t('savings.card.setAsideHint', '{{amount}} of it through your own goal', { amount: formatCurrency(goal.your_set_aside ?? 0) })}
-              </p>
-            )}
+            <p className="text-xs text-gray-600 dark:text-gray-400 tabular-nums">
+              {goal.your_goal_id || goal.your_target > 0
+                ? t('savings.card.yourPart', 'of your {{target}} part', { target: formatCurrency(goal.your_target) })
+                : t('savings.card.noPartYet', 'No part yet')}
+            </p>
           </div>
           <div className="min-w-0 text-right">
             <p className="text-xs font-medium text-prosperity-700 dark:text-prosperity-400 truncate">
@@ -186,6 +186,11 @@ export default function SharedGoalCard({ goal, onViewRecords, onDelete, onEdit, 
               {totalContributed > 0 && <span className="font-normal text-gray-600 dark:text-gray-400"> · {peerSplitPct.toFixed(0)}%</span>}
             </p>
             <p className="text-sm font-bold text-gray-900 dark:text-white tabular-nums">{formatCurrency(goal.peer_amount)}</p>
+            <p className="text-xs text-gray-600 dark:text-gray-400 tabular-nums">
+              {goal.peer_joined
+                ? t('savings.card.peerPart', 'of their {{target}} part', { target: formatCurrency(goal.peer_target) })
+                : t('savings.card.peerNotJoined', 'Hasn’t added their part yet')}
+            </p>
           </div>
         </div>
 
@@ -211,7 +216,9 @@ export default function SharedGoalCard({ goal, onViewRecords, onDelete, onEdit, 
             onClick={() => onSetAside(goal)}
             className="w-full min-h-11 rounded-lg border border-primary-200 dark:border-primary-800 px-3 py-2 text-sm font-medium text-primary-700 dark:text-primary-300 hover:bg-primary-50 dark:hover:bg-primary-900/20 transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-primary-500"
           >
-            {t('savings.card.setAside', 'Set aside money')}
+            {goal.your_goal_id
+              ? t('savings.card.setAside', 'Set aside money')
+              : t('savings.card.addPart', 'Add your part')}
           </button>
         )}
       </div>

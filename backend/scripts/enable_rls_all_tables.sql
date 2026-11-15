@@ -34,7 +34,6 @@ ALTER TABLE public.user_data_exports           ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.user_security_logs          ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.user_preference_history     ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.debt_accounts               ENABLE ROW LEVEL SECURITY;
-ALTER TABLE public.saving_records              ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.peer_connections            ENABLE ROW LEVEL SECURITY;
 
 -- ── LINE Bot / group expense splitting ────────────────────────────────────────

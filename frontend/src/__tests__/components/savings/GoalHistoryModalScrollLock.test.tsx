@@ -1,28 +1,32 @@
 /**
- * /savings mounts SavingRecordsModal all the time, so a closed one must not hold
- * the page's scroll lock (it did: the page couldn't scroll on any tab).
- * Uses the real useDialog / useScrollLock, unlike SavingRecordsModal.test.tsx.
+ * /savings mounts GoalHistoryModal all the time, so a closed one must not hold
+ * the page's scroll lock (its predecessor did: the page couldn't scroll on any
+ * tab). Uses the real useDialog / useScrollLock, unlike GoalHistoryModal.test.tsx.
  */
 import React from 'react';
 import { fireEvent, render } from '@testing-library/react';
-import SavingRecordsModal from '@/components/savings/SavingRecordsModal';
+import GoalHistoryModal from '@/components/savings/GoalHistoryModal';
 import { demoSharedGoals } from '@/data/demoData';
 
 jest.mock('react-i18next', () => {
   const t = (_key: string, fallback?: string) => (typeof fallback === 'string' ? fallback : _key);
-  return { initReactI18next: { type: '3rdParty', init: () => {} }, useTranslation: () => ({ t }) };
+  return { initReactI18next: { type: '3rdParty', init: () => {} }, useTranslation: () => ({ t, i18n: { language: 'en' } }) };
 });
 
 jest.mock('@/lib/api-client', () => ({
-  apiClient: { listSavingRecords: jest.fn().mockResolvedValue({ data: [] }) },
+  apiClient: { getSharedGoalHistory: jest.fn().mockResolvedValue({ data: [] }) },
 }));
 
-const props = { isDemo: true, currentUserId: 'u1', onClose: jest.fn(), onRecordChanged: jest.fn() };
+jest.mock('next/dynamic', () => () => function ChartStub() {
+  return null;
+});
+
+const onClose = jest.fn();
 
 function page(goal: typeof demoSharedGoals[number] | null) {
   return (
     <main id="main-content">
-      <SavingRecordsModal goal={goal} {...props} />
+      <GoalHistoryModal goal={goal} isDemo onClose={onClose} />
     </main>
   );
 }
@@ -44,5 +48,5 @@ it('leaves the page scrollable while no goal is open, and locks it while one is'
 it('leaves Escape alone while closed', () => {
   render(page(null));
   fireEvent.keyDown(document, { key: 'Escape' });
-  expect(props.onClose).not.toHaveBeenCalled();
+  expect(onClose).not.toHaveBeenCalled();
 });

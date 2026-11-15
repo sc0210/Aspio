@@ -2,11 +2,11 @@
 Pydantic v2 schemas for the peers module.
 
 Request schemas:  PeerInviteRequest, PeerRespondRequest,
-                  SharedGoalCreate, SharedGoalUpdate
+                  SharedGoalCreate, SharedGoalUpdate, LinkGoalIn
 Response schemas: UserSearchResult, PeerConnectionOut,
                   WalletTotals, PeerStatCard,
                   CompareChartPoint, CompareDataResponse,
-                  SharedGoalOut
+                  SharedGoalOut, SharedGoalHistoryPoint
 """
 
 from datetime import date, datetime
@@ -141,22 +141,53 @@ class CompareDataResponse(BaseModel):
 
 
 class SharedGoalCreate(BaseModel):
-    """Body for POST /peers/goals"""
+    """Body for POST /peers/goals: the goal, and your part of it.
+
+    Your part is a personal goal of yours: a new one with ``my_target`` as its
+    target, or ``goal_id``, a goal you already have. Give exactly one.
+    """
 
     connection_id: UUID
     title: str = Field(..., min_length=1, max_length=100)
-    target_amount: Decimal = Field(..., gt=0, description="Total savings target (> 0)")
     target_date: Optional[date] = None
+    my_target: Optional[Decimal] = Field(None, gt=0, description="Your part of the target")
+    goal_id: Optional[UUID] = Field(None, description="A goal of yours to be your part")
+
+    @model_validator(mode="after")
+    def _one_part(self):
+        if (self.my_target is None) == (self.goal_id is None):
+            raise ValueError("give my_target or goal_id, not both")
+        return self
+
+
+class LinkGoalIn(BaseModel):
+    """Body for POST /peers/goals/{goal_id}/link-goal (optional).
+
+    ``goal_id``: a goal you already have becomes your part. ``target_amount``:
+    the target of a new goal made for it (default: your partner's part).
+    """
+
+    goal_id: Optional[UUID] = None
+    target_amount: Optional[Decimal] = Field(None, gt=0)
+
+    @model_validator(mode="after")
+    def _not_both(self):
+        if self.goal_id is not None and self.target_amount is not None:
+            raise ValueError("give goal_id or target_amount, not both")
+        return self
 
 
 class SharedGoalUpdate(BaseModel):
-    """Body for PATCH /peers/goals/{goal_id}. Either participant may edit."""
+    """Body for PATCH /peers/goals/{goal_id}. Either participant may edit.
+
+    The target is not here: it is the sum of both partners' parts, and each
+    edits their own on their personal goal.
+    """
 
     title: Optional[str] = Field(None, min_length=1, max_length=100)
-    target_amount: Optional[Decimal] = Field(None, gt=0)
     target_date: Optional[date] = None
 
-    @field_validator("title", "target_amount")
+    @field_validator("title")
     @classmethod
     def _no_explicit_null(cls, v):
         # Leaving a field out keeps it; sending null for these would write NULL
@@ -170,8 +201,9 @@ class SharedGoalOut(BaseModel):
     """Shared goal returned to the client.
 
     Amounts are expressed as floats for easy JSON consumption.
-    your_amount / peer_amount are resolved relative to the calling user so
-    the frontend never needs to know who is requester vs receiver.
+    your_* / peer_* are resolved relative to the calling user so the frontend
+    never needs to know who is requester vs receiver. Each side is that
+    partner's personal goal: its target is their part, its value their amount.
     """
 
     model_config = ConfigDict(from_attributes=True)
@@ -179,13 +211,16 @@ class SharedGoalOut(BaseModel):
     id: str
     connection_id: str
     title: str
-    target_amount: float
+    target_amount: float        # your_target + peer_target
     target_date: Optional[str]   # ISO date string ("YYYY-MM-DD") or None
     status: str
 
-    # Per-participant amounts (perspective of the calling user)
+    # Per-participant amounts and parts (perspective of the calling user)
     your_amount: float
     peer_amount: float
+    your_target: float = 0.0
+    peer_target: float = 0.0
+    peer_joined: bool = False   # the partner has a personal goal for their part
 
     # Display names and IDs for the frontend
     your_name: str
@@ -200,46 +235,16 @@ class SharedGoalOut(BaseModel):
 
     created_at: str             # ISO datetime string
 
-    # The caller's own goal backing their side (POST /peers/goals/{id}/link-goal),
-    # and the money it holds, already counted in your_amount.
+    # The caller's own goal for their part (its money is your_amount).
     your_goal_id: Optional[str] = None
-    your_set_aside: float = 0.0
 
 
-# ---------------------------------------------------------------------------
-# Saving record schemas
-# ---------------------------------------------------------------------------
+class SharedGoalHistoryPoint(BaseModel):
+    """One day's net change to one side's progress (GET /peers/goals/{id}/history)."""
 
-
-class SavingRecordCreate(BaseModel):
-    """Body for POST /peers/goals/{goal_id}/records"""
-
-    amount: Decimal = Field(..., gt=0, description="Amount saved (must be > 0)")
-    record_date: date
-    note: Optional[str] = Field(None, max_length=200)
-
-
-class SavingRecordUpdate(BaseModel):
-    """Body for PATCH /peers/goals/{goal_id}/records/{record_id}"""
-
-    amount: Optional[Decimal] = Field(None, gt=0)
-    record_date: Optional[date] = None
-    note: Optional[str] = Field(None, max_length=200)
-
-
-class SavingRecordOut(BaseModel):
-    """Saving record returned to the client."""
-
-    model_config = ConfigDict(from_attributes=True)
-
-    id: str
-    goal_id: str
-    user_id: str
-    user_name: str
-    amount: float
-    record_date: str    # ISO date "YYYY-MM-DD"
-    note: Optional[str]
-    created_at: str     # ISO datetime string
+    date: str                   # business day, "YYYY-MM-DD"
+    side: Literal["you", "partner"]
+    amount: float               # signed: a release is negative
 
 
 # ---------------------------------------------------------------------------

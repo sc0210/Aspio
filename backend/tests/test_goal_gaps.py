@@ -3,7 +3,7 @@
   * a goal lot sold after the exchange rate moved books its gain against what
     the goal actually paid, so "release everything" ends at exactly 0;
   * a partner's reservation that completes a shared goal stores it as reached
-    and sends the "reached" alert, as a saving record does;
+    and sends the "reached" alert;
   * an emergency-fund goal follows the Emergency Wallet both ways (completes
     and reopens with it), and refuses to reserve Life cash (that money belongs
     in the Emergency Wallet);
@@ -52,6 +52,19 @@ def _income(user_id, category_id, amount, wallet=TransactionWalletType.LIFE):
         user_id=user_id, type=TransactionType.INCOME, wallet_type=wallet, amount=D(amount),
         currency="TWD", description="Salary", transaction_date=date(2026, 1, 1), category_id=category_id,
     )
+
+
+def _partner_part(client, partner, shared, target, reserve=False):
+    """The partner joins the shared goal with a part of `target`, filled if `reserve`."""
+    _ok(client.post("/api/v1/transactions/", json={
+        "type": "income", "wallet_type": "life", "amount": target, "currency": "TWD",
+        "description": "Salary", "transaction_date": "2026-01-01", "category_name": "Salary"},
+        headers=partner), 201)
+    part = _ok(client.post(f"/api/v1/peers/goals/{shared}/link-goal",
+                           json={"target_amount": target}, headers=partner))
+    if reserve:
+        _ok(client.post(f"/api/v1/goals/{part['id']}/reserve", json={"amount": target}, headers=partner), 201)
+    return part
 
 
 async def test_a_usd_goal_lot_books_its_gain_against_what_the_goal_paid(async_session, test_user, test_category, monkeypatch):
@@ -121,9 +134,8 @@ async def test_a_reservation_that_completes_a_shared_goal_says_so(
         "type": "income", "wallet_type": "life", "amount": "50000", "currency": "TWD",
         "description": "Salary", "transaction_date": "2026-01-01", "category_name": "Salary"}), 201)
     shared = _ok(client.post("/api/v1/peers/goals", json={
-        "connection_id": connection, "title": "Wedding", "target_amount": "30000"}), 201)["id"]
-    _ok(client.post(f"/api/v1/peers/goals/{shared}/records", json={
-        "amount": "10000", "record_date": "2026-02-01"}, headers=partner), 201)
+        "connection_id": connection, "title": "Wedding", "my_target": "20000"}), 201)["id"]
+    _partner_part(client, partner, shared, "10000", reserve=True)
     mine = _ok(client.post(f"/api/v1/peers/goals/{shared}/link-goal"))
 
     _ok(client.post(f"/api/v1/goals/{mine['id']}/reserve", json={"amount": "20000"}), 201)
@@ -227,7 +239,8 @@ async def test_cancelling_a_linked_goal_reopens_the_shared_goal(
         "type": "income", "wallet_type": "life", "amount": "50000", "currency": "TWD",
         "description": "Salary", "transaction_date": "2026-01-01", "category_name": "Salary"}), 201)
     shared = _ok(client.post("/api/v1/peers/goals", json={
-        "connection_id": connection, "title": "Wedding", "target_amount": "20000"}), 201)["id"]
+        "connection_id": connection, "title": "Wedding", "my_target": "20000"}), 201)["id"]
+    _partner_part(client, partner, shared, "1000", reserve=True)
     mine = _ok(client.post(f"/api/v1/peers/goals/{shared}/link-goal"))
     _ok(client.post(f"/api/v1/goals/{mine['id']}/reserve", json={"amount": "20000"}), 201)
 
@@ -487,7 +500,8 @@ async def test_an_emergency_fund_reopening_reopens_the_shared_goal_it_backs(
         "type": "income", "wallet_type": "emergency", "amount": "30000", "currency": "TWD",
         "description": "Rainy day", "transaction_date": "2026-01-01", "category_name": "Salary"}), 201)
     shared = _ok(client.post("/api/v1/peers/goals", json={
-        "connection_id": connection, "title": "Safety net", "target_amount": "20000"}), 201)["id"]
+        "connection_id": connection, "title": "Safety net", "my_target": "20000"}), 201)["id"]
+    _partner_part(client, partner, shared, "1000", reserve=True)
     mine = _ok(client.post(f"/api/v1/peers/goals/{shared}/link-goal"))
     _ok(client.put(f"/api/v1/goals/{mine['id']}", json={"category": "emergency_fund"}))
     _ok(client.get("/api/v1/goals/"))

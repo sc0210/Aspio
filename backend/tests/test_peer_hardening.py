@@ -1,8 +1,8 @@
 """
 Regression tests for the peer fixes, against real rows.
 
-- Reconnecting after a remove swapped requester/receiver while goal totals are
-  cached per side, so Alice 300 + 100 read as 700.
+- Reconnecting after a remove swapped requester/receiver while goal totals were
+  cached per side, so Alice 300 + 100 read as 700 (sides are now keyed by user).
 - A completed goal vanished from the list and never re-opened.
 - The 2-peer cap checked only one side at each step and ignored pending invites.
 - A declined invite could be re-sent (and re-notified) forever.
@@ -18,9 +18,12 @@ import pytest_asyncio
 from fastapi import HTTPException
 from sqlalchemy import select
 
+from app.modules.goals.schemas import GoalContributionCreate, GoalUpdate
+from app.modules.goals.service import GoalService
 from app.modules.notifications.models import Notification
-from app.modules.peers.models import GoalStatus, PeerConnection, PeerStatus
-from app.modules.peers.schemas import SavingRecordCreate, SharedGoalCreate, SharedGoalUpdate
+from app.modules.peers.models import GoalStatus, PeerConnection, PeerStatus, SharedGoal
+from app.modules.peers.schemas import LinkGoalIn, SharedGoalCreate, SharedGoalUpdate
+from app.modules.transactions.models import Transaction, TransactionType, TransactionWalletType
 from app.modules.peers.service import PeerService
 from app.modules.users.models import User, UserRole, UserStatus
 
@@ -33,16 +36,33 @@ def _user(name):
                 access_tier="premium")
 
 
-def rec(amount):
-    return SavingRecordCreate(amount=Decimal(str(amount)), record_date=date(2026, 10, 1))
-
-
 @pytest_asyncio.fixture
-async def people(async_session):
+async def people(async_session, test_category):
     users = {n: _user(n) for n in ("alice", "bob", "carol", "dave")}
     async_session.add_all(users.values())
+    await async_session.flush()
+    for person in users.values():  # Life cash to set aside for goals
+        async_session.add(Transaction(
+            user_id=person.id, type=TransactionType.INCOME, wallet_type=TransactionWalletType.LIFE,
+            amount=Decimal("10000"), currency="TWD", description="Salary",
+            transaction_date=date(2026, 1, 1), category_id=test_category.id,
+        ))
     await async_session.commit()
     return users
+
+
+async def _part(svc, user, goal_id, target=None):
+    return await svc.link_goal(user.id, goal_id, LinkGoalIn(target_amount=Decimal(str(target))) if target else None)
+
+
+async def _reserve(session, svc, user, goal_id, amount):
+    part = await _part(svc, user, goal_id)
+    await GoalService(session).reserve(part.id, user.id, GoalContributionCreate(amount=Decimal(str(amount))))
+
+
+async def _release(session, svc, user, goal_id, amount):
+    part = await _part(svc, user, goal_id)
+    await GoalService(session).release(part.id, user.id, GoalContributionCreate(amount=Decimal(str(amount))))
 
 
 async def _connect(svc, inviter, invitee):
@@ -62,13 +82,13 @@ async def test_reconnecting_with_swapped_sides_keeps_each_persons_total(async_se
     alice, bob = people["alice"], people["bob"]
     conn = await _connect(svc, alice, bob)  # alice is the requester
     goal = await svc.create_goal(alice.id, SharedGoalCreate(
-        connection_id=conn.id, title="Trip", target_amount=Decimal("1000")))
+        connection_id=conn.id, title="Trip", my_target=Decimal("1000")))
     goal_id = uuid.UUID(str(goal.id))
-    await svc.add_record(alice.id, goal_id, rec(300))
+    await _reserve(async_session, svc, alice, goal_id, 300)
 
     await svc.remove_connection(conn.id, alice.id)
     await _connect(svc, bob, alice)  # bob re-invites: the sides swap
-    await svc.add_record(alice.id, goal_id, rec(100))
+    await _reserve(async_session, svc, alice, goal_id, 100)
 
     seen = await svc.get_goal(alice.id, goal_id)
     assert (seen.your_amount, seen.peer_amount, seen.total_amount) == (400, 0, 400)
@@ -79,29 +99,40 @@ async def test_completed_goals_stay_listed_and_reopen_when_the_total_drops(async
     alice, bob = people["alice"], people["bob"]
     conn = await _connect(svc, alice, bob)
     goal_id = uuid.UUID(str((await svc.create_goal(alice.id, SharedGoalCreate(
-        connection_id=conn.id, title="Sofa", target_amount=Decimal("500")))).id))
+        connection_id=conn.id, title="Sofa", my_target=Decimal("300")))).id))
+    await _part(svc, bob, goal_id, 200)
 
-    record = await svc.add_record(bob.id, goal_id, rec(500))
+    await _reserve(async_session, svc, alice, goal_id, 300)
+    await _reserve(async_session, svc, bob, goal_id, 200)
     listed = await svc.list_goals(alice.id)
     assert [(g.title, g.status) for g in listed] == [("Sofa", GoalStatus.completed)]
 
-    await svc.delete_record(bob.id, goal_id, uuid.UUID(record.id))
+    await _release(async_session, svc, bob, goal_id, 200)
     assert (await svc.get_goal(alice.id, goal_id)).status == GoalStatus.active
 
 
-async def test_editing_the_target_reopens_or_completes(async_session, people):
+async def test_editing_a_part_reopens_or_completes(async_session, people):
     svc = PeerService(async_session)
     alice, bob = people["alice"], people["bob"]
     conn = await _connect(svc, alice, bob)
     goal_id = uuid.UUID(str((await svc.create_goal(alice.id, SharedGoalCreate(
-        connection_id=conn.id, title="Car", target_amount=Decimal("1000")))).id))
-    await svc.add_record(alice.id, goal_id, rec(600))
+        connection_id=conn.id, title="Car", my_target=Decimal("600")))).id))
+    bobs = await _part(svc, bob, goal_id, 400)
+    await _reserve(async_session, svc, alice, goal_id, 600)
+    await _reserve(async_session, svc, bob, goal_id, 100)
 
-    # Either participant may edit, not only the creator.
-    edited = await svc.update_goal(bob.id, goal_id, SharedGoalUpdate(title="Car fund", target_amount=Decimal("600")))
-    assert (edited.title, edited.status) == ("Car fund", GoalStatus.completed)
-    reopened = await svc.update_goal(alice.id, goal_id, SharedGoalUpdate(target_amount=Decimal("2000")))
-    assert reopened.status == GoalStatus.active
+    # Either participant may edit the title and date, not only the creator.
+    edited = await svc.update_goal(bob.id, goal_id, SharedGoalUpdate(title="Car fund"))
+    assert (edited.title, edited.status) == ("Car fund", GoalStatus.active)
+
+    goals = GoalService(async_session)
+    await goals.update_goal(bobs.id, bob.id, GoalUpdate(target_amount=Decimal("100")))
+    stored = await async_session.get(SharedGoal, goal_id)
+    await async_session.refresh(stored)
+    assert stored.status == GoalStatus.completed                  # 700 of 700
+    alices = await _part(svc, alice, goal_id)
+    await goals.update_goal(alices.id, alice.id, GoalUpdate(target_amount=Decimal("2000")))
+    assert (await svc.get_goal(alice.id, goal_id)).status == GoalStatus.active
 
 
 async def test_the_cap_counts_pending_invites_and_both_sides(async_session, people):
@@ -171,8 +202,9 @@ async def test_partners_are_notified_with_a_link_to_savings(async_session, peopl
     alice, bob = people["alice"], people["bob"]
     conn = await _connect(svc, alice, bob)
     goal_id = uuid.UUID(str((await svc.create_goal(alice.id, SharedGoalCreate(
-        connection_id=conn.id, title="Trip", target_amount=Decimal("100")))).id))
-    await svc.add_record(bob.id, goal_id, rec(100))
+        connection_id=conn.id, title="Trip", my_target=Decimal("100")))).id))
+    await _reserve(async_session, svc, alice, goal_id, 100)
+    await _reserve(async_session, svc, bob, goal_id, 100)   # bob's part defaults to alice's 100
 
     invite = await _notes(async_session, bob, "peer_invite")
     accepted = await _notes(async_session, alice, "peer_invite_accepted")
@@ -185,13 +217,12 @@ async def test_partners_are_notified_with_a_link_to_savings(async_session, peopl
     assert "net worth" in invite[0].message
 
 
-@pytest.mark.parametrize("field", ["title", "target_amount"])
-async def test_an_explicit_null_is_rejected_not_written(field):
-    """Omitted keeps the value; null for these would hit a NOT NULL column (500)."""
+async def test_an_explicit_null_title_is_rejected_not_written():
+    """Omitted keeps the value; null would hit a NOT NULL column (500)."""
     from pydantic import ValidationError
 
     with pytest.raises(ValidationError):
-        SharedGoalUpdate(**{field: None})
+        SharedGoalUpdate(title=None)
     assert SharedGoalUpdate(target_date=None).model_dump(exclude_unset=True) == {"target_date": None}
 
 

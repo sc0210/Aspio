@@ -1,4 +1,4 @@
-import { Transaction, PortfolioHolding, User, PeerConnectionOut, SharedGoalOut, SavingRecord, CompareDataResponse, PeerStatCard, SplitOut, SettlementOut, PeerBalanceOut, RecurringSplitOut } from '@/shared/types';
+import { Transaction, PortfolioHolding, User, PeerConnectionOut, SharedGoalOut, SharedGoalHistoryPoint, CompareDataResponse, PeerStatCard, SplitOut, SettlementOut, PeerBalanceOut, RecurringSplitOut } from '@/shared/types';
 import type { DebtAccount } from '@/services/loanService';
 import { minimumsOnly } from '@/lib/finance/payoffPlan';
 import { businessToday } from '@/lib/portfolio/businessDate';
@@ -317,6 +317,9 @@ export const demoSharedGoals: SharedGoalOut[] = [
     peer_user_id: 'demo-peer-1',
     total_amount: 30000,
     progress_pct: 60,
+    your_target: 25000,
+    peer_target: 25000,
+    peer_joined: true,
     is_creator: true,
     created_at: '2026-01-15T09:00:00Z',
   },
@@ -335,6 +338,9 @@ export const demoSharedGoals: SharedGoalOut[] = [
     peer_user_id: 'demo-peer-2',
     total_amount: 55000,
     progress_pct: 55,
+    your_target: 50000,
+    peer_target: 50000,
+    peer_joined: true,
     is_creator: false,
     created_at: '2026-02-20T14:00:00Z',
   },
@@ -353,6 +359,9 @@ export const demoSharedGoals: SharedGoalOut[] = [
     peer_user_id: 'demo-peer-1',
     total_amount: 10000,
     progress_pct: 100,
+    your_target: 5500,
+    peer_target: 4500,
+    peer_joined: true,
     is_creator: true,
     created_at: '2026-01-01T00:00:00Z',
   },
@@ -807,22 +816,17 @@ export const demoGroupExpenses: Record<string, DemoGroupExpense[]> = {
 };
 
 // Dated back from today, so the demo always has recent saving for the pace line to read.
-export const demoSavingRecords: Record<string, SavingRecord[]> = {
+// Each side's money set aside by day, as GET /peers/goals/{id}/history returns it.
+const hist = (side: SharedGoalHistoryPoint['side'], amount: number, daysAgo: number): SharedGoalHistoryPoint =>
+  ({ date: splitDay(daysAgo), side, amount });
+
+export const demoSharedGoalHistory: Record<string, SharedGoalHistoryPoint[]> = {
   'demo-goal-1': [
-    { id: 'rec-1a', goal_id: 'demo-goal-1', user_id: 'demo-user-1', user_name: 'Alex Chen', amount: 5000, record_date: splitDay(200), note: 'Monthly savings', created_at: `${splitDay(200)}T10:00:00Z` },
-    { id: 'rec-1b', goal_id: 'demo-goal-1', user_id: 'demo-peer-1', user_name: '小明', amount: 4000, record_date: splitDay(198), note: null, created_at: `${splitDay(198)}T10:00:00Z` },
-    { id: 'rec-1c', goal_id: 'demo-goal-1', user_id: 'demo-user-1', user_name: 'Alex Chen', amount: 7000, record_date: splitDay(120), note: 'Bonus savings', created_at: `${splitDay(120)}T10:00:00Z` },
-    { id: 'rec-1d', goal_id: 'demo-goal-1', user_id: 'demo-peer-1', user_name: '小明', amount: 8000, record_date: splitDay(62), note: 'Monthly contribution', created_at: `${splitDay(62)}T10:00:00Z` },
-    { id: 'rec-1e', goal_id: 'demo-goal-1', user_id: 'demo-user-1', user_name: 'Alex Chen', amount: 6000, record_date: splitDay(18), note: null, created_at: `${splitDay(18)}T10:00:00Z` },
+    hist('you', 5000, 200), hist('partner', 4000, 198), hist('you', 7000, 120),
+    hist('partner', 8000, 62), hist('you', 6000, 18),
   ],
   'demo-goal-2': [
-    { id: 'rec-2a', goal_id: 'demo-goal-2', user_id: 'demo-user-1', user_name: 'Alex Chen', amount: 15000, record_date: splitDay(150), note: 'Initial deposit', created_at: `${splitDay(150)}T10:00:00Z` },
-    { id: 'rec-2b', goal_id: 'demo-goal-2', user_id: 'demo-peer-2', user_name: '小美', amount: 12000, record_date: splitDay(146), note: null, created_at: `${splitDay(146)}T10:00:00Z` },
-    { id: 'rec-2c', goal_id: 'demo-goal-2', user_id: 'demo-user-1', user_name: 'Alex Chen', amount: 15000, record_date: splitDay(75), note: 'Monthly savings', created_at: `${splitDay(75)}T10:00:00Z` },
-    { id: 'rec-2d', goal_id: 'demo-goal-2', user_id: 'demo-peer-2', user_name: '小美', amount: 13000, record_date: splitDay(33), note: null, created_at: `${splitDay(33)}T10:00:00Z` },
+    hist('you', 15000, 150), hist('partner', 12000, 146), hist('you', 15000, 75), hist('partner', 13000, 33),
   ],
-  'demo-goal-3': [
-    { id: 'rec-3a', goal_id: 'demo-goal-3', user_id: 'demo-user-1', user_name: 'Alex Chen', amount: 5500, record_date: splitDay(330), note: 'Gift fund', created_at: `${splitDay(330)}T10:00:00Z` },
-    { id: 'rec-3b', goal_id: 'demo-goal-3', user_id: 'demo-peer-1', user_name: '小明', amount: 4500, record_date: splitDay(325), note: null, created_at: `${splitDay(325)}T10:00:00Z` },
-  ],
+  'demo-goal-3': [hist('you', 5500, 330), hist('partner', 4500, 325)],
 };

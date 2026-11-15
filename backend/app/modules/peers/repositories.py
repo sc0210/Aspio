@@ -4,7 +4,6 @@ Repository layer for the Peers module.
 Owns all raw database access for:
   - PeerConnection rows (find, insert, status transitions)
   - SharedGoal rows (CRUD)
-  - SavingRecord rows (CRUD, per-user sum)
   - User look-ups used by peer comparison
   - Read-only cross-module queries (portfolio_holdings, currency_rates,
     transactions) needed for wallet totals and the compare chart
@@ -15,8 +14,6 @@ The caller (service) is responsible for commit() / rollback().
 
 import uuid
 import logging
-from datetime import date
-from decimal import Decimal
 from typing import Optional
 from uuid import UUID
 
@@ -27,7 +24,6 @@ from app.modules.peers.models import (
     GoalStatus,
     PeerConnection,
     PeerStatus,
-    SavingRecord,
     SharedGoal,
 )
 from app.modules.users.models import User
@@ -163,10 +159,6 @@ class SharedGoalRepository:
         )
         return (await self.session.execute(stmt)).scalar_one()
 
-    async def list_for_connection(self, connection_id: UUID) -> list[SharedGoal]:
-        stmt = select(SharedGoal).where(SharedGoal.connection_id == connection_id)
-        return list((await self.session.execute(stmt)).scalars().all())
-
     async def list_for_participant(
         self, user_id: UUID
     ) -> list[tuple[SharedGoal, PeerConnection]]:
@@ -226,50 +218,6 @@ class SharedGoalRepository:
 
     async def refresh(self, goal: SharedGoal) -> None:
         await self.session.refresh(goal)
-
-
-class SavingRecordRepository:
-    """Raw DB operations for SavingRecord rows."""
-
-    def __init__(self, session: AsyncSession) -> None:
-        self.session = session
-
-    async def list_for_goal(self, goal_id: UUID) -> list[SavingRecord]:
-        stmt = (
-            select(SavingRecord)
-            .where(SavingRecord.goal_id == goal_id)
-            .order_by(
-                SavingRecord.record_date.desc(),
-                SavingRecord.created_at.desc(),
-            )
-        )
-        return list((await self.session.execute(stmt)).scalars().all())
-
-    async def get_by_id(
-        self, record_id: UUID, goal_id: UUID
-    ) -> Optional[SavingRecord]:
-        stmt = select(SavingRecord).where(
-            and_(SavingRecord.id == record_id, SavingRecord.goal_id == goal_id)
-        )
-        return (await self.session.execute(stmt)).scalars().first()
-
-    async def sum_for_user(self, goal_id: UUID, user_id: UUID) -> Decimal:
-        """Return the sum of all saving records for user on a goal."""
-        stmt = select(
-            func.coalesce(func.sum(SavingRecord.amount), Decimal("0"))
-        ).where(
-            and_(SavingRecord.goal_id == goal_id, SavingRecord.user_id == user_id)
-        )
-        return (await self.session.execute(stmt)).scalar_one()
-
-    def add(self, record: SavingRecord) -> None:
-        self.session.add(record)
-
-    async def delete(self, record: SavingRecord) -> None:
-        await self.session.delete(record)
-
-    async def refresh(self, record: SavingRecord) -> None:
-        await self.session.refresh(record)
 
 
 class PeerUserRepository:

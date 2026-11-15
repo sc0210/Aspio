@@ -5,7 +5,7 @@ import { useTranslation } from 'react-i18next';
 import { Area, AreaChart, CartesianGrid, ReferenceLine, ResponsiveContainer, Tooltip, XAxis, YAxis } from 'recharts';
 import { useIsDark } from '@/contexts/ThemeContext';
 import { formatCurrency } from '@/utils/formatters';
-import type { SavingRecord } from '@/shared/types';
+import type { SharedGoalHistoryPoint } from '@/shared/types';
 
 const money = (v: number) => formatCurrency(v, 'TWD', { precision: 0 });
 const compact = (v: number) => (v >= 1_000_000 ? `${(v / 1_000_000).toFixed(1)}M` : v >= 1_000 ? `${Math.round(v / 1_000)}K` : String(v));
@@ -19,13 +19,13 @@ export interface HistoryPoint {
   theirs: number;
 }
 
-/** Running totals per person, one point per day that had a record, oldest first. */
-export function goalHistory(records: SavingRecord[], isMine: (r: SavingRecord) => boolean): HistoryPoint[] {
+/** Running totals per side, one point per day that moved, oldest first. */
+export function goalHistory(points: SharedGoalHistoryPoint[]): HistoryPoint[] {
   const byDay = new Map<string, { mine: number; theirs: number }>();
-  for (const r of [...records].sort((a, b) => a.record_date.localeCompare(b.record_date))) {
-    const day = byDay.get(r.record_date) ?? { mine: 0, theirs: 0 };
-    if (isMine(r)) day.mine += r.amount; else day.theirs += r.amount;
-    byDay.set(r.record_date, day);
+  for (const p of [...points].sort((a, b) => a.date.localeCompare(b.date))) {
+    const day = byDay.get(p.date) ?? { mine: 0, theirs: 0 };
+    if (p.side === 'you') day.mine += p.amount; else day.theirs += p.amount;
+    byDay.set(p.date, day);
   }
   let mine = 0;
   let theirs = 0;
@@ -37,21 +37,20 @@ export function goalHistory(records: SavingRecord[], isMine: (r: SavingRecord) =
 }
 
 interface GoalHistoryChartProps {
-  records: SavingRecord[];
-  isMine: (r: SavingRecord) => boolean;
+  points: SharedGoalHistoryPoint[];
   target: number;
   partnerName: string;
 }
 
 /** How the goal filled up: each person's running total, stacked, against the target. */
-export default function GoalHistoryChart({ records, isMine, target, partnerName }: GoalHistoryChartProps) {
+export default function GoalHistoryChart({ points, target, partnerName }: GoalHistoryChartProps) {
   const { t, i18n } = useTranslation('common');
   const isDark = useIsDark();
   const colors = isDark ? COLORS.dark : COLORS.light;
   // On a time axis: points spaced by the days between them, not evenly.
   const data = useMemo(
-    () => goalHistory(records, isMine).map((p) => ({ ...p, t: Date.parse(`${p.date}T00:00:00Z`) })),
-    [records, isMine],
+    () => goalHistory(points).map((p) => ({ ...p, t: Date.parse(`${p.date}T00:00:00Z`) })),
+    [points],
   );
   if (data.length < 2) return null;
 
@@ -65,7 +64,7 @@ export default function GoalHistoryChart({ records, isMine, target, partnerName 
   return (
     <figure className="mb-4">
       <figcaption className="flex flex-wrap items-center justify-between gap-2 mb-2">
-        <span className="text-xs font-semibold text-gray-700 dark:text-gray-300">{t('savings.records.history', 'How it filled up')}</span>
+        <span className="text-xs font-semibold text-gray-700 dark:text-gray-300">{t('savings.history.chartTitle', 'How it filled up')}</span>
         <span className="flex items-center gap-3 text-xs text-gray-600 dark:text-gray-400">
           <span className="flex items-center gap-1"><span className="w-2.5 h-2.5 rounded-sm" style={{ background: colors.mine }} aria-hidden="true" />{youLabel}</span>
           <span className="flex items-center gap-1"><span className="w-2.5 h-2.5 rounded-sm" style={{ background: colors.theirs }} aria-hidden="true" />{partnerName}</span>
@@ -92,7 +91,7 @@ export default function GoalHistoryChart({ records, isMine, target, partnerName 
       </div>
       {/* The chart is decoration for sighted readers; this is the same story in words. */}
       <p className="sr-only">
-        {t('savings.records.historySummary', 'Saved so far: you {{mine}}, {{name}} {{theirs}}, of {{target}}.', {
+        {t('savings.history.chartSummary', 'Saved so far: you {{mine}}, {{name}} {{theirs}}, of {{target}}.', {
           mine: money(last.mine), theirs: money(last.theirs), name: partnerName, target: money(target),
         })}
       </p>

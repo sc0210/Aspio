@@ -159,19 +159,18 @@ async def test_peer_invite_accept_compare_and_shared_goal(authenticated_client, 
     assert "Stranger" in str(compare)
 
     goal = _ok(client.post(f"{API}/peers/goals", json={
-        "connection_id": connection_id, "title": "Shared trip", "target_amount": "50000"}), 201)
+        "connection_id": connection_id, "title": "Shared trip", "my_target": "50000"}), 201)
     goal_id = goal["id"]
     assert _ok(client.get(f"{API}/peers/goals/{goal_id}"))["title"] == "Shared trip"
     assert _ok(client.get(f"{API}/peers/goals/{goal_id}", headers=other))["title"] == "Shared trip"
 
-    record = _ok(client.post(f"{API}/peers/goals/{goal_id}/records", json={
-        "amount": "1000", "record_date": business_today().isoformat()}), 201)
-    assert [r["id"] for r in _ok(client.get(f"{API}/peers/goals/{goal_id}/records"))] == [record["id"]]
-    # Only the person who saved it can change a record.
-    assert client.patch(f"{API}/peers/goals/{goal_id}/records/{record['id']}",
-                        json={"amount": "5"}, headers=other).status_code == 403
-    _ok(client.patch(f"{API}/peers/goals/{goal_id}/records/{record['id']}", json={"amount": "1500"}))
-    assert client.delete(f"{API}/peers/goals/{goal_id}/records/{record['id']}").status_code == 204
+    # The partner adds their part; the target is the sum of the two.
+    theirs = _ok(client.post(f"{API}/peers/goals/{goal_id}/link-goal",
+                             json={"target_amount": "30000"}, headers=other))
+    assert theirs["sharedGoalId"] == goal_id
+    assert _ok(client.get(f"{API}/peers/goals/{goal_id}"))["target_amount"] == 80000
+    _ok(client.patch(f"{API}/peers/goals/{goal_id}", json={"title": "Trip"}, headers=other))
+    assert _ok(client.get(f"{API}/peers/goals/{goal_id}/history")) == []
 
     assert client.delete(f"{API}/peers/goals/{goal_id}").status_code == 204
     assert client.delete(f"{API}/peers/{connection_id}").status_code == 204
@@ -191,11 +190,10 @@ async def test_an_outsider_cannot_see_a_shared_goal(authenticated_client, async_
     connection_id = _ok(client.post(f"{API}/peers/invite", json={"username": "stranger"}), 201)["id"]
     client.patch(f"{API}/peers/{connection_id}/respond", json={"action": "accept"}, headers=_headers(stranger))
     goal_id = _ok(client.post(f"{API}/peers/goals", json={
-        "connection_id": connection_id, "title": "Ours", "target_amount": "100"}), 201)["id"]
+        "connection_id": connection_id, "title": "Ours", "my_target": "100"}), 201)["id"]
 
     assert client.get(f"{API}/peers/goals/{goal_id}", headers=_headers(outsider)).status_code == 404
-    assert client.post(f"{API}/peers/goals/{goal_id}/records", json={
-        "amount": "1", "record_date": business_today().isoformat()}, headers=_headers(outsider)).status_code == 404
+    assert client.get(f"{API}/peers/goals/{goal_id}/history", headers=_headers(outsider)).status_code == 404
 
 
 def test_goal_schema_accepts_enum_values_or_names_and_nothing_else():
