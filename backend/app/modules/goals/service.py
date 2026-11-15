@@ -6,6 +6,7 @@ Business logic for managing financial goals.
 
 import logging
 from datetime import datetime, timezone
+from types import SimpleNamespace
 from decimal import Decimal
 from typing import List, Optional, Tuple
 from uuid import UUID
@@ -209,28 +210,44 @@ class GoalService:
         return goals, total
 
     async def _settle_emergency_status(self, user_id: UUID) -> None:
-        """An active emergency fund completes once the Emergency Wallet it follows covers it.
+        """An emergency fund is completed exactly while the Emergency Wallet covers it.
 
         Nothing writes to such a goal when the wallet moves (a transfer, a
         holding), so its stored status is settled when goals are listed, before
-        any status filter. Only ever completes: a goal marked done by hand is
-        never reopened by a smaller wallet. Decided again under the goals' lock
-        on fresh rows, so a concurrent edit or cancel is not overwritten.
+        any status filter: it completes once the wallet reaches the target and
+        reopens when the wallet falls below it. A paused or cancelled fund is
+        left alone, and update_goal refuses marking one done by hand below its
+        target, so no manual choice is undone here. Decided again under the
+        goals' lock on fresh rows, so a concurrent edit or cancel is not
+        overwritten.
         """
         async def due() -> List[Goal]:
-            active = await self.repository.active_emergency_goals(user_id)
-            if not active:
+            funds = await self.repository.open_emergency_goals(user_id)
+            if not funds:
                 return []
             balance = await emergency_balance(self.session, user_id)
-            return [g for g in active if balance >= g.target_amount]
+            return [
+                g for g in funds
+                if (balance >= g.target_amount) != (g.status == GoalStatus.COMPLETED)
+            ]
 
         if not await due():
             return
         await lock_user_goals(self.session, user_id)
         settled = await due()  # fresh rows, after the lock
         for goal in settled:
-            goal.status = GoalStatus.COMPLETED
-            goal.completed_at = datetime.now(timezone.utc)
+            if goal.status == GoalStatus.COMPLETED:
+                goal.status, goal.completed_at = GoalStatus.ACTIVE, None
+            else:
+                goal.status, goal.completed_at = GoalStatus.COMPLETED, datetime.now(timezone.utc)
+        backed = {g.shared_goal_id for g in settled if g.shared_goal_id is not None}
+        if backed:
+            # Those sides changed status: re-judge the shared goals they back.
+            from app.modules.peers.service import PeerService
+
+            await self.session.flush()
+            for shared_goal_id in backed:
+                await PeerService(self.session).sync_backed_goal(shared_goal_id, user_id)
         await self.session.commit()
 
     async def update_goal(
@@ -260,6 +277,20 @@ class GoalService:
             if field in update_data and update_data[field] is not None:
                 update_data[field] = _resolve_enum(enum_cls, update_data[field])
 
+        if (
+            update_data.get("status") == GoalStatus.COMPLETED
+            and goal.status != GoalStatus.COMPLETED
+            and _is_emergency_goal(SimpleNamespace(category=update_data.get("category") or goal.category))
+            and await emergency_balance(self.session, user_id)
+            < Decimal(str(update_data.get("target_amount") or goal.target_amount))
+        ):
+            # It completes by itself once the Emergency Wallet covers it, and
+            # would reopen at the next look; a smaller target is the honest edit.
+            raise ValidationException(
+                "An emergency fund completes when your Emergency Wallet reaches its "
+                "target. Lower the target to finish it sooner."
+            )
+
         cancelling = (
             update_data.get("status") == GoalStatus.CANCELLED
             and goal.status != GoalStatus.CANCELLED
@@ -286,9 +317,11 @@ class GoalService:
                 await self.session.flush()
                 await PeerService(self.session).sync_backed_goal(unlinked_from, user_id)
 
-        # Auto-complete if target reached
+        # Auto-complete if target reached. An emergency fund is judged on the
+        # wallet it follows instead, after the commit below.
         if (
-            goal.current_amount >= goal.target_amount
+            not _is_emergency_goal(goal)
+            and goal.current_amount >= goal.target_amount
             and goal.status == GoalStatus.ACTIVE
         ):
             goal.status = GoalStatus.COMPLETED
@@ -317,6 +350,8 @@ class GoalService:
                 )
 
         await self.session.commit()
+        if _is_emergency_goal(goal):
+            await self._settle_emergency_status(user_id)
         await self.repository.refresh(goal, ["milestones", "contributions"])
         await self.attach_money([goal], user_id)
         return goal
@@ -444,7 +479,9 @@ class GoalService:
         # rather than adding to the loaded figure, so the column cannot drift
         # from the rows whatever ran before.
         goal.current_amount = await self.repository.contribution_total(goal.id)
-        if goal.current_amount >= goal.target_amount and goal.status == GoalStatus.ACTIVE:
+        if _is_emergency_goal(goal):
+            pass  # its status follows the Emergency Wallet (_settle_emergency_status)
+        elif goal.current_amount >= goal.target_amount and goal.status == GoalStatus.ACTIVE:
             goal.status = GoalStatus.COMPLETED
             goal.completed_at = datetime.now(timezone.utc)
         elif goal.current_amount < goal.target_amount and goal.status == GoalStatus.COMPLETED:
@@ -473,6 +510,7 @@ class GoalService:
 
     async def get_summary(self, user_id: UUID) -> GoalSummary:
         """Get goals summary using a single DB aggregation query (was: load all + Python loops)."""
+        await self._settle_emergency_status(user_id)
         row = await self.repository.get_summary_row(user_id)
 
         total_target = Decimal(str(row.total_target)) if row else Decimal("0")

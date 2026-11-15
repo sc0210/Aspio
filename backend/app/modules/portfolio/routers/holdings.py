@@ -376,6 +376,42 @@ async def update_holding(
                 ),
             )
 
+        # A sale shrank this lot but left its buy as it was: the buy and its Life
+        # Wallet leg still cover the sold units, whose cost the sale has already
+        # booked. Restating quantity or cost here would rewrite that purchase
+        # from the units left, so the ledger and the realized gain would no
+        # longer agree. The date can still be corrected, but not to after the
+        # sale (units sold before they were bought, and FIFO order upset).
+        # The edit form re-sends both fields on every save, its cost read back
+        # through a JS number, so a cost is compared at 6 places: an untouched
+        # field must not read as a change.
+        def _cost(value) -> Decimal:
+            return Decimal(str(value)).quantize(Decimal("0.000001"))
+
+        resizing = (
+            (holding_updates.quantity is not None
+             and Decimal(str(holding_updates.quantity)) != Decimal(str(original_holding.quantity)))
+            or (holding_updates.average_cost is not None
+                and _cost(holding_updates.average_cost) != _cost(original_holding.average_cost))
+        )
+        if resizing or holding_updates.purchase_date is not None:
+            first_sale = await holding_service.first_sale_of_lot(original_holding)
+            if first_sale is not None and resizing:
+                raise HTTPException(
+                    status_code=status.HTTP_400_BAD_REQUEST,
+                    detail=(
+                        "Part of this lot has been sold, so its quantity and cost can no "
+                        "longer be edited. Record another buy or sell for the difference."
+                    ),
+                )
+            if first_sale is not None and business_day_of(holding_updates.purchase_date) > business_day_of(
+                to_utc(first_sale) if isinstance(first_sale, datetime) else first_sale
+            ):
+                raise HTTPException(
+                    status_code=status.HTTP_400_BAD_REQUEST,
+                    detail="Part of this lot was sold on an earlier day, so it cannot have been bought later.",
+                )
+
         # Copy the previous values out as plain numbers BEFORE updating.
         #
         # `original_holding` and `holding` are the same Python object: SQLAlchemy's
@@ -398,7 +434,12 @@ async def update_holding(
         holding = await holding_service.update_holding(
             holding_id=holding_id,
             user_id=current_user.id,
-            updates=holding_updates.model_dump(exclude_unset=True, exclude={"expected_quantity"}),
+            # An untouched cost (equal at 6 places) is not written back, so the
+            # lot keeps the figure its buy leg was booked from.
+            updates=holding_updates.model_dump(exclude_unset=True, exclude={"expected_quantity"} | (
+                {"average_cost"} if holding_updates.average_cost is not None
+                and _cost(holding_updates.average_cost) == _cost(previous_cost) else set()
+            )),
         )
 
         if not holding:
@@ -436,7 +477,7 @@ async def update_holding(
         )
         cost_changed = (
             holding_updates.average_cost is not None
-            and Decimal(str(holding_updates.average_cost)) != previous_cost
+            and _cost(holding_updates.average_cost) != _cost(previous_cost)
         )
         # Compared as business DAYS, not instants: the ledger leg stores a day, so
         # two stamps that differ only in wall-clock time are not a change to it.
@@ -465,7 +506,7 @@ async def update_holding(
             )
             new_cost = (
                 holding_updates.average_cost
-                if holding_updates.average_cost is not None
+                if cost_changed  # an untouched cost stays the stored one, as on the lot
                 else previous_cost
             )
             old_qty = previous_quantity
@@ -1047,6 +1088,14 @@ async def remove_holding(
                 detail="Holding not found or does not belong to user",
             )
 
+        # Deleting withdraws the whole purchase; after a sale took some of it,
+        # that would refund units whose proceeds Life already received.
+        if await holding_repo.first_sale_of_lot(holding) is not None:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="Part of this lot has been sold, so it cannot be deleted. Sell the rest instead.",
+            )
+
         portfolio_id = holding.portfolio_id
 
         # Reverse the Life Wallet expense that paid for this holding.
@@ -1287,11 +1336,20 @@ async def sell_holding(
                 business_day_of(transaction_date or now),
             )
             if gain_twd is None:
-                logger.warning(
-                    "Goal lot %s sold with no %s→TWD rate; the goal's progress "
-                    "misses this sale's gain or loss", holding.id, holding.currency,
+                # Without a rate the proceeds would land in the goal's reserve in
+                # another currency and its progress would miss the gain or loss.
+                # Nothing is committed yet, so the whole sale is undone.
+                currency = (holding.currency or "TWD").upper()  # read before the rollback expires it
+                await session.rollback()
+                raise HTTPException(
+                    status_code=status.HTTP_400_BAD_REQUEST,
+                    detail=(
+                        f"No {currency}→TWD rate to "
+                        "credit this sale to its goal. Try again once exchange "
+                        "rates have refreshed."
+                    ),
                 )
-            elif gain_twd != 0:
+            if gain_twd != 0:
                 await GoalService(session).record_sale_gain(
                     holding.goal_id, current_user.id, gain_twd, transaction_date or now,
                     f"Sold {quantity} {holding.symbol}",

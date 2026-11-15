@@ -4,8 +4,11 @@
     the goal actually paid, so "release everything" ends at exactly 0;
   * a partner's reservation that completes a shared goal stores it as reached
     and sends the "reached" alert, as a saving record does;
-  * an emergency-fund goal follows the Emergency Wallet, and refuses to reserve
-    Life cash (that money belongs in the Emergency Wallet).
+  * an emergency-fund goal follows the Emergency Wallet both ways (completes
+    and reopens with it), and refuses to reserve Life cash (that money belongs
+    in the Emergency Wallet);
+  * a goal lot sale with no exchange rate is refused, and a partly sold lot's
+    quantity and cost cannot be restated.
 """
 
 from datetime import date, datetime, timezone
@@ -21,7 +24,7 @@ from app.core.exceptions import BusinessLogicException
 from app.modules.goals.reservations import goal_money
 from app.modules.goals.schemas import GoalContributionCreate, GoalCreate
 from app.modules.goals.service import GoalService
-from app.modules.portfolio.routers.holdings import sell_holding
+from app.modules.portfolio.routers.holdings import remove_holding, sell_holding
 from app.modules.portfolio.schemas import HoldingCreate
 from app.modules.portfolio.services import PortfolioService, get_portfolio_service
 from app.modules.transactions.models import Transaction, TransactionType, TransactionWalletType
@@ -234,17 +237,177 @@ async def test_cancelling_a_linked_goal_reopens_the_shared_goal(
     assert status == "active"
 
 
-async def test_an_emergency_fund_marked_done_by_hand_stays_done(async_session, test_user, test_category):
+async def test_an_emergency_fund_cannot_be_marked_done_below_its_target(async_session, test_user, test_category):
+    from app.core.exceptions import ValidationException
     from app.modules.goals.models import GoalStatus
     from app.modules.goals.schemas import GoalUpdate
 
     async_session.add(_income(test_user.id, test_category.id, "10000", TransactionWalletType.EMERGENCY))
     await async_session.commit()
+    user = test_user.id  # read now: the rollback below expires test_user
+    goals = GoalService(async_session)
+    goal = (await goals.create_goal(user, GoalCreate(
+        title="Six months", category="emergency_fund", target_amount=D("180000")))).id
+
+    with pytest.raises(ValidationException):
+        await goals.update_goal(goal, user, GoalUpdate(status="completed"))
+    await async_session.rollback()
+    # Lowering the target is the way to finish it: it completes on its own.
+    await goals.update_goal(goal, user, GoalUpdate(target_amount=D("10000")))
+    completed, _ = await goals.list_goals(user, status="completed")
+    assert [g.id for g in completed] == [goal]
+    assert all(g.status == GoalStatus.COMPLETED for g in completed)
+
+
+async def test_an_emergency_fund_reopens_when_the_wallet_falls_below_it(async_session, test_user, test_category):
+    async_session.add(_income(test_user.id, test_category.id, "200000", TransactionWalletType.EMERGENCY))
+    await async_session.commit()
     goals = GoalService(async_session)
     goal = (await goals.create_goal(test_user.id, GoalCreate(
         title="Six months", category="emergency_fund", target_amount=D("180000")))).id
-    await goals.update_goal(goal, test_user.id, GoalUpdate(status="completed"))
-
     completed, _ = await goals.list_goals(test_user.id, status="completed")
-    assert [g.id for g in completed] == [goal]          # a small wallet does not reopen it
-    assert all(g.status == GoalStatus.COMPLETED for g in completed)
+    assert [g.id for g in completed] == [goal]
+
+    # A hospital bill paid from the Emergency Wallet: 200,000 → 150,000.
+    async_session.add(Transaction(
+        user_id=test_user.id, type=TransactionType.EXPENSE, wallet_type=TransactionWalletType.EMERGENCY,
+        amount=D("50000"), currency="TWD", description="Hospital", transaction_date=date(2026, 2, 1),
+        category_id=test_category.id))
+    await async_session.commit()
+
+    active, _ = await goals.list_goals(test_user.id, status="active")
+    assert [g.id for g in active] == [goal]
+    assert active[0].completed_at is None
+
+
+async def test_a_goal_lot_sale_with_no_rate_is_refused_and_changes_nothing(async_session, test_user, test_category, monkeypatch):
+    from fastapi import HTTPException
+
+    from app.modules.portfolio.models import PortfolioHolding
+
+    async def to_twd(self, amount, currency, on_day=None):
+        if (currency or "TWD").upper() == "TWD":
+            return D(amount), "TWD"
+        if on_day is not None and on_day >= SELL_DAY.date():
+            return D(amount), currency            # the rate is gone by the sale
+        return D(amount) * D("30"), "TWD"
+
+    monkeypatch.setattr(PortfolioService, "_to_twd", to_twd)
+    async_session.add(_income(test_user.id, test_category.id, "100000"))
+    await async_session.commit()
+    user = test_user.id
+    goals = GoalService(async_session)
+    goal = (await goals.create_goal(user, GoalCreate(title="Tokyo flat", category="savings", target_amount=D("1000000")))).id
+    await goals.reserve(goal, user, GoalContributionCreate(amount=D("50000")))
+    lot = (await get_portfolio_service(async_session).add_holding(user, HoldingCreate(
+        symbol="VTI", name="Vanguard Total", type="etf", exchange="NYSE", currency="USD", market="US",
+        quantity=D("10"), average_cost=D("100"), purchase_date=BUY_DAY, goal_id=goal,
+    ))).id
+
+    with pytest.raises(HTTPException) as refused:
+        await sell_holding(holding_id=lot, quantity=D("10"), price=D("110"), fees=D("0"), taxes=D("0"),
+                           notes=None, transaction_date=SELL_DAY, current_user=SimpleNamespace(id=user),
+                           session=async_session)
+    assert refused.value.status_code == 400
+
+    held = (await async_session.execute(
+        select(PortfolioHolding).where(PortfolioHolding.id == lot).execution_options(populate_existing=True)
+    )).scalar_one()
+    assert held.quantity == D("10") and held.is_active
+    money = (await goal_money(async_session, user, [goal])).get(goal)
+    assert money.reserved == D("20000")                 # 50,000 − the 30,000 lot, unchanged
+
+
+async def test_a_partly_sold_lot_keeps_its_quantity_and_cost(async_session, test_user, test_category):
+    from fastapi import HTTPException
+
+    from app.modules.portfolio.routers.holdings import update_holding
+    from app.modules.portfolio.schemas import HoldingUpdate
+
+    user = test_user.id
+    goals, goal = await _goal_with_cash(async_session, test_user, test_category)
+    lot = (await get_portfolio_service(async_session).add_holding(user, HoldingCreate(
+        symbol="0050", name="Yuanta 50", type="etf", exchange="TWSE", currency="TWD", market="TW",
+        quantity=D("10"), average_cost=D("100"), purchase_date=BUY_DAY, goal_id=goal,
+    ))).id
+    await sell_holding(holding_id=lot, quantity=D("4"), price=D("100"), fees=D("0"), taxes=D("0"),
+                       notes=None, transaction_date=SELL_DAY, current_user=SimpleNamespace(id=user),
+                       session=async_session)
+
+    # Re-sending the same figures (as the edit form does on every save) is no
+    # change: the buy leg, and so the goal's reserve, stay as they were.
+    before = (await goal_money(async_session, user, [goal])).get(goal).reserved
+    await update_holding(holding_id=lot, holding_updates=HoldingUpdate(quantity=D("6"), average_cost=D("100.0000001")),
+                         current_user=SimpleNamespace(id=user), session=async_session)
+    assert (await goal_money(async_session, user, [goal])).get(goal).reserved == before
+    from app.modules.portfolio.models import PortfolioHolding
+    kept = (await async_session.execute(
+        select(PortfolioHolding.average_cost).where(PortfolioHolding.id == lot))).scalar_one()
+    assert D(str(kept)) == D("100")                      # the untouched cost is not rewritten
+
+    for change in (HoldingUpdate(quantity=D("8")), HoldingUpdate(average_cost=D("90"))):
+        with pytest.raises(HTTPException) as refused:
+            await update_holding(holding_id=lot, holding_updates=change,
+                                 current_user=SimpleNamespace(id=user), session=async_session)
+        assert refused.value.status_code == 400
+
+    # Not to after the sale, nor deleted (that would refund the sold units).
+    with pytest.raises(HTTPException):
+        await update_holding(holding_id=lot, holding_updates=HoldingUpdate(
+            purchase_date=datetime(2026, 7, 1, 4, 0, tzinfo=timezone.utc)),
+            current_user=SimpleNamespace(id=user), session=async_session)
+    with pytest.raises(HTTPException) as refused:
+        await remove_holding(holding_id=lot, current_user=SimpleNamespace(id=user), session=async_session)
+    assert refused.value.status_code == 400
+
+    # The date is still the user's to correct.
+    moved = await update_holding(holding_id=lot, holding_updates=HoldingUpdate(
+        purchase_date=datetime(2026, 3, 5, 4, 0, tzinfo=timezone.utc)),
+        current_user=SimpleNamespace(id=user), session=async_session)
+    assert moved.quantity == D("6")
+    assert await _progress(goals, async_session, user, goal) == D("50000")   # sold at cost
+
+
+async def test_an_emergency_fund_with_old_progress_rows_follows_only_the_wallet(async_session, test_user, test_category):
+    from app.modules.goals.models import ContributionKind, GoalContribution, GoalStatus
+    from app.modules.goals.schemas import GoalUpdate
+
+    user = test_user.id
+    async_session.add(_income(user, test_category.id, "10000", TransactionWalletType.EMERGENCY))
+    await async_session.commit()
+    goals = GoalService(async_session)
+    goal = (await goals.create_goal(user, GoalCreate(
+        title="Six months", category="emergency_fund", target_amount=D("180000")))).id
+    # Progress recorded before reservations: rows past the target, wallet below it.
+    async_session.add(GoalContribution(goal_id=goal, kind=ContributionKind.LEGACY.value, amount=D("200000"),
+                                       contribution_date=datetime(2026, 1, 1, tzinfo=timezone.utc)))
+    await async_session.commit()
+
+    edited = await goals.update_goal(goal, user, GoalUpdate(title="Half a year"))
+    assert edited.status == GoalStatus.ACTIVE          # the rows do not complete it
+    summary = await goals.get_summary(user)
+    assert summary.completed_goals == 0
+
+
+async def test_a_resend_of_an_untouched_cost_books_the_stored_one(async_session, test_user, test_category):
+    from app.modules.portfolio.models import PortfolioHolding
+    from app.modules.portfolio.routers.holdings import update_holding
+    from app.modules.portfolio.schemas import HoldingUpdate
+
+    user = test_user.id
+    goals, goal = await _goal_with_cash(async_session, test_user, test_category)
+    lot = (await get_portfolio_service(async_session).add_holding(user, HoldingCreate(
+        symbol="0050", name="Yuanta 50", type="etf", exchange="TWSE", currency="TWD", market="TW",
+        quantity=D("10"), average_cost=D("10.1234567"), purchase_date=BUY_DAY, goal_id=goal,
+    ))).id
+    reserved = (await goal_money(async_session, user, [goal])).get(goal).reserved
+    # Two more units; the form re-sends the cost as a JS number read it back.
+    await update_holding(holding_id=lot, holding_updates=HoldingUpdate(
+        quantity=D("12"), average_cost=D("10.12345670001")),
+        current_user=SimpleNamespace(id=user), session=async_session)
+
+    kept = (await async_session.execute(
+        select(PortfolioHolding.average_cost).where(PortfolioHolding.id == lot))).scalar_one()
+    assert D(str(kept)) == D("10.1234567")
+    after = (await goal_money(async_session, user, [goal])).get(goal).reserved
+    assert reserved - after == (D("2") * D("10.1234567")).quantize(D("0.01"))   # the leg grew by 2 units at the stored cost
