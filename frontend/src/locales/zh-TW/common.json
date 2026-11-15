@@ -648,8 +648,8 @@
     "review": "本月回顧",
     "savings": "共同儲蓄",
     "sections": {
-      "finance": "財務",
-      "goals_growth": "目標與成長"
+      "loans_sharing": "借貸與分帳",
+      "more_tools": "更多工具"
     },
     "settings": "設定",
     "showValues": "顯示金額",
@@ -1348,7 +1348,7 @@
     "shell": {
       "nav": {
         "title": "到處看看",
-        "body": "所有頁面都在這裡：交易、投資組合、與夥伴一起儲蓄、目標、貸款與每月回顧。"
+        "body": "常用頁面在最上方：交易、投資組合、目標與每月回顧。貸款、共同儲蓄與規劃工具在下方的分類裡展開。"
       },
       "navMobile": {
         "title": "到處看看",

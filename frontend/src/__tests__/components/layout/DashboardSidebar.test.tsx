@@ -42,8 +42,8 @@ jest.mock('@/components/layout/CommandPalette', () => ({
 
 import { DashboardSidebar } from '@/components/layout/DashboardSidebar';
 
-const FINANCE = 'navigation.sections.finance';
-const GOALS = 'navigation.sections.goals_growth';
+const SHARING = 'navigation.sections.loans_sharing';
+const TOOLS = 'navigation.sections.more_tools';
 
 function renderSidebar(collapsed = false) {
   return render(
@@ -66,48 +66,53 @@ describe('DashboardSidebar sections', () => {
   });
 
   it('opens the section holding the current page', () => {
-    mockPathname = '/goals';
+    mockPathname = '/housing';
     renderSidebar();
 
-    expect(header(GOALS)).toHaveAttribute('aria-expanded', 'true');
-    expect(header(FINANCE)).toHaveAttribute('aria-expanded', 'false');
+    expect(header(TOOLS)).toHaveAttribute('aria-expanded', 'true');
+    expect(header(SHARING)).toHaveAttribute('aria-expanded', 'false');
   });
 
-  it('falls back to Finance where the current page is a standalone row', () => {
-    // The dashboard belongs to no section, and one link under shut
-    // headers is not a navigation.
+  it('keeps every section shut on an everyday page, whose rows sit above them', () => {
+    // A first look shows the core pages and nothing that reads as advice.
     renderSidebar();
 
-    expect(header(FINANCE)).toHaveAttribute('aria-expanded', 'true');
-    expect(screen.getAllByRole('link', { name: 'navigation.transactions' })[0]).toBeInTheDocument();
+    expect(header(SHARING)).toHaveAttribute('aria-expanded', 'false');
+    expect(header(TOOLS)).toHaveAttribute('aria-expanded', 'false');
+    for (const name of ['navigation.transactions', 'navigation.portfolio', 'navigation.goals', 'navigation.review']) {
+      expect(screen.getAllByRole('link', { name })[0]).toBeInTheDocument();
+    }
+    expect(screen.queryByRole('link', { name: 'navigation.lifecycle' })).not.toBeInTheDocument();
   });
 
   it('remembers what the reader opened, over what the route suggests', () => {
+    // The route alone would open Tools and leave Sharing shut.
+    mockPathname = '/housing';
     localStorage.setItem(
       'aspiro-nav-sections',
-      JSON.stringify({ [GOALS]: true, [FINANCE]: false }),
+      JSON.stringify({ [TOOLS]: false, [SHARING]: true }),
     );
     renderSidebar();
 
-    expect(header(GOALS)).toHaveAttribute('aria-expanded', 'true');
-    expect(header(FINANCE)).toHaveAttribute('aria-expanded', 'false');
+    expect(header(TOOLS)).toHaveAttribute('aria-expanded', 'false');
+    expect(header(SHARING)).toHaveAttribute('aria-expanded', 'true');
   });
 
   it('writes a toggle straight to storage', () => {
     renderSidebar();
-    fireEvent.click(header(GOALS));
+    fireEvent.click(header(TOOLS));
 
-    expect(header(GOALS)).toHaveAttribute('aria-expanded', 'true');
-    expect(JSON.parse(localStorage.getItem('aspiro-nav-sections')!)).toEqual({ [GOALS]: true });
+    expect(header(TOOLS)).toHaveAttribute('aria-expanded', 'true');
+    expect(JSON.parse(localStorage.getItem('aspiro-nav-sections')!)).toEqual({ [TOOLS]: true });
   });
 
   it('marks a closed section that holds the page you are on', () => {
-    mockPathname = '/goals';
-    localStorage.setItem('aspiro-nav-sections', JSON.stringify({ [GOALS]: false }));
+    mockPathname = '/housing';
+    localStorage.setItem('aspiro-nav-sections', JSON.stringify({ [TOOLS]: false }));
     const { container } = renderSidebar();
 
     // Otherwise the active item simply vanishes with no trace of where it went.
-    expect(header(GOALS)).toHaveAttribute('aria-expanded', 'false');
+    expect(header(TOOLS)).toHaveAttribute('aria-expanded', 'false');
     expect(container.querySelector('nav .bg-primary-500')).toBeInTheDocument();
   });
 });
@@ -144,6 +149,14 @@ describe('DashboardSidebar collapsed rail', () => {
     expect(links.length).toBeGreaterThan(0);
     expect(links.every((link) => link.getAttribute('aria-label'))).toBe(true);
     expect(rail.querySelectorAll('nav button[aria-expanded]')).toHaveLength(0);
+  });
+
+  it('rules off the titled groups, not each core row', () => {
+    // Five standalone rows, then two groups: a divider before each group only.
+    const { container } = renderSidebar(true);
+    const rail = container.firstElementChild as HTMLElement;
+
+    expect(rail.querySelectorAll('nav [aria-hidden="true"].h-px')).toHaveLength(2);
   });
 
   it('raises a tooltip on keyboard focus, not only on hover', () => {

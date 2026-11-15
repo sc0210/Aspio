@@ -83,16 +83,12 @@ export function DashboardSidebar({ open, collapsed, onToggleCollapsed, onClose }
   const navigationSections = getNavigationSections(isAdmin, features);
   const isActiveRoute = (href: string) => pathname === href || pathname.startsWith(href + '/');
 
-  // Which section opens itself when the reader has expressed no preference.
-  // Normally the one holding the current route — but the dashboard is a
-  // standalone row, so landing there would otherwise show a lone link under
-  // three shut headers. Finance is the group opened daily, so it stands in.
-  const sectionWithActiveRoute = navigationSections.find(
+  // Which section opens itself when the reader has expressed no preference:
+  // only the one holding the current route. The everyday pages are standalone
+  // rows above the headings, so shut headings hide nothing a first look needs.
+  const defaultOpenKey = navigationSections.find(
     (section) => section.titleKey && section.items.some((item) => isActiveRoute(item.href)),
-  );
-  const defaultOpenKey =
-    sectionWithActiveRoute?.titleKey ??
-    navigationSections.find((section) => section.titleKey)?.titleKey;
+  )?.titleKey;
 
   // Handle click outside to close mobile sidebar
   useEffect(() => {
@@ -268,7 +264,9 @@ export function DashboardSidebar({ open, collapsed, onToggleCollapsed, onClose }
             if (!section.titleKey || isCollapsed) {
               return (
                 <div key={section.titleKey ?? section.items[0].href} className="space-y-0.5">
-                  {isCollapsed && index > 0 && (
+                  {/* Rule off the titled groups, not every standalone row: the
+                      core rows read as one block. */}
+                  {isCollapsed && index > 0 && (section.titleKey || navigationSections[index - 1].titleKey) && (
                     <div className="mx-2 my-2 h-px bg-gray-200 dark:bg-gray-700" aria-hidden="true" />
                   )}
                   {renderItems(section)}

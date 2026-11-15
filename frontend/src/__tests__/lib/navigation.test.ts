@@ -34,6 +34,15 @@ describe('navigation structure', () => {
         }
     });
 
+    it('leads with the everyday pages as standalone rows, the rest behind headings', () => {
+        // Simulators like /lifecycle read as advice to a new reader; they must
+        // not sit among the rows a first look shows.
+        const sections = getNavigationSections(false, ALL_FEATURES);
+        const standalone = sections.filter((s) => !s.titleKey).flatMap((s) => s.items.map((i) => i.href));
+        expect(standalone).toEqual(['/dashboard', '/transactions', '/portfolio', '/goals', '/review']);
+        expect(sections.findIndex((s) => s.titleKey)).toBe(standalone.length);
+    });
+
     it('gives every destination its own icon', () => {
         const items = getNavigationItems(true, ALL_FEATURES);
         const outline = items.map((item) => item.icon);
