@@ -77,17 +77,40 @@ const DASHBOARD: NavItem = {
   keywords: ['home', '首頁', '儀表板', '總覽'],
 };
 
-const FINANCE: NavItem[] = [
-  {
-    nameKey: 'navigation.transactions', href: '/transactions',
-    icon: CreditCardIcon, iconSolid: CreditCardIconSolid, primary: true,
-    keywords: ['expenses', 'income', 'spending', '交易', '記帳', '支出', '收入'],
-  },
-  {
-    nameKey: 'navigation.portfolio', href: '/portfolio',
-    icon: ChartBarIcon, iconSolid: ChartBarIconSolid, primary: true,
-    keywords: ['holdings', 'stocks', 'etf', '投資', '持股'],
-  },
+// The pages most readers open every week. Each is a standalone row at the top,
+// never behind a heading, so a first look shows these and little else.
+const TRANSACTIONS: NavItem = {
+  nameKey: 'navigation.transactions', href: '/transactions',
+  icon: CreditCardIcon, iconSolid: CreditCardIconSolid, primary: true,
+  keywords: ['expenses', 'income', 'spending', '交易', '記帳', '支出', '收入'],
+};
+
+const PORTFOLIO: NavItem = {
+  nameKey: 'navigation.portfolio', href: '/portfolio',
+  icon: ChartBarIcon, iconSolid: ChartBarIconSolid, primary: true,
+  keywords: ['holdings', 'stocks', 'etf', '投資', '持股'],
+};
+
+const GOALS: NavItem = {
+  nameKey: 'navigation.goals', href: '/goals',
+  icon: TrophyIcon, iconSolid: TrophyIconSolid, primary: true,
+  keywords: ['fire', 'target', '目標', '理財目標'],
+};
+
+// The other page you open on a schedule. It led an Analysis section beside
+// /reports and /chat until both were retired (2026-09-17). The old /reports
+// keywords come with it, since a reader searching "報表" now wants this page.
+const REVIEW: NavItem = {
+  nameKey: 'navigation.review', href: '/review',
+  icon: CalendarDaysIcon, iconSolid: CalendarDaysIconSolid,
+  keywords: ['month', 'recap', 'monthly', 'report', '回顧', '月報', '本月', '報表'],
+};
+
+const CORE: NavItem[] = [DASHBOARD, TRANSACTIONS, PORTFOLIO, GOALS, REVIEW];
+
+// Money that involves other people or debt. Useful once you have it, noise
+// before, so it sits behind a heading that stays shut until you are inside it.
+const LOANS_SHARING: NavItem[] = [
   {
     nameKey: 'navigation.loans', href: '/loans',
     icon: BanknotesIcon, iconSolid: BanknotesIconSolid,
@@ -113,12 +136,9 @@ const FINANCE: NavItem[] = [
   },
 ];
 
-const GOALS_GROWTH: NavItem[] = [
-  {
-    nameKey: 'navigation.goals', href: '/goals',
-    icon: TrophyIcon, iconSolid: TrophyIconSolid, primary: true,
-    keywords: ['fire', 'target', '目標', '理財目標'],
-  },
+// Simulators and extras. /housing and /lifecycle model specific strategies, and
+// shown up front to a new reader they read as advice, so they stay closed by default.
+const MORE_TOOLS: NavItem[] = [
   {
     nameKey: 'navigation.housing', href: '/housing',
     icon: HomeModernIcon, iconSolid: HomeModernIconSolid,
@@ -136,17 +156,6 @@ const GOALS_GROWTH: NavItem[] = [
   },
 ];
 
-// A standalone row under the dashboard. It led an Analysis section beside
-// /reports and /chat until both were retired (2026-09-17); a heading above one
-// row states nothing. It sits next to the dashboard because it is the other
-// page you open on a schedule. The old /reports keywords come with it, since a
-// reader searching "報表" now wants this page.
-const REVIEW: NavItem = {
-  nameKey: 'navigation.review', href: '/review',
-  icon: CalendarDaysIcon, iconSolid: CalendarDaysIconSolid,
-  keywords: ['month', 'recap', 'monthly', 'report', '回顧', '月報', '本月', '報表'],
-};
-
 const ADMIN: NavItem = {
   nameKey: 'navigation.admin', href: '/admin',
   icon: ShieldCheckIcon, iconSolid: ShieldCheckIconSolid,
@@ -159,10 +168,9 @@ const ADMIN: NavItem = {
  */
 export function getNavigationSections(isAdmin: boolean, features: Features): NavSection[] {
   const sections: NavSection[] = [
-    { items: [DASHBOARD] },
-    { items: [REVIEW] },
-    { titleKey: 'navigation.sections.finance', items: FINANCE },
-    { titleKey: 'navigation.sections.goals_growth', items: GOALS_GROWTH },
+    ...CORE.map((item) => ({ items: [item] })),
+    { titleKey: 'navigation.sections.loans_sharing', items: LOANS_SHARING },
+    { titleKey: 'navigation.sections.more_tools', items: MORE_TOOLS },
   ];
 
   if (isAdmin) sections.push({ items: [ADMIN] });
