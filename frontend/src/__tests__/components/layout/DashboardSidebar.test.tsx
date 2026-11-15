@@ -151,6 +151,14 @@ describe('DashboardSidebar collapsed rail', () => {
     expect(rail.querySelectorAll('nav button[aria-expanded]')).toHaveLength(0);
   });
 
+  it('rules off the titled groups, not each core row', () => {
+    // Five standalone rows, then two groups: a divider before each group only.
+    const { container } = renderSidebar(true);
+    const rail = container.firstElementChild as HTMLElement;
+
+    expect(rail.querySelectorAll('nav [aria-hidden="true"].h-px')).toHaveLength(2);
+  });
+
   it('raises a tooltip on keyboard focus, not only on hover', () => {
     const { container } = renderSidebar(true);
     const rail = container.firstElementChild as HTMLElement;

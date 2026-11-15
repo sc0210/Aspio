@@ -55,7 +55,7 @@ async function newDemoContext(browser, theme, extra = {}) {
     localStorage.setItem('aspiro-theme', theme);
     localStorage.setItem(
       'aspiro-nav-sections',
-      JSON.stringify({ 'navigation.sections.finance': true, 'navigation.sections.goals_growth': true }),
+      JSON.stringify({ 'navigation.sections.loans_sharing': true, 'navigation.sections.more_tools': true }),
     );
     // Survives client-side navigation, since the layout never remounts <head>.
     addEventListener('DOMContentLoaded', () => {
