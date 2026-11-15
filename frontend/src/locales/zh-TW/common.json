@@ -1529,5 +1529,12 @@
         "body": "依類別的支出，以及收入的來源。"
       }
     }
+  },
+  "access": {
+    "premiumTitle": "此頁面需要進階方案",
+    "premiumBody": "你的帳號目前是免費方案。請聯絡管理員升級後即可使用此頁面。",
+    "backToDashboard": "回到儀表板",
+    "planFree": "免費",
+    "planPremium": "進階"
   }
 }

@@ -704,6 +704,7 @@ class UserManagementService:
                 User.email,
                 User.name,
                 User.is_active,
+                User.access_tier,
                 User.created_at,
                 User.last_login_at,
             )
@@ -739,6 +740,7 @@ class UserManagementService:
                 "email": r.email,
                 "full_name": r.name,
                 "is_active": r.is_active,
+                "access_tier": r.access_tier,
                 "created_at": r.created_at.isoformat(),
                 "last_login_at": r.last_login_at.isoformat() if r.last_login_at else None,
                 "portfolio_count": portfolio_counts.get(r.id, 0),
@@ -782,6 +784,7 @@ class UserManagementService:
             "full_name": user.full_name,
             "is_active": user.is_active,
             "is_verified": user.is_verified,
+            "access_tier": user.access_tier,
             "created_at": user.created_at.isoformat(),
             "last_login_at": user.last_login_at.isoformat() if user.last_login_at else None,
             "portfolio_count": int(stats_row.portfolio_count) if stats_row else 0,
@@ -808,6 +811,25 @@ class UserManagementService:
             "id": str(user.id),
             "email": user.email,
             "is_active": user.is_active,
+        }
+
+    async def set_access_tier(self, user_id: UUID, tier: str) -> Dict[str, Any]:
+        """Set which pages the account may use. Returns the old and new tier."""
+        from fastapi import HTTPException
+
+        user = await self.session.get(User, user_id)
+        if not user:
+            raise HTTPException(status_code=404, detail="User not found")
+
+        previous = user.access_tier
+        user.access_tier = tier
+        await self.session.commit()
+        # require_premium reads the database per request, so no cache to drop.
+        return {
+            "id": str(user.id),
+            "email": user.email,
+            "access_tier": user.access_tier,
+            "previous_access_tier": previous,
         }
 
     async def log_admin_action(
@@ -1036,8 +1058,12 @@ class UserManagementService:
 
         return user_email
 
-    async def approve_user(self, user_id: UUID) -> User:
-        """Approve a pending user and activate their account"""
+    async def approve_user(self, user_id: UUID, access_tier: Optional[str] = None) -> User:
+        """Approve a pending user and activate their account.
+
+        `access_tier`, when given, is set in the same commit, so the admin picks
+        the account's tier at the moment they let it in.
+        """
         from app.modules.users.models import UserStatus
         from fastapi import HTTPException
 
@@ -1054,6 +1080,8 @@ class UserManagementService:
         # Update user status to ACTIVE
         user.status = UserStatus.ACTIVE
         user.is_active = True
+        if access_tier is not None:
+            user.access_tier = access_tier
 
         await self.session.commit()
         await self.session.refresh(user)

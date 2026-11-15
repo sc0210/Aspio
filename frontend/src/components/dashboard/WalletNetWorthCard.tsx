@@ -16,6 +16,7 @@ import {
     Cell,
 } from 'recharts';
 import { usePrivacy } from '@/contexts/PrivacyContext';
+import { useAccessTier } from '@/hooks/useAccessTier';
 import { compactAxisFormatter, formatTWD } from '@/utils/formatters';
 import type { WalletTrendDataPoint } from '@/hooks/useWalletTrends';
 import { cn } from '@/utils/cn';
@@ -163,6 +164,7 @@ export function WalletNetWorthCard({
     const { t, i18n } = useTranslation('dashboard');
     const { t: tg } = useTranslation('goals');
     const { isValueVisible } = usePrivacy();
+    const { isPremium } = useAccessTier();
     // Life cash set aside for goals: still in Life (and Total Asset), but not
     // free to spend. Shown only when some is reserved.
     const lifeReserved = lifeCash && lifeCash.reserved > 0 ? lifeCash : null;
@@ -362,12 +364,15 @@ export function WalletNetWorthCard({
                                         : '•••'}
                                 </span>
                             )}
-                            <Link
-                                href="/savings"
-                                className="text-xs text-primary-700 hover:text-primary-800 dark:text-primary-400 dark:hover:text-primary-300 font-medium transition-colors"
-                            >
-                                {t('todayStrip.details', 'Details')}
-                            </Link>
+                            {/* The net-worth detail lives on /savings (peers), a premium page. */}
+                            {isPremium && (
+                                <Link
+                                    href="/savings"
+                                    className="text-xs text-primary-700 hover:text-primary-800 dark:text-primary-400 dark:hover:text-primary-300 font-medium transition-colors"
+                                >
+                                    {t('todayStrip.details', 'Details')}
+                                </Link>
+                            )}
                         </div>
                     </div>
 
@@ -391,9 +396,15 @@ export function WalletNetWorthCard({
                             <span className="text-gray-500 dark:text-gray-600">−</span>
                             <div className="flex items-center gap-1">
                                 <span className="text-gray-500 dark:text-gray-400">{t('wallet.liabilities', 'Liabilities')}</span>
-                                <Link href="/loans" className="font-semibold text-error-700 dark:text-error-400 tabular-nums hover:underline">
-                                    {isValueVisible ? formatTWD(totalDebt) : '•••'}
-                                </Link>
+                                {isPremium ? (
+                                    <Link href="/loans" className="font-semibold text-error-700 dark:text-error-400 tabular-nums hover:underline">
+                                        {isValueVisible ? formatTWD(totalDebt) : '•••'}
+                                    </Link>
+                                ) : (
+                                    <span className="font-semibold text-error-700 dark:text-error-400 tabular-nums">
+                                        {isValueVisible ? formatTWD(totalDebt) : '•••'}
+                                    </span>
+                                )}
                             </div>
                         </div>
                     )}

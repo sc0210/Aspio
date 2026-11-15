@@ -26,6 +26,7 @@ from app.modules.notifications.models import (
     NotificationType,
 )
 from app.modules.peers.models import GoalStatus, PeerConnection, PeerStatus, SavingRecord, SharedGoal
+from app.modules.users.models import AccessTier
 from app.modules.peers.repositories import (
     PeerConnectionRepository,
     PeerUserRepository,
@@ -133,6 +134,14 @@ class PeerService:
             raise HTTPException(
                 status_code=status.HTTP_400_BAD_REQUEST,
                 detail="The demo account cannot have peer connections",
+            )
+
+        # Peers is a premium feature. A free account could never open the invite,
+        # so it would sit pending; refuse it here with a reason the sender can act on.
+        if receiver.access_tier != AccessTier.PREMIUM.value:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="This user's plan does not include peer features",
             )
 
         # 3. Check for any existing connection row (either direction)

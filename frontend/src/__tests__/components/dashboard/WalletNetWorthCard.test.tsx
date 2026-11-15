@@ -3,6 +3,8 @@ import { render, screen, fireEvent } from '@testing-library/react';
 import { WalletNetWorthCard } from '@/components/dashboard/WalletNetWorthCard';
 import type { WalletTrendDataPoint } from '@/hooks/useWalletTrends';
 
+const mockAccess = { tier: 'premium', isPremium: true, isLoading: false, isError: false };
+jest.mock('@/hooks/useAccessTier', () => ({ useAccessTier: () => mockAccess }));
 jest.mock('react-i18next', () => ({
   // i18next calls .use(initReactI18next) at import time; a mock without it
   // makes lib/i18n throw and the whole suite dies before any test runs.
@@ -625,5 +627,26 @@ describe('WalletNetWorthCard', () => {
       // totalAsset is on by default; lifeWallet is opt-in via the legend toggle.
       expect(screen.getByTestId('area-totalAsset')).toBeInTheDocument();
     });
+  });
+});
+
+describe('for a free account', () => {
+  afterEach(() => Object.assign(mockAccess, { tier: 'premium', isPremium: true }));
+
+  it('links neither Details nor the liabilities figure to a premium page', () => {
+    // /savings and /loans are premium; a free account would land on the gate.
+    const withDebt = { ...baseStats, total_debt: 400000 };
+    const premium = render(<WalletNetWorthCard stats={withDebt} walletTrendsData={[]} />);
+    const premiumHrefs = [...premium.container.querySelectorAll('a')].map((a) => a.getAttribute('href'));
+    expect(premiumHrefs).toEqual(expect.arrayContaining(['/savings', '/loans']));
+    premium.unmount();
+
+    Object.assign(mockAccess, { tier: 'free', isPremium: false });
+    const { container } = render(<WalletNetWorthCard stats={withDebt} walletTrendsData={[]} />);
+    const hrefs = [...container.querySelectorAll('a')].map((a) => a.getAttribute('href'));
+    expect(hrefs).not.toContain('/savings');
+    expect(hrefs).not.toContain('/loans');
+    // The figure itself still shows: debt counts in net worth on every plan.
+    expect(screen.getAllByText('NT$400000').length).toBeGreaterThan(0);
   });
 });

@@ -80,7 +80,7 @@ from app.modules.transactions.models import (
     TransactionWalletType,
 )
 from app.modules.transactions.repositories import TransactionRepository
-from app.modules.users.models import User
+from app.modules.users.models import AccessTier, User
 from app.utils.datetime_helpers import business_today
 
 logger = logging.getLogger(__name__)
@@ -147,6 +147,19 @@ class SplitService:
     async def _policy(self, connection_id: UUID, user_id: UUID) -> str:
         pref = await self.session.get(PeerConnectionPref, (connection_id, user_id))
         return pref.split_policy if pref else SplitPolicy.APPROVE_EACH.value
+
+    async def _require_premium_pair(self, user_id: UUID, partner_id: UUID) -> None:
+        """Splits are a premium feature on both sides. The router refuses a free
+        caller, but the recurring runner calls in without one, and a partner may
+        have been moved to free since connecting: a split they could never open
+        to accept or settle would sit on their side for good."""
+        tiers = dict((await self.session.execute(
+            select(User.id, User.access_tier).where(User.id.in_([user_id, partner_id]))
+        )).all())
+        if tiers.get(user_id) != AccessTier.PREMIUM.value:
+            raise HTTPException(status.HTTP_403_FORBIDDEN, "Your plan does not include bill splitting")
+        if tiers.get(partner_id) != AccessTier.PREMIUM.value:
+            raise HTTPException(status.HTTP_403_FORBIDDEN, "Your partner's plan does not include bill splitting")
 
     async def _name(self, user_id: UUID) -> str:
         if user_id not in self._names:
@@ -245,6 +258,7 @@ class SplitService:
 
     async def create_split(self, user_id: UUID, data: SplitCreate) -> SplitOut:
         conn = await self._connection(data.connection_id, user_id)
+        await self._require_premium_pair(user_id, self._partner(conn, user_id))
         await self._expense_category(data.category_id)
         payer_is_me = data.payer == "me"
         mine, theirs = split_amounts(data.total_amount, data.method, payer_is_me, data.my_percent, data.my_amount)
@@ -259,6 +273,8 @@ class SplitService:
         row becomes their share's row: whole until the partner accepts, then
         their share. Withdrawing or a decline hands it back whole."""
         conn = await self._connection(data.connection_id, user_id)
+        # Also the recurring runner's path, which has no router gate.
+        await self._require_premium_pair(user_id, self._partner(conn, user_id))
         row = (await self.session.execute(
             select(Transaction).where(and_(
                 Transaction.id == data.transaction_id,
@@ -528,6 +544,7 @@ class SplitService:
         """A recurring expense of yours (you pay it) that is split with this partner
         each time it posts, by the same rules as splitting one by hand."""
         conn = await self._connection(data.connection_id, user_id)
+        await self._require_premium_pair(user_id, self._partner(conn, user_id))
         if await self._policy(conn.id, self._partner(conn, user_id)) == SplitPolicy.OFF.value:
             raise HTTPException(status.HTTP_403_FORBIDDEN, "Your partner has turned off bill splitting with you")
         await self._expense_category(data.category_id)

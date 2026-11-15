@@ -34,7 +34,7 @@ def _ok(response, code=200):
 async def partner(async_session, test_user):
     test_user.username = "tester"
     user = User(id=uuid4(), email="partner@example.com", name="Partner", username="partner",
-                hashed_password="x", is_active=True, is_verified=True, role=UserRole.USER,
+                hashed_password="x", is_active=True, is_verified=True, role=UserRole.USER, access_tier="premium",
                 status=UserStatus.ACTIVE, preferred_currency="TWD", timezone="UTC",
                 experience_points=0, level=1)
     async_session.add(user)
@@ -121,7 +121,7 @@ async def test_an_outsider_cannot_link(authenticated_client, seed_categories, pa
     client = authenticated_client
     shared = _shared(client, partner, 100000)
     outsider = User(id=uuid4(), email="out@example.com", name="Out", username="out",
-                    hashed_password="x", is_active=True, is_verified=True, role=UserRole.USER,
+                    hashed_password="x", is_active=True, is_verified=True, role=UserRole.USER, access_tier="premium",
                     status=UserStatus.ACTIVE, preferred_currency="TWD", timezone="UTC",
                     experience_points=0, level=1)
     async_session.add(outsider)

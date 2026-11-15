@@ -17,6 +17,8 @@ export interface User {
   preferences?: UserPreferences;
   profile?: UserProfile;
   preferred_currency?: string; // e.g. 'TWD' — apiClient.getCurrentUser() does no key transform, so this stays snake_case
+  /** Which pages the account may use; set by a super admin. See lib/access.ts. */
+  access_tier?: 'free' | 'premium';
 }
 
 export type UserRole = 'USER' | 'PREMIUM' | 'ADMIN' | 'SUPER_ADMIN';

@@ -29,7 +29,8 @@ pytestmark = [pytest.mark.asyncio, pytest.mark.database]
 
 def _user(name):
     return User(id=uuid.uuid4(), email=f"{name}@example.com", name=name, username=name,
-                is_active=True, role=UserRole.USER, status=UserStatus.ACTIVE)
+                is_active=True, role=UserRole.USER, status=UserStatus.ACTIVE,
+                access_tier="premium")
 
 
 def rec(amount):

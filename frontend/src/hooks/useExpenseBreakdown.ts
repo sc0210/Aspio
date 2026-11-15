@@ -5,6 +5,7 @@ import { useQuery } from '@tanstack/react-query';
 import { useAppMode } from './useAppMode';
 import { useTransactions } from './useTransactions';
 import { loanService } from '@/services/loanService';
+import { useAccessTier } from './useAccessTier';
 import { demoLoans } from '@/data/demoData';
 import { toTWD } from '@/utils/formatters';
 import { EXPENSE_GROUPS, getExpenseGroupKey, isEarnedIncome, isWalletTransfer, type ExpenseGroupKey } from '@/utils/expenseGroups';
@@ -73,10 +74,12 @@ export function useExpenseBreakdown(): ExpenseBreakdown {
 
     // Loans → monthly debt interest (current balance × APR ÷ 12).
     // Demo mode uses the fixture list — never hit the real API (avoids a 401).
+    // Loans are premium: a free account has none to read, and the API would 403.
+    const { isPremium } = useAccessTier();
     const { data: loansResp, isLoading: loadingLoans } = useQuery({
         queryKey: ['loans-list', userKey],
         queryFn: () => loanService.getLoans(),
-        enabled: enabled && !isDemo,
+        enabled: enabled && !isDemo && isPremium,
         staleTime: 5 * 60 * 1000,
         gcTime: 15 * 60 * 1000,
         retry: false,

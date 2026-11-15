@@ -115,8 +115,8 @@ describe('SplitExpenseModal', () => {
 });
 
 describe('Split from the transaction list', () => {
-  async function openMenu(isDemo: boolean, tx = expense()) {
-    withClient(<TransactionList transactions={[tx]} isDemo={isDemo} />);
+  async function openMenu(isDemo: boolean, tx = expense(), canSplit = true) {
+    withClient(<TransactionList transactions={[tx]} isDemo={isDemo} canSplit={canSplit} />);
     fireEvent.click(screen.getAllByRole('button', { name: /Expand|Collapse/ })[0]);
     fireEvent.click(await screen.findByRole('button', { name: `Actions for ${tx.description}` }));
   }
@@ -129,6 +129,11 @@ describe('Split from the transaction list', () => {
 
   it('is not offered in demo mode', async () => {
     await openMenu(true);
+    expect(screen.queryByRole('menuitem', { name: 'Split with partner' })).not.toBeInTheDocument();
+  });
+
+  it('is not offered to a free account, whose plan has no partners', async () => {
+    await openMenu(false, expense(), false);
     expect(screen.queryByRole('menuitem', { name: 'Split with partner' })).not.toBeInTheDocument();
   });
 

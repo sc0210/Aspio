@@ -35,6 +35,17 @@ class AspiroException(Exception):
         super().__init__(message)
 
 
+class PremiumRequiredException(AspiroException):
+    """The account's tier does not include this feature. Expected, not a fault."""
+
+    def __init__(self):
+        super().__init__(
+            message="This feature needs Premium. Ask your admin to upgrade your account.",
+            status_code=status.HTTP_403_FORBIDDEN,
+            error_code="PREMIUM_REQUIRED",
+        )
+
+
 class ValidationException(AspiroException):
     """Exception for validation errors"""
 
@@ -93,7 +104,11 @@ async def aspiro_exception_handler(
     """Handler for custom Aspiro exceptions"""
 
     # Use WARNING for expected exceptions like rate limits, ERROR for unexpected
-    log_level = logger.warning if isinstance(exc, RateLimitException) else logger.error
+    log_level = (
+        logger.warning
+        if isinstance(exc, (RateLimitException, PremiumRequiredException))
+        else logger.error
+    )
 
     log_level(
         f"AspiroException: {exc.error_code} - {exc.message}",

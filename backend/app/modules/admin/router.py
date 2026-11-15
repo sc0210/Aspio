@@ -10,7 +10,10 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from typing import Optional, List
 from uuid import UUID
 
+from pydantic import BaseModel
+
 from app.core.database import get_db
+from app.modules.users.models import AccessTier
 from app.common.schemas import ApiResponse
 from .dependencies import (
     get_current_admin,
@@ -146,6 +149,46 @@ async def toggle_user_active(
     )
 
 
+class AccessTierUpdate(BaseModel):
+    access_tier: AccessTier
+
+
+@router.patch("/users/{user_id}/access-tier", response_model=ApiResponse)
+async def set_user_access_tier(
+    body: AccessTierUpdate,
+    user_id: UUID = Path(..., description="User ID"),
+    current_admin: AdminUser = Depends(require_super_admin),
+    session: AsyncSession = Depends(get_db),
+):
+    """
+    Set which pages an account may use: `free` or `premium`.
+
+    **Required Permission:** super_admin only
+
+    Applies on the account's next request; they do not need to sign out.
+    Setting your own account is allowed, so an admin can see the free view.
+    """
+    service = UserManagementService(session)
+    result = await service.set_access_tier(user_id, body.access_tier.value)
+
+    await service.log_admin_action(
+        admin_id=current_admin.id,
+        action="set_access_tier",
+        resource_type="user",
+        resource_id=str(user_id),
+        metadata={
+            "email": result["email"],
+            "from": result["previous_access_tier"],
+            "to": result["access_tier"],
+        },
+    )
+
+    return ApiResponse.success_response(
+        data=result,
+        message=f"{result['email']} is now {result['access_tier']}",
+    )
+
+
 @router.delete("/users/{user_id}", response_model=ApiResponse)
 async def delete_user(
     user_id: UUID = Path(..., description="User ID to delete"),
@@ -228,6 +271,9 @@ async def get_pending_users(
 @router.post("/approve-user/{user_id}", response_model=ApiResponse)
 async def approve_user(
     user_id: UUID = Path(..., description="User ID to approve"),
+    access_tier: Optional[AccessTier] = Query(
+        None, description="Tier to give the account; omitted, it keeps its default (free)"
+    ),
     current_admin: AdminUser = Depends(require_super_admin),
     session: AsyncSession = Depends(get_db),
 ):
@@ -240,7 +286,9 @@ async def approve_user(
     log in and use the application.
     """
     service = UserManagementService(session)
-    approved_user = await service.approve_user(user_id)
+    approved_user = await service.approve_user(
+        user_id, access_tier=access_tier.value if access_tier else None
+    )
 
     # Log the approval
     await service.log_admin_action(
@@ -248,11 +296,15 @@ async def approve_user(
         action="approve_user",
         resource_type="user",
         resource_id=str(user_id),
-        metadata={"user_email": approved_user.email}
+        metadata={"user_email": approved_user.email, "access_tier": approved_user.access_tier}
     )
 
     return ApiResponse.success_response(
-        data={"user_id": str(user_id), "email": approved_user.email},
+        data={
+            "user_id": str(user_id),
+            "email": approved_user.email,
+            "access_tier": approved_user.access_tier,
+        },
         message=f"User {approved_user.email} approved successfully"
     )
 

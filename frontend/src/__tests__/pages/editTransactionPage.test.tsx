@@ -14,6 +14,8 @@ const mockPush = jest.fn();
 const mockRouter = { push: mockPush };
 // Mutable so a test can open the page as if it had been clicked from a filtered list.
 let mockSearch = new URLSearchParams();
+const mockAccess = { tier: 'premium', isPremium: true, isLoading: false, isError: false };
+jest.mock('@/hooks/useAccessTier', () => ({ useAccessTier: () => mockAccess }));
 jest.mock('next/navigation', () => ({
   useRouter: () => mockRouter,
   useParams: () => ({ id: 'test-transaction-id' }),

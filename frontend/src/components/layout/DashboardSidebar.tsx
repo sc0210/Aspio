@@ -17,6 +17,7 @@ import { useIsAdmin } from '@/hooks/useAdmin';
 import { useScrollLock } from '@/hooks/useScrollLock';
 import { getNavigationSections, type NavSection } from '@/lib/navigation';
 import { useFeatures } from '@/hooks/useFeatures';
+import { useAccessTier } from '@/hooks/useAccessTier';
 import { openCommandPalette } from './CommandPalette';
 import { AccountMenu } from './AccountMenu';
 
@@ -80,7 +81,8 @@ export function DashboardSidebar({ open, collapsed, onToggleCollapsed, onClose }
   const [railTooltip, setRailTooltip] = useState<{ label: string; top: number } | null>(null);
 
   const features = useFeatures();
-  const navigationSections = getNavigationSections(isAdmin, features);
+  const { isPremium } = useAccessTier();
+  const navigationSections = getNavigationSections({ isAdmin, isPremium, features });
   const isActiveRoute = (href: string) => pathname === href || pathname.startsWith(href + '/');
 
   // Which section opens itself when the reader has expressed no preference:
