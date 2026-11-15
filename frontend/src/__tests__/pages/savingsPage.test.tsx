@@ -36,6 +36,13 @@ const demoAuth = {
 };
 let mockAuth: Record<string, unknown> = demoAuth;
 
+// Parts made from this page invalidate the /goals queries.
+const mockInvalidate = jest.fn();
+jest.mock('@tanstack/react-query', () => ({
+  ...jest.requireActual('@tanstack/react-query'),
+  useQueryClient: () => ({ invalidateQueries: mockInvalidate }),
+}));
+
 jest.mock('@/contexts/AuthContext', () => ({
   useAuthContext: () => mockAuth,
 }));
@@ -334,7 +341,10 @@ describe('/savings — goals and compare as tabs over one roster', () => {
       api.listSharedGoals.mockResolvedValue({ data: [goalOnTime] });
       const recent = new Date(Date.now() - 10 * 86_400_000).toISOString().slice(0, 10);
       // Every fetch (the page loads goals more than once), then back to empty for the next tests.
+      const older = new Date(Date.now() - 200 * 86_400_000).toISOString().slice(0, 10);
+      // The history explains the 20,000 held; only the recent 9,000 sets the pace.
       api.getSharedGoalHistory.mockImplementation(() => Promise.resolve({ data: [
+        { date: older, side: 'partner', amount: 11000 },
         { date: recent, side: 'you', amount: 9000 },
       ] }));
       try {
@@ -343,6 +353,22 @@ describe('/savings — goals and compare as tabs over one roster', () => {
         // And never the "nothing saved" line on the way there.
         expect(screen.queryByText(/Nothing saved toward the active goals/)).toBeNull();
         expect(api.getSharedGoalHistory).toHaveBeenCalledWith(goalOnTime.id);
+      } finally {
+        api.getSharedGoalHistory.mockImplementation(() => Promise.resolve({ data: [] }));
+      }
+    });
+
+    it('shows no pace when the history does not explain what the goals hold', async () => {
+      // e.g. a part that is an emergency fund: worth its wallet, with no dated rows.
+      const goal = { ...demoSharedGoals[0], status: 'active' as const, target_date: '2099-01-01', target_amount: 50000, total_amount: 20000 };
+      api.listSharedGoals.mockResolvedValue({ data: [goal] });
+      const recent = new Date(Date.now() - 10 * 86_400_000).toISOString().slice(0, 10);
+      api.getSharedGoalHistory.mockImplementation(() => Promise.resolve({ data: [{ date: recent, side: 'you', amount: 9000 }] }));
+      try {
+        render(<SavingsPage />);
+        await waitFor(() => expect(api.getSharedGoalHistory).toHaveBeenCalledWith(goal.id));
+        await screen.findByText('Combined savings progress');
+        expect(screen.queryByTestId('savings-pace')).toBeNull();
       } finally {
         api.getSharedGoalHistory.mockImplementation(() => Promise.resolve({ data: [] }));
       }

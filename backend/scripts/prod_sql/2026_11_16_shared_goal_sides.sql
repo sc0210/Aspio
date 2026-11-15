@@ -18,9 +18,13 @@ IF EXISTS (SELECT 1 FROM information_schema.columns
            WHERE table_schema = 'public' AND table_name = 'shared_goals'
              AND column_name = 'target_amount') THEN
 
-    -- 1. A personal goal for each participant of an open shared goal who has none.
+    -- 1. A personal goal for each participant of an open shared goal who has none:
+    --    on an accepted connection, or with saving records to carry over.
     WITH sides AS (
-        SELECT sg.id AS shared_id, sg.title, sg.target_date, sg.target_amount, p.user_id
+        SELECT sg.id AS shared_id, sg.title, sg.target_date, sg.target_amount, p.user_id,
+               pc.status = 'accepted'
+               OR EXISTS (SELECT 1 FROM saving_records r
+                          WHERE r.goal_id = sg.id AND r.user_id = p.user_id) AS needed
         FROM shared_goals sg
         JOIN peer_connections pc ON pc.id = sg.connection_id
         CROSS JOIN LATERAL (VALUES (pc.requester_id), (pc.receiver_id)) AS p(user_id)
@@ -42,7 +46,8 @@ IF EXISTS (SELECT 1 FROM information_schema.columns
            'savings', 'medium', 'active',
            round(GREATEST(share, 1), 2), 0, 'TWD', target_date::timestamptz, now(),
            '{"made_for_shared_goal": true}'::jsonb, now(), now(), shared_id
-    FROM parts;
+    FROM parts
+    WHERE needed;
 
     -- 2. Each saving record becomes legacy progress on its owner's part.
     INSERT INTO goal_contributions (id, goal_id, kind, amount, contribution_date, notes,

@@ -350,9 +350,11 @@ class GoalService:
                     "Failed to create goal-completion notification", exc_info=True
                 )
 
-        if "target_amount" in update_data and goal.shared_goal_id is not None:
-            # This goal's target is the user's part of a shared goal, whose
-            # target is the sum of both parts: re-judge it.
+        if update_data and goal.shared_goal_id is not None:
+            # This goal is the user's part of a shared goal, whose target and
+            # amount are the sums of both parts. A new target moves the sum, and
+            # so can another edit (a category switch to or from emergency_fund
+            # changes what the part is worth): re-judge it.
             from app.modules.peers.service import PeerService
 
             await self.session.flush()

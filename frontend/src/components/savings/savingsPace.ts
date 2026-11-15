@@ -65,3 +65,18 @@ export function paceForecast(goals: SharedGoalOut[], points: PacePoint[], today:
     monthsLate: latest === null ? 0 : Math.max(0, finishIndex - latest),
   };
 }
+
+/**
+ * Whether the history explains what the active goals hold, so a pace read from
+ * it means something. A part can hold money with no dated row behind it: an
+ * emergency-fund part is worth its Emergency Wallet, and invested money moves
+ * with the market. Then the history understates (or overstates) the saving, and
+ * no pace is better than a wrong one. Within 1% (or NT$1) counts as explained.
+ */
+export function historyCoversTotals(goals: SharedGoalOut[], points: PacePoint[]): boolean {
+  const active = goals.filter((g) => g.status !== 'completed');
+  const ids = new Set(active.map((g) => g.id));
+  const held = active.reduce((s, g) => s + g.total_amount, 0);
+  const recorded = points.filter((p) => ids.has(p.goal_id)).reduce((s, p) => s + p.amount, 0);
+  return Math.abs(held - recorded) <= Math.max(1, held * 0.01);
+}

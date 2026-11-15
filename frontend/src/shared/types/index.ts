@@ -528,7 +528,6 @@ export interface SharedGoalOut {
   peer_joined: boolean;
   /** The caller's own goal for their part (POST /peers/goals/{id}/link-goal). */
   your_goal_id?: string | null;
-  your_set_aside?: number;
 }
 
 /** Your part is a new goal of `my_target`, or `goal_id`, a goal you already have. */

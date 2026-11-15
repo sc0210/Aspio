@@ -260,3 +260,24 @@ async def test_an_outsider_cannot_link_or_read_history(authenticated_client, see
         {"sub": str(outsider.id), "email": outsider.email})}
     assert client.post(f"{API}/peers/goals/{shared}/link-goal", headers=headers).status_code == 404
     assert client.get(f"{API}/peers/goals/{shared}/history", headers=headers).status_code == 404
+
+
+async def test_any_edit_to_a_part_rejudges_the_shared_goal(authenticated_client, seed_categories, partner, async_session):
+    """A category switch to emergency_fund makes the part worth its Emergency Wallet:
+    the stored status and the alert follow at once, not at the next reservation."""
+    from app.modules.peers.models import SharedGoal
+
+    client = authenticated_client
+    shared = _shared(client, partner, 20000)
+    mine = _ok(client.post(f"{API}/peers/goals/{shared}/link-goal"))
+    _partner_part(client, partner, shared, 1000, reserve=1000)
+    _ok(client.post(f"{API}/transactions/", json={
+        "type": "income", "wallet_type": "emergency", "amount": "30000", "currency": "TWD",
+        "description": "Rainy day", "transaction_date": "2026-01-01", "category_name": "Salary"}), 201)
+
+    _ok(client.put(f"{API}/goals/{mine['id']}", json={"category": "emergency_fund"}))
+
+    stored = (await async_session.execute(
+        select(SharedGoal.status).where(SharedGoal.id == UUID(shared))
+        .execution_options(populate_existing=True))).scalar_one()
+    assert stored == "completed"

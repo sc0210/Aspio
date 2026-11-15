@@ -680,7 +680,6 @@ class ApiClient {
     return this.patch<PeerPrefsOut>(`/peers/${connectionId}/prefs`, update);
   }
 
-  /** The caller's own goal backing their side of a shared goal, made if missing. */
   /** Your part of a shared goal: your own goal, made (or linked: goal_id) on first use. */
   async linkSharedGoal(goalId: string, body?: { goal_id?: string; target_amount?: number }): Promise<ApiResponse<Goal>> {
     return this.post<Goal>(`/peers/goals/${goalId}/link-goal`, body);

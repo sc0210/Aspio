@@ -235,9 +235,8 @@ class SharedGoalOut(BaseModel):
 
     created_at: str             # ISO datetime string
 
-    # The caller's own goal for their part, and the money it holds (= your_amount).
+    # The caller's own goal for their part (its money is your_amount).
     your_goal_id: Optional[str] = None
-    your_set_aside: float = 0.0
 
 
 class SharedGoalHistoryPoint(BaseModel):

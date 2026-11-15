@@ -87,7 +87,8 @@ export default function CreateGoalModal({
   useEffect(() => {
     if (!isOpen || mode === 'edit') return;
     let stale = false;
-    apiClient.get<Goal[]>('/goals/')
+    // The endpoint's largest page: the default 50 could hide a goal to pick.
+    apiClient.get<Goal[]>('/goals/?limit=200')
       .then((res) => {
         if (stale) return;
         setOwnGoals((res.data ?? []).filter((g) => g.status !== 'cancelled' && !g.sharedGoalId));

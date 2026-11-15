@@ -346,8 +346,10 @@ class PeerService:
                 ),
             )
 
-        # 3. The goal and the caller's part, committed together (the part's
-        # commit carries the staged goal row; a refused part rolls both back).
+        # 3. The goal and the caller's part, committed together: a new part's
+        # commit (GoalService.create_goal) carries the staged goal row, a linked
+        # part is committed here, and a refused part rolls both back. One part
+        # alone never reaches the goal (_rejudge), so there is nothing to judge.
         goal = SharedGoal(
             id=uuid.uuid4(),
             connection_id=data.connection_id,
@@ -360,7 +362,6 @@ class PeerService:
         try:
             await self.session.flush()
             await self._attach_side(user_id, goal, data.goal_id, data.my_target)
-            await self._rejudge(goal, conn)
             await self.session.commit()
         except Exception:
             await self.session.rollback()
@@ -475,6 +476,12 @@ class PeerService:
                 target = peer_part[2]
             try:
                 goal_id = await self._attach_side(user_id, shared, data.goal_id, target)
+                # A new part's create_goal committed, which ended the row lock:
+                # take it again, so a partner's move judging the same goal waits
+                # and neither sends the "reached" alert twice.
+                await self.session.execute(
+                    select(SharedGoal.id).where(SharedGoal.id == shared.id).with_for_update()
+                )
                 await self._rejudge(shared, conn)
                 await self.session.commit()
             except Exception:
@@ -867,7 +874,6 @@ class PeerService:
             is_creator=(goal.created_by == user_id),
             created_at=created_at_str,
             your_goal_id=str(your_goal_id) if your_goal_id else None,
-            your_set_aside=your_amount,
         )
 
     @staticmethod

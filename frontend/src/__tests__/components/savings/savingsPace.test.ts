@@ -1,5 +1,5 @@
 import type { SharedGoalHistoryPoint, SharedGoalOut } from '@/shared/types';
-import { paceForecast, type PacePoint } from '@/components/savings/savingsPace';
+import { historyCoversTotals, paceForecast, type PacePoint } from '@/components/savings/savingsPace';
 import { goalHistory } from '@/components/savings/GoalHistoryChart';
 
 const goal = (over: Partial<SharedGoalOut>): SharedGoalOut => ({
@@ -56,6 +56,23 @@ describe('paceForecast', () => {
 
   it('has nothing to project when every active goal is reached', () => {
     expect(paceForecast([goal({ total_amount: 50000 })], [rec('2026-11-01', 1)], TODAY)).toEqual({ kind: 'done' });
+  });
+});
+
+describe('historyCoversTotals', () => {
+  it('holds when the active goals\' history adds up to what they hold, within 1%', () => {
+    expect(historyCoversTotals([goal({})], [rec('2026-01-01', 15000), rec('2026-10-01', 5000)])).toBe(true);
+    expect(historyCoversTotals([goal({})], [rec('2026-10-01', 19900)])).toBe(true);
+  });
+
+  it('fails when money is held with no row behind it, or rows exceed it', () => {
+    expect(historyCoversTotals([goal({})], [rec('2026-10-01', 9000)])).toBe(false);
+    expect(historyCoversTotals([goal({ total_amount: 1000 })], [rec('2026-10-01', 9000)])).toBe(false);
+  });
+
+  it('reads only the active goals', () => {
+    const done = goal({ id: 'g9', status: 'completed', total_amount: 10000 });
+    expect(historyCoversTotals([goal({}), done], [rec('2026-10-01', 20000), rec('2026-10-01', 3, { goal_id: 'g9' })])).toBe(true);
   });
 });
 

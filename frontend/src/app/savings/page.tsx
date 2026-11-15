@@ -4,6 +4,8 @@ import { Suspense, useCallback, useEffect, useMemo, useRef, useState } from 'rea
 import { usePathname, useRouter, useSearchParams } from 'next/navigation';
 import dynamic from 'next/dynamic';
 import { useTranslation } from 'react-i18next';
+import { useQueryClient } from '@tanstack/react-query';
+import { QUERY_KEYS } from '@/hooks/useDataSynchronization';
 import { PlusIcon, UsersIcon } from '@heroicons/react/24/outline';
 import { useAuthContext } from '@/contexts/AuthContext';
 import { DashboardLayout } from '@/components/layout/DashboardLayout';
@@ -24,7 +26,7 @@ import {
 } from '@/data/demoData';
 import type { CompareDataResponse, PeerConnectionOut, SharedGoalOut } from '@/shared/types';
 import type { Goal } from '@/hooks/useGoals';
-import { paceForecast, type PacePoint } from '@/components/savings/savingsPace';
+import { historyCoversTotals, paceForecast, type PacePoint } from '@/components/savings/savingsPace';
 import { businessToday } from '@/lib/portfolio/businessDate';
 import { formatCurrency as formatCurrencyUtil } from '@/utils/formatters';
 import { cn } from '@/utils/cn';
@@ -215,6 +217,15 @@ function SavingsGroups() {
       setError(err instanceof Error ? err.message : t('savings.errors.loadFailed', 'Failed to load savings goals'));
     }
   }, [t]);
+
+  const queryClient = useQueryClient();
+  // A part made or linked here is a personal goal too: /goals must not keep a
+  // cached list without it.
+  const partsChanged = useCallback(async () => {
+    void queryClient.invalidateQueries({ queryKey: [QUERY_KEYS.GOALS] });
+    void queryClient.invalidateQueries({ queryKey: [QUERY_KEYS.GOALS_SUMMARY] });
+    await refreshGoals();
+  }, [queryClient, refreshGoals]);
 
   // Opens Reserve / Release on the caller's own goal for this shared goal. With
   // no part yet, asks for one first (a new goal or one they have; see link_goal).
@@ -509,7 +520,7 @@ function SavingsGroups() {
           <CreateGoalModal
             isOpen={isCreateGoalOpen}
             onClose={() => setIsCreateGoalOpen(false)}
-            onSuccess={refreshGoals}
+            onSuccess={partsChanged}
             connections={accepted}
           />
           <CreateGoalModal
@@ -522,7 +533,7 @@ function SavingsGroups() {
           <CreateGoalModal
             isOpen={joiningGoal !== null}
             onClose={() => setJoiningGoal(null)}
-            onSuccess={refreshGoals}
+            onSuccess={partsChanged}
             connections={accepted}
             joinGoal={joiningGoal}
             onJoined={setSetAsideGoal}
@@ -622,8 +633,11 @@ function TabBar({ tab, onSelect, tabs = TABS }: { tab: Tab; onSelect: (tab: Tab)
 
 function CombinedProgress({ goals, pacePoints }: { goals: SharedGoalOut[]; pacePoints: PacePoint[] | null }) {
   const { t, i18n } = useTranslation('common');
-  // The pace reads each side's money set aside by day (the goals' history).
-  const forecast = pacePoints ? paceForecast(goals, pacePoints, businessToday()) : null;
+  // The pace reads each side's money set aside by day (the goals' history), and
+  // only where that history explains the totals (see historyCoversTotals).
+  const forecast = pacePoints && historyCoversTotals(goals, pacePoints)
+    ? paceForecast(goals, pacePoints, businessToday())
+    : null;
   const monthName = (ym: string) =>
     new Date(Date.UTC(+ym.slice(0, 4), +ym.slice(5, 7) - 1, 1)).toLocaleDateString(i18n?.language || 'en', { year: 'numeric', month: 'short', timeZone: 'UTC' });
   const totalSaved = goals.reduce((s, g) => s + g.total_amount, 0);
