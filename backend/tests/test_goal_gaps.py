@@ -387,3 +387,27 @@ async def test_an_emergency_fund_with_old_progress_rows_follows_only_the_wallet(
     assert edited.status == GoalStatus.ACTIVE          # the rows do not complete it
     summary = await goals.get_summary(user)
     assert summary.completed_goals == 0
+
+
+async def test_a_resend_of_an_untouched_cost_books_the_stored_one(async_session, test_user, test_category):
+    from app.modules.portfolio.models import PortfolioHolding
+    from app.modules.portfolio.routers.holdings import update_holding
+    from app.modules.portfolio.schemas import HoldingUpdate
+
+    user = test_user.id
+    goals, goal = await _goal_with_cash(async_session, test_user, test_category)
+    lot = (await get_portfolio_service(async_session).add_holding(user, HoldingCreate(
+        symbol="0050", name="Yuanta 50", type="etf", exchange="TWSE", currency="TWD", market="TW",
+        quantity=D("10"), average_cost=D("10.1234567"), purchase_date=BUY_DAY, goal_id=goal,
+    ))).id
+    reserved = (await goal_money(async_session, user, [goal])).get(goal).reserved
+    # Two more units; the form re-sends the cost as a JS number read it back.
+    await update_holding(holding_id=lot, holding_updates=HoldingUpdate(
+        quantity=D("12"), average_cost=D("10.12345670001")),
+        current_user=SimpleNamespace(id=user), session=async_session)
+
+    kept = (await async_session.execute(
+        select(PortfolioHolding.average_cost).where(PortfolioHolding.id == lot))).scalar_one()
+    assert D(str(kept)) == D("10.1234567")
+    after = (await goal_money(async_session, user, [goal])).get(goal).reserved
+    assert reserved - after == (D("2") * D("10.1234567")).quantize(D("0.01"))   # the leg grew by 2 units at the stored cost
