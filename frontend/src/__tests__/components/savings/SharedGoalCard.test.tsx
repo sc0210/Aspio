@@ -16,7 +16,8 @@ jest.mock('react-i18next', () => ({
 jest.mock('@heroicons/react/24/outline', () => ({
   TrashIcon: () => <span data-testid="trash-icon" />,
   CheckCircleIcon: () => <span data-testid="check-icon" />,
-  ListBulletIcon: () => <span data-testid="records-icon" />,
+  ChartBarIcon: () => <span data-testid="history-icon" />,
+  PencilSquareIcon: () => <span data-testid="edit-icon" />,
 }));
 
 const BASE_GOAL: SharedGoalOut = {
@@ -36,28 +37,32 @@ const BASE_GOAL: SharedGoalOut = {
   progress_pct: 60,
   is_creator: true,
   created_at: '2026-01-01T00:00:00Z',
+  your_target: 30000,
+  peer_target: 20000,
+  peer_joined: true,
+  your_goal_id: 'my-goal',
 };
 
 const noop = jest.fn();
 
 describe('SharedGoalCard', () => {
-  const onViewRecords = jest.fn();
+  const onViewHistory = jest.fn();
   const onDelete = jest.fn();
 
   beforeEach(() => jest.clearAllMocks());
 
   it('renders the goal title', () => {
-    render(<SharedGoalCard goal={BASE_GOAL} onViewRecords={onViewRecords} onDelete={onDelete} />);
+    render(<SharedGoalCard goal={BASE_GOAL} onViewHistory={onViewHistory} onDelete={onDelete} />);
     expect(screen.getByText('Japan Trip Fund')).toBeInTheDocument();
   });
 
   it('renders progress percentage text', () => {
-    render(<SharedGoalCard goal={BASE_GOAL} onViewRecords={onViewRecords} onDelete={onDelete} />);
+    render(<SharedGoalCard goal={BASE_GOAL} onViewHistory={onViewHistory} onDelete={onDelete} />);
     expect(screen.getByText('60.0%')).toBeInTheDocument();
   });
 
   it('shows each side once: you and the partner, with the share each put in', () => {
-    render(<SharedGoalCard goal={BASE_GOAL} onViewRecords={onViewRecords} onDelete={onDelete} />);
+    render(<SharedGoalCard goal={BASE_GOAL} onViewHistory={onViewHistory} onDelete={onDelete} />);
     expect(screen.getByText(/^You/)).toHaveTextContent('You · 60%');
     expect(screen.getByText(/^小明/)).toHaveTextContent('小明 · 40%');
     // Not your own name again under "You", nor the old "Alex: 60%" label row.
@@ -69,7 +74,7 @@ describe('SharedGoalCard', () => {
 
     it('says what a month takes to reach the target on time', () => {
       jest.useFakeTimers().setSystemTime(new Date('2026-09-01T00:00:00Z'));
-      render(<SharedGoalCard goal={BASE_GOAL} onViewRecords={onViewRecords} onDelete={onDelete} />);
+      render(<SharedGoalCard goal={BASE_GOAL} onViewHistory={onViewHistory} onDelete={onDelete} />);
       // NT$20,000 left over 91 days (2.99 months of 30.44 days): NT$6,690.1, rounded up.
       expect(screen.getByText(/a month between you reaches it on time/)).toHaveTextContent(/^NT\$6,691 a month/);
     });
@@ -77,68 +82,90 @@ describe('SharedGoalCard', () => {
     it('asks for no pace once the goal is reached or its date has passed', () => {
       jest.useFakeTimers().setSystemTime(new Date('2026-09-01T00:00:00Z'));
       const { rerender } = render(
-        <SharedGoalCard goal={{ ...BASE_GOAL, status: 'completed', total_amount: 50000, progress_pct: 100 }} onViewRecords={onViewRecords} onDelete={onDelete} />,
+        <SharedGoalCard goal={{ ...BASE_GOAL, status: 'completed', total_amount: 50000, progress_pct: 100 }} onViewHistory={onViewHistory} onDelete={onDelete} />,
       );
       expect(screen.queryByText(/a month between you/)).toBeNull();
-      rerender(<SharedGoalCard goal={{ ...BASE_GOAL, target_date: '2026-08-01' }} onViewRecords={onViewRecords} onDelete={onDelete} />);
+      rerender(<SharedGoalCard goal={{ ...BASE_GOAL, target_date: '2026-08-01' }} onViewHistory={onViewHistory} onDelete={onDelete} />);
       expect(screen.queryByText(/a month between you/)).toBeNull();
     });
   });
 
   it('shows completed badge when status is completed', () => {
     const goal = { ...BASE_GOAL, status: 'completed' as const };
-    render(<SharedGoalCard goal={goal} onViewRecords={onViewRecords} onDelete={onDelete} />);
+    render(<SharedGoalCard goal={goal} onViewHistory={onViewHistory} onDelete={onDelete} />);
     expect(screen.getByText('Goal reached!')).toBeInTheDocument();
   });
 
   it('does not show completed badge when status is active', () => {
-    render(<SharedGoalCard goal={BASE_GOAL} onViewRecords={onViewRecords} onDelete={onDelete} />);
+    render(<SharedGoalCard goal={BASE_GOAL} onViewHistory={onViewHistory} onDelete={onDelete} />);
     expect(screen.queryByText('Goal reached!')).toBeNull();
   });
 
-  it('shows records button always', () => {
-    render(<SharedGoalCard goal={BASE_GOAL} onViewRecords={onViewRecords} onDelete={onDelete} />);
-    expect(screen.getByTestId('records-icon')).toBeInTheDocument();
+  it('shows the history button always', () => {
+    render(<SharedGoalCard goal={BASE_GOAL} onViewHistory={onViewHistory} onDelete={onDelete} />);
+    expect(screen.getByTestId('history-icon')).toBeInTheDocument();
   });
 
-  it('shows records button even when completed', () => {
+  it('shows the history button even when completed', () => {
     const goal = { ...BASE_GOAL, status: 'completed' as const };
-    render(<SharedGoalCard goal={goal} onViewRecords={onViewRecords} onDelete={onDelete} />);
-    expect(screen.getByTestId('records-icon')).toBeInTheDocument();
+    render(<SharedGoalCard goal={goal} onViewHistory={onViewHistory} onDelete={onDelete} />);
+    expect(screen.getByTestId('history-icon')).toBeInTheDocument();
   });
 
   it('hides delete button when is_creator is false', () => {
     const goal = { ...BASE_GOAL, is_creator: false };
-    render(<SharedGoalCard goal={goal} onViewRecords={noop} onDelete={onDelete} />);
+    render(<SharedGoalCard goal={goal} onViewHistory={noop} onDelete={onDelete} />);
     expect(screen.queryByTestId('trash-icon')).toBeNull();
   });
 
   it('shows delete button when is_creator is true', () => {
-    render(<SharedGoalCard goal={BASE_GOAL} onViewRecords={noop} onDelete={onDelete} />);
+    render(<SharedGoalCard goal={BASE_GOAL} onViewHistory={noop} onDelete={onDelete} />);
     expect(screen.getByTestId('trash-icon')).toBeInTheDocument();
   });
 
   it('disables delete button when deleting is true', () => {
-    render(<SharedGoalCard goal={BASE_GOAL} onViewRecords={noop} onDelete={onDelete} deleting={true} />);
+    render(<SharedGoalCard goal={BASE_GOAL} onViewHistory={noop} onDelete={onDelete} deleting={true} />);
     const trashBtn = screen.getByTestId('trash-icon').closest('button') as HTMLButtonElement;
     expect(trashBtn.disabled).toBe(true);
   });
 
   it('delete button is enabled when deleting is false', () => {
-    render(<SharedGoalCard goal={BASE_GOAL} onViewRecords={noop} onDelete={onDelete} deleting={false} />);
+    render(<SharedGoalCard goal={BASE_GOAL} onViewHistory={noop} onDelete={onDelete} deleting={false} />);
     const trashBtn = screen.getByTestId('trash-icon').closest('button') as HTMLButtonElement;
     expect(trashBtn.disabled).toBe(false);
   });
 
-  it('calls onViewRecords with the goal when records button clicked', () => {
-    render(<SharedGoalCard goal={BASE_GOAL} onViewRecords={onViewRecords} onDelete={noop} />);
-    fireEvent.click(screen.getByTestId('records-icon').closest('button')!);
-    expect(onViewRecords).toHaveBeenCalledWith(BASE_GOAL);
+  it('calls onViewHistory with the goal when the history button is clicked', () => {
+    render(<SharedGoalCard goal={BASE_GOAL} onViewHistory={onViewHistory} onDelete={noop} />);
+    fireEvent.click(screen.getByTestId('history-icon').closest('button')!);
+    expect(onViewHistory).toHaveBeenCalledWith(BASE_GOAL);
   });
 
   it('calls onDelete with goal.id when delete button clicked', () => {
-    render(<SharedGoalCard goal={BASE_GOAL} onViewRecords={noop} onDelete={onDelete} />);
+    render(<SharedGoalCard goal={BASE_GOAL} onViewHistory={noop} onDelete={onDelete} />);
     fireEvent.click(screen.getByTestId('trash-icon').closest('button')!);
     expect(onDelete).toHaveBeenCalledWith('goal-1');
+  });
+
+  it('shows each partner’s part under their amount', () => {
+    render(<SharedGoalCard goal={BASE_GOAL} onViewHistory={noop} onDelete={noop} />);
+    expect(screen.getByText('of your NT$30,000 part')).toBeInTheDocument();
+    expect(screen.getByText('of their NT$20,000 part')).toBeInTheDocument();
+  });
+
+  it('says when the partner has no part yet', () => {
+    const goal = { ...BASE_GOAL, peer_joined: false, peer_target: 0, peer_amount: 0 };
+    render(<SharedGoalCard goal={goal} onViewHistory={noop} onDelete={noop} />);
+    expect(screen.getByText('Hasn’t added their part yet')).toBeInTheDocument();
+  });
+
+  it('asks you to add your part before setting money aside', () => {
+    const onSetAside = jest.fn();
+    const goal = { ...BASE_GOAL, your_goal_id: null, your_target: 0, your_amount: 0 };
+    const { rerender } = render(<SharedGoalCard goal={goal} onViewHistory={noop} onDelete={noop} onSetAside={onSetAside} />);
+    fireEvent.click(screen.getByRole('button', { name: 'Add your part' }));
+    expect(onSetAside).toHaveBeenCalledWith(goal);
+    rerender(<SharedGoalCard goal={BASE_GOAL} onViewHistory={noop} onDelete={noop} onSetAside={onSetAside} />);
+    expect(screen.getByRole('button', { name: 'Set aside money' })).toBeInTheDocument();
   });
 });

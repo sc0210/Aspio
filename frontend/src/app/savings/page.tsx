@@ -16,16 +16,15 @@ import CompareStatCards from '@/components/compare/CompareStatCards';
 import { PeerRoster } from '@/components/savings/PeerRoster';
 import SharedGoalCard from '@/components/savings/SharedGoalCard';
 import CreateGoalModal from '@/components/savings/CreateGoalModal';
-import SavingRecordsModal from '@/components/savings/SavingRecordsModal';
+import GoalHistoryModal from '@/components/savings/GoalHistoryModal';
 import { ConfirmDialog } from '@/components/ui/ConfirmDialog';
 import SharedSpendingTab from '@/components/savings/SharedSpendingTab';
-import { withRecordTotals } from '@/components/savings/recordOwnership';
 import {
-  demoCompareData, demoPeerConnections, demoRecurringSplits, demoSavingRecords, demoSettlements, demoSharedGoals, demoSplitBalances, demoSplits,
+  demoCompareData, demoPeerConnections, demoRecurringSplits, demoSettlements, demoSharedGoalHistory, demoSharedGoals, demoSplitBalances, demoSplits,
 } from '@/data/demoData';
-import type { CompareDataResponse, PeerConnectionOut, SavingRecord, SharedGoalOut } from '@/shared/types';
+import type { CompareDataResponse, PeerConnectionOut, SharedGoalOut } from '@/shared/types';
 import type { Goal } from '@/hooks/useGoals';
-import { paceForecast } from '@/components/savings/savingsPace';
+import { paceForecast, type PacePoint } from '@/components/savings/savingsPace';
 import { businessToday } from '@/lib/portfolio/businessDate';
 import { formatCurrency as formatCurrencyUtil } from '@/utils/formatters';
 import { cn } from '@/utils/cn';
@@ -76,7 +75,7 @@ export default function SavingsPage() {
 }
 
 function SavingsGroups() {
-  const { isAuthenticated, isDemo, status, user } = useAuthContext();
+  const { isAuthenticated, isDemo, status } = useAuthContext();
   const router = useRouter();
   const pathname = usePathname();
   const searchParams = useSearchParams();
@@ -87,20 +86,17 @@ function SavingsGroups() {
   // NT$7,099,345 portfolio read as "$7,099,345" for a USD-preferring viewer.
   const compareCurrency = 'TWD';
 
-  // Who "you" are when a saving record is attributed; see isOwnRecord.
-  const currentUserId = user?.id ?? '';
-
   const requestedTab = searchParams.get('tab');
   const tab: Tab = TABS.includes(requestedTab as Tab) ? (requestedTab as Tab) : 'goals';
 
   const [connections, setConnections] = useState<PeerConnectionOut[]>([]);
   const [goals, setGoals] = useState<SharedGoalOut[]>([]);
-  // The pace line reads every active goal's saving records. Fetched results are kept with
-  // the goals they were for (ids and totals: a record added or removed changes a total), so a
-  // stale set is never shown and nothing reads "nothing saved" while a fetch is under way.
+  // The pace line reads every active goal's history. Fetched results are kept with the
+  // goals they were for (ids and totals: money set aside changes a total), so a stale
+  // set is never shown and nothing reads "nothing saved" while a fetch is under way.
   const activeGoals = goals.filter((g) => g.status !== 'completed');
   const paceKey = activeGoals.map((g) => `${g.id}:${g.total_amount}`).join(',');
-  const [fetchedPace, setFetchedPace] = useState<{ key: string; records: SavingRecord[] | null } | null>(null);
+  const [fetchedPace, setFetchedPace] = useState<{ key: string; points: PacePoint[] | null } | null>(null);
   useEffect(() => {
     if (isDemo || !isAuthenticated || paceKey === '') return;
     const ids = paceKey.split(',').map((k) => k.split(':')[0]);
@@ -108,23 +104,26 @@ function SavingsGroups() {
     // All or nothing: a partial set would understate the pace. Started inside a then,
     // so even a synchronous throw ends in the catch.
     Promise.resolve()
-      .then(() => Promise.all(ids.map((id) => apiClient.listSavingRecords(id).then((r) => r.data ?? []))))
-      .then((all) => { if (!stale) setFetchedPace({ key: paceKey, records: all.flat() }); })
-      .catch(() => { if (!stale) setFetchedPace({ key: paceKey, records: null }); });
+      .then(() => Promise.all(ids.map((id) => apiClient.getSharedGoalHistory(id)
+        .then((r) => (r.data ?? []).map((p) => ({ goal_id: id, date: p.date, amount: p.amount }))))))
+      .then((all) => { if (!stale) setFetchedPace({ key: paceKey, points: all.flat() }); })
+      .catch(() => { if (!stale) setFetchedPace({ key: paceKey, points: null }); });
     return () => { stale = true; };
   }, [paceKey, isDemo, isAuthenticated]);
   // null: not loaded yet, or the load failed; the line stays hidden.
-  const paceRecords: SavingRecord[] | null = isDemo
-    ? activeGoals.flatMap((g) => demoSavingRecords[g.id] ?? [])
+  const pacePoints: PacePoint[] | null = isDemo
+    ? activeGoals.flatMap((g) => (demoSharedGoalHistory[g.id] ?? []).map((p) => ({ goal_id: g.id, date: p.date, amount: p.amount })))
     : paceKey === ''
       ? []
-      : fetchedPace?.key === paceKey ? fetchedPace.records : null;
+      : fetchedPace?.key === paceKey ? fetchedPace.points : null;
 
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [isAddPeerOpen, setIsAddPeerOpen] = useState(false);
   const [isCreateGoalOpen, setIsCreateGoalOpen] = useState(false);
-  const [recordsGoal, setRecordsGoal] = useState<SharedGoalOut | null>(null);
+  const [historyGoal, setHistoryGoal] = useState<SharedGoalOut | null>(null);
+  // A goal you have no part in yet, open in the "your part" form.
+  const [joiningGoal, setJoiningGoal] = useState<SharedGoalOut | null>(null);
   // The caller's own goal behind a shared goal, open in Reserve / Release.
   const [setAsideGoal, setSetAsideGoal] = useState<Goal | null>(null);
   const [removingId, setRemovingId] = useState<string | null>(null);
@@ -205,7 +204,7 @@ function SavingsGroups() {
     }
   }, [t]);
 
-  // Goals alone, without the page-level loading state: a saving record or a new
+  // Goals alone, without the page-level loading state: money set aside or a new
   // goal changes the goals list, not the roster, and should not blank the page
   // behind the modal that made the change.
   const refreshGoals = useCallback(async () => {
@@ -217,9 +216,13 @@ function SavingsGroups() {
     }
   }, [t]);
 
-  // Opens Reserve / Release on the caller's own goal for this shared goal,
-  // making that goal on first use (it backs their side; see link_goal).
+  // Opens Reserve / Release on the caller's own goal for this shared goal. With
+  // no part yet, asks for one first (a new goal or one they have; see link_goal).
   const handleSetAside = useCallback(async (goal: SharedGoalOut) => {
+    if (!goal.your_goal_id) {
+      setJoiningGoal(goal);
+      return;
+    }
     try {
       const res = await apiClient.linkSharedGoal(goal.id);
       if (res.data) setSetAsideGoal(res.data);
@@ -232,22 +235,14 @@ function SavingsGroups() {
     if (isAuthenticated) {
       fetchData();
     } else if (isDemo) {
-      // Demo mode: fixtures for every view, no backend call. Goal totals come
-      // from the saving-record fixture, which the records modal edits in memory;
-      // reading the static goal amounts instead undid a demo deposit on the card
-      // every time the page remounted, while the records list kept it.
+      // Demo mode: fixtures for every view, no backend call.
       setConnections(demoPeerConnections);
-      setGoals(
-        demoSharedGoals.map((g) => {
-          const records = demoSavingRecords[g.id];
-          return records ? withRecordTotals(g, records, currentUserId) : g;
-        }),
-      );
+      setGoals(demoSharedGoals);
       setCompareData(demoCompareData);
       setCompareStale(false);
       setLoading(false);
     }
-  }, [isAuthenticated, isDemo, fetchData, currentUserId]);
+  }, [isAuthenticated, isDemo, fetchData]);
 
   useEffect(() => {
     // Only where the compare tab is shown — phones never show it (#344).
@@ -305,22 +300,6 @@ function SavingsGroups() {
       setDeletingGoalId(null);
     }
   };
-
-  // A goal's totals are the sum of its saving records, which the backend
-  // recomputes on every change. Demo mode has no backend, so recompute here from
-  // the fixture the records modal just wrote — otherwise a new deposit appears in
-  // the records list and nowhere on the card.
-  const handleRecordChanged = useCallback(
-    (goalId: string) => {
-      if (!isDemo) {
-        refreshGoals();
-        return;
-      }
-      const records = demoSavingRecords[goalId] ?? [];
-      setGoals((prev) => prev.map((g) => (g.id === goalId ? withRecordTotals(g, records, currentUserId) : g)));
-    },
-    [isDemo, refreshGoals, currentUserId],
-  );
 
   // Memoized (and above the early return, like every hook): tabs and modals key effects on it, and a fresh array each render
   // refetched every partner's settings and wiped a modal's error.
@@ -457,7 +436,7 @@ function SavingsGroups() {
                     <SharedSpendingTab connections={accepted} demo={isDemo ? DEMO_SHARED_SPENDING : undefined} />
                   ) : activeTab === 'goals' ? (
                     <div className="space-y-6">
-                      {goals.length > 0 && <CombinedProgress goals={goals} paceRecords={paceRecords} />}
+                      {goals.length > 0 && <CombinedProgress goals={goals} pacePoints={pacePoints} />}
 
                       {goals.length === 0 ? (
                         <div className="bg-white dark:bg-gray-800 rounded-xl p-10 shadow-sm flex flex-col items-center text-center gap-4">
@@ -488,7 +467,7 @@ function SavingsGroups() {
                             <SharedGoalCard
                               key={goal.id}
                               goal={goal}
-                              onViewRecords={setRecordsGoal}
+                              onViewHistory={setHistoryGoal}
                               onDelete={setConfirmDeleteGoalId}
                               onEdit={isDemo ? undefined : setEditingGoal}
                               onSetAside={isDemo ? undefined : handleSetAside}
@@ -519,7 +498,7 @@ function SavingsGroups() {
         )}
       </div>
 
-      {/* Modals — only shown in real (non-demo) mode, except saving records, which works on local fixtures */}
+      {/* Modals — only shown in real (non-demo) mode, except the history, which reads local fixtures */}
       {!isDemo && (
         <>
           <AddPeerModal
@@ -540,6 +519,14 @@ function SavingsGroups() {
             connections={accepted}
             goal={editingGoal}
           />
+          <CreateGoalModal
+            isOpen={joiningGoal !== null}
+            onClose={() => setJoiningGoal(null)}
+            onSuccess={refreshGoals}
+            connections={accepted}
+            joinGoal={joiningGoal}
+            onJoined={setSetAsideGoal}
+          />
         </>
       )}
 
@@ -557,7 +544,7 @@ function SavingsGroups() {
       <ConfirmDialog
         isOpen={confirmDeleteGoalId !== null}
         title={t('savings.confirmDeleteGoalTitle', 'Delete this goal?')}
-        message={t('savings.confirmDeleteGoalMessage', 'This deletes the goal and every saving record in it, including your partner’s. It can’t be undone.')}
+        message={t('savings.confirmDeleteGoalMessage', 'This removes the shared goal for both of you. Your own goals behind it stay, with their money.')}
         confirmLabel={t('savings.confirmDeleteGoal', 'Delete goal')}
         onCancel={() => setConfirmDeleteGoalId(null)}
         onConfirm={() => {
@@ -582,13 +569,7 @@ function SavingsGroups() {
         />
       )}
 
-      <SavingRecordsModal
-        goal={recordsGoal}
-        isDemo={isDemo}
-        currentUserId={currentUserId}
-        onClose={() => setRecordsGoal(null)}
-        onRecordChanged={handleRecordChanged}
-      />
+      <GoalHistoryModal goal={historyGoal} isDemo={isDemo} onClose={() => setHistoryGoal(null)} />
     </DashboardLayout>
   );
 }
@@ -639,13 +620,10 @@ function TabBar({ tab, onSelect, tabs = TABS }: { tab: Tab; onSelect: (tab: Tab)
   );
 }
 
-function CombinedProgress({ goals, paceRecords }: { goals: SharedGoalOut[]; paceRecords: SavingRecord[] | null }) {
+function CombinedProgress({ goals, pacePoints }: { goals: SharedGoalOut[]; pacePoints: PacePoint[] | null }) {
   const { t, i18n } = useTranslation('common');
-  // The pace reads saving records only. Money in a partner's linked goal (reserved,
-  // spent or invested through their own goal) has no dated record here, so a
-  // projection from records alone would understate the pace; none is shown then.
-  const backedByGoals = goals.some((g) => g.status === 'active' && (g.your_set_aside ?? 0) > 0);
-  const forecast = paceRecords && !backedByGoals ? paceForecast(goals, paceRecords, businessToday()) : null;
+  // The pace reads each side's money set aside by day (the goals' history).
+  const forecast = pacePoints ? paceForecast(goals, pacePoints, businessToday()) : null;
   const monthName = (ym: string) =>
     new Date(Date.UTC(+ym.slice(0, 4), +ym.slice(5, 7) - 1, 1)).toLocaleDateString(i18n?.language || 'en', { year: 'numeric', month: 'short', timeZone: 'UTC' });
   const totalSaved = goals.reduce((s, g) => s + g.total_amount, 0);

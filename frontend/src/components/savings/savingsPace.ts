@@ -1,4 +1,7 @@
-import type { SavingRecord, SharedGoalOut } from '@/shared/types';
+import type { SharedGoalHistoryPoint, SharedGoalOut } from '@/shared/types';
+
+/** A day's net change to one side of one goal (the history endpoint, tagged with its goal). */
+export type PacePoint = Pick<SharedGoalHistoryPoint, 'date' | 'amount'> & { goal_id: string };
 
 /** How far back "your recent pace" looks: about three months. */
 export const PACE_WINDOW_DAYS = 90;
@@ -30,20 +33,20 @@ const monthOfIndex = (i: number) => `${Math.floor(i / 12)}-${String((i % 12) + 1
 
 /**
  * When the active goals would all be reached if you both keep saving as you
- * have over the last ~3 months. `records` are every active goal's records;
- * `today` is the business day ('YYYY-MM-DD').
+ * have over the last ~3 months: the net set aside (releases count against it).
+ * `points` are every active goal's history; `today` is the business day ('YYYY-MM-DD').
  */
-export function paceForecast(goals: SharedGoalOut[], records: SavingRecord[], today: string): PaceForecast {
+export function paceForecast(goals: SharedGoalOut[], points: PacePoint[], today: string): PaceForecast {
   const active = goals.filter((g) => g.status !== 'completed');
   const remaining = active.reduce((s, g) => s + Math.max(0, g.target_amount - g.total_amount), 0);
   if (remaining <= 0) return { kind: 'done' };
 
   const activeIds = new Set(active.map((g) => g.id));
   const end = dayNumber(today);
-  const saved = records
-    .filter((r) => activeIds.has(r.goal_id))
-    .filter((r) => { const d = dayNumber(r.record_date); return d > end - PACE_WINDOW_DAYS && d <= end; })
-    .reduce((s, r) => s + r.amount, 0);
+  const saved = points
+    .filter((p) => activeIds.has(p.goal_id))
+    .filter((p) => { const d = dayNumber(p.date); return d > end - PACE_WINDOW_DAYS && d <= end; })
+    .reduce((s, p) => s + p.amount, 0);
   if (saved <= 0) return { kind: 'stalled', remaining };
 
   const perMonth = saved / (PACE_WINDOW_DAYS / 30.44);

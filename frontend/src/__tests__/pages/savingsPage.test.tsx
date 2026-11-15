@@ -12,7 +12,7 @@ import { render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import SavingsPage from '@/app/savings/page';
 import { apiClient } from '@/lib/api-client';
-import { demoPeerConnections, demoSavingRecords, demoSharedGoals } from '@/data/demoData';
+import { demoPeerConnections, demoSharedGoals } from '@/data/demoData';
 
 const mockReplace = jest.fn();
 let mockSearch = new URLSearchParams();
@@ -28,7 +28,7 @@ const demoAuth = {
   isAuthenticated: false,
   isDemo: true,
   // Not the fixtures' demo-user-1, as in the app: DemoContext's user id and the
-  // seeded records' owner id differ, and a test using one id for both hid a bug.
+  // fixtures' owner id differ.
   user: { id: 'demo-session-user' },
   canPersistData: false,
   session: null,
@@ -57,8 +57,9 @@ jest.mock('@/lib/api-client', () => ({
     getPeerCompareData: jest.fn(),
     removePeerConnection: jest.fn(),
     deleteSharedGoal: jest.fn(),
-    // The pace line reads every active goal's records.
-    listSavingRecords: jest.fn(() => Promise.resolve({ data: [] })),
+    // The pace line reads every active goal's history.
+    getSharedGoalHistory: jest.fn(() => Promise.resolve({ data: [] })),
+    linkSharedGoal: jest.fn(),
   },
 }));
 
@@ -87,19 +88,22 @@ jest.mock('@/components/compare/CompareStatCards', () => function CompareStatsSt
 });
 jest.mock('@/components/savings/SharedGoalCard', () => function GoalCardStub({
   goal,
-  onViewRecords,
+  onViewHistory,
   onDelete,
   onEdit,
+  onSetAside,
 }: {
   goal: { id: string; your_amount: number; peer_amount: number; total_amount: number };
-  onViewRecords: (goal: unknown) => void;
+  onViewHistory: (goal: unknown) => void;
   onDelete: (id: string) => void;
   onEdit?: (goal: unknown) => void;
+  onSetAside?: (goal: unknown) => void;
 }) {
   return (
     <div data-testid="goal-card">
       <span>{`${goal.id}:${goal.your_amount}+${goal.peer_amount}/${goal.total_amount}`}</span>
-      <button type="button" onClick={() => onViewRecords(goal)}>{`records ${goal.id}`}</button>
+      <button type="button" onClick={() => onViewHistory(goal)}>{`history ${goal.id}`}</button>
+      {onSetAside && <button type="button" onClick={() => onSetAside(goal)}>{`set aside ${goal.id}`}</button>}
       <button type="button" onClick={() => onDelete(goal.id)}>{`delete ${goal.id}`}</button>
       {onEdit && <button type="button" onClick={() => onEdit(goal)}>{`edit ${goal.id}`}</button>}
     </div>
@@ -107,16 +111,12 @@ jest.mock('@/components/savings/SharedGoalCard', () => function GoalCardStub({
 });
 jest.mock('@/components/compare/AddPeerModal', () => () => null);
 jest.mock('@/components/compare/PendingInviteBanner', () => () => null);
-jest.mock('@/components/savings/CreateGoalModal', () => () => null);
-// Stands in for a deposit made in the records modal: it reports the change, as the real one does.
-jest.mock('@/components/savings/SavingRecordsModal', () => function RecordsStub({
-  goal,
-  onRecordChanged,
-}: {
-  goal: { id: string } | null;
-  onRecordChanged: (goalId: string) => void;
-}) {
-  return goal ? <button type="button" onClick={() => onRecordChanged(goal.id)}>record changed</button> : null;
+// Only the "your part" form shows, so a test can see it open.
+jest.mock('@/components/savings/CreateGoalModal', () => function GoalFormStub({ joinGoal }: { joinGoal?: { id: string } | null }) {
+  return joinGoal ? <div>{`your part of ${joinGoal.id}`}</div> : null;
+});
+jest.mock('@/components/savings/GoalHistoryModal', () => function HistoryStub({ goal }: { goal: { id: string } | null }) {
+  return goal ? <div>{`history of ${goal.id}`}</div> : null;
 });
 
 const api = apiClient as unknown as Record<string, jest.Mock>;
@@ -183,64 +183,14 @@ describe('/savings — goals and compare as tabs over one roster', () => {
     expect(screen.getByRole('region', { name: 'Insights' })).toBeInTheDocument();
   });
 
-  it("moves a goal's totals when a deposit is recorded in demo mode", async () => {
-    // Totals are the sum of saving records; with no backend to recompute them,
-    // a demo deposit used to show in the records list and nowhere on the card.
+  it("opens a goal's history, in demo mode too", async () => {
     const user = userEvent.setup();
     const goal = demoSharedGoals[0];
-    const seeded = demoSavingRecords[goal.id];
     render(<SavingsPage />);
-    expect(
-      await screen.findByText(`${goal.id}:${goal.your_amount}+${goal.peer_amount}/${goal.total_amount}`),
-    ).toBeInTheDocument();
 
-    demoSavingRecords[goal.id] = [
-      ...seeded,
-      {
-        // Filed under the goal's owner, as the records modal does in demo.
-        id: 'demo-new', goal_id: goal.id, user_id: goal.your_user_id, user_name: goal.your_name,
-        amount: 1000, record_date: '2026-09-13', note: null, created_at: '2026-09-13T00:00:00Z',
-      },
-    ];
-    try {
-      await user.click(screen.getByRole('button', { name: `records ${goal.id}` }));
-      await user.click(screen.getByRole('button', { name: 'record changed' }));
-
-      // Your share rises by the deposit and the peer's does not move. Checking
-      // only the total passed while every seeded deposit was moved to the peer.
-      expect(
-        await screen.findByText(
-          `${goal.id}:${goal.your_amount + 1000}+${goal.peer_amount}/${goal.total_amount + 1000}`,
-        ),
-      ).toBeInTheDocument();
-    } finally {
-      demoSavingRecords[goal.id] = seeded;
-    }
-  });
-
-  it('reads demo goal totals from the saving records, so a deposit survives a remount', async () => {
-    // The records modal edits the record fixture in memory. Loading the static
-    // goal amounts on mount put the card back to its seeded totals while the
-    // records list still held the deposit.
-    const goal = demoSharedGoals[0];
-    const seeded = demoSavingRecords[goal.id];
-    demoSavingRecords[goal.id] = [
-      ...seeded,
-      {
-        id: 'demo-kept', goal_id: goal.id, user_id: goal.your_user_id, user_name: goal.your_name,
-        amount: 1000, record_date: '2026-09-13', note: null, created_at: '2026-09-13T00:00:00Z',
-      },
-    ];
-    try {
-      render(<SavingsPage />);
-      expect(
-        await screen.findByText(
-          `${goal.id}:${goal.your_amount + 1000}+${goal.peer_amount}/${goal.total_amount + 1000}`,
-        ),
-      ).toBeInTheDocument();
-    } finally {
-      demoSavingRecords[goal.id] = seeded;
-    }
+    await user.click(await screen.findByRole('button', { name: `history ${goal.id}` }));
+    expect(screen.getByText(`history of ${goal.id}`)).toBeInTheDocument();
+    expect(api.getSharedGoalHistory).not.toHaveBeenCalled();
   });
 
   it('offers to invite again in demo mode once every sample peer is removed', async () => {
@@ -339,17 +289,21 @@ describe('/savings — goals and compare as tabs over one roster', () => {
       expect(mockReplace).toHaveBeenLastCalledWith('/savings?utm_source=line', { scroll: false });
     });
 
-    it('refreshes goals after a record change without reloading the roster or blanking the page', async () => {
+    it('asks for your part before setting money aside on a goal you have no part in', async () => {
       const user = userEvent.setup();
-      api.listSharedGoals.mockResolvedValue({ data: [demoSharedGoals[0]] });
+      const theirs = { ...demoSharedGoals[0], your_goal_id: null };
+      const mine = { ...demoSharedGoals[1], your_goal_id: 'my-part' };
+      api.listSharedGoals.mockResolvedValue({ data: [theirs, mine] });
+      api.linkSharedGoal.mockResolvedValue({ data: { id: 'my-part', title: mine.title, currentAmount: 0, targetAmount: 1 } });
       render(<SavingsPage />);
 
-      await user.click(await screen.findByRole('button', { name: `records ${demoSharedGoals[0].id}` }));
-      await user.click(screen.getByRole('button', { name: 'record changed' }));
+      await user.click(await screen.findByRole('button', { name: `set aside ${theirs.id}` }));
+      expect(screen.getByText(`your part of ${theirs.id}`)).toBeInTheDocument();
+      expect(api.linkSharedGoal).not.toHaveBeenCalled();
 
-      await waitFor(() => expect(api.listSharedGoals).toHaveBeenCalledTimes(2));
-      expect(api.getPeerConnections).toHaveBeenCalledTimes(1);
-      expect(screen.getByRole('tablist')).toBeInTheDocument();
+      // With a part, it opens that goal straight away.
+      await user.click(screen.getByRole('button', { name: `set aside ${mine.id}` }));
+      await waitFor(() => expect(api.linkSharedGoal).toHaveBeenCalledWith(mine.id));
     });
 
     it('asks before deleting a goal; Cancel deletes nothing, confirming deletes once', async () => {
@@ -375,23 +329,22 @@ describe('/savings — goals and compare as tabs over one roster', () => {
       expect(await screen.findByRole('button', { name: `edit ${demoSharedGoals[0].id}` })).toBeInTheDocument();
     });
 
-    it('projects the pace from the active goals\' recent records', async () => {
+    it('projects the pace from the active goals\' recent history', async () => {
       const goalOnTime = { ...demoSharedGoals[0], status: 'active' as const, target_date: '2099-01-01', target_amount: 50000, total_amount: 20000 };
       api.listSharedGoals.mockResolvedValue({ data: [goalOnTime] });
       const recent = new Date(Date.now() - 10 * 86_400_000).toISOString().slice(0, 10);
       // Every fetch (the page loads goals more than once), then back to empty for the next tests.
-      api.listSavingRecords.mockImplementation(() => Promise.resolve({ data: [{
-        id: 'r1', goal_id: goalOnTime.id, user_id: 'u1', user_name: 'Me', amount: 9000,
-        record_date: recent, note: null, created_at: `${recent}T00:00:00Z`,
-      }] }));
+      api.getSharedGoalHistory.mockImplementation(() => Promise.resolve({ data: [
+        { date: recent, side: 'you', amount: 9000 },
+      ] }));
       try {
         render(<SavingsPage />);
         await waitFor(() => expect(screen.getByTestId('savings-pace')).toHaveTextContent(/every active goal is reached by .*on time/));
         // And never the "nothing saved" line on the way there.
         expect(screen.queryByText(/Nothing saved toward the active goals/)).toBeNull();
-        expect(api.listSavingRecords).toHaveBeenCalledWith(goalOnTime.id);
+        expect(api.getSharedGoalHistory).toHaveBeenCalledWith(goalOnTime.id);
       } finally {
-        api.listSavingRecords.mockImplementation(() => Promise.resolve({ data: [] }));
+        api.getSharedGoalHistory.mockImplementation(() => Promise.resolve({ data: [] }));
       }
     });
 

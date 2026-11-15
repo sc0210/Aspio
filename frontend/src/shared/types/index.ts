@@ -520,17 +520,30 @@ export interface SharedGoalOut {
   progress_pct: number;
   is_creator: boolean;
   created_at: string;
-  /** The caller's own goal backing their side (POST /peers/goals/{id}/link-goal),
-   *  and the money it holds, already counted in your_amount. */
+  /** Each side is that partner's personal goal: its target is their part, its
+   *  value their amount. target_amount = your_target + peer_target. */
+  your_target: number;
+  peer_target: number;
+  /** The partner has a personal goal for their part. */
+  peer_joined: boolean;
+  /** The caller's own goal for their part (POST /peers/goals/{id}/link-goal). */
   your_goal_id?: string | null;
   your_set_aside?: number;
 }
 
-export interface SharedGoalCreate {
+/** Your part is a new goal of `my_target`, or `goal_id`, a goal you already have. */
+export type SharedGoalCreate = {
   connection_id: string;
   title: string;
-  target_amount: number;
   target_date?: string | null;
+} & ({ my_target: number; goal_id?: never } | { goal_id: string; my_target?: never });
+
+/** One day's net change to one side's progress (GET /peers/goals/{id}/history). */
+export interface SharedGoalHistoryPoint {
+  date: string;
+  side: 'you' | 'partner';
+  /** Signed: a release is negative. */
+  amount: number;
 }
 
 export type SplitMethod = 'equal' | 'percent' | 'fixed';
@@ -684,19 +697,8 @@ export interface PeerPrefsUpdate {
   notify?: boolean;
 }
 
+/** The target is each partner's part, edited on their own goal. */
 export interface SharedGoalUpdate {
   title?: string;
-  target_amount?: number;
   target_date?: string | null;
-}
-
-export interface SavingRecord {
-  id: string;
-  goal_id: string;
-  user_id: string;
-  user_name: string;
-  amount: number;
-  record_date: string;
-  note: string | null;
-  created_at: string;
 }

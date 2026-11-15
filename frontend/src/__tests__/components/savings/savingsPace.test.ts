@@ -1,5 +1,5 @@
-import type { SavingRecord, SharedGoalOut } from '@/shared/types';
-import { paceForecast } from '@/components/savings/savingsPace';
+import type { SharedGoalHistoryPoint, SharedGoalOut } from '@/shared/types';
+import { paceForecast, type PacePoint } from '@/components/savings/savingsPace';
 import { goalHistory } from '@/components/savings/GoalHistoryChart';
 
 const goal = (over: Partial<SharedGoalOut>): SharedGoalOut => ({
@@ -7,10 +7,9 @@ const goal = (over: Partial<SharedGoalOut>): SharedGoalOut => ({
   your_amount: 0, peer_amount: 0, your_name: 'Me', peer_name: 'Bob', your_user_id: 'me', peer_user_id: 'bob',
   total_amount: 20000, progress_pct: 40, is_creator: true, created_at: '2026-01-01T00:00:00Z', ...over,
 } as SharedGoalOut);
-let n = 0;
-const rec = (record_date: string, amount: number, over: Partial<SavingRecord> = {}): SavingRecord => ({
-  id: `r${++n}`, goal_id: 'g1', user_id: 'me', user_name: 'Me', amount, record_date, note: null,
-  created_at: `${record_date}T00:00:00Z`, ...over,
+// A day's net set aside on a goal, as the page tags the history it fetched.
+const rec = (date: string, amount: number, over: Partial<PacePoint> = {}): PacePoint => ({
+  goal_id: 'g1', date, amount, ...over,
 });
 const TODAY = '2026-11-11';
 
@@ -38,7 +37,7 @@ describe('paceForecast', () => {
     expect(paceForecast([goal({})], [rec('2026-08-14', 5000)], TODAY).kind).toBe('pace');
   });
 
-  it('leaves out completed goals, their gap and their records', () => {
+  it('leaves out completed goals, their gap and their history', () => {
     const done = goal({ id: 'g9', status: 'completed', target_amount: 10000, total_amount: 10000 });
     const f = paceForecast([goal({}), done], [rec('2026-11-01', 9000, { goal_id: 'g9' })], TODAY);
     expect(f).toEqual({ kind: 'stalled', remaining: 30000 });
@@ -51,19 +50,25 @@ describe('paceForecast', () => {
     expect(paceForecast([goal({})], [rec('2026-11-01', 1)], TODAY).kind).toBe('stalled');
   });
 
+  it('counts money taken back against the pace', () => {
+    expect(paceForecast([goal({})], [rec('2026-10-01', 5000), rec('2026-11-01', -5000)], TODAY).kind).toBe('stalled');
+  });
+
   it('has nothing to project when every active goal is reached', () => {
     expect(paceForecast([goal({ total_amount: 50000 })], [rec('2026-11-01', 1)], TODAY)).toEqual({ kind: 'done' });
   });
 });
 
 describe('goalHistory', () => {
-  it('runs a total per person, one point per day, oldest first', () => {
-    const isMine = (r: SavingRecord) => r.user_id === 'me';
+  it('runs a total per side, one point per day, oldest first', () => {
+    const point = (date: string, side: SharedGoalHistoryPoint['side'], amount: number) => ({ date, side, amount });
     expect(goalHistory([
-      rec('2026-03-01', 500, { user_id: 'bob' }), rec('2026-01-01', 1000), rec('2026-03-01', 200),
-    ], isMine)).toEqual([
+      point('2026-03-01', 'partner', 500), point('2026-01-01', 'you', 1000), point('2026-03-01', 'you', 200),
+      point('2026-04-01', 'you', -300),
+    ])).toEqual([
       { date: '2026-01-01', mine: 1000, theirs: 0 },
       { date: '2026-03-01', mine: 1200, theirs: 500 },
+      { date: '2026-04-01', mine: 900, theirs: 500 },
     ]);
   });
 });
