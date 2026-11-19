@@ -68,6 +68,7 @@
     "done": "✓ Done",
     "editTitle": "Edit goal details",
     "left": "{{amount}} left",
+    "over": "{{amount}} over target",
     "perMonth": "~{{amount}}/mo"
   },
   "categories": {

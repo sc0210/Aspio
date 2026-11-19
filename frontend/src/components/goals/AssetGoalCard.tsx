@@ -75,6 +75,9 @@ export function AssetGoalCard({
     const current = goalProgressAmount(money);
     const progress = target > 0 ? (current / target) * 100 : 0;
     const remaining = Math.max(0, target - current);
+    // Shown capped at 100%: an overfunded goal read "1000.0%". The surplus gets its own line.
+    const shownPct = Math.min(100, progress);
+    const over = Math.max(0, current - target);
     const isCompleted = goalReached(money);
     const monthsLeft = monthsUntil(targetDate);
     const horizonWarning = goalHorizonRisk(money);
@@ -174,7 +177,7 @@ export function AssetGoalCard({
                 <div className="flex items-center justify-between gap-2 mt-2">
                     <div className="flex items-center gap-1.5 text-xs min-w-0">
                         <span className="font-medium text-gray-600 dark:text-gray-300">
-                            {isValueVisible ? `${progress.toFixed(0)}%` : '•••%'}
+                            {isValueVisible ? `${shownPct.toFixed(0)}%` : '•••%'}
                         </span>
                         {dateText && (
                             <span className={`truncate ${denseDateClass}`}>· {dateText}</span>
@@ -285,9 +288,14 @@ export function AssetGoalCard({
 
                 <div className="flex justify-between items-center mt-2 gap-2">
                     <span className="text-xs font-medium text-gray-700 dark:text-gray-300">
-                        {isValueVisible ? `${progress.toFixed(1)}%` : '•••%'}
+                        {isValueVisible ? `${shownPct.toFixed(1)}%` : '•••%'}
                     </span>
-                    {!isCompleted && (
+                    {over > 0 && (
+                        <span className="text-xs font-medium text-success-700 dark:text-success-400 truncate text-right">
+                            {t('goals:card.over', { amount: isValueVisible ? formatCashAmount(over, currency) : '•••••' })}
+                        </span>
+                    )}
+                    {!isCompleted && over === 0 && (
                         <span className="text-xs text-gray-500 dark:text-gray-400 truncate text-right">
                             {t('goals:card.left', { amount: isValueVisible ? formatCashAmount(remaining, currency) : '•••••' })}
                         </span>

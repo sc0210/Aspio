@@ -222,7 +222,10 @@ function DesktopGoalsPage() {
     const activeCoverageRatio = useMemo(() => {
         const activeTargetTotal = activeGoals.reduce((sum, goal) => sum + Number(goal.targetAmount), 0);
         // As the cards read it: market value once invested, the Emergency Wallet for an emergency fund.
-        const activeCurrentTotal = activeGoals.reduce((sum, goal) => sum + goalProgressAmount(goal), 0);
+        // Each goal counts at most its target: summing uncapped amounts let one
+        // overfunded goal (an emergency fund at 1000%) hide the goals behind pace.
+        const activeCurrentTotal = activeGoals.reduce(
+            (sum, goal) => sum + Math.min(goalProgressAmount(goal), Number(goal.targetAmount)), 0);
         if (activeTargetTotal <= 0) {
             return 0;
         }

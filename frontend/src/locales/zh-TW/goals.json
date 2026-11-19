@@ -68,6 +68,7 @@
     "done": "✓ 完成",
     "editTitle": "編輯目標詳情",
     "left": "尚差 {{amount}}",
+    "over": "超出目標 {{amount}}",
     "perMonth": "~{{amount}}/月"
   },
   "categories": {
