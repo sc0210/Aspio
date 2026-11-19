@@ -297,7 +297,7 @@ export function AssetGoalCard({
                             {t('goals:card.over', { amount: isValueVisible ? formatCashAmount(over, currency) : '•••••' })}
                         </span>
                     )}
-                    {!isCompleted && (
+                    {!isCompleted && remaining > 0 && (
                         <span className="text-xs text-gray-500 dark:text-gray-400 truncate text-right">
                             {t('goals:card.left', { amount: isValueVisible ? formatCashAmount(remaining, currency) : '•••••' })}
                         </span>
