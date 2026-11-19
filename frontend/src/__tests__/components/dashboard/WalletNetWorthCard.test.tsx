@@ -287,25 +287,26 @@ describe('WalletNetWorthCard', () => {
   });
 
   describe('emergency runway', () => {
-    it('shows emergency runway in months', () => {
-      // 30000 / 60000 = 0.5 months
+    it('shows the normalised monthly runway, not emergency ÷ the period total', () => {
+      // On 1Y monthlyExpenses is a year of spending: 30000 / 60000 would read 0.5 mo.
+      // The backend already divided by the monthly rate and sent 6.
       render(
         <WalletNetWorthCard
-          stats={baseStats}
+          stats={{ ...baseStats, emergencyFundMonths: 6 }}
           walletTrendsData={[]}
-
         />,
       );
       expect(screen.getByText('Emergency Runway')).toBeInTheDocument();
+      expect(screen.getByText('6.0 mo')).toBeInTheDocument();
+      expect(screen.queryByText('0.5 mo')).toBeNull();
     });
 
-    it('shows — when monthlyExpenses is 0', () => {
-      const stats = { ...baseStats, monthlyExpenses: 0 };
+    it('shows — when there is no runway figure (no spending)', () => {
+      const stats = { ...baseStats, emergencyFundMonths: null };
       render(
         <WalletNetWorthCard
           stats={stats}
           walletTrendsData={[]}
-
         />,
       );
       expect(screen.getAllByText('—').length).toBeGreaterThanOrEqual(1);
