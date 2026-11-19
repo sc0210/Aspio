@@ -33,3 +33,12 @@ describe('AssetGoalCard progress', () => {
         expect(screen.getByText('100%')).toBeInTheDocument();
     });
 });
+
+describe('AssetGoalCard surplus line', () => {
+    it('is not shown for an invested goal over target by market value alone', () => {
+        // Saved 80k of 100k, now worth 130k: not reached, so no "over target".
+        render(<AssetGoalCard title="Fund" currentAmount={80_000} targetAmount={100_000} investedAmount={80_000}
+            valueAmount={130_000} currency="TWD" />);
+        expect(screen.queryByText(/^goals:card\.over:/)).toBeNull();
+    });
+});

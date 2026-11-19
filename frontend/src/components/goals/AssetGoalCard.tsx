@@ -290,12 +290,14 @@ export function AssetGoalCard({
                     <span className="text-xs font-medium text-gray-700 dark:text-gray-300">
                         {isValueVisible ? `${shownPct.toFixed(1)}%` : '•••%'}
                     </span>
-                    {over > 0 && (
+                    {/* Same reached rule as the rest of the card (goalReached), so an invested
+                        goal over target by market value alone is not called over target. */}
+                    {isCompleted && over > 0 && (
                         <span className="text-xs font-medium text-success-700 dark:text-success-400 truncate text-right">
                             {t('goals:card.over', { amount: isValueVisible ? formatCashAmount(over, currency) : '•••••' })}
                         </span>
                     )}
-                    {!isCompleted && over === 0 && (
+                    {!isCompleted && (
                         <span className="text-xs text-gray-500 dark:text-gray-400 truncate text-right">
                             {t('goals:card.left', { amount: isValueVisible ? formatCashAmount(remaining, currency) : '•••••' })}
                         </span>
