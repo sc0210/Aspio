@@ -115,6 +115,9 @@ function useNotifPrefs(isDemo: boolean) {
   const [loading, setLoading] = useState(!isDemo);
   const [loadFailed, setLoadFailed] = useState(false);
   const [saveFailed, setSaveFailed] = useState(false);
+  // A switch stays disabled while its own save is in flight, so a failed save
+  // can only ever revert the one change it carried.
+  const [saving, setSaving] = useState<Partial<Record<keyof NotifPrefs, boolean>>>({});
 
   const load = useCallback(() => {
     if (isDemo) { setLoading(false); return; }
@@ -133,15 +136,18 @@ function useNotifPrefs(isDemo: boolean) {
     setPrefs(prev => ({ ...prev, [key]: val }));
     setSaveFailed(false);
     if (isDemo) return;
+    setSaving(prev => ({ ...prev, [key]: true }));
     try {
       await apiClient.patch('/notifications/preferences', { [key]: val });
     } catch {
       setPrefs(prev => ({ ...prev, [key]: !val }));
       setSaveFailed(true);
+    } finally {
+      setSaving(prev => ({ ...prev, [key]: false }));
     }
   };
 
-  return { prefs, set, loading, loadFailed, saveFailed, retry: load };
+  return { prefs, set, saving, loading, loadFailed, saveFailed, retry: load };
 }
 
 // ---------------------------------------------------------------------------
@@ -752,7 +758,7 @@ export default function SettingsPage() {
             <Toggle
               checked={notif.achievement_notifications}
               onChange={v => setNotif('achievement_notifications', v)}
-              disabled={notifDisabled}
+              disabled={notifDisabled || notifPrefs.saving.achievement_notifications}
               label={t('settings.notifGoalsAchievements')}
             />
           </SettingRow>
@@ -764,7 +770,7 @@ export default function SettingsPage() {
               <Toggle
                 checked={notif.transaction_alerts}
                 onChange={v => setNotif('transaction_alerts', v)}
-                disabled={notifDisabled}
+                disabled={notifDisabled || notifPrefs.saving.transaction_alerts}
                 label={t('settings.notifSpendingBills')}
               />
             </SettingRow>
