@@ -132,3 +132,48 @@ class TestSpendingAlerts:
         await self._spend(async_session, test_user, test_category, date(2026, 10, 5), "4500")
         await async_session.commit()
         assert await generate_spending_alerts(async_session, reference_date=TODAY, threshold=Decimal("2")) == 0
+
+
+class TestSettingsSwitches:
+    """The Settings notification switches silence the producers they name."""
+
+    async def _prefs(self, session, user, **switches):
+        from app.modules.notifications.models import NotificationPreference
+        session.add(NotificationPreference(id=uuid4(), user_id=user.id, **switches))
+        await session.commit()
+
+    async def test_payment_reminders_follow_the_spending_and_bills_switch(self, async_session, test_user):
+        await self._prefs(async_session, test_user, transaction_alerts=False)
+        async_session.add(loan(test_user, due_day=15))
+        await async_session.commit()
+        assert await generate_payment_due_reminders(async_session, reference_date=TODAY) == 0
+        assert await notes(async_session) == []
+
+    async def test_the_other_switch_leaves_payment_reminders_on(self, async_session, test_user):
+        await self._prefs(async_session, test_user, achievement_notifications=False)
+        async_session.add(loan(test_user, due_day=15))
+        await async_session.commit()
+        assert await generate_payment_due_reminders(async_session, reference_date=TODAY) == 1
+
+    async def test_goal_and_achievement_alerts_follow_their_switch(self, async_session, test_user):
+        from app.modules.notifications.services import create_notification
+        await self._prefs(async_session, test_user, achievement_notifications=False)
+        muted = await create_notification(
+            async_session, user_id=test_user.id, type=NotificationType.ACHIEVEMENT_UNLOCKED,
+            title="t", message="m")
+        assert muted is None and await notes(async_session) == []
+
+    async def test_in_app_off_silences_everything(self, async_session, test_user):
+        from app.modules.notifications.services import create_notification
+        await self._prefs(async_session, test_user, in_app_enabled=False)
+        for kind in (NotificationType.ACHIEVEMENT_UNLOCKED, NotificationType.PAYMENT_DUE,
+                     NotificationType.TRANSACTION_REMINDER):
+            assert await create_notification(
+                async_session, user_id=test_user.id, type=kind, title="t", message="m") is None
+
+    async def test_no_preferences_row_means_everything_on(self, async_session, test_user):
+        from app.modules.notifications.services import create_notification
+        n = await create_notification(
+            async_session, user_id=test_user.id, type=NotificationType.ACHIEVEMENT_UNLOCKED,
+            title="t", message="m")
+        assert n is not None

@@ -67,10 +67,21 @@ class NotificationService:
                 setattr(pref, key, value)
 
         await self.db.flush()
+        # The flush expires the server-set updated_at; reload it here, or the
+        # response serialiser lazy-loads it outside the async context and 500s.
+        await self.db.refresh(pref)
         return pref
 
 def get_notifications_service(db: AsyncSession) -> NotificationService:
     return NotificationService(db)
+
+
+# The preference switch (shown in Settings) that silences each producer's type.
+_PREF_FOR_TYPE = {
+    NotificationType.ACHIEVEMENT_UNLOCKED: "achievement_notifications",  # goal reached, achievement
+    NotificationType.PAYMENT_DUE: "transaction_alerts",  # loan payment due
+    NotificationType.TRANSACTION_REMINDER: "transaction_alerts",  # spending above usual
+}
 
 
 async def create_notification(
@@ -85,14 +96,23 @@ async def create_notification(
     action_url: Optional[str] = None,
     related_entity_type: Optional[str] = None,
     related_entity_id=None,
-) -> Notification:
+) -> Optional[Notification]:
     """Create an in-app notification for a user.
 
     This is the shared producer used by domain events (goal completion,
     achievement unlock, payment reminders, budget alerts). It flushes so the id
     is populated but does NOT commit — the caller's transaction owns the commit,
     keeping the notification atomic with the event that triggered it.
+
+    Returns None, creating nothing, when the user switched this type off. With no
+    preferences row every type is on, matching the model defaults.
     """
+    pref = await NotificationPreferenceRepository(db).get_by_user(user_id)
+    if pref is not None:
+        field = _PREF_FOR_TYPE.get(type)
+        if not pref.in_app_enabled or (field and not getattr(pref, field)):
+            return None
+
     notification = Notification(
         id=uuid.uuid4(),
         user_id=user_id,
