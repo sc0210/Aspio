@@ -81,12 +81,14 @@ function Toggle({ checked, onChange, disabled, label }: { checked: boolean; onCh
       role="switch"
       aria-checked={checked}
       aria-label={label}
-      disabled={disabled}
-      onClick={() => onChange(!checked)}
+      // aria-disabled, not disabled: a disabled button drops keyboard focus, and
+      // these switches go briefly unavailable while their own save is in flight.
+      aria-disabled={disabled || undefined}
+      onClick={() => { if (!disabled) onChange(!checked); }}
       className={cn(
         'relative inline-flex h-7 w-12 flex-shrink-0 items-center rounded-full transition-colors',
         'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-500 focus-visible:ring-offset-2',
-        'disabled:opacity-50 disabled:cursor-not-allowed touch-manipulation',
+        'aria-disabled:opacity-50 aria-disabled:cursor-not-allowed touch-manipulation',
         checked ? 'bg-primary-600' : 'bg-gray-200 dark:bg-gray-600'
       )}
     >
