@@ -437,13 +437,12 @@
       "quantity": "Shares held:",
       "avgCost": "Average cost:",
       "currentPrice": "Price:",
-      "cashBalance": "Cash balance:",
       "grossProceeds": "Gross proceeds:",
       "feesAndTax": "Fees & tax:",
       "netProceeds": "Net proceeds:",
-      "estimatedPnl": "Estimated P&L:",
-      "newCashBalance": "New cash balance:"
+      "estimatedPnl": "Estimated P&L:"
     },
+    "proceedsDestination": "Net proceeds go to your Life Wallet in TWD, or back to the goal this lot was reserved for.",
     "notesPlaceholder": "Why you are selling, or anything else worth noting…",
     "pickHolding": "Pick the holding to sell ({{count}})",
     "processing": "Working…",

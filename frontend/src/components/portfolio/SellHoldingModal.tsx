@@ -43,7 +43,6 @@ interface SellHoldingModalProps {
         totalCost: number;
         currency: string;
     } | null;
-    cashWalletBalance?: number;
 }
 
 export function SellHoldingModal({
@@ -52,7 +51,6 @@ export function SellHoldingModal({
     onSell,
     existingHoldings = [],
     preSelectedHolding = null,
-    cashWalletBalance = 0,
 }: SellHoldingModalProps) {
     const { t } = useTranslation('portfolio');
     // Headless UI locks the document element, but <main> is this app's scroll
@@ -95,7 +93,6 @@ export function SellHoldingModal({
     const costBasis = holding ? quantityNum * holding.averageCost : 0;
     const estimatedGainLoss = totalProceeds - costBasis - feesNum - taxesNum;
     const estimatedGainLossPct = costBasis > 0 ? (estimatedGainLoss / costBasis) * 100 : 0;
-    const newCashBalance = cashWalletBalance + netProceeds;
 
     const isValidQuantity = holding && quantityNum > 0 && quantityNum <= holding.quantity;
     const isValidPrice = priceNum > 0;
@@ -317,12 +314,6 @@ export function SellHoldingModal({
                                                 {formatCurrency(holding.currentPrice, holding.currency)}
                                             </span>
                                         </div>
-                                        <div className="flex justify-between text-sm">
-                                            <span className="text-gray-600 dark:text-gray-400">{t('sell.label.cashBalance')}</span>
-                                            <span className="font-semibold text-gray-900 dark:text-white">
-                                                {formatCurrency(cashWalletBalance, holding.currency)}
-                                            </span>
-                                        </div>
                                     </div>
                                 </div>
                             )}
@@ -480,15 +471,14 @@ export function SellHoldingModal({
                                                 {' '}({estimatedGainLossPct >= 0 ? '+' : ''}{estimatedGainLossPct.toFixed(2)}%)
                                             </span>
                                         </div>
-                                        <div className="flex justify-between items-center pt-2 border-t border-prosperity-200 dark:border-prosperity-800">
-                                            <span className="flex items-center gap-1 text-gray-600 dark:text-gray-400">
-                                                <BanknotesIcon className="h-4 w-4" />
-                                                {t('sell.label.newCashBalance')}
-                                            </span>
-                                            <span className="font-bold text-primary-700 dark:text-primary-400">
-                                                {formatCurrency(newCashBalance, holding.currency)}
-                                            </span>
-                                        </div>
+                                        {/* Where the money goes, not a "new cash balance": the modal
+                                            never knew the Life balance (it read 0), and proceeds are
+                                            credited in TWD at the valuation rate, or back to the goal
+                                            the lot was reserved for — the server decides which. */}
+                                        <p className="flex items-start gap-1.5 pt-2 border-t border-prosperity-200 dark:border-prosperity-800 text-xs text-gray-600 dark:text-gray-400">
+                                            <BanknotesIcon className="h-4 w-4 flex-shrink-0" aria-hidden="true" />
+                                            {t('sell.proceedsDestination')}
+                                        </p>
                                     </div>
                                 </div>
                             )}
