@@ -1,7 +1,6 @@
 'use client';
 
 import { useState, useEffect, useCallback } from 'react';
-import Link from 'next/link';
 import {
   UserIcon,
   MoonIcon,
@@ -100,37 +99,49 @@ function Toggle({ checked, onChange, disabled, label }: { checked: boolean; onCh
 }
 
 // ---------------------------------------------------------------------------
-// Notification preferences (localStorage only)
+// Notification preferences — stored on the account; the backend's notification
+// producers check them (notifications/services.py::create_notification). Only
+// switches that a real producer honours are offered.
 // ---------------------------------------------------------------------------
 
-const NOTIF_KEY = 'aspiro-notification-prefs';
 const DEFAULT_NOTIF = {
-  goalDeadlines: true,
-  transactionSummary: false,
-  peerUpdates: true,
-  portfolioAlerts: true,
+  achievement_notifications: true, // goal reached, achievement unlocked
+  transaction_alerts: true, // spending above usual, loan payment due
 };
 type NotifPrefs = typeof DEFAULT_NOTIF;
 
-function useNotifPrefs() {
+function useNotifPrefs(isDemo: boolean) {
   const [prefs, setPrefs] = useState<NotifPrefs>(DEFAULT_NOTIF);
+  const [loading, setLoading] = useState(!isDemo);
+  const [loadFailed, setLoadFailed] = useState(false);
+  const [saveFailed, setSaveFailed] = useState(false);
 
-  useEffect(() => {
+  const load = useCallback(() => {
+    if (isDemo) { setLoading(false); return; }
+    setLoading(true);
+    setLoadFailed(false);
+    // `data` is null until the user has saved a preference: every switch is on.
+    apiClient.get<Partial<NotifPrefs> | null>('/notifications/preferences')
+      .then(res => setPrefs({ ...DEFAULT_NOTIF, ...(res.data ?? {}) }))
+      .catch(() => setLoadFailed(true))
+      .finally(() => setLoading(false));
+  }, [isDemo]);
+
+  useEffect(() => { load(); }, [load]);
+
+  const set = async (key: keyof NotifPrefs, val: boolean) => {
+    setPrefs(prev => ({ ...prev, [key]: val }));
+    setSaveFailed(false);
+    if (isDemo) return;
     try {
-      const raw = localStorage.getItem(NOTIF_KEY);
-      if (raw) setPrefs({ ...DEFAULT_NOTIF, ...JSON.parse(raw) });
-    } catch { /* ignore */ }
-  }, []);
-
-  const set = (key: keyof NotifPrefs, val: boolean) => {
-    setPrefs(prev => {
-      const next = { ...prev, [key]: val };
-      try { localStorage.setItem(NOTIF_KEY, JSON.stringify(next)); } catch { /* ignore */ }
-      return next;
-    });
+      await apiClient.patch('/notifications/preferences', { [key]: val });
+    } catch {
+      setPrefs(prev => ({ ...prev, [key]: !val }));
+      setSaveFailed(true);
+    }
   };
 
-  return { prefs, set };
+  return { prefs, set, loading, loadFailed, saveFailed, retry: load };
 }
 
 // ---------------------------------------------------------------------------
@@ -310,20 +321,34 @@ function LineBotSection() {
             </button>
           </div>
         ) : (
-          <div className="flex items-center gap-3">
-            <div className="w-12 h-12 rounded-full bg-gray-100 dark:bg-gray-700 flex items-center justify-center shrink-0">
-              {LineLogo}
+          // Linking starts in LINE: /link replies with a one-time /link-line?token=…
+          // URL. Opening /link-line from here, without a token, only shows an error.
+          <div>
+            <div className="flex items-center gap-3">
+              <div className="w-12 h-12 rounded-full bg-gray-100 dark:bg-gray-700 flex items-center justify-center shrink-0">
+                {LineLogo}
+              </div>
+              <div className="flex-1 min-w-0">
+                <p className="text-sm font-medium text-gray-900 dark:text-white">{t('settings.lineBot.notConnected')}</p>
+                <p className="text-xs text-gray-500 dark:text-gray-400">{t('settings.lineBot.notConnectedHint')}</p>
+              </div>
+              <button
+                onClick={fetchStatus}
+                className="shrink-0 text-xs px-3 py-2 min-h-[44px] rounded-lg border border-gray-200 dark:border-gray-600 text-gray-600 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-500 touch-manipulation"
+              >
+                {t('settings.lineBot.checkAgain')}
+              </button>
             </div>
-            <div className="flex-1">
-              <p className="text-sm font-medium text-gray-900 dark:text-white">{t('settings.lineBot.notConnected')}</p>
-              <p className="text-xs text-gray-500 dark:text-gray-400">{t('settings.lineBot.notConnectedHint')}</p>
-            </div>
-            <Link
-              href="/link-line"
-              className="shrink-0 text-xs px-3 py-2 min-h-[44px] inline-flex items-center rounded-lg bg-[#06C755] hover:bg-[#05b34d] text-white font-medium transition-colors touch-manipulation"
-            >
-              {t('settings.lineBot.connect')}
-            </Link>
+            <ol className="mt-3 ml-1 space-y-1.5 text-xs text-gray-600 dark:text-gray-300">
+              {(['step1', 'step2', 'step3'] as const).map((step, i) => (
+                <li key={step} className="flex gap-2">
+                  <span className="shrink-0 w-5 h-5 rounded-full bg-[#06C755]/10 text-[#05b34d] dark:text-[#06C755] font-semibold flex items-center justify-center">
+                    {i + 1}
+                  </span>
+                  <span className="pt-0.5">{t(`settings.lineBot.connectSteps.${step}`)}</span>
+                </li>
+              ))}
+            </ol>
           </div>
         )}
       </div>
@@ -373,7 +398,9 @@ export default function SettingsPage() {
   const { isValueVisible, setValueVisible } = usePrivacy();
   const { preferences, updatePreference, resetPreferences } = useAssetTrackingPreferences();
   const { theme, setTheme } = useTheme();
-  const { prefs: notif, set: setNotif } = useNotifPrefs();
+  const notifPrefs = useNotifPrefs(isDemoMode);
+  const { prefs: notif, set: setNotif } = notifPrefs;
+  const notifDisabled = notifPrefs.loading || notifPrefs.loadFailed;
   const queryClient = useQueryClient();
 
   // Usage analytics, the switch the consent banner points to. Shown only where
@@ -707,38 +734,46 @@ export default function SettingsPage() {
 
         {/* ── Notifications ────────────────────────────────────────────── */}
         <SectionCard title={t('settings.notifications', 'Notifications')} icon={BellIcon}>
+          {notifPrefs.loadFailed && (
+            <div role="alert" className="flex items-center justify-between gap-3 rounded-lg bg-red-50 dark:bg-red-900/20 px-3 py-2">
+              <p className="text-xs text-red-700 dark:text-red-400">{t('settings.notifLoadFailed')}</p>
+              <button
+                onClick={notifPrefs.retry}
+                className="shrink-0 text-xs px-3 py-2 min-h-[44px] rounded-lg border border-gray-200 dark:border-gray-600 text-gray-600 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-500 touch-manipulation"
+              >
+                {t('settings.lineBot.retry')}
+              </button>
+            </div>
+          )}
           <SettingRow
-            label={t('settings.notifGoals', 'Goal deadline alerts')}
-            description={t('settings.notifGoalsDesc', 'Remind me when savings goals are approaching their target date')}
+            label={t('settings.notifGoalsAchievements')}
+            description={t('settings.notifGoalsAchievementsDesc')}
           >
-            <Toggle checked={notif.goalDeadlines} onChange={v => setNotif('goalDeadlines', v)} label={t('settings.notifGoals', 'Goal deadline alerts')} />
+            <Toggle
+              checked={notif.achievement_notifications}
+              onChange={v => setNotif('achievement_notifications', v)}
+              disabled={notifDisabled}
+              label={t('settings.notifGoalsAchievements')}
+            />
           </SettingRow>
           <div className="border-t border-gray-100 dark:border-gray-700 pt-4">
             <SettingRow
-              label={t('settings.notifPortfolio', 'Portfolio alerts')}
-              description={t('settings.notifPortfolioDesc', 'Notify me of significant portfolio movements')}
+              label={t('settings.notifSpendingBills')}
+              description={t('settings.notifSpendingBillsDesc')}
             >
-              <Toggle checked={notif.portfolioAlerts} onChange={v => setNotif('portfolioAlerts', v)} label={t('settings.notifPortfolio', 'Portfolio alerts')} />
+              <Toggle
+                checked={notif.transaction_alerts}
+                onChange={v => setNotif('transaction_alerts', v)}
+                disabled={notifDisabled}
+                label={t('settings.notifSpendingBills')}
+              />
             </SettingRow>
           </div>
-          <div className="border-t border-gray-100 dark:border-gray-700 pt-4">
-            <SettingRow
-              label={t('settings.notifPeers', 'Peer updates')}
-              description={t('settings.notifPeersDesc', 'Get notified when a peer accepts your invite or updates a shared goal')}
-            >
-              <Toggle checked={notif.peerUpdates} onChange={v => setNotif('peerUpdates', v)} label={t('settings.notifPeers', 'Peer updates')} />
-            </SettingRow>
-          </div>
-          <div className="border-t border-gray-100 dark:border-gray-700 pt-4">
-            <SettingRow
-              label={t('settings.notifTransactions', 'Weekly transaction summary')}
-              description={t('settings.notifTransactionsDesc', 'Receive a weekly digest of your spending')}
-            >
-              <Toggle checked={notif.transactionSummary} onChange={v => setNotif('transactionSummary', v)} label={t('settings.notifTransactions', 'Weekly transaction summary')} />
-            </SettingRow>
-          </div>
+          {notifPrefs.saveFailed && (
+            <p role="alert" className="text-xs text-red-700 dark:text-red-400">{t('settings.notifSaveFailed')}</p>
+          )}
           <p className="text-xs text-gray-500 dark:text-gray-400 pt-1">
-            {t('settings.notifNote', 'Push notifications require browser permission. In-app alerts are always on.')}
+            {t('settings.notifNote')}
           </p>
         </SectionCard>
 
