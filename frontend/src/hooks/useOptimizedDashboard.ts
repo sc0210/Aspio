@@ -55,12 +55,6 @@ interface RawHolding {
   name?: string;
 }
 
-/** Emergency-fund months from `days` of spending, scaled to a 30-day month. */
-function runwayMonths(emergency: number, expenses: number, days: number): number | null {
-  if (!(expenses > 0) || !(days > 0)) return null;
-  return emergency / (expenses / (days / 30));
-}
-
 interface DashboardStatsData {
   life_wallet?: number;
   portfolio_wallet?: number;
@@ -193,7 +187,11 @@ export function useOptimizedDashboard(dateRange: '7d' | '14d' | 'month' | '30d' 
         monthlyChange: 0,
         upcomingBills: 2,
         totalAssets: demoStats.life_wallet + demoStats.emergency_wallet + demoStats.portfolio_wallet,
-        emergencyFundMonths: runwayMonths(demoStats.emergency_wallet, demoStats.monthlyExpenses, new Date().getDate()),
+        // Demo stats are this calendar month and ignore the period selector. Scaling
+        // month-to-date by the day count blew up on the 1st, when rent lands.
+        emergencyFundMonths: demoStats.monthlyExpenses > 0
+          ? demoStats.emergency_wallet / demoStats.monthlyExpenses
+          : null,
       },
       recentTransactions: demoTransactions.slice(0, 5),
       portfolio: {
