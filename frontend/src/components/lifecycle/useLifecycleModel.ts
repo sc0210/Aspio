@@ -58,13 +58,13 @@ export function useLifecycleModel() {
     const { isAuthenticated, isDemo, isLoading: authLoading } = useAppMode();
     const router = useRouter();
 
-    const { data: dash, isLoading: dashLoading } = useOptimizedDashboard('month');
+    const { data: dash, isLoading: dashLoading, isError: dashFailed, refetch: refetchDash } = useOptimizedDashboard('month');
     const stats = dash?.data?.stats;
 
     // Trailing 12-month average — a stable cash-flow basis that smooths
     // seasonal spikes, the same seed the housing page uses.
     const cashFlow = useAnnualCashFlow();
-    const { loans } = useLoans();
+    const { loans, isError: loansFailed, refetch: refetchLoans } = useLoans();
     const { holdings } = usePortfolio();
     const { preferences, currentAge, updatePreference, setInvestmentLoanIds } = useLifecyclePreferences();
 
@@ -278,9 +278,13 @@ export function useLifecycleModel() {
     );
 
     const showSpinner = authLoading || (isAuthenticated && dashLoading && !stats);
+    // No stats, or no loans to know the debt by: leverage would read 0× and every
+    // safety check pass. Say the data did not load instead.
+    const loadFailed = !isDemo && ((dashFailed && !stats) || loansFailed);
+    const retry = () => { void refetchDash(); void refetchLoans(); };
 
 
     return {
-        realizedReturn, lifeCash, position, target, tracking, preferences, walletTrend, historyLoans, livePosition, historyPeriod, setHistoryPeriod, trendLoading, stress, cashFlowBasisMonths, glidepathSeed, updatePreference, spread, debt, interest, realizedReturnPct, loans, selectedLoanIds, toggleLoan, showSpinner,
+        realizedReturn, lifeCash, position, target, tracking, preferences, walletTrend, historyLoans, livePosition, historyPeriod, setHistoryPeriod, trendLoading, stress, cashFlowBasisMonths, glidepathSeed, updatePreference, spread, debt, interest, realizedReturnPct, loans, selectedLoanIds, toggleLoan, showSpinner, loadFailed, retry,
     };
 }

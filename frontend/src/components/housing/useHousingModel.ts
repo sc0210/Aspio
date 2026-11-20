@@ -39,7 +39,7 @@ export function useHousingModel(derived: SimulatorDerived) {
     const { isAuthenticated, isDemo, isLoading: authLoading } = useAppMode();
     const router = useRouter();
 
-    const { data: dash, isLoading: dashLoading } = useOptimizedDashboard('month');
+    const { data: dash, isLoading: dashLoading, isError: dashFailed, refetch: refetchDash } = useOptimizedDashboard('month');
     const stats = dash?.data?.stats;
     // Trailing 12-month average for income/expenses — a stable cash-flow basis
     // that smooths seasonal spikes, far better than a single current month.
@@ -95,5 +95,10 @@ export function useHousingModel(derived: SimulatorDerived) {
 
     const showSpinner = authLoading || (isAuthenticated && dashLoading && !stats);
 
-    return { seed, affordability, houseContext, cashFlowBasisMonths, showSpinner };
+    // With no stats every input is 0, and the verdicts read as confident answers
+    // about NT$0 of assets. Say the data did not load instead.
+    const loadFailed = !isDemo && dashFailed && !stats;
+    const retry = () => { void refetchDash(); };
+
+    return { seed, affordability, houseContext, cashFlowBasisMonths, showSpinner, loadFailed, retry };
 }

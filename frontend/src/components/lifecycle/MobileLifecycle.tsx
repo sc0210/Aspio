@@ -1,5 +1,6 @@
 'use client';
 
+import { QueryErrorCard } from '@/components/ui/QueryErrorCard';
 import { useTranslation } from 'react-i18next';
 import { DashboardLayout } from '@/components/layout/DashboardLayout';
 import { LoadingSpinner } from '@/components/ui/LoadingSpinner';
@@ -16,7 +17,7 @@ import { useLifecycleModel } from '@/components/lifecycle/useLifecycleModel';
  */
 export function MobileLifecycle() {
     const { t } = useTranslation(['common', 'dashboard']);
-    const { position, target, tracking, preferences, stress, cashFlowBasisMonths, showSpinner } =
+    const { position, target, tracking, preferences, stress, cashFlowBasisMonths, showSpinner, loadFailed, retry } =
         useLifecycleModel();
 
     return (
@@ -30,6 +31,8 @@ export function MobileLifecycle() {
 
                 {showSpinner ? (
                     <div className="flex items-center justify-center py-24"><LoadingSpinner /></div>
+                ) : loadFailed ? (
+                    <QueryErrorCard onRetry={retry} />
                 ) : (
                     <>
                         <PositionHeader

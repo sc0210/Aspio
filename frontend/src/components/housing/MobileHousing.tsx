@@ -1,5 +1,6 @@
 'use client';
 
+import { QueryErrorCard } from '@/components/ui/QueryErrorCard';
 import { useTranslation } from 'react-i18next';
 import { DashboardLayout } from '@/components/layout/DashboardLayout';
 import { LoadingSpinner } from '@/components/ui/LoadingSpinner';
@@ -16,7 +17,7 @@ import { useHousingModel, INITIAL_DERIVED } from '@/components/housing/useHousin
  */
 export function MobileHousing() {
     const { t } = useTranslation(['common', 'dashboard']);
-    const { seed, affordability, cashFlowBasisMonths, showSpinner } = useHousingModel(INITIAL_DERIVED);
+    const { seed, affordability, cashFlowBasisMonths, showSpinner, loadFailed, retry } = useHousingModel(INITIAL_DERIVED);
 
     return (
         <DashboardLayout>
@@ -29,6 +30,8 @@ export function MobileHousing() {
 
                 {showSpinner ? (
                     <div className="flex items-center justify-center py-24"><LoadingSpinner /></div>
+                ) : loadFailed ? (
+                    <QueryErrorCard onRetry={retry} />
                 ) : (
                     <>
                         <AffordabilityPanel inputs={affordability} cashFlowBasisMonths={cashFlowBasisMonths} />
