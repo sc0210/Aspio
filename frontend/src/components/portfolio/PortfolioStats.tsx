@@ -379,7 +379,8 @@ export function PortfolioStats({ portfolio, performance, isValueVisible, apiStat
                       onClick={(e) => { e.stopPropagation(); onViewTrendClick(); }}
                       className={cn(
                         'absolute top-2.5 right-2.5 z-10 flex items-center gap-1 px-2 py-1 rounded-lg text-xs sm:text-xs font-semibold',
-                        'transition-all duration-200 opacity-0 group-hover:opacity-100 focus:opacity-100',
+                        // Always visible: hover-only, touch and keyboard users never found it.
+                        'transition-all duration-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-500',
                         'backdrop-blur-sm shadow-sm border',
                         tone('bg-success-100/80 dark:bg-success-900/40 text-success-700 dark:text-success-300 border-success-200/60 dark:border-success-700/40 hover:bg-success-200/80 dark:hover:bg-success-800/50', 'bg-rose-100/80 dark:bg-rose-900/40 text-error-700 dark:text-error-300 border-rose-200/60 dark:border-rose-700/40 hover:bg-rose-200/80 dark:hover:bg-rose-800/50', 'bg-gray-100/80 dark:bg-gray-800/60 text-gray-700 dark:text-gray-300 border-gray-200/60 dark:border-gray-700/40 hover:bg-gray-200/80 dark:hover:bg-gray-700/50')
                       )}
