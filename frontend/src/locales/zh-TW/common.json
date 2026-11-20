@@ -117,6 +117,8 @@
   "errorState": {
     "description": "載入此頁面時發生未預期的錯誤。",
     "iconLabel": "錯誤",
+    "loadFailed": "無法載入",
+    "loadFailedHint": "請檢查網路連線後再試一次。這裡的數字並非零，只是尚未載入。",
     "title": "發生錯誤",
     "titleWithSegment": "{{segment}}載入失敗",
     "tryAgain": "重試"

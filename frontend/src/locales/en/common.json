@@ -117,6 +117,8 @@
   "errorState": {
     "description": "An unexpected error occurred while loading this page.",
     "iconLabel": "Error",
+    "loadFailed": "Couldn't load this",
+    "loadFailedHint": "Check your connection and try again. The figures here are not zero, they just didn't arrive.",
     "title": "Something went wrong",
     "titleWithSegment": "Failed to load {{segment}}",
     "tryAgain": "Try again"
