@@ -245,9 +245,8 @@ function SignInForm() {
                     rightIcon={
                       <button
                         type="button"
-                        tabIndex={-1}
                         onClick={() => setShowPassword(v => !v)}
-                        className="text-gray-500 dark:text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 transition-colors"
+                        className="grid place-items-center w-11 h-11 -mr-3 rounded-lg text-gray-500 dark:text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-500"
                         aria-label={showPassword ? t('auth:signIn.hidePassword') : t('auth:signIn.showPassword')}
                       >
                         {showPassword

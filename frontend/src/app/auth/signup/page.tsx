@@ -286,10 +286,9 @@ function SignUpForm() {
                     rightIcon={
                       <button
                         type="button"
-                        tabIndex={-1}
                         onClick={() => setShowPassword(v => !v)}
-                        className="text-gray-500 dark:text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 transition-colors"
-                        aria-label={showPassword ? 'Hide password' : 'Show password'}
+                        className="grid place-items-center w-11 h-11 -mr-3 rounded-lg text-gray-500 dark:text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-500"
+                        aria-label={showPassword ? t('auth:signIn.hidePassword') : t('auth:signIn.showPassword')}
                       >
                         {showPassword ? <EyeSlashIcon className="w-4 h-4" /> : <EyeIcon className="w-4 h-4" />}
                       </button>
@@ -332,10 +331,9 @@ function SignUpForm() {
                   rightIcon={
                     <button
                       type="button"
-                      tabIndex={-1}
                       onClick={() => setShowConfirm(v => !v)}
-                      className="text-gray-500 dark:text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 transition-colors"
-                      aria-label={showConfirm ? 'Hide password' : 'Show password'}
+                      className="grid place-items-center w-11 h-11 -mr-3 rounded-lg text-gray-500 dark:text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-500"
+                      aria-label={showConfirm ? t('auth:signIn.hidePassword') : t('auth:signIn.showPassword')}
                     >
                       {showConfirm ? <EyeSlashIcon className="w-4 h-4" /> : <EyeIcon className="w-4 h-4" />}
                     </button>
