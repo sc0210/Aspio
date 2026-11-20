@@ -17,6 +17,7 @@ import { useEditHref } from '@/lib/transactions/returnTo';
 import { formatCurrency } from '@/utils/formatters';
 import { highlight } from '@/utils/highlight';
 import { getCategoryIcon } from '@/utils/categoryIcon';
+import { isWalletTransfer } from '@/utils/expenseGroups';
 import { Transaction } from '@/shared/types';
 import { getPaymentMethodColor, getWalletTypeBadge } from './transactionRowStyles';
 import { canSplit } from './SplitExpenseModal';
@@ -153,10 +154,12 @@ function TransactionRowBase({
                   <div
                     className={cn(
                       'text-sm font-semibold whitespace-nowrap',
-                      transaction.type === 'income'
-                        ? 'text-success-700 dark:text-success-400'
-                        : transaction.type === 'transfer'
+                      // A transfer leg is an expense/income row, never type 'transfer';
+                      // neutral so moving money between wallets doesn't read as spending.
+                      isWalletTransfer(transaction)
                         ? 'text-gray-600 dark:text-gray-400'
+                        : transaction.type === 'income'
+                        ? 'text-success-700 dark:text-success-400'
                         : 'text-error-700 dark:text-error-400'
                     )}
                   >

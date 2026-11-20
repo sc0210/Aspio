@@ -164,7 +164,11 @@ export function MobileTransactions() {
                                     <Card padding="none" shadow="none" clip className="divide-y divide-gray-100 dark:divide-gray-700">
                                         {txs.map((tx) => {
                                             const isIncome = tx.type === 'income';
-                                            const isTransfer = tx.type === 'transfer';
+                                            // Legs are stored as expense/income rows, never type 'transfer':
+                                            // checking the type coloured a Life → Emergency move as spending
+                                            // and income. Neutral, with the wallet each leg moved.
+                                            const isTransfer = isWalletTransfer(tx);
+                                            const wallet = tx.walletType === 'emergency' ? 'emergency' : 'life';
                                             return (
                                                 <Link key={tx.id} href={editHref(tx.id)} className="flex items-center gap-3 px-4 py-3 active:bg-gray-50 dark:active:bg-gray-700/40 focus-visible:outline-none focus-visible:bg-gray-50 dark:focus-visible:bg-gray-700/40">
                                                     <span className="grid place-items-center w-9 h-9 rounded-xl bg-gray-100 dark:bg-gray-700 text-lg flex-shrink-0" aria-hidden="true">
@@ -172,11 +176,14 @@ export function MobileTransactions() {
                                                     </span>
                                                     <div className="min-w-0 flex-1">
                                                         <p className="text-sm font-bold text-gray-900 dark:text-white truncate">{tx.description || tx.category}</p>
-                                                        <p className="text-xs font-medium text-gray-500 dark:text-gray-400 truncate">{tx.category}</p>
+                                                        <p className="text-xs font-medium text-gray-500 dark:text-gray-400 truncate">
+                                                            {isTransfer ? `${tx.category} · ${t(`transactions:wallet.${wallet}`)}` : tx.category}
+                                                        </p>
                                                     </div>
                                                     <p className={cn('text-[14.5px] font-extrabold tabular-nums flex-shrink-0',
                                                         isTransfer ? 'text-gray-500 dark:text-gray-400' : isIncome ? 'text-prosperity-700 dark:text-prosperity-400' : 'text-gray-900 dark:text-white')}>
-                                                        {isTransfer ? '' : isIncome ? '+' : '−'}{isValueVisible ? formatTWDCompact(toTWD(tx.amount || 0, tx.currency || 'TWD')) : '•••'}
+                                                        {/* Exact, not compact: a ledger row read "−NT$1.2K". */}
+                                                        {isIncome ? '+' : '−'}{isValueVisible ? formatTWD(toTWD(tx.amount || 0, tx.currency || 'TWD')) : '•••'}
                                                     </p>
                                                 </Link>
                                             );

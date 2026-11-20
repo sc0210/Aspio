@@ -422,7 +422,7 @@
   "splitBadge": "Split",
   "stats": {
     "averageTransaction": "Average Transaction",
-    "hideTransfers": "Hide transfers",
+    "hideTransfers": "Exclude transfers from totals",
     "hideTransfersNote": "Moving money between your own wallets is left out. The list below still shows both legs, so these totals no longer match it.",
     "loadFailed": "Couldn't load totals",
     "netIncome": "Net Income",
