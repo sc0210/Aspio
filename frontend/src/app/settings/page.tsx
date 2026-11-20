@@ -26,6 +26,7 @@ import { useQueryClient } from '@tanstack/react-query';
 import { languages } from '@/lib/i18n';
 import { apiClient } from '@/lib/api-client';
 import { demoLineLinkStatus } from '@/data/demoData';
+import { useAccessTier } from '@/hooks/useAccessTier';
 import { useFeatures } from '@/hooks/useFeatures';
 import { QUERY_KEYS } from '@/hooks/useDataSynchronization';
 import { cn } from '@/utils/cn';
@@ -405,6 +406,7 @@ function LineBotSection() {
 
 export default function SettingsPage() {
   const { t, i18n } = useTranslation('common');
+  const { tier } = useAccessTier();
   const { user, isDemo: isDemoMode } = useAppMode();
   const { lineBot } = useFeatures();
   const { isValueVisible, setValueVisible } = usePrivacy();
@@ -551,9 +553,12 @@ export default function SettingsPage() {
               <p className="text-xs text-gray-500 dark:text-gray-400 truncate">
                 {isDemoMode ? 'alex.chen@example.com' : (user?.email || '—')}
               </p>
-              <span className="mt-1 inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-primary-100 text-primary-700 dark:bg-primary-900/30 dark:text-primary-300">
-                {isDemoMode ? 'Premium' : 'Basic Plan'}
-              </span>
+              {/* From the account's tier: hardcoded, a premium user read "Basic Plan". */}
+              {tier && (
+                <span className="mt-1 inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-primary-100 text-primary-700 dark:bg-primary-900/30 dark:text-primary-300">
+                  {t(tier === 'premium' ? 'access.planPremium' : 'access.planFree')}
+                </span>
+              )}
             </div>
           </div>
 
