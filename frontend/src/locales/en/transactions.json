@@ -434,7 +434,8 @@
     "uploadImage": "Upload Image",
     "uploadTitle": "Capture or Upload Receipt",
     "verifyBody": "Low confidence detected. Please review and correct if needed.",
-    "verifyTitle": "Please verify details"
+    "verifyTitle": "Please verify details",
+    "reviewAndSave": "Review & save"
   },
   "splitBadge": "Split",
   "stats": {

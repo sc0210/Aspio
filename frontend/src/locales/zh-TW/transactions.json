@@ -434,7 +434,8 @@
     "uploadImage": "上傳圖片",
     "uploadTitle": "拍攝或上傳收據",
     "verifyBody": "辨識信心度偏低，請檢查並視需要修正。",
-    "verifyTitle": "請確認明細"
+    "verifyTitle": "請確認明細",
+    "reviewAndSave": "確認並儲存"
   },
   "splitBadge": "分帳",
   "stats": {
