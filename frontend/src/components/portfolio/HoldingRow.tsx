@@ -114,17 +114,20 @@ function HoldingRowBase({
       <td className="px-3 md:px-6 py-4 whitespace-nowrap">
         <div>
           <div className="flex items-center gap-2">
-            {/* A button, so the row is reachable by keyboard: the <tr onClick> was mouse-only. */}
-            <button
-              type="button"
-              // In bulk edit it selects the row instead, so it is never a dead tab stop.
-              onClick={(e) => { e.stopPropagation(); if (bulkEditMode) onToggleSelect(holding); else onOpen(holding); }}
-              aria-pressed={bulkEditMode ? isSelected : undefined}
-              className="text-sm font-medium text-gray-900 dark:text-gray-100 rounded hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-500"
-              aria-label={t('portfolio:openHolding', { symbol: holding.symbol, defaultValue: 'Open {{symbol}}' })}
-            >
-              {holding.symbol}
-            </button>
+            {/* A button, so the row is reachable by keyboard: the <tr onClick> was mouse-only.
+                Plain text in bulk edit, where the checkbox is the row's one control. */}
+            {bulkEditMode ? (
+              <span className="text-sm font-medium text-gray-900 dark:text-gray-100">{holding.symbol}</span>
+            ) : (
+              <button
+                type="button"
+                onClick={(e) => { e.stopPropagation(); onOpen(holding); }}
+                className="text-sm font-medium text-gray-900 dark:text-gray-100 rounded hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-500"
+                aria-label={t('portfolio:openHolding', { symbol: holding.symbol, defaultValue: 'Open {{symbol}}' })}
+              >
+                {holding.symbol}
+              </button>
+            )}
             {/* Bought with a goal's money */}
             {holding.goalId && (
                 <span className="inline-flex items-center px-1.5 py-0.5 rounded text-xs font-medium bg-amber-100 dark:bg-amber-900/30 text-amber-800 dark:text-amber-300" title={t('goals:invest.goalLotHint')}>
