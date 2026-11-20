@@ -323,7 +323,8 @@
     "walletPlaceholder": "Reassign wallet",
     "holdingLinkedSkipped": "{{count}} selected entries belong to portfolio holdings and were left as they are. Change them on Portfolio.",
     "split": "Split with partner",
-    "manageSplit": "Manage split"
+    "manageSplit": "Manage split",
+    "actionsFor": "Actions for {{description}}"
   },
   "monthlySummary": "Monthly Summary",
   "monthlySummaryPage": {

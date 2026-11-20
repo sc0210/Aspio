@@ -97,9 +97,14 @@ function TransactionRowBase({
           <div className="flex-1 min-w-0">
             <div className="flex items-start justify-between gap-2">
               <div className="flex-1 min-w-0">
-                <p className="text-sm font-medium text-gray-900 dark:text-white truncate mb-0.5">
+                {/* The description opens the editor, as the phone row does; editing was only
+                    behind the ⋮ menu. */}
+                <Link
+                  href={editHref(transaction.id)}
+                  className="block text-sm font-medium text-gray-900 dark:text-white truncate mb-0.5 rounded hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-500"
+                >
                   {searchQuery ? highlight(transaction.description, searchQuery) : transaction.description}
-                </p>
+                </Link>
                 {/* No "•" separators: every chip after the category is a pill, and a bullet left
                     alone at the start of a wrapped line read as a stray mark. */}
                 <div className="flex flex-wrap items-center gap-1 text-xs text-gray-500 dark:text-gray-400 min-w-0">
@@ -180,8 +185,8 @@ function TransactionRowBase({
 
                   <Menu as="div" className="relative">
                     <MenuButton
-                      className="p-1 sm:p-1.5 text-gray-600 hover:text-gray-700 transition-opacity min-w-[44px] min-h-[44px] flex items-center justify-center"
-                      aria-label={`Actions for ${transaction.description}`}
+                      className="p-1 sm:p-1.5 rounded-lg text-gray-600 hover:text-gray-800 dark:text-gray-400 dark:hover:text-gray-200 transition-opacity min-w-[44px] min-h-[44px] flex items-center justify-center focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-500"
+                      aria-label={t('transactions:list.actionsFor', { description: transaction.description, defaultValue: 'Actions for {{description}}' })}
                     >
                       <EllipsisVerticalIcon className="w-4 h-4" />
                     </MenuButton>
