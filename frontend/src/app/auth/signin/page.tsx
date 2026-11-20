@@ -1,6 +1,6 @@
 'use client';
 
-import { useFeatures } from '@/hooks/useFeatures';
+import { useGoogleSignIn } from '@/hooks/useGoogleSignIn';
 import { useDemo } from '@/contexts/DemoContext';
 import { useState, useMemo, Suspense } from 'react';
 import { signIn } from 'next-auth/react';
@@ -65,8 +65,7 @@ function SignInForm() {
   const [isLoading, setIsLoading] = useState(false);
   const [isGoogleLoading, setIsGoogleLoading] = useState(false);
   const { enableDemo } = useDemo();
-  const { googleLogin } = useFeatures();
-  const showGoogle = googleLogin !== false;
+  const showGoogle = useGoogleSignIn();
   const [isDemoLoading, setIsDemoLoading] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
   const { t } = useTranslation(['auth']);

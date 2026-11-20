@@ -1,6 +1,6 @@
 'use client';
 
-import { useFeatures } from '@/hooks/useFeatures';
+import { useGoogleSignIn } from '@/hooks/useGoogleSignIn';
 import { useState, useMemo, Suspense } from 'react';
 import { signIn } from 'next-auth/react';
 import { useRouter, useSearchParams } from 'next/navigation';
@@ -73,8 +73,7 @@ export default function SignUpPage() {
 function SignUpForm() {
   const [isLoading, setIsLoading] = useState(false);
   const [isGoogleLoading, setIsGoogleLoading] = useState(false);
-  const { googleLogin } = useFeatures();
-  const showGoogle = googleLogin !== false;
+  const showGoogle = useGoogleSignIn();
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirm, setShowConfirm] = useState(false);
   const router = useRouter();
