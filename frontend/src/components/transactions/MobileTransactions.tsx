@@ -55,8 +55,10 @@ export function MobileTransactions() {
     });
     const listRows = useMemo(() => {
         const all = (list.transactions ?? []) as Transaction[];
-        // Demo returns everything (it paginates client-side elsewhere): cap here too.
-        return all.slice(0, limit);
+        // Demo returns everything, unsorted (it paginates client-side elsewhere): sort
+        // newest-first before capping, or the cap keeps the wrong rows.
+        const time = (tx: Transaction) => new Date(typeof tx.date === 'string' ? tx.date : tx.date).getTime();
+        return [...all].sort((a, b) => time(b) - time(a)).slice(0, limit);
     }, [list.transactions, limit]);
     const canLoadMore = ((list.transactions ?? []) as Transaction[]).length >= limit;
 
@@ -181,7 +183,7 @@ export function MobileTransactions() {
                             type="search"
                             value={search}
                             onChange={(e) => { setSearch(e.target.value); setLimit(PAGE); }}
-                            placeholder={t('transactions:mobile.searchPlaceholder', 'Search description, category, tag…')}
+                            placeholder={t('transactions:mobile.searchPlaceholder', 'Search transactions…')}
                             aria-label={t('transactions:mobile.searchLabel', 'Search transactions')}
                             className="w-full min-h-[44px] rounded-xl border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 px-3 text-sm text-gray-900 dark:text-white placeholder:text-gray-400 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-400"
                         />
@@ -209,7 +211,8 @@ export function MobileTransactions() {
                             <p className="text-sm text-gray-500 dark:text-gray-400">{t('transactions:empty.title', 'No transactions yet')}</p>
                         </Card>
                     ) : (
-                        <div className="space-y-4">
+                        // Dimmed while a new search/filter loads over the previous rows.
+                        <div className={cn('space-y-4 transition-opacity', list.isFetching && !list.isLoading && 'opacity-60')}>
                             {model.groups.map(([iso, txs]) => (
                                 <div key={iso}>
                                     <p className="px-1 mb-1.5 text-xs font-bold uppercase tracking-wide text-gray-500 dark:text-gray-400">{dayLabel(iso)}</p>

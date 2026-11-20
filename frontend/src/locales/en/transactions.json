@@ -502,7 +502,7 @@
     "loading": "Loading…",
     "noMatch": "No transactions match",
     "searchLabel": "Search transactions",
-    "searchPlaceholder": "Search description, category, tag…",
+    "searchPlaceholder": "Search transactions…",
     "typeFilter": "Type"
   }
 }

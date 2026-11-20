@@ -502,7 +502,7 @@
     "loading": "載入中…",
     "noMatch": "沒有符合的交易",
     "searchLabel": "搜尋交易",
-    "searchPlaceholder": "搜尋描述、分類、標籤…",
+    "searchPlaceholder": "搜尋交易…",
     "typeFilter": "類型"
   }
 }
