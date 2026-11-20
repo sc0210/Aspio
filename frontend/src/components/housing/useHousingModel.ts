@@ -93,7 +93,8 @@ export function useHousingModel(derived: SimulatorDerived) {
         [seed.liquidFunds, seed.monthlyIncome, seed.monthlyExpenses, seed.debtBalance],
     );
 
-    const showSpinner = authLoading || (isAuthenticated && dashLoading && !stats);
+    // The 12-month basis too: until it arrives the seed falls back to one month.
+    const showSpinner = authLoading || (isAuthenticated && ((dashLoading && !stats) || cashFlow.isLoading));
 
     // With no stats every input is 0, and the verdicts read as confident answers
     // about NT$0 of assets. Say the data did not load instead.

@@ -65,7 +65,8 @@ export function useLifecycleModel() {
     // seasonal spikes, the same seed the housing page uses.
     const cashFlow = useAnnualCashFlow();
     const { loans, isLoading: loansLoading, isError: loansFailed, refetch: refetchLoans } = useLoans();
-    const { holdings, error: portfolioError, refetch: refetchPortfolio } = usePortfolio();
+    // isLoading also covers holding mutations; lifecycle makes none, so it is the query's.
+    const { holdings, isLoading: portfolioLoading, error: portfolioError, refetch: refetchPortfolio } = usePortfolio();
     const { preferences, currentAge, updatePreference, setInvestmentLoanIds } = useLifecyclePreferences();
 
     // Until the user pins a selection, default to their personal loans rather
@@ -277,8 +278,10 @@ export function useLifecycleModel() {
         [stockExposure, cashAssets, debt, monthlySavings, currentAge],
     );
 
-    // Loans too: until they arrive debt reads 0, so leverage would flash 0×.
-    const showSpinner = authLoading || (isAuthenticated && ((dashLoading && !stats) || loansLoading));
+    // Every input, not just the stats: until loans, holdings and the cash-flow basis
+    // arrive they read 0, and leverage and the safety checks would flash verdicts on zeros.
+    const showSpinner = authLoading
+        || (isAuthenticated && ((dashLoading && !stats) || loansLoading || portfolioLoading || cashFlow.isLoading));
     // No stats, loans, holdings or cash-flow basis: leverage would read 0× and
     // every safety check pass. Say the data did not load instead.
     const portfolioFailed = !!portfolioError && holdings.length === 0;
