@@ -1250,6 +1250,12 @@
       "steady": "A steady month.",
       "strong": "A strong month."
     },
+    "verdictSoFar": {
+      "over": "So far this month you've spent more than you've earned.",
+      "tight": "So far, a tight month.",
+      "steady": "So far, more came in than went out — the month isn't over yet.",
+      "strong": "So far, more came in than went out — the month isn't over yet."
+    },
     "kept": "kept",
     "overspent": "over what came in",
     "savingsRate": "{{rate}}% of income kept",
