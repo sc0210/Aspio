@@ -625,7 +625,7 @@ describe('WalletNetWorthCard', () => {
           walletTrendsData={twoPointTrend}
         />,
       );
-      // totalAsset is on by default; lifeWallet is opt-in via the legend toggle.
+      // netWorth is the only series on by default; the others are opt-in via the legend.
       expect(screen.getByTestId('area-netWorth')).toBeInTheDocument();
     });
   });
