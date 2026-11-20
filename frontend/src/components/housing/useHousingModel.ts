@@ -90,8 +90,9 @@ export function useHousingModel(derived: SimulatorDerived) {
     // comfortable, floored to a 10萬 step. It used to be a fixed NT$25M default the
     // page never showed, so "Am I ready to buy?" scored a house far above the one
     // the headline recommended — and on phones it could not be changed at all.
-    // Priced on the default terms, not the simulator's: the desktop simulator is
-    // re-seeded when this changes, so it must move only with the user's data.
+    // Priced on the default terms, not the simulator's: the desktop simulator's
+    // price follows this until the user sets one, so it must move only with the
+    // user's data, never with their own slider changes.
     const startingPrice = useMemo(() => {
         const max = calcAffordability({ ...affordability, ...loanTermsOf(DEFAULT_BUY_VS_RENT) }).maxPrice;
         return max > 0 ? Math.floor(max / 100_000) * 100_000 : DEFAULT_BUY_VS_RENT.housePrice;

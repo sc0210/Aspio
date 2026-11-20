@@ -325,7 +325,7 @@ export function BuyVsRentSimulator({ defaults, onDerivedChange }: Props) {
             </div>
             )}
 
-            {open && <ScenarioCompare current={inputs} onLoad={(next) => setInputs({ ...next })} />}
+            {open && <ScenarioCompare current={inputs} onLoad={(next) => { priceTouched.current = true; setInputs({ ...next }); }} />}
 
             {/* Disclaimer */}
             {open && (
