@@ -48,7 +48,9 @@ export default function DashboardPage() {
         // sidebar vanish between the route skeleton and the content, then come back.
         return (
             <DashboardLayout>
-                <ComprehensiveDashboardSkeleton />
+                <div role="status" aria-busy="true" aria-label="Loading dashboard">
+                    <ComprehensiveDashboardSkeleton />
+                </div>
             </DashboardLayout>
         );
     }
