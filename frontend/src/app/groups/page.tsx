@@ -209,24 +209,29 @@ function DesktopGroupsPage() {
       return;
     }
 
+    // A retry can start while an older load is in flight; only the latest may land.
+    let cancelled = false;
     async function load() {
       try {
         const statusRes = await apiClient.get<LinkStatus>('/line-bot/link-status');
         const status = statusRes.data ?? null;
+        if (cancelled) return;
         setLinkStatus(status);
         if (status?.linked) {
           const groupsRes = await apiClient.get<Group[]>('/line-bot/groups');
+          if (cancelled) return;
           setGroups(groupsRes.data ?? []);
         }
       } catch {
         // Not "ignore": a null link status rendered the Connect LINE prompt to a
         // user who is linked, and the groups list read as empty.
-        setLoadFailed(true);
+        if (!cancelled) setLoadFailed(true);
       } finally {
-        setLoading(false);
+        if (!cancelled) setLoading(false);
       }
     }
     load();
+    return () => { cancelled = true; };
   }, [isDemo, attempt]);
 
   const retryLoad = () => { setLoadFailed(false); setLoading(true); setAttempt(a => a + 1); };

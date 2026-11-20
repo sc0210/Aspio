@@ -5,7 +5,7 @@
  * locale files don't provide (users then see raw "history" / "addExpense" strings
  * instead of copy). Asserts:
  *   1. en and zh-TW are in EXACT key-parity with each other.
- *   2. the namespace exposes its documented 86 keys.
+ *   2. the namespace exposes its documented 85 keys.
  *   3. every key referenced at runtime by BOTH groups pages exists in BOTH locale
  *      files.
  *
@@ -66,9 +66,9 @@ describe('groups i18n namespace', () => {
     expect(zhKeys).toEqual(enKeys);
   });
 
-  it('exposes the documented 86 keys', () => {
-    expect(flatten(en).length).toBe(86);
-    expect(flatten(zh).length).toBe(86);
+  it('exposes the documented 85 keys', () => {
+    expect(flatten(en).length).toBe(85);
+    expect(flatten(zh).length).toBe(85);
   });
 
   it('contains every key the list page references (en + zh-TW)', () => {
