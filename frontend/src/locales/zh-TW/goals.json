@@ -48,14 +48,14 @@
     "aria": {
       "cancelDelete": "取消刪除",
       "confirmDelete": "刪除目標：{{title}}",
-      "contribute": "向「{{title}}」提撥",
+      "contribute": "為「{{title}}」預留或釋出資金",
       "delete": "刪除「{{title}}」",
       "edit": "編輯「{{title}}」",
       "progress": "「{{title}}」進度"
     },
     "atRisk": "進度落後",
     "complete": "✓ 已完成",
-    "contribute": "提撥",
+    "contribute": "預留 / 釋出",
     "date": {
       "days": "剩 {{days}} 天",
       "months": "剩 {{months}} 個月",
@@ -119,7 +119,8 @@
     "status": "狀態",
     "targetAmount": "目標金額",
     "targetDate": "目標日期",
-    "title": "目標標題"
+    "title": "目標標題",
+    "reserveNow": "現在先預留（選填）"
   },
   "filters": {
     "active": "進行中",

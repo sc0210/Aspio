@@ -48,14 +48,14 @@
     "aria": {
       "cancelDelete": "Cancel delete",
       "confirmDelete": "Delete goal: {{title}}",
-      "contribute": "Contribute to {{title}}",
+      "contribute": "Reserve or release money for {{title}}",
       "delete": "Delete {{title}}",
       "edit": "Edit {{title}}",
       "progress": "{{title}} progress"
     },
     "atRisk": "At Risk",
     "complete": "✓ Complete",
-    "contribute": "Contribute",
+    "contribute": "Reserve / Release",
     "date": {
       "days": "{{days}} days left",
       "months": "{{months}} months left",
@@ -119,7 +119,8 @@
     "status": "Status",
     "targetAmount": "Target Amount",
     "targetDate": "Target Date",
-    "title": "Goal Title"
+    "title": "Goal Title",
+    "reserveNow": "Reserve now (optional)"
   },
   "filters": {
     "active": "Active",
