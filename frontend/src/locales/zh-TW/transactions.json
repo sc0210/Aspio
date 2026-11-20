@@ -185,10 +185,15 @@
     "optional": "（選填）",
     "paymentMethodLabel": "付款方式",
     "paymentMethods": {
+      "alipay": "支付寶",
       "bank_transfer": "銀行轉帳",
       "cash": "現金",
       "credit_card": "信用卡",
-      "digital_wallet": "電子錢包"
+      "debit_card": "金融卡",
+      "digital_wallet": "其他電子錢包",
+      "line_pay": "LINE Pay",
+      "shopee_pay": "蝦皮支付",
+      "wechat_pay": "微信支付"
     },
     "tagPlaceholder": "新增標籤（按 Enter）",
     "toWallet": "轉入錢包",
