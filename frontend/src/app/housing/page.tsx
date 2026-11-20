@@ -54,8 +54,7 @@ function DesktopHousingPage() {
                             housePrice={derived.housePrice}
                         />
                         <CarImpactPanel context={houseContext} />
-                        {/* Re-seeded when the starting price moves (it can settle a render after mount). */}
-                        <BuyVsRentSimulator key={startingPrice} defaults={{ housePrice: startingPrice }} onDerivedChange={handleDerived} />
+                        <BuyVsRentSimulator defaults={{ housePrice: startingPrice }} onDerivedChange={handleDerived} />
                         <HousingPrinciples />
                     </>
                 )}
