@@ -16,7 +16,11 @@ export function demoEmergencyRunway(
   const spent = transactions
     .filter((t) => t.type === 'expense')
     .filter((t) => {
-      const d = new Date(t.date);
+      // A 'YYYY-MM-DD' string parses as UTC midnight; read it as a local day so a
+      // rent dated the 1st stays in its month west of UTC.
+      const d = typeof t.date === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(t.date)
+        ? new Date(Number(t.date.slice(0, 4)), Number(t.date.slice(5, 7)) - 1, Number(t.date.slice(8, 10)))
+        : new Date(t.date);
       return d >= start && d < end;
     })
     .reduce((sum, t) => sum + Number(t.amount || 0), 0);

@@ -77,7 +77,9 @@ export function AssetGoalCard({
     const remaining = Math.max(0, target - current);
     // Shown capped at 100%: an overfunded goal read "1000.0%". The surplus gets its own line.
     const shownPct = Math.min(100, progress);
-    const over = Math.max(0, current - target);
+    // On goalReached's basis (money put in; the wallet for an emergency fund), so
+    // market gains on an invested goal are not called money saved over target.
+    const over = Math.max(0, (tracksEmergency ? current : Number(currentAmount) || 0) - target);
     const isCompleted = goalReached(money);
     const monthsLeft = monthsUntil(targetDate);
     const horizonWarning = goalHorizonRisk(money);

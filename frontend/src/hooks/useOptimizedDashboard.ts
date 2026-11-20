@@ -56,6 +56,12 @@ interface RawHolding {
   name?: string;
 }
 
+function runwayOf(months: number, emergency: number, periodExpenses: number): number | null {
+  if (months > 0) return months;
+  if (periodExpenses <= 0 || emergency > 0) return null;
+  return 0;
+}
+
 interface DashboardStatsData {
   life_wallet?: number;
   portfolio_wallet?: number;
@@ -384,9 +390,14 @@ export function useOptimizedDashboard(dateRange: '7d' | '14d' | 'month' | '30d' 
             // The backend divides by a monthly rate measured over the selected window
             // (dashboard/services.py::_calc_emergency_fund_months). Dividing by the
             // period's expenses here made runway move with the period selector.
-            emergencyFundMonths: safeNumber(statsData?.total_expenses ?? statsData?.totalExpenses, 0) > 0
-              ? safeNumber(statsData?.emergencyFundMonths, 0)
-              : null,
+            // 0 is also what the backend sends when the window had no LIVING spend
+            // (only investment buys): with an emergency fund that is "—", not 0 mo.
+            // A real 0 (spending, no fund) still reads 0.
+            emergencyFundMonths: runwayOf(
+              safeNumber(statsData?.emergencyFundMonths, 0),
+              emergency_wallet,
+              safeNumber(statsData?.total_expenses ?? statsData?.totalExpenses, 0),
+            ),
           };
 
           const rawData = trendsData?.data as { dataPoints?: TrendDataPoint[] } | undefined;

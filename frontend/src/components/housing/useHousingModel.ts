@@ -95,7 +95,9 @@ export function useHousingModel(derived: SimulatorDerived) {
     // user's data, never with their own slider changes.
     const startingPrice = useMemo(() => {
         const max = calcAffordability({ ...affordability, ...loanTermsOf(DEFAULT_BUY_VS_RENT) }).maxPrice;
-        return max > 0 ? Math.floor(max / 100_000) * 100_000 : DEFAULT_BUY_VS_RENT.housePrice;
+        // Check the floored value: under NT$100K it floors to 0, a free house.
+        const floored = Math.floor(max / 100_000) * 100_000;
+        return floored > 0 ? floored : DEFAULT_BUY_VS_RENT.housePrice;
     }, [affordability]);
     const startingDerived: SimulatorDerived = useMemo(() => derivedAt(startingPrice), [startingPrice]);
 

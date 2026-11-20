@@ -44,3 +44,12 @@ describe('AssetGoalCard surplus line', () => {
         expect(screen.queryByText(/^goals:card\.left:/)).toBeNull();
     });
 });
+
+describe('AssetGoalCard surplus basis', () => {
+    it('counts money put in, not market gains, as over target', () => {
+        // Reached on contributions (100k of 100k), now worth 130k: no NT$30k "over".
+        render(<AssetGoalCard title="Fund" currentAmount={100_000} targetAmount={100_000} investedAmount={100_000}
+            valueAmount={130_000} currency="TWD" />);
+        expect(screen.queryByText(/^goals:card\.over:/)).toBeNull();
+    });
+});

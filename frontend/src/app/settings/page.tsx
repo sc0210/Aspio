@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import {
   UserIcon,
   MoonIcon,
@@ -121,15 +121,19 @@ function useNotifPrefs(isDemo: boolean) {
   // can only ever revert the one change it carried.
   const [saving, setSaving] = useState<Partial<Record<keyof NotifPrefs, boolean>>>({});
 
+  // Only the latest load may land: demo mode can resolve a render late, and the
+  // real request it outran would then 401 and show a load error in demo.
+  const latestLoad = useRef(0);
   const load = useCallback(() => {
+    const id = ++latestLoad.current;
+    setLoadFailed(false);
     if (isDemo) { setLoading(false); return; }
     setLoading(true);
-    setLoadFailed(false);
     // `data` is null until the user has saved a preference: every switch is on.
     apiClient.get<Partial<NotifPrefs> | null>('/notifications/preferences')
-      .then(res => setPrefs({ ...DEFAULT_NOTIF, ...(res.data ?? {}) }))
-      .catch(() => setLoadFailed(true))
-      .finally(() => setLoading(false));
+      .then(res => { if (id === latestLoad.current) setPrefs({ ...DEFAULT_NOTIF, ...(res.data ?? {}) }); })
+      .catch(() => { if (id === latestLoad.current) setLoadFailed(true); })
+      .finally(() => { if (id === latestLoad.current) setLoading(false); });
   }, [isDemo]);
 
   useEffect(() => { load(); }, [load]);
