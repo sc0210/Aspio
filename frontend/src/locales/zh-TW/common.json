@@ -601,7 +601,12 @@
     "confirmWarning": "只有在您剛剛於自己與機器人的 LINE 聊天室輸入 /link 時才繼續。如果這個連結是別人傳給您的，請取消：連結後對方的 LINE 帳號將能在您的帳號記帳並查看餘額。",
     "confirmButton": "連結帳號",
     "cancel": "取消",
-    "cancelled": "未進行任何連結，您可以關閉此頁面。"
+    "cancelled": "未進行任何連結，您可以關閉此頁面。",
+    "linking": "正在連結你的帳號…",
+    "loading": "載入中…",
+    "continueGoogle": "使用 Google 繼續",
+    "signInEmail": "改用電子郵件登入",
+    "backToApp": "返回 Aspiro"
   },
   "loadingOverlay": {
     "hint": "正在從伺服器取得最新資料",

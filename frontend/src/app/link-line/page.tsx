@@ -4,6 +4,7 @@ import { LineBotGate } from '@/components/line/LineBotGate';
 import { useEffect, useState, Suspense } from 'react';
 import { signIn } from 'next-auth/react';
 import { useSearchParams } from 'next/navigation';
+import Link from 'next/link';
 import { LoadingSpinner } from '@/components/ui/LoadingSpinner';
 import { apiClient } from '@/lib/api-client';
 import { useAppMode } from '@/hooks/useAppMode';
@@ -112,7 +113,7 @@ function LinkLineContent() {
           <div className="flex flex-col items-center gap-3 py-6">
             <LoadingSpinner size="lg" />
             <p className="text-sm text-gray-500 dark:text-gray-400">
-              {state === 'linking' ? 'Linking your account…' : 'Loading…'}
+              {state === 'linking' ? t('common:lineLink.linking') : t('common:lineLink.loading')}
             </p>
           </div>
         )}
@@ -124,11 +125,19 @@ function LinkLineContent() {
             </p>
             <button
               onClick={handleGoogleSignIn}
-              className="w-full flex items-center justify-center gap-3 px-4 py-3 border border-gray-300 dark:border-gray-600 rounded-xl text-sm font-medium text-gray-700 dark:text-gray-200 bg-white dark:bg-gray-700 hover:bg-gray-50 dark:hover:bg-gray-600 transition-colors"
+              className="w-full flex items-center justify-center gap-3 px-4 py-3 border border-gray-300 dark:border-gray-600 rounded-xl text-sm font-medium text-gray-700 dark:text-gray-200 bg-white dark:bg-gray-700 hover:bg-gray-50 dark:hover:bg-gray-600 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-500"
             >
               {GoogleIcon}
-              Continue with Google
+              {t('common:lineLink.continueGoogle')}
             </button>
+            {/* Password accounts could not finish linking: Google was the only way in.
+                The sign-in page returns here, token and all. */}
+            <Link
+              href={`/auth/signin?callbackUrl=${encodeURIComponent(`/link-line?token=${encodeURIComponent(token ?? '')}`)}`}
+              className="w-full flex items-center justify-center px-4 py-3 rounded-xl text-sm font-medium text-primary-700 dark:text-primary-400 hover:bg-primary-50 dark:hover:bg-primary-900/20 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-500"
+            >
+              {t('common:lineLink.signInEmail')}
+            </Link>
           </div>
         )}
 
@@ -173,10 +182,16 @@ function LinkLineContent() {
           </div>
         )}
 
+        {/* Every end state offers a way back into the app; they were dead ends. */}
         {state === 'cancelled' && (
-          <p className="text-sm text-center text-gray-600 dark:text-gray-300 py-4">
-            {t('common:lineLink.cancelled')}
-          </p>
+          <div className="flex flex-col items-center gap-3 py-4">
+            <p className="text-sm text-center text-gray-600 dark:text-gray-300">
+              {t('common:lineLink.cancelled')}
+            </p>
+            <Link href="/settings" className="text-sm font-medium text-primary-700 dark:text-primary-400 hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-500 rounded">
+              {t('common:lineLink.backToApp')}
+            </Link>
+          </div>
         )}
 
         {state === 'success' && (
@@ -197,6 +212,9 @@ function LinkLineContent() {
             <p className="text-sm text-center text-gray-500 dark:text-gray-400">
               {t('common:lineLink.tryPrefix')} <span className="font-mono bg-gray-100 dark:bg-gray-700 px-1 rounded text-gray-700 dark:text-inherit">/balance</span> {t('common:lineLink.tryOr')} <span className="font-mono bg-gray-100 dark:bg-gray-700 px-1 rounded text-gray-700 dark:text-inherit">/add 150 coffee</span>
             </p>
+            <Link href="/settings" className="text-sm font-medium text-primary-700 dark:text-primary-400 hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-500 rounded">
+              {t('common:lineLink.backToApp')}
+            </Link>
           </div>
         )}
 
@@ -214,6 +232,9 @@ function LinkLineContent() {
             <p className="text-sm text-center text-gray-500 dark:text-gray-400">
               {t('common:lineLink.runPrefix')} <span className="font-mono bg-gray-100 dark:bg-gray-700 px-1 rounded text-gray-700 dark:text-inherit">/link</span> {t('common:lineLink.runSuffix')}
             </p>
+            <Link href="/settings" className="text-sm font-medium text-primary-700 dark:text-primary-400 hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-500 rounded">
+              {t('common:lineLink.backToApp')}
+            </Link>
           </div>
         )}
       </div>
