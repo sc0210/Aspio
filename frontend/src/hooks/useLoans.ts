@@ -16,6 +16,7 @@ import { QUERY_KEYS, invalidateDashboardData } from '@/hooks/useDataSynchronizat
 import { useSession } from 'next-auth/react';
 import { useAppMode } from '@/hooks/useAppMode';
 import { demoLoans } from '@/data/demoData';
+import { ApiError } from '@/lib/api-client';
 
 // From the shared map, so the invalidation group and this query cannot
 // disagree about what the key is.
@@ -73,13 +74,20 @@ export function deriveSummary(loans: DebtAccount[]): DebtAccountSummary {
 export function useLoans() {
   const { isDemo } = useAppMode();
   const scope = useLoansScope();
-  const { data, isLoading, error, refetch } = useQuery({
+  const { data, isLoading, error, isError, refetch } = useQuery({
     queryKey: [...LOANS_KEY, scope],
     queryFn: async () => {
       try {
         return await loanService.getLoans();
-      } catch {
-        return { success: true, data: [] as DebtAccount[], message: '' };
+      } catch (err) {
+        // A free account gets 403 PREMIUM_REQUIRED on the pages that only read its
+        // debt (dashboard, lifecycle): that genuinely means no loans to count. Any
+        // other failure used to return [] too, so /loans told a user with a mortgage
+        // to "add your first loan". Those must surface as errors.
+        if (err instanceof ApiError && err.status === 403) {
+          return { success: true, data: [] as DebtAccount[], message: '' };
+        }
+        throw err;
       }
     },
     staleTime: 5 * 60 * 1000,
@@ -91,7 +99,7 @@ export function useLoans() {
   const loans = isDemo ? demoLoans : (data?.data ?? []);
   const summary = deriveSummary(loans);
 
-  return { loans, summary, isLoading, error, refetch };
+  return { loans, summary, isLoading, error, isError: !isDemo && isError, refetch };
 }
 
 /**
