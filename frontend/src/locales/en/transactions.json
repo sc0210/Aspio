@@ -345,7 +345,8 @@
     "totalInvested": "Total Invested {{year}}",
     "transfer": "Transfer",
     "debt": "Debt",
-    "movedBetweenWallets": "Moved between your wallets: {{amount}} (not spending)"
+    "movedBetweenWallets": "Moved between your wallets: {{amount}} (not spending)",
+    "totalIncludesInvest": "Total Exp includes money invested."
   },
   "monthlySummaryShort": "Summary",
   "pagination": {
