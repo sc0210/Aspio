@@ -54,21 +54,6 @@ const GoogleIcon = (
   </svg>
 );
 
-function getPasswordStrength(pwd: string): { score: number; label: string; color: string } {
-  if (!pwd) return { score: 0, label: '', color: '' };
-  let score = 0;
-  if (pwd.length >= 8)  score++;
-  if (pwd.length >= 12) score++;
-  if (/[A-Z]/.test(pwd) && /[a-z]/.test(pwd)) score++;
-  if (/\d/.test(pwd))   score++;
-  if (/[^A-Za-z0-9]/.test(pwd)) score++;
-  if (score <= 1) return { score: 1, label: 'Weak',   color: 'bg-red-500' };
-  if (score <= 2) return { score: 2, label: 'Fair',   color: 'bg-amber-500' };
-  if (score <= 3) return { score: 3, label: 'Good',   color: 'bg-yellow-500' };
-  if (score <= 4) return { score: 4, label: 'Strong', color: 'bg-emerald-500' };
-  return             { score: 5, label: 'Very strong', color: 'bg-emerald-600' };
-}
-
 export default function SignUpPage() {
   return (
     <Suspense fallback={<div className="min-h-screen flex items-center justify-center"><LoadingSpinner size="lg" /></div>}>
@@ -117,7 +102,13 @@ function SignUpForm() {
   } = useForm<FormData>({ resolver: yupResolver(schema) });
 
   const passwordValue = watch('password') ?? '';
-  const strength = getPasswordStrength(passwordValue);
+  // The form's own rules, checked live: the old meter scored its own rules, so it
+  // could call a password "Good" that validation then rejected.
+  const rules = [
+    { key: 'length', ok: passwordValue.length >= MIN_PASSWORD_LENGTH, label: t('auth:signUp.ruleLength', { count: MIN_PASSWORD_LENGTH }) },
+    { key: 'case', ok: /[a-z]/.test(passwordValue) && /[A-Z]/.test(passwordValue), label: t('auth:signUp.ruleCase') },
+    { key: 'digit', ok: /\d/.test(passwordValue), label: t('auth:signUp.ruleDigit') },
+  ];
 
   const onSubmit = async (data: FormData) => {
     setIsLoading(true);
@@ -294,30 +285,16 @@ function SignUpForm() {
                       </button>
                     }
                   />
-                  {/* Strength bar */}
-                  {passwordValue.length > 0 && (
-                    <div className="mt-1.5 flex items-center gap-2">
-                      <div className="flex-1 flex gap-1">
-                        {[1, 2, 3, 4, 5].map(i => (
-                          <div
-                            key={i}
-                            className={cn(
-                              'h-1 flex-1 rounded-full transition-all duration-300',
-                              i <= strength.score ? strength.color : 'bg-gray-200 dark:bg-gray-600'
-                            )}
-                          />
-                        ))}
-                      </div>
-                      <span className={cn('text-xs font-semibold flex-shrink-0', {
-                        'text-red-700 dark:text-red-500':     strength.score <= 1,
-                        'text-amber-500':   strength.score === 2,
-                        'text-yellow-700 dark:text-yellow-500':  strength.score === 3,
-                        'text-emerald-500': strength.score >= 4,
-                      })}>
-                        {strength.label}
-                      </span>
-                    </div>
-                  )}
+                  {/* Shown before typing too: the rules were hidden until you failed them. */}
+                  <ul id="password-rules" className="mt-1.5 space-y-0.5 text-xs" aria-live="polite">
+                    {rules.map(r => (
+                      <li key={r.key} className={cn('flex items-center gap-1.5', r.ok ? 'text-emerald-700 dark:text-emerald-400' : 'text-gray-500 dark:text-gray-400')}>
+                        <span aria-hidden="true">{r.ok ? '✓' : '○'}</span>
+                        <span>{r.label}</span>
+                        <span className="sr-only">{r.ok ? t('auth:signUp.ruleMet') : t('auth:signUp.ruleNotMet')}</span>
+                      </li>
+                    ))}
+                  </ul>
                 </div>
 
                 <Input
@@ -362,6 +339,9 @@ function SignUpForm() {
                     <p className="text-xs text-red-700 dark:text-red-400 ml-6">{errors.terms.message}</p>
                   )}
                 </div>
+
+                {/* Every account starts pending: say so before the user commits, not after. */}
+                <p className="text-xs text-gray-600 dark:text-gray-400">{t('auth:signUp.approvalNote')}</p>
 
                 <Button
                   type="submit"
