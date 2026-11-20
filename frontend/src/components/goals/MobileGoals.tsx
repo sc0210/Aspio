@@ -260,11 +260,12 @@ export function MobileGoals() {
                 )}
 
                 {/* A real link: /achievements has a phone view; this read as one but wasn't. */}
-                <Link href="/achievements"
-                    className="flex items-center justify-between rounded-2xl bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 px-4 min-h-[52px] text-sm font-bold text-gray-900 dark:text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-400">
+                <Card padding="none" radius="2xl" shadow="none" clip>
+                    <Link href="/achievements" className="flex items-center justify-between px-4 min-h-[52px] text-sm font-bold text-gray-900 dark:text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-400">
                     {t('goals:reserve.mobileMore', 'Milestones & achievements')}
                     <span aria-hidden="true" className="text-gray-400">›</span>
-                </Link>
+                    </Link>
+                </Card>
             </div>
 
             {createOpen && (

@@ -285,11 +285,12 @@ export function MobilePortfolio() {
                 </section>
 
                 {/* The phone rebalancing view works; nothing on the phone linked to it. */}
-                <Link href="/rebalancing"
-                    className="flex items-center justify-between rounded-2xl bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 px-4 min-h-[52px] text-sm font-bold text-gray-900 dark:text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-400">
+                <Card padding="none" radius="2xl" shadow="none" clip>
+                    <Link href="/rebalancing" className="flex items-center justify-between px-4 min-h-[52px] text-sm font-bold text-gray-900 dark:text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-400">
                     {t('portfolio:rebalancing', 'Rebalancing')}
                     <span aria-hidden="true" className="text-gray-400">›</span>
-                </Link>
+                    </Link>
+                </Card>
 
                 <p className="text-center px-4 pt-1 text-xs font-semibold leading-relaxed text-gray-500 dark:text-gray-400">
                     {t('dashboard:mobile.fullPortfolio', 'Performance charts, IRR & rebalancing')}
