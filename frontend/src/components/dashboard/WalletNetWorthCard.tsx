@@ -182,12 +182,15 @@ export function WalletNetWorthCard({
         </span>
     );
 
+    // Net worth alone by default. With Total Asset (~2.5M) and debt on the same axis
+    // the net-worth line flattened (+7.8% drew as a level line on top of the debt
+    // line); the axis fits whatever is visible, so the legend adds the others back.
     const [lineVisibility, setLineVisibility] = useState({
         lifeWallet: false,
         portfolioWallet: false,
         emergencyWallet: false,
-        debtBalance: true,
-        totalAsset: true,
+        debtBalance: false,
+        totalAsset: false,
         netWorth: true,
     });
 
