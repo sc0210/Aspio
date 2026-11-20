@@ -16,12 +16,22 @@
  * now, imported by both.
  */
 
-export const isPriceStale = (lastUpdated: Date | string | undefined): boolean => {
+/**
+ * Stale against the market's session, not the clock. A flat four hours flagged
+ * every after-close and weekend price — a Friday close read "stale" all weekend,
+ * right under a green "Live" pill. While the market trades, four hours is stale;
+ * while it is closed the last close stands until it is several days old
+ * (a weekend plus a holiday), which is when a missed update is worth flagging.
+ */
+export const isPriceStale = (
+  lastUpdated: Date | string | undefined,
+  marketState?: string,
+  now: number = Date.now(),
+): boolean => {
   if (!lastUpdated) return true;
-  const updateTime = new Date(lastUpdated).getTime();
-  const now = Date.now();
-  const fourHoursMs = 4 * 60 * 60 * 1000;
-  return (now - updateTime) > fourHoursMs;
+  const age = now - new Date(lastUpdated).getTime();
+  const HOUR = 60 * 60 * 1000;
+  return age > (marketState === 'closed' ? 96 * HOUR : 4 * HOUR);
 };
 
 export const formatTimeAgo = (date: Date | string | undefined, t: (key: string, opts?: Record<string, unknown>) => string): string => {

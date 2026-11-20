@@ -94,6 +94,8 @@ export interface Holding {
   exchange: string;
   sector?: string;
   lastUpdated: Date;
+  /** open / closed / manual / unknown: staleness is judged against the session. */
+  marketState?: string;
   purchaseDate?: string;
   sparklineData?: number[]; // Real historical price data from backend
 }
