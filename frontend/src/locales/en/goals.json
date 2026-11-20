@@ -3,6 +3,8 @@
     "allCaughtUp": "All caught up — no new achievements yet.",
     "allStreaksEarned": "All streak badges earned 🎉",
     "almostThere": "Almost there",
+    "bestDays_one": "Best: {{count}} day",
+    "bestDays_other": "Best: {{count}} days",
     "checkFailed": "Could not check achievements. Try again.",
     "checkForNew": "Check for new",
     "checking": "Checking…",
@@ -13,6 +15,7 @@
     "financialScores": "Financial Scores",
     "last7Days": "Last 7 days",
     "level": "Level",
+    "locked": "Locked",
     "newAchievements_one": "🎉 {{count}} new achievement unlocked!",
     "newAchievements_other": "🎉 {{count}} new achievements unlocked!",
     "relative": {
@@ -35,6 +38,8 @@
     "sortProgress": "Most progress",
     "sortRarity": "Rarity",
     "streakBadgeToast": "🎉 Streak badge unlocked: {{name}}!",
+    "streakDays_one": "{{count}}-day streak",
+    "streakDays_other": "{{count}}-day streak",
     "subtitle": "Track your milestones and earn rewards",
     "tabs": {
       "all": "All",
@@ -42,7 +47,10 @@
       "unlocked": "Unlocked"
     },
     "title": "Achievements",
-    "unlocked": "unlocked"
+    "toBadge_one": "{{count}} day to {{target}}-day badge",
+    "toBadge_other": "{{count}} days to {{target}}-day badge",
+    "unlocked": "unlocked",
+    "viewDetails": "View {{title}} details"
   },
   "card": {
     "aria": {

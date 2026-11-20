@@ -7,6 +7,7 @@ import { PageHeader } from '@/components/layout/PageHeader';
 import { LoadingSpinner } from '@/components/ui/LoadingSpinner';
 import { AchievementDetailModal } from '@/components/goals/AchievementDetailModal';
 import { cn } from '@/utils/cn';
+import { LockClosedIcon } from '@heroicons/react/24/solid';
 import { QueryErrorCard } from '@/components/ui/QueryErrorCard';
 import {
   useGamificationStats,
@@ -303,17 +304,18 @@ function StreakStrip({ streak, longest }: { streak: number; longest: number }) {
     <Card padding="md" radius="xl" shadow="none">
       <div className="flex items-center justify-between mb-4">
         <div className="flex items-center gap-2">
-          <span className="text-2xl" aria-hidden>🔥</span>
+          {/* Grey at 0: a lit flame on a broken streak said the opposite. */}
+          <span className={cn('text-2xl', streak === 0 && 'grayscale opacity-40')} aria-hidden>🔥</span>
           <div>
             <p className="text-sm font-semibold text-gray-900 dark:text-white">
-              {streak}-day streak
+              {t('goals:achievements.streakDays', { count: streak })}
             </p>
-            <p className="text-xs text-gray-500 dark:text-gray-400">Best: {longest} days</p>
+            <p className="text-xs text-gray-500 dark:text-gray-400">{t('goals:achievements.bestDays', { count: longest })}</p>
           </div>
         </div>
         {target ? (
           <span className="rounded-full bg-amber-50 dark:bg-amber-900/20 px-3 py-1 text-xs font-medium text-amber-700 dark:text-amber-300">
-            {remaining} day{remaining === 1 ? '' : 's'} to {target}-day badge
+            {t('goals:achievements.toBadge', { count: remaining, target })}
           </span>
         ) : (
           <span className="rounded-full bg-prosperity-50 dark:bg-prosperity-900/20 px-3 py-1 text-xs font-medium text-prosperity-700 dark:text-prosperity-300">
@@ -360,17 +362,30 @@ function AchievementCard({ a, onSelect }: { a: AchievementProgress; onSelect: (a
     <button
       type="button"
       onClick={() => onSelect(a)}
-      aria-label={`View ${a.title} details`}
+      aria-label={t('goals:achievements.viewDetails', { title: a.title })}
+      // Locked badges keep full-strength text (the card-wide opacity-60 made them
+      // nearly vanish in dark mode); only the icon dims, and a lock says why.
       className={cn(
         'group w-full text-left rounded-xl border bg-white dark:bg-gray-800 p-4 flex flex-col gap-2 transition-all hover:shadow-md hover:-translate-y-0.5 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-500/60',
         cfg.borderCls,
-        !a.is_unlocked && 'opacity-60 hover:opacity-100'
       )}
     >
       <div className="flex items-start justify-between gap-2">
-        <span className={cn('text-3xl', !a.is_unlocked && 'grayscale')}>{a.icon}</span>
-        <span className={cn('rounded-full px-2 py-0.5 text-xs font-semibold', cfg.badgeCls)}>
-          {cfg.label}
+        <span className="relative">
+          <span className={cn('text-3xl', !a.is_unlocked && 'grayscale opacity-50')} aria-hidden="true">{a.icon}</span>
+          {!a.is_unlocked && (
+            <LockClosedIcon className="absolute -bottom-1 -right-1.5 w-4 h-4 p-0.5 rounded-full bg-gray-700 text-white dark:bg-gray-200 dark:text-gray-800" aria-hidden="true" />
+          )}
+        </span>
+        <span className="flex items-center gap-1.5">
+          {!a.is_unlocked && (
+            <span className="rounded-full px-2 py-0.5 text-xs font-semibold bg-gray-100 text-gray-700 dark:bg-gray-700 dark:text-gray-200">
+              {t('goals:achievements.locked')}
+            </span>
+          )}
+          <span className={cn('rounded-full px-2 py-0.5 text-xs font-semibold', cfg.badgeCls)}>
+            {cfg.label}
+          </span>
         </span>
       </div>
       <div>
