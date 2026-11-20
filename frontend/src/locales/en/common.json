@@ -251,7 +251,8 @@
       "scoreLabel": "readiness score",
       "short": "short",
       "target": "target",
-      "title": "Am I ready to buy?"
+      "title": "Am I ready to buy?",
+      "scoringPrice": "for a {{price}} home"
     },
     "sim": {
       "after": "After {{n}} years",

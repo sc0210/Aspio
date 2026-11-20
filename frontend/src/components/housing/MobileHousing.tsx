@@ -17,7 +17,7 @@ import { useHousingModel, INITIAL_DERIVED } from '@/components/housing/useHousin
  */
 export function MobileHousing() {
     const { t } = useTranslation(['common', 'dashboard']);
-    const { seed, affordability, cashFlowBasisMonths, showSpinner, loadFailed, retry } = useHousingModel(INITIAL_DERIVED);
+    const { seed, affordability, cashFlowBasisMonths, showSpinner, loadFailed, retry, startingDerived } = useHousingModel(INITIAL_DERIVED);
 
     return (
         <DashboardLayout>
@@ -37,8 +37,9 @@ export function MobileHousing() {
                         <AffordabilityPanel inputs={affordability} cashFlowBasisMonths={cashFlowBasisMonths} />
                         <ReadinessScorecard
                             seed={seed}
-                            cashNeededAtPurchase={INITIAL_DERIVED.upfrontCash}
-                            monthlyHousingCost={INITIAL_DERIVED.monthlyHousingCost}
+                            cashNeededAtPurchase={startingDerived.upfrontCash}
+                            monthlyHousingCost={startingDerived.monthlyHousingCost}
+                            housePrice={startingDerived.housePrice}
                             cashFlowBasisMonths={cashFlowBasisMonths}
                         />
                     </>

@@ -22,7 +22,7 @@ function DesktopHousingPage() {
     // through useHousingModel, which the phone view shares.
     const [derived, setDerived] = useState<SimulatorDerived>(INITIAL_DERIVED);
     const handleDerived = useCallback((d: SimulatorDerived) => setDerived(d), []);
-    const { seed, affordability, houseContext, cashFlowBasisMonths, showSpinner, loadFailed, retry } = useHousingModel(derived);
+    const { seed, affordability, houseContext, cashFlowBasisMonths, showSpinner, loadFailed, retry, startingPrice } = useHousingModel(derived);
 
     return (
         <DashboardLayout>
@@ -51,9 +51,11 @@ function DesktopHousingPage() {
                             cashNeededAtPurchase={derived.upfrontCash}
                             monthlyHousingCost={derived.monthlyHousingCost}
                             cashFlowBasisMonths={cashFlowBasisMonths}
+                            housePrice={derived.housePrice}
                         />
                         <CarImpactPanel context={houseContext} />
-                        <BuyVsRentSimulator onDerivedChange={handleDerived} />
+                        {/* Re-seeded when the starting price moves (it can settle a render after mount). */}
+                        <BuyVsRentSimulator key={startingPrice} defaults={{ housePrice: startingPrice }} onDerivedChange={handleDerived} />
                         <HousingPrinciples />
                     </>
                 )}

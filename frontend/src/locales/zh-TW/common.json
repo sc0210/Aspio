@@ -251,7 +251,8 @@
       "scoreLabel": "準備度分數",
       "short": "不足",
       "target": "目標",
-      "title": "我準備好買房了嗎？"
+      "title": "我準備好買房了嗎？",
+      "scoringPrice": "以 {{price}} 的房子計算"
     },
     "sim": {
       "after": "{{n}} 年後",

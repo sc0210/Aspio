@@ -6,7 +6,7 @@ import { useAppMode } from '@/hooks/useAppMode';
 import { useOptimizedDashboard } from '@/hooks/useOptimizedDashboard';
 import { useAnnualCashFlow } from '@/hooks/useAnnualCashFlow';
 import { projectBuyVsRent, loanTermsOf, DEFAULT_BUY_VS_RENT, DEFAULT_TARGETS, type HouseTimelineContext } from '@/lib/housing';
-import type { AffordabilityInputs } from '@/lib/housing/affordability';
+import { calcAffordability, type AffordabilityInputs } from '@/lib/housing/affordability';
 import type { ReadinessSeed } from '@/components/housing/ReadinessScorecard';
 import type { SimulatorDerived } from '@/components/housing/BuyVsRentSimulator';
 
@@ -20,15 +20,20 @@ const INITIAL = projectBuyVsRent(DEFAULT_BUY_VS_RENT);
  * replaces it as the simulator changes; the phone view (#344) has no simulator,
  * so it reads the plan on these defaults throughout.
  */
-export const INITIAL_DERIVED: SimulatorDerived = {
-    housePrice: DEFAULT_BUY_VS_RENT.housePrice,
-    upfrontCash: INITIAL.upfrontCash,
-    monthlyPayment: INITIAL.monthlyPayment,
-    monthlyHousingCost:
-        INITIAL.monthlyPayment +
-        (DEFAULT_BUY_VS_RENT.housePrice * DEFAULT_BUY_VS_RENT.ownershipCostPctPerYear) / 100 / 12,
-    terms: loanTermsOf(DEFAULT_BUY_VS_RENT),
-};
+/** What the simulator's default terms imply at `housePrice`. */
+function derivedAt(housePrice: number): SimulatorDerived {
+    const inputs = { ...DEFAULT_BUY_VS_RENT, housePrice };
+    const r = housePrice === DEFAULT_BUY_VS_RENT.housePrice ? INITIAL : projectBuyVsRent(inputs);
+    return {
+        housePrice,
+        upfrontCash: r.upfrontCash,
+        monthlyPayment: r.monthlyPayment,
+        monthlyHousingCost: r.monthlyPayment + (housePrice * inputs.ownershipCostPctPerYear) / 100 / 12,
+        terms: loanTermsOf(inputs),
+    };
+}
+
+export const INITIAL_DERIVED: SimulatorDerived = derivedAt(DEFAULT_BUY_VS_RENT.housePrice);
 
 /**
  * The inputs every /housing panel reads, from the user's real balances and cash
@@ -81,6 +86,18 @@ export function useHousingModel(derived: SimulatorDerived) {
         [seed, derived.terms],
     );
 
+    // The price the plan starts from: what the affordability headline calls
+    // comfortable, floored to a 10萬 step. It used to be a fixed NT$25M default the
+    // page never showed, so "Am I ready to buy?" scored a house far above the one
+    // the headline recommended — and on phones it could not be changed at all.
+    // Priced on the default terms, not the simulator's: the desktop simulator is
+    // re-seeded when this changes, so it must move only with the user's data.
+    const startingPrice = useMemo(() => {
+        const max = calcAffordability({ ...affordability, ...loanTermsOf(DEFAULT_BUY_VS_RENT) }).maxPrice;
+        return max > 0 ? Math.floor(max / 100_000) * 100_000 : DEFAULT_BUY_VS_RENT.housePrice;
+    }, [affordability]);
+    const startingDerived: SimulatorDerived = useMemo(() => derivedAt(startingPrice), [startingPrice]);
+
     // Context the car-impact panel measures a car purchase against.
     const houseContext: HouseTimelineContext = useMemo(
         () => ({
@@ -106,5 +123,5 @@ export function useHousingModel(derived: SimulatorDerived) {
         if (cashFlowFailed) cashFlow.refetch();
     };
 
-    return { seed, affordability, houseContext, cashFlowBasisMonths, showSpinner, loadFailed, retry };
+    return { seed, affordability, houseContext, cashFlowBasisMonths, showSpinner, loadFailed, retry, startingPrice, startingDerived };
 }
