@@ -40,6 +40,9 @@ interface AnnualCashFlow {
     /** True once at least one complete month contributed income or spending. */
     hasData: boolean;
     isLoading: boolean;
+    /** The 12-month fetch failed (so hasData is false for that reason). */
+    isError: boolean;
+    refetch: () => void;
 }
 
 export function useAnnualCashFlow(): AnnualCashFlow {
@@ -49,7 +52,7 @@ export function useAnnualCashFlow(): AnnualCashFlow {
         const now = new Date();
         return { start: new Date(now.getFullYear(), now.getMonth() - WINDOW_MONTHS, 1), end: now };
     }, []);
-    const { transactions: rawTx, isLoading } = useTransactions({ dateRange, fetchAll: true });
+    const { transactions: rawTx, isLoading, error, refetch } = useTransactions({ dateRange, fetchAll: true });
 
     return useMemo(() => {
         const txs = (rawTx ?? []) as unknown as TxLite[];
@@ -108,6 +111,8 @@ export function useAnnualCashFlow(): AnnualCashFlow {
             monthsAveraged,
             hasData: earliestIdx <= latestIdx,
             isLoading,
+            isError: !!error,
+            refetch: () => { void refetch(); },
         };
-    }, [rawTx, isLoading]);
+    }, [rawTx, isLoading, error, refetch]);
 }

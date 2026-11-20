@@ -97,8 +97,13 @@ export function useHousingModel(derived: SimulatorDerived) {
 
     // With no stats every input is 0, and the verdicts read as confident answers
     // about NT$0 of assets. Say the data did not load instead.
-    const loadFailed = !isDemo && dashFailed && !stats;
-    const retry = () => { void refetchDash(); };
+    // The 12-month cash flow too: failed, the seed quietly fell back to one month.
+    const cashFlowFailed = cashFlow.isError && !cashFlow.hasData;
+    const loadFailed = !isDemo && ((dashFailed && !stats) || cashFlowFailed);
+    const retry = () => {
+        if (dashFailed) void refetchDash();
+        if (cashFlowFailed) cashFlow.refetch();
+    };
 
     return { seed, affordability, houseContext, cashFlowBasisMonths, showSpinner, loadFailed, retry };
 }

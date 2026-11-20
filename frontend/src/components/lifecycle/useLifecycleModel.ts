@@ -64,8 +64,8 @@ export function useLifecycleModel() {
     // Trailing 12-month average — a stable cash-flow basis that smooths
     // seasonal spikes, the same seed the housing page uses.
     const cashFlow = useAnnualCashFlow();
-    const { loans, isError: loansFailed, refetch: refetchLoans } = useLoans();
-    const { holdings } = usePortfolio();
+    const { loans, isLoading: loansLoading, isError: loansFailed, refetch: refetchLoans } = useLoans();
+    const { holdings, error: portfolioError, refetch: refetchPortfolio } = usePortfolio();
     const { preferences, currentAge, updatePreference, setInvestmentLoanIds } = useLifecyclePreferences();
 
     // Until the user pins a selection, default to their personal loans rather
@@ -277,11 +277,19 @@ export function useLifecycleModel() {
         [stockExposure, cashAssets, debt, monthlySavings, currentAge],
     );
 
-    const showSpinner = authLoading || (isAuthenticated && dashLoading && !stats);
-    // No stats, or no loans to know the debt by: leverage would read 0× and every
-    // safety check pass. Say the data did not load instead.
-    const loadFailed = !isDemo && ((dashFailed && !stats) || loansFailed);
-    const retry = () => { void refetchDash(); void refetchLoans(); };
+    // Loans too: until they arrive debt reads 0, so leverage would flash 0×.
+    const showSpinner = authLoading || (isAuthenticated && ((dashLoading && !stats) || loansLoading));
+    // No stats, loans, holdings or cash-flow basis: leverage would read 0× and
+    // every safety check pass. Say the data did not load instead.
+    const portfolioFailed = !!portfolioError && holdings.length === 0;
+    const cashFlowFailed = cashFlow.isError && !cashFlow.hasData;
+    const loadFailed = !isDemo && ((dashFailed && !stats) || loansFailed || portfolioFailed || cashFlowFailed);
+    const retry = () => {
+        if (dashFailed) void refetchDash();
+        if (loansFailed) void refetchLoans();
+        if (portfolioFailed) void refetchPortfolio();
+        if (cashFlowFailed) cashFlow.refetch();
+    };
 
 
     return {
