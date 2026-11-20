@@ -1,9 +1,10 @@
 'use client';
 
+import { DashboardLayout } from '@/components/layout/DashboardLayout';
+import { ComprehensiveDashboardSkeleton } from '@/components/ui/DashboardSkeleton';
 import { useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { useAuthContext } from '@/contexts/AuthContext';
-import { LoadingSpinner } from '@/components/ui/LoadingSpinner';
 import { ComprehensiveDashboard } from '@/components/dashboard/ComprehensiveDashboard';
 import { MobileDashboard } from '@/components/dashboard/MobileDashboard';
 import { CompactDashboard } from '@/components/dashboard/CompactDashboard';
@@ -43,14 +44,12 @@ export default function DashboardPage() {
     // Wait for the auth check, the breakpoint, AND (on desktop) the view preference
     // before committing to a layout — avoids a flash of the wrong view.
     if (isLoading || isMobile === null || (!isMobile && viewMode === null)) {
+        // Inside the shell, like loading.tsx: a bare full-screen spinner here made the
+        // sidebar vanish between the route skeleton and the content, then come back.
         return (
-            <div
-                className="min-h-screen flex items-center justify-center bg-gray-50 dark:bg-gray-900"
-                role="status"
-                aria-label="Loading dashboard"
-            >
-                <LoadingSpinner size="lg" />
-            </div>
+            <DashboardLayout>
+                <ComprehensiveDashboardSkeleton />
+            </DashboardLayout>
         );
     }
 

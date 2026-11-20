@@ -501,7 +501,7 @@ export function WalletNetWorthCard({
                                         onClick={() => toggleLine(lineKey)}
                                         aria-pressed={visible}
                                         aria-label={`${visible ? 'Hide' : 'Show'} ${t(labelKey, fallback)}`}
-                                        className="flex items-center gap-1.5 rounded-md px-1.5 py-1 min-h-[32px] transition-colors touch-manipulation hover:bg-gray-100 dark:hover:bg-gray-700"
+                                        className="flex items-center gap-1.5 rounded-md px-1.5 py-1 min-h-[44px] lg:min-h-[32px] transition-colors touch-manipulation hover:bg-gray-100 dark:hover:bg-gray-700"
                                     >
                                         <span className={cn(
                                             'w-2.5 h-2.5 rounded-full flex-shrink-0 transition-colors',
@@ -523,7 +523,7 @@ export function WalletNetWorthCard({
                                     onClick={() => toggleLine('debtBalance')}
                                     aria-pressed={lineVisibility.debtBalance}
                                     aria-label={`${lineVisibility.debtBalance ? 'Hide' : 'Show'} ${t('wallet.debtBalance', 'Debt Balance')}`}
-                                    className="flex items-center gap-1.5 rounded-md px-1.5 py-1 min-h-[32px] transition-colors touch-manipulation hover:bg-gray-100 dark:hover:bg-gray-700"
+                                    className="flex items-center gap-1.5 rounded-md px-1.5 py-1 min-h-[44px] lg:min-h-[32px] transition-colors touch-manipulation hover:bg-gray-100 dark:hover:bg-gray-700"
                                 >
                                     <svg width="14" height="6" viewBox="0 0 14 6" className={cn('flex-shrink-0 transition-opacity', !lineVisibility.debtBalance && 'opacity-40')}>
                                         <line x1="0" y1="3" x2="14" y2="3" stroke={CHART_COLORS.debt} strokeWidth="2" strokeDasharray="5 3" />
