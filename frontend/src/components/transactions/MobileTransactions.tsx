@@ -1,5 +1,6 @@
 'use client';
 
+import { categoryLabel } from '@/lib/transactions/categoryLabel';
 import { useMemo } from 'react';
 import Link from 'next/link';
 import { useTranslation } from 'react-i18next';
@@ -175,9 +176,9 @@ export function MobileTransactions() {
                                                         {getCategoryIcon(tx.category)}
                                                     </span>
                                                     <div className="min-w-0 flex-1">
-                                                        <p className="text-sm font-bold text-gray-900 dark:text-white truncate">{tx.description || tx.category}</p>
+                                                        <p className="text-sm font-bold text-gray-900 dark:text-white truncate">{tx.description || categoryLabel(tx.category, t)}</p>
                                                         <p className="text-xs font-medium text-gray-500 dark:text-gray-400 truncate">
-                                                            {isTransfer ? `${tx.category} · ${t(`transactions:wallet.${wallet}`)}` : tx.category}
+                                                            {isTransfer ? `${categoryLabel(tx.category, t)} · ${t(`transactions:wallet.${wallet}`)}` : categoryLabel(tx.category, t)}
                                                         </p>
                                                     </div>
                                                     <p className={cn('text-[14.5px] font-extrabold tabular-nums flex-shrink-0',

@@ -115,23 +115,33 @@
       "life": "生活錢包"
     },
     "walletType": "錢包類型",
-    "sharedOnly": "只看共同支出"
+    "sharedOnly": "只看共同支出",
+    "filterByCategory": "依「{{category}}」篩選"
   },
   "form": {
     "addTag": "新增",
     "categories": {
+      "Bonus": "獎金",
       "Dining": "餐飲",
+      "Education": "教育",
       "Entertainment": "娛樂",
+      "Food & Dining": "餐飲",
       "Freelance": "接案收入",
       "Gift": "禮物",
       "Groceries": "日用雜貨",
       "Healthcare": "醫療",
       "Housing": "住房",
+      "Investment": "投資",
+      "Investment Purchase": "投資買入",
       "Investment Returns": "投資收益",
+      "Investment Sale": "投資賣出",
       "Loan Payment": "貸款還款",
+      "Loan Receipt": "借款入帳",
       "Others": "其他",
+      "Personal Care": "個人護理",
       "Salary": "薪資",
       "Shopping": "購物",
+      "Transfer": "轉帳",
       "Transportation": "交通",
       "Travel": "旅遊",
       "Utilities": "水電瓦斯"

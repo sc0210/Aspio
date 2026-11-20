@@ -1,5 +1,6 @@
 'use client';
 
+import { categoryLabel } from '@/lib/transactions/categoryLabel';
 import React, { useState, useRef, useEffect, useCallback, useMemo } from 'react';
 import {
   ChevronDownIcon,
@@ -460,7 +461,7 @@ export function TransactionList({ transactions, isLoading, isFetching, isSearchi
             >
               <option value="" disabled>{t('transactions:list.categoryPlaceholder', 'Category…')}</option>
               {ALL_CATEGORIES.map(cat => (
-                <option key={cat.value} value={cat.value}>{cat.label}</option>
+                <option key={cat.value} value={cat.value}>{cat.label.split(' ')[0]} {categoryLabel(cat.value, t)}</option>
               ))}
             </select>
             <select

@@ -115,23 +115,33 @@
       "life": "Life"
     },
     "walletType": "Wallet Type",
-    "sharedOnly": "Shared bills only"
+    "sharedOnly": "Shared bills only",
+    "filterByCategory": "Filter by {{category}}"
   },
   "form": {
     "addTag": "Add",
     "categories": {
+      "Bonus": "Bonus",
       "Dining": "Dining",
+      "Education": "Education",
       "Entertainment": "Fun",
+      "Food & Dining": "Dining",
       "Freelance": "Freelance",
       "Gift": "Gift",
       "Groceries": "Groceries",
       "Healthcare": "Health",
       "Housing": "Housing",
+      "Investment": "Investment",
+      "Investment Purchase": "Investment buy",
       "Investment Returns": "Investment",
+      "Investment Sale": "Investment sale",
       "Loan Payment": "Loan",
+      "Loan Receipt": "Loan received",
       "Others": "Others",
+      "Personal Care": "Personal Care",
       "Salary": "Salary",
       "Shopping": "Shopping",
+      "Transfer": "Transfer",
       "Transportation": "Transport",
       "Travel": "Travel",
       "Utilities": "Utilities"
