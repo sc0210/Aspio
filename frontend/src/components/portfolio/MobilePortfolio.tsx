@@ -285,8 +285,8 @@ export function MobilePortfolio() {
                 </section>
 
                 {/* The phone rebalancing view works; nothing on the phone linked to it. */}
-                <Card padding="none" radius="2xl" shadow="none" clip>
-                    <Link href="/rebalancing" className="flex items-center justify-between px-4 min-h-[52px] text-sm font-bold text-gray-900 dark:text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-400">
+                <Card padding="none" radius="2xl" shadow="none">
+                    <Link href="/rebalancing" className="flex items-center justify-between px-4 min-h-[52px] text-sm font-bold text-gray-900 dark:text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-primary-400 rounded-2xl">
                     {t('portfolio:rebalancing', 'Rebalancing')}
                     <span aria-hidden="true" className="text-gray-400">›</span>
                     </Link>
