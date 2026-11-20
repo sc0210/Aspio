@@ -23,22 +23,22 @@ import { SortableDayGrid } from './SortableDayGrid';
 import { apiDate, applyDayOrder } from './dayOrder';
 
 const ALL_CATEGORIES = [
-  { value: 'Dining', label: '🍽️ Dining' },
-  { value: 'Groceries', label: '🛒 Groceries' },
-  { value: 'Transportation', label: '🚗 Transportation' },
-  { value: 'Shopping', label: '🛍️ Shopping' },
-  { value: 'Entertainment', label: '🎬 Entertainment' },
-  { value: 'Healthcare', label: '🏥 Healthcare' },
-  { value: 'Housing', label: '🏠 Housing' },
-  { value: 'Utilities', label: '💡 Utilities' },
-  { value: 'Travel', label: '✈️ Travel' },
-  { value: 'Gift', label: '🎁 Gift' },
-  { value: 'Salary', label: '💼 Salary' },
-  { value: 'Freelance', label: '💻 Freelance' },
-  { value: 'Investment Returns', label: '📈 Investment Returns' },
-  { value: 'Loan Payment', label: '💳 Loan Payment' },
-  { value: 'Loan Receipt', label: '💳 Loan Receipt' },
-  { value: 'Others', label: '📦 Others' },
+  { value: 'Dining', emoji: '🍽️' },
+  { value: 'Groceries', emoji: '🛒' },
+  { value: 'Transportation', emoji: '🚗' },
+  { value: 'Shopping', emoji: '🛍️' },
+  { value: 'Entertainment', emoji: '🎬' },
+  { value: 'Healthcare', emoji: '🏥' },
+  { value: 'Housing', emoji: '🏠' },
+  { value: 'Utilities', emoji: '💡' },
+  { value: 'Travel', emoji: '✈️' },
+  { value: 'Gift', emoji: '🎁' },
+  { value: 'Salary', emoji: '💼' },
+  { value: 'Freelance', emoji: '💻' },
+  { value: 'Investment Returns', emoji: '📈' },
+  { value: 'Loan Payment', emoji: '💳' },
+  { value: 'Loan Receipt', emoji: '💳' },
+  { value: 'Others', emoji: '📦' },
 ];
 
 interface TransactionListProps {
@@ -461,7 +461,7 @@ export function TransactionList({ transactions, isLoading, isFetching, isSearchi
             >
               <option value="" disabled>{t('transactions:list.categoryPlaceholder', 'Category…')}</option>
               {ALL_CATEGORIES.map(cat => (
-                <option key={cat.value} value={cat.value}>{cat.label.split(' ')[0]} {categoryLabel(cat.value, t)}</option>
+                <option key={cat.value} value={cat.value}>{cat.emoji} {categoryLabel(cat.value, t)}</option>
               ))}
             </select>
             <select
