@@ -5,6 +5,7 @@ import { useLoans, useCreateLoan, useUpdateLoan, useDeleteLoan, useRecordPayment
 import { loanService } from '@/services/loanService';
 import type { DebtAccount } from '@/services/loanService';
 import { ApiError } from '@/lib/api-client';
+import { useSession } from 'next-auth/react';
 
 // This suite drives useQuery/useMutation directly to check the hook's derive
 // logic and its service wiring; it has no interest in the cache. react-query is
@@ -63,6 +64,8 @@ const mockLoan: DebtAccount = {
 beforeEach(() => {
   jest.clearAllMocks();
   mockUseQueryClient.mockReturnValue({ invalidateQueries: jest.fn() });
+  // The session-gate tests change it; every other test runs signed in.
+  (useSession as jest.Mock).mockReturnValue({ data: { user: { id: 'test-user-id' } }, status: 'authenticated' });
 });
 
 // Helper to create a mock mutation that invokes mutationFn + onSuccess when mutateAsync is called
@@ -157,6 +160,32 @@ describe('useLoans', () => {
     const { result } = renderHook(() => useLoans());
     expect(result.current.isError).toBe(false);
     expect(result.current.loans).toHaveLength(1);
+  });
+
+  describe('session gate', () => {
+    const withSession = (status: string, user: object | null) =>
+      (useSession as jest.Mock).mockReturnValue({ data: user ? { user } : null, status });
+
+    it('does not query before the session is authenticated, and reads as loading meanwhile', () => {
+      withSession('loading', null);
+      mockUseQuery.mockReturnValue(loansQuery(undefined, { isPending: true }));
+      const { result } = renderHook(() => useLoans());
+      expect(mockUseQuery.mock.calls[0][0].enabled).toBe(false);
+      expect(result.current.isLoading).toBe(true);
+    });
+
+    it('is not stuck loading for a signed-out visitor (the auth guard takes over)', () => {
+      withSession('unauthenticated', null);
+      mockUseQuery.mockReturnValue(loansQuery(undefined, { isPending: true }));
+      expect(renderHook(() => useLoans()).result.current.isLoading).toBe(false);
+    });
+
+    it('queries an authenticated session even if it carries no user id', () => {
+      withSession('authenticated', { email: 'a@b.c' });
+      mockUseQuery.mockReturnValue(loansQuery({ data: [] }));
+      renderHook(() => useLoans());
+      expect(mockUseQuery.mock.calls[0][0].enabled).toBe(true);
+    });
   });
 
   describe('fetch errors', () => {

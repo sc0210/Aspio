@@ -74,6 +74,8 @@ export function deriveSummary(loans: DebtAccount[]): DebtAccountSummary {
 export function useLoans() {
   const { isDemo } = useAppMode();
   const scope = useLoansScope();
+  const { status: sessionStatus } = useSession();
+  const enabled = !isDemo && sessionStatus === 'authenticated';
   const { data, isPending, error, isError, refetch } = useQuery({
     queryKey: [...LOANS_KEY, scope],
     queryFn: async () => {
@@ -93,8 +95,8 @@ export function useLoans() {
     staleTime: 5 * 60 * 1000,
     retry: false,
     // Demo mode uses fixtures — never hit the real API (avoids 401s). Nor before
-    // the session has a user: that request 401s and would flash the error card.
-    enabled: !isDemo && scope !== 'anon',
+    // the session is authenticated: that request 401s and would flash the error card.
+    enabled,
   });
 
   const loans = isDemo ? demoLoans : (data?.data ?? []);
@@ -104,7 +106,7 @@ export function useLoans() {
   // keeps the loans already on screen.
   // Loading until the first answer, including while the session has no user yet
   // (the query is disabled then, and a bare isLoading would flash the empty state).
-  const isLoading = !isDemo && isPending;
+  const isLoading = !isDemo && (sessionStatus === 'loading' || (enabled && isPending));
   return { loans, summary, isLoading, error, isError: !isDemo && isError && data === undefined, refetch };
 }
 
