@@ -14,6 +14,7 @@ import {
   ArrowPathIcon,
   ChartBarIcon,
   ChatBubbleLeftRightIcon,
+  ChevronRightIcon,
 } from '@heroicons/react/24/outline';
 import { DashboardLayout } from '@/components/layout/DashboardLayout';
 import { Avatar } from '@/components/ui/Avatar';
@@ -383,7 +384,8 @@ function LineBotSection() {
       {/* Command reference */}
       {/* Folded: nine rows of reference pushed Account and Danger Zone far down. */}
       <details className="group">
-        <summary className="flex items-center min-h-[44px] cursor-pointer text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wide rounded focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-500">
+        <summary className="flex items-center gap-1 min-h-[44px] cursor-pointer list-none text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wide rounded focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-500">
+          <ChevronRightIcon className="w-3.5 h-3.5 transition-transform group-open:rotate-90" aria-hidden="true" />
           {t('settings.lineBot.commandsTitle')}
         </summary>
         <div className="space-y-1.5 pt-1">
@@ -450,7 +452,13 @@ export default function SettingsPage() {
   const [profileAttempt, setProfileAttempt] = useState(0);
   // The goal-alert window saved silently; flash a confirmation like the currency row.
   const [prefsSaved, setPrefsSaved] = useState(false);
-  const flashSaved = () => { setPrefsSaved(true); window.setTimeout(() => setPrefsSaved(false), 2000); };
+  const savedTimer = useRef<number | undefined>(undefined);
+  const flashSaved = () => {
+    window.clearTimeout(savedTimer.current);
+    setPrefsSaved(true);
+    savedTimer.current = window.setTimeout(() => setPrefsSaved(false), 2000);
+  };
+  useEffect(() => () => window.clearTimeout(savedTimer.current), []);
 
   // Seed form with current session/fetched data
   useEffect(() => {
@@ -459,13 +467,21 @@ export default function SettingsPage() {
       setUsername('alexchen');
     } else if (user) {
       setDisplayName(user.name || '');
-      // Fetch full profile for username + preferred currency
-      setProfileLoadFailed(false);
-      apiClient.getCurrentUser?.().then((u) => {
-        if (u?.username) setUsername(u.username);
-        if (u?.preferred_currency) setPreferredCurrency(u.preferred_currency);
-      }).catch(() => setProfileLoadFailed(true));
     }
+  }, [user, isDemoMode]);
+
+  // The full profile (username, preferred currency) in its own effect, so Retry
+  // never resets a display name being typed; only the latest attempt may land.
+  useEffect(() => {
+    if (isDemoMode || !user) return;
+    let cancelled = false;
+    setProfileLoadFailed(false);
+    apiClient.getCurrentUser?.().then((u) => {
+      if (cancelled) return;
+      if (u?.username) setUsername(u.username);
+      if (u?.preferred_currency) setPreferredCurrency(u.preferred_currency);
+    }).catch(() => { if (!cancelled) setProfileLoadFailed(true); });
+    return () => { cancelled = true; };
   }, [user, isDemoMode, profileAttempt]);
 
   const handleCurrencyChange = async (code: string) => {
