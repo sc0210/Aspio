@@ -1,6 +1,6 @@
 'use client';
 
-import { useMemo } from 'react';
+import { useMemo, useState } from 'react';
 import Link from 'next/link';
 import { useTranslation } from 'react-i18next';
 import { PlusIcon } from '@heroicons/react/24/outline';
@@ -19,6 +19,7 @@ import type { PortfolioHolding } from '@/shared/types';
 import { MarketStatusStrip } from '@/components/portfolio/MarketStatusStrip';
 import { lastSessionWeekday } from '@/utils/marketStatus';
 import { Card } from '@/components/ui/Card';
+import { isCashHolding } from '@/components/portfolio/holdingRowStyles';
 
 
 // Fixed categorical order — colors follow the entity, never rank.
@@ -43,9 +44,20 @@ function arc(startFrac: number, endFrac: number, r = 15.9, cx = 21, cy = 21) {
     return `M${x0.toFixed(3)},${y0.toFixed(3)} A${r},${r} 0 ${large} 1 ${x1.toFixed(3)},${y1.toFixed(3)}`;
 }
 
+const ROW = 'flex items-center gap-3 px-4 py-3';
+function HoldingRowShell({ href, children }: { href: string | null; children: React.ReactNode }) {
+    if (!href) return <div className={ROW}>{children}</div>;
+    return (
+        <Link href={href} className={cn(ROW, 'active:bg-gray-50 dark:active:bg-gray-700/40 focus-visible:outline-none focus-visible:bg-gray-50 dark:focus-visible:bg-gray-700/40')}>
+            {children}
+        </Link>
+    );
+}
+
 export function MobilePortfolio() {
     const { t, i18n } = useTranslation(['portfolio', 'dashboard', 'common']);
     const { portfolio, isLoading } = usePortfolio();
+    const [showAll, setShowAll] = useState(false);
     const { isValueVisible } = usePrivacy();
     const { user } = useAppMode();
     // Same query (and cache) as the desktop stats strip: the time-weighted
@@ -240,10 +252,13 @@ export function MobilePortfolio() {
                 <section data-tour="pf-m-holdings">
                     <p className="px-1 mb-2.5 text-sm font-extrabold tracking-tight text-gray-900 dark:text-white">{t('portfolio:holdingsList', 'Holdings')}</p>
                     <Card padding="none" shadow="none" clip className="divide-y divide-gray-100 dark:divide-gray-700">
-                        {model.holdings.slice(0, 8).map((h) => {
+                        {(showAll ? model.holdings : model.holdings.slice(0, 8)).map((h) => {
                             const up = (h.gainLoss || 0) >= 0;
                             return (
-                                <div key={h.id} className="flex items-center gap-3 px-4 py-3">
+                                // Each row opens the holding (rows were plain text, so a phone could
+                                // see a position but never its detail) — except cash, which has no
+                                // detail page, as on desktop.
+                                <HoldingRowShell key={h.id} href={isCashHolding({ type: h.type || '' }) ? null : `/portfolio/holdings/${encodeURIComponent(h.symbol)}`}>
                                     <div className="min-w-0 flex-1">
                                         <p className="text-sm font-extrabold tracking-tight text-gray-900 dark:text-white truncate">{h.symbol}</p>
                                         <p className="text-xs font-medium text-gray-500 dark:text-gray-400 truncate">{h.name || h.type}</p>
@@ -256,21 +271,31 @@ export function MobilePortfolio() {
                                             {up ? '+' : '−'}{Math.abs(h.gainLossPercentage || 0).toFixed(1)}%
                                         </p>
                                     </div>
-                                </div>
+                                </HoldingRowShell>
                             );
                         })}
                     </Card>
+                    {/* Holdings past the 8th were unreachable on a phone; now they expand. */}
                     {model.count > 8 && (
-                        <p className="text-center mt-2 text-xs font-semibold text-gray-500 dark:text-gray-400">
-                            {t('portfolio:andMore', '+{{n}} more', { n: model.count - 8 })}
-                        </p>
+                        <button type="button" onClick={() => setShowAll((v) => !v)} aria-expanded={showAll}
+                            className="block mx-auto mt-2 min-h-[44px] px-4 text-xs font-semibold text-primary-700 dark:text-primary-400 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-400 rounded-lg">
+                            {showAll ? t('common:showLess', 'Show less') : t('portfolio:andMore', '+{{n}} more', { n: model.count - 8 })}
+                        </button>
                     )}
                 </section>
+
+                {/* The phone rebalancing view works; nothing on the phone linked to it. */}
+                <Link href="/rebalancing"
+                    className="flex items-center justify-between rounded-2xl bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 px-4 min-h-[52px] text-sm font-bold text-gray-900 dark:text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-400">
+                    {t('portfolio:rebalancing', 'Rebalancing')}
+                    <span aria-hidden="true" className="text-gray-400">›</span>
+                </Link>
 
                 <p className="text-center px-4 pt-1 text-xs font-semibold leading-relaxed text-gray-500 dark:text-gray-400">
                     {t('dashboard:mobile.fullPortfolio', 'Performance charts, IRR & rebalancing')}
                     <br />
-                    <span className="text-primary-700 dark:text-primary-400">→ {t('dashboard:mobile.onLargerScreen', 'on tablet / desktop')}</span>
+                    {/* Muted: it read as a link but went nowhere. */}
+                    <span>{t('dashboard:mobile.onLargerScreen', 'on tablet / desktop')}</span>
                 </p>
             </div>
         </DashboardLayout>
