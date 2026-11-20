@@ -346,7 +346,7 @@
     "transfer": "轉帳",
     "debt": "還債",
     "movedBetweenWallets": "錢包間轉帳：{{amount}}（不計入支出）",
-    "totalIncludesInvest": "總支出包含投資金額。"
+    "totalIncludesInvest": "總支出包含投資金額與錢包之間的轉帳。"
   },
   "monthlySummaryShort": "摘要",
   "pagination": {

@@ -72,10 +72,13 @@ interface MonthlySummaryChartsProps {
     categoryBreakdownSubtitle: string;
 }
 
+// Cyan, not emerald: emerald sat beside the Income line's green and read as one.
+const INVEST = '#0891b2';
+
 const PIE_CATEGORIES = [
     { name: 'Housing', key: 'housing' as const, color: '#3b82f6' },
     { name: 'Eat', key: 'eat' as const, color: '#f59e0b' },
-    { name: 'Invest', key: 'investment' as const, color: '#10b981' },
+    { name: 'Invest', key: 'investment' as const, color: INVEST },
     // Money that only changed pocket: its own slice, not spending hidden in Others.
     { name: 'Transfer', key: 'transfer' as const, color: '#64748b' },
     // Servicing debt is not discretionary, so it gets its own slice rather than
@@ -85,15 +88,12 @@ const PIE_CATEGORIES = [
 ];
 
 /** The expense stack, bottom to top. */
-const INVEST = '#0891b2';
-
 const STACK = [
     { key: 'Housing', fill: '#3b82f6' },
     { key: 'Eat', fill: '#f59e0b' },
     { key: 'Transfer', fill: '#64748b' },
     { key: 'Debt', fill: '#be123c' },
     { key: 'Others', fill: '#8b5cf6' },
-    // Cyan, not emerald: emerald sat beside the Income line's green and read as one.
     { key: 'Investment', fill: INVEST },
 ] as const;
 
@@ -212,6 +212,7 @@ export function MonthlySummaryCharts({
                 <div className="p-4">
                     {/* Legend: only what is drawn. Bar mode listed the Income and Total lines,
                         which draw only in line mode. */}
+                    {(showBarChart || showLineChart) && (
                     <div className="flex flex-wrap items-center gap-x-4 gap-y-2 mb-3 text-xs">
                         {[
                             ...(showBarChart ? [
@@ -233,10 +234,11 @@ export function MonthlySummaryCharts({
                             </div>
                         ))}
                     </div>
+                    )}
                     {showLineChart && (
                         // "Total Exp" counts money invested as an outflow; say so beside it.
                         <p className="-mt-1 mb-3 text-xs text-gray-500 dark:text-gray-400">
-                            {t('transactions:monthlySummaryPage.totalIncludesInvest', 'Total Exp includes money invested.')}
+                            {t('transactions:monthlySummaryPage.totalIncludesInvest', 'Total Exp includes money invested and moved between your wallets.')}
                         </p>
                     )}
                     <div className="h-64" role="img" aria-label={`${chartTitle}. ${chartSubtitle}`}>
