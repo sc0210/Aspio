@@ -114,9 +114,15 @@ function HoldingRowBase({
       <td className="px-3 md:px-6 py-4 whitespace-nowrap">
         <div>
           <div className="flex items-center gap-2">
-            <div className="text-sm font-medium text-gray-900 dark:text-gray-100">
+            {/* A button, so the row is reachable by keyboard: the <tr onClick> was mouse-only. */}
+            <button
+              type="button"
+              onClick={(e) => { e.stopPropagation(); if (!bulkEditMode) onOpen(holding); }}
+              className="text-sm font-medium text-gray-900 dark:text-gray-100 rounded hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-500"
+              aria-label={t('portfolio:openHolding', { symbol: holding.symbol, defaultValue: 'Open {{symbol}}' })}
+            >
               {holding.symbol}
-            </div>
+            </button>
             {/* Bought with a goal's money */}
             {holding.goalId && (
                 <span className="inline-flex items-center px-1.5 py-0.5 rounded text-xs font-medium bg-amber-100 dark:bg-amber-900/30 text-amber-800 dark:text-amber-300" title={t('goals:invest.goalLotHint')}>
@@ -153,8 +159,10 @@ function HoldingRowBase({
                   e.stopPropagation();
                   onSellHolding(holding);
                 }}
-                className="ml-1 p-1 hover:bg-green-100 dark:hover:bg-green-900/30 rounded transition-colors"
-                title="Sell this holding"
+                // A labelled control: the 24px "$" had only a title and said nothing about selling.
+                className="ml-1 p-1 grid place-items-center min-w-[44px] min-h-[44px] lg:min-w-0 lg:min-h-0 hover:bg-green-100 dark:hover:bg-green-900/30 rounded transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-500"
+                title={t('portfolio:sellHolding', { symbol: holding.symbol, defaultValue: 'Sell {{symbol}}' })}
+                aria-label={t('portfolio:sellHolding', { symbol: holding.symbol, defaultValue: 'Sell {{symbol}}' })}
               >
                 <CurrencyDollarIcon className="w-4 h-4 text-green-700 dark:text-green-400" />
               </button>

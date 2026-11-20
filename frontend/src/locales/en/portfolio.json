@@ -786,5 +786,7 @@
     "closedSince": "Closed · last close {{day}}",
     "fxLive": "live",
     "fxEstimate": "estimate"
-  }
+  },
+  "openHolding": "Open {{symbol}}",
+  "sellHolding": "Sell {{symbol}}"
 }

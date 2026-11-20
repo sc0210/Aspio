@@ -781,5 +781,7 @@
     "closedSince": "已收盤 · 最近收盤 {{day}}",
     "fxLive": "即時",
     "fxEstimate": "估計值"
-  }
+  },
+  "openHolding": "開啟 {{symbol}}",
+  "sellHolding": "賣出 {{symbol}}"
 }
