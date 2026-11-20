@@ -213,7 +213,6 @@ export function getNavigationItems(access: NavAccess): NavItem[] {
   return getNavigationSections(access).flatMap((section) => section.items);
 }
 
-/** The bottom bar's own tabs; everything else goes in its More sheet. None depends on an add-on or a tier. */
 /**
  * Pages that belong to a nav item without sharing its path prefix, so the item
  * still reads as "you are here" (the sidebar and the phone tab bar both use it).
@@ -226,6 +225,7 @@ export function navPathFor(pathname: string): string {
   return alias ? NAV_ALIASES[alias] : pathname;
 }
 
+/** The bottom bar's own tabs; everything else goes in its More sheet. None depends on an add-on or a tier. */
 export const primaryNavItems: NavItem[] = getNavigationItems({
   isAdmin: false, isPremium: false, features: ALL_FEATURES,
 }).filter((i) => i.primary);

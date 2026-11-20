@@ -63,7 +63,7 @@ function useActiveTab(pathname: string): string | null {
   // list here would keep rendering a tab that highlighting had stopped knowing
   // about, with nothing to catch it. null: a page reached through More.
   const path = navPathFor(pathname);
-  return primaryNavItems.find((item) => path.startsWith(item.href))?.href ?? null;
+  return primaryNavItems.find((item) => path === item.href || path.startsWith(item.href + '/'))?.href ?? null;
 }
 
 // ---------------------------------------------------------------------------
