@@ -55,10 +55,6 @@
     "close": "關閉"
   },
   "deleteModal": {
-    "cancel": "取消",
-    "confirmPrefix": "這將移除",
-    "confirmSuffix": "與此貸款相關的還款紀錄將保留在您的交易中。",
-    "message": "此操作將刪除 <strong>{{name}}</strong>。與此貸款相關的還款記錄將保留在交易紀錄中。",
     "remove": "確認刪除",
     "removing": "刪除中…",
     "title": "刪除貸款？",

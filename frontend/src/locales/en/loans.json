@@ -55,10 +55,6 @@
     "close": "Close"
   },
   "deleteModal": {
-    "cancel": "Cancel",
-    "confirmPrefix": "This will remove",
-    "confirmSuffix": "Payment history linked to this loan will be preserved in your transactions.",
-    "message": "This will remove <strong>{{name}}</strong>. Payment history linked to this loan will be preserved in your transactions.",
     "remove": "Remove",
     "removing": "Removing…",
     "title": "Remove Loan?",
