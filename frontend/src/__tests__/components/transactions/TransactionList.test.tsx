@@ -457,4 +457,21 @@ describe('TransactionList', () => {
       expect(screen.getByText('-USD250')).toBeInTheDocument();
     });
   });
+  describe('days start open; a day the user closed stays closed', () => {
+    const day = (iso: string, id: string) => makeTransaction({ id, date: new Date(iso) });
+    const headers = () => screen.getAllByRole('button', { name: /^(Expand|Collapse) transactions for/ });
+
+    it('opens every day on first render, past ones included', () => {
+      render(<TransactionList transactions={[day('2024-03-15T10:00:00Z', 'a'), day('2024-03-10T10:00:00Z', 'b')]} />);
+      expect(headers().map((h) => h.getAttribute('aria-expanded'))).toEqual(['true', 'true']);
+    });
+
+    it('keeps a closed day closed when new data arrives, and opens the new day', () => {
+      const first = [day('2024-03-15T10:00:00Z', 'a'), day('2024-03-10T10:00:00Z', 'b')];
+      const { rerender } = render(<TransactionList transactions={first} />);
+      fireEvent.click(headers()[1]); // close Mar 10
+      rerender(<TransactionList transactions={[...first, day('2024-03-05T10:00:00Z', 'c')]} />);
+      expect(headers().map((h) => h.getAttribute('aria-expanded'))).toEqual(['true', 'false', 'true']);
+    });
+  });
 });

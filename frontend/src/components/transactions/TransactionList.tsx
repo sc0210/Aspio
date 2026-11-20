@@ -348,7 +348,8 @@ export function TransactionList({ transactions, isLoading, isFetching, isSearchi
 
     // Every day on the page opens; only a day the user closed stays closed. Opening
     // just today and yesterday left the rest of a page as headers with a total pill,
-    // one click each to read (19 of 21 days in the review screenshot).
+    // one click each to read (19 of 21 days in the review screenshot). Cheap: a page
+    // holds at most MAX_PAGE_SIZE (30) rows (useTransactionData), so this mounts ≤ 30.
     const days = Object.keys(groupedTransactions);
     if (isSearching) {
       // Expand all days when searching (including when new data arrives)
