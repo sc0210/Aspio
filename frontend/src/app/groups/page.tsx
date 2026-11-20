@@ -227,7 +227,9 @@ function DesktopGroupsPage() {
     if (isDemo) {
       setLinkStatus(demoLineLinkStatus);
       setGroups(demoGroups);
-      setBalancesById(Object.fromEntries(demoGroups.map((g) => [g.id, (demoGroupBalances[g.id] ?? null) as GroupBalances | null])));
+      // No fixture means settled, not failed — as the card's own demo fallback reads it.
+      setBalancesById(Object.fromEntries(demoGroups.map((g) => [g.id, (demoGroupBalances[g.id]
+        ?? { group_id: g.id, currency: g.currency, balances: [], member_names: {} }) as GroupBalances])));
       setLoading(false);
       return;
     }
@@ -244,13 +246,14 @@ function DesktopGroupsPage() {
           const groupsRes = await apiClient.get<Group[]>('/line-bot/groups');
           if (cancelled) return;
           const list = groupsRes.data ?? [];
-          setGroups(list);
           // Every group's balances up front, as the phone view does, so desktop can
           // show where you stand instead of only names behind a "Balances" button.
           const all = await Promise.all(list.map((g) =>
             apiClient.get<GroupBalances>(`/line-bot/groups/${g.id}/balances`).then((r) => r.data ?? null).catch(() => null)));
           if (cancelled) return;
+          // Together, so each card mounts with its balances (its state is seeded once).
           setBalancesById(Object.fromEntries(list.map((g, i) => [g.id, all[i]])));
+          setGroups(list);
         }
       } catch {
         // Not "ignore": a null link status rendered the Connect LINE prompt to a
@@ -347,9 +350,18 @@ function DesktopGroupsPage() {
           /* Group list */
           <div className="space-y-3">
             {/* Where you stand across every group, per currency (the phone's hero). */}
-            {position.totals.length > 0 && (
+            {(position.totals.length > 0 || position.failedCount > 0) && (
               <Card padding="md" radius="2xl" shadow="sm">
                 <p className="text-sm font-semibold text-gray-500 dark:text-gray-400">{t('groups:mobile.position')}</p>
+                {/* Partial, and saying so: a group whose balances failed is missing from the total. */}
+                {position.failedCount > 0 && (
+                  <div className="mt-1 flex items-center gap-3">
+                    <p className="text-xs font-semibold text-amber-700 dark:text-amber-300">⚠ {t('groups:mobile.failedCaveat', { count: position.failedCount })}</p>
+                    <button type="button" onClick={retryLoad} className="min-h-[44px] text-xs font-semibold text-primary-700 dark:text-primary-400 hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-500 rounded">
+                      {t('common:errorState.tryAgain')}
+                    </button>
+                  </div>
+                )}
                 <div className="mt-2 grid gap-4 sm:grid-cols-2">
                   {position.totals.map((tot) => (
                     <div key={tot.currency}>
