@@ -404,10 +404,11 @@ export function PortfolioStats({ portfolio, performance, isValueVisible, apiStat
                         tone('text-success-700 dark:text-success-400', 'text-error-700 dark:text-error-400', 'text-gray-500 dark:text-gray-400')
                       )} />
                     </div>
-                    {/* Room for the always-visible Trend pill pinned top-right. */}
-                    <div className={cn('flex-1', onViewTrendClick && 'pr-16')}>
+                    <div className="flex-1 min-w-0">
+                      {/* Only the label line clears the always-visible Trend pill (top-right). */}
                       <p className={cn(
                         "text-xs md:text-sm font-semibold mb-1 uppercase tracking-wider",
+                        onViewTrendClick && 'pr-16',
                         tone('text-success-700 dark:text-success-300', 'text-error-700 dark:text-error-300', 'text-gray-600 dark:text-gray-300')
                       )}>{lastSessionDay
                         ? t('portfolio:stats.lastSessionChange', { day: lastSessionDay, defaultValue: 'Change · {{day}}' })
