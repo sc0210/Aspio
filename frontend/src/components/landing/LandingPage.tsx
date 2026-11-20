@@ -89,12 +89,14 @@ export function LandingPage() {
     { name: t('landing.features.goals.title'),           description: t('landing.features.goals.description'),           icon: TrophyIcon },
   ];
 
+  // Loans, savings groups and peer compare are Premium (server-gated): marked so
+  // the free pitch next to "Create a free account" does not promise them.
   const secondaryFeatures = [
-    { name: t('landing.features.loans.title'),       icon: BanknotesIcon },
-    { name: t('landing.features.savings.title'),     icon: UserGroupIcon },
-    { name: t('landing.features.review.title'),      icon: CalendarDaysIcon },
-    { name: t('landing.features.rebalancing.title'), icon: ArrowPathIcon },
-    { name: t('landing.features.peerCompare.title'), icon: UsersIcon },
+    { name: t('landing.features.loans.title'),       icon: BanknotesIcon,    premium: true },
+    { name: t('landing.features.savings.title'),     icon: UserGroupIcon,    premium: true },
+    { name: t('landing.features.review.title'),      icon: CalendarDaysIcon, premium: false },
+    { name: t('landing.features.rebalancing.title'), icon: ArrowPathIcon,    premium: false },
+    { name: t('landing.features.peerCompare.title'), icon: UsersIcon,        premium: true },
   ];
 
   // Capability statements, not testimonials — each one is something the app
@@ -282,6 +284,11 @@ export function LandingPage() {
                   <Icon className="w-5 h-5 text-gray-500 dark:text-gray-400" />
                   <span className="text-xs font-medium text-gray-600 dark:text-gray-300 leading-snug">
                     {feature.name}
+                    {feature.premium && (
+                      <span className="ml-1 inline-block rounded-full bg-amber-100 dark:bg-amber-900/30 px-1.5 py-px text-[11px] font-semibold text-amber-800 dark:text-amber-300 align-middle">
+                        {t('access.planPremium')}
+                      </span>
+                    )}
                   </span>
                 </div>
               );

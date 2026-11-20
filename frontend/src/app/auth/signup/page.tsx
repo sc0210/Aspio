@@ -38,12 +38,14 @@ type FormData = {
 const MIN_PASSWORD_LENGTH = 8;
 
 
+// Real capabilities, shared with the landing page's "What Aspiro actually does".
+// The old list was hardcoded English and claimed "AI-powered insights" (the AI
+// chat page is gone) and "bank-grade security".
 const FEATURES = [
-  { emoji: '🚀', title: 'Start your FIRE journey', desc: 'Set your financial independence date and work backwards' },
-  { emoji: '📈', title: 'Track every investment', desc: 'Stocks, ETFs, crypto — all in one dashboard' },
-  { emoji: '🧠', title: 'AI-powered insights', desc: 'Get personalized recommendations from your own data' },
-  { emoji: '🔒', title: 'Bank-grade security', desc: 'Your data is encrypted and never sold' },
-];
+  { emoji: '👛', key: 'wallets' },
+  { emoji: '📈', key: 'markets' },
+  { emoji: '📄', key: 'csv' },
+] as const;
 
 const GoogleIcon = (
   <svg className="w-4 h-4 flex-shrink-0" viewBox="0 0 24 24">
@@ -185,14 +187,14 @@ function SignUpForm() {
             </p>
           </div>
           <div className="space-y-4">
-            {FEATURES.map(({ emoji, title, desc }) => (
-              <div key={title} className="flex items-center gap-3.5">
-                <div className="w-10 h-10 bg-white/10 rounded-xl flex items-center justify-center text-xl flex-shrink-0">
+            {FEATURES.map(({ emoji, key }) => (
+              <div key={key} className="flex items-center gap-3.5">
+                <div className="w-10 h-10 bg-white/10 rounded-xl flex items-center justify-center text-xl flex-shrink-0" aria-hidden="true">
                   {emoji}
                 </div>
                 <div>
-                  <p className="text-white font-semibold text-sm leading-tight">{title}</p>
-                  <p className="text-indigo-300 text-xs mt-0.5">{desc}</p>
+                  <p className="text-white font-semibold text-sm leading-tight">{t(`common:landing.capabilities.${key}.title`)}</p>
+                  <p className="text-indigo-200 text-xs mt-0.5">{t(`common:landing.capabilities.${key}.description`)}</p>
                 </div>
               </div>
             ))}
