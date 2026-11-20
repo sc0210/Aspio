@@ -430,7 +430,8 @@
       "shareHint": "The book's own default is 83%; most people who run this for real sit between 50% and 67%.",
       "subtitle": "Target leverage falls on its own as savings accumulate. Your job is to follow it down, not to predict the market.",
       "targetLine": "Target",
-      "title": "The glidepath"
+      "title": "The glidepath",
+      "noLoanYet": "No investment loan yet"
     },
     "history": {
       "title": "Leverage over time",

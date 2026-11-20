@@ -136,10 +136,19 @@ export function PositionHeader({ position, target, tracking, maxLeverage }: Prop
                                     aria-hidden="true"
                                 />
                             </div>
-                            <div className="flex justify-between text-xs text-gray-500 dark:text-gray-400 -mt-1">
-                                <span>0×</span>
-                                <span>1× · {t('lifecycle.position.noDebt', 'no debt')}</span>
-                                <span>{maxLeverage}× · {t('lifecycle.position.ceiling', 'ceiling')}</span>
+                            {/* Each tick sits at value / maxLeverage, like the bar: spread with
+                                justify-between, "1×" sat at 50% even when the ceiling was 1.5×
+                                (it belongs at 67%), and a 1× ceiling showed "1×" twice. */}
+                            <div className="relative h-4 text-xs text-gray-500 dark:text-gray-400 -mt-1">
+                                <span className="absolute left-0">0×</span>
+                                {maxLeverage > 1 && (
+                                    <span className="absolute -translate-x-1/2 whitespace-nowrap" style={{ left: `${(1 / maxLeverage) * 100}%` }}>
+                                        1× · {t('lifecycle.position.noDebt', 'no debt')}
+                                    </span>
+                                )}
+                                <span className="absolute right-0 whitespace-nowrap">
+                                    {maxLeverage}× · {maxLeverage > 1 ? t('lifecycle.position.ceiling', 'ceiling') : t('lifecycle.position.noDebt', 'no debt')}
+                                </span>
                             </div>
                         </div>
 
@@ -176,7 +185,8 @@ export function PositionHeader({ position, target, tracking, maxLeverage }: Prop
                             <Stat
                                 label={t('lifecycle.position.debt', 'Investment debt')}
                                 value={isValueVisible ? formatTWDCompact(position.investmentDebt) : '•••'}
-                                tone="debt"
+                                // Red only when there is debt: NT$0 of debt read as a warning.
+                                tone={position.investmentDebt > 0 ? 'debt' : 'neutral'}
                             />
                             <Stat
                                 label={t('lifecycle.position.ownMoney', 'Your own money')}
