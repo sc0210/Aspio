@@ -27,7 +27,10 @@ export default function PendingApprovalPage() {
   };
 
   // Something to do while waiting: approval can take a while and nothing notifies.
-  const handleTryDemo = () => {
+  // Signed out first: a pending Google sign-up can hold a session, and the app
+  // treats a session as authenticated, not demo, so /dashboard would dead-end.
+  const handleTryDemo = async () => {
+    await signOut({ redirect: false });
     enableDemo();
     window.location.assign('/dashboard');
   };

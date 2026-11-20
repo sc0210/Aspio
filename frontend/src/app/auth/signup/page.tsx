@@ -54,6 +54,11 @@ const GoogleIcon = (
   </svg>
 );
 
+// One set of rules for the validator and the checklist, so they cannot drift.
+const HAS_LOWER = /[a-z]/;
+const HAS_UPPER = /[A-Z]/;
+const HAS_DIGIT = /\d/;
+
 export default function SignUpPage() {
   return (
     <Suspense fallback={<div className="min-h-screen flex items-center justify-center"><LoadingSpinner size="lg" /></div>}>
@@ -81,7 +86,8 @@ function SignUpForm() {
         password: yup
           .string()
           .min(MIN_PASSWORD_LENGTH, t('auth:errors.passwordMinChars', { count: MIN_PASSWORD_LENGTH }))
-          .matches(/^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)/, t('auth:errors.passwordComplexity'))
+          .test('case', t('auth:errors.passwordComplexity'), (v) => !v || (HAS_LOWER.test(v) && HAS_UPPER.test(v)))
+          .test('digit', t('auth:errors.passwordComplexity'), (v) => !v || HAS_DIGIT.test(v))
           .required(t('auth:errors.passwordRequired')),
         confirmPassword: yup
           .string()
@@ -106,8 +112,8 @@ function SignUpForm() {
   // could call a password "Good" that validation then rejected.
   const rules = [
     { key: 'length', ok: passwordValue.length >= MIN_PASSWORD_LENGTH, label: t('auth:signUp.ruleLength', { count: MIN_PASSWORD_LENGTH }) },
-    { key: 'case', ok: /[a-z]/.test(passwordValue) && /[A-Z]/.test(passwordValue), label: t('auth:signUp.ruleCase') },
-    { key: 'digit', ok: /\d/.test(passwordValue), label: t('auth:signUp.ruleDigit') },
+    { key: 'case', ok: HAS_LOWER.test(passwordValue) && HAS_UPPER.test(passwordValue), label: t('auth:signUp.ruleCase') },
+    { key: 'digit', ok: HAS_DIGIT.test(passwordValue), label: t('auth:signUp.ruleDigit') },
   ];
 
   const onSubmit = async (data: FormData) => {
@@ -268,6 +274,7 @@ function SignUpForm() {
                 <div>
                   <Input
                     {...register('password')}
+                    {...(errors.password ? {} : { 'aria-describedby': 'password-rules' })}
                     type={showPassword ? 'text' : 'password'}
                     label={t('auth:signUp.password')}
                     error={errors.password?.message}
@@ -286,7 +293,8 @@ function SignUpForm() {
                     }
                   />
                   {/* Shown before typing too: the rules were hidden until you failed them. */}
-                  <ul id="password-rules" className="mt-1.5 space-y-0.5 text-xs" aria-live="polite">
+                  {/* Described by, not aria-live: a live list re-announced on every keystroke. */}
+                  <ul id="password-rules" className="mt-1.5 space-y-0.5 text-xs">
                     {rules.map(r => (
                       <li key={r.key} className={cn('flex items-center gap-1.5', r.ok ? 'text-emerald-700 dark:text-emerald-400' : 'text-gray-500 dark:text-gray-400')}>
                         <span aria-hidden="true">{r.ok ? '✓' : '○'}</span>
