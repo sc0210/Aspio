@@ -105,6 +105,9 @@ interface DashboardSummary {
         total_debt?: number;
     } | undefined;
     isLoading: boolean;
+    /** The stats failed and there are none to show: render an error, never NT$0. */
+    isError: boolean;
+    refetch: () => void;
     isDemo: boolean;
     /** Nothing recorded yet: no assets or debt, no activity this month, no goals. */
     isNewUser: boolean;
@@ -112,7 +115,7 @@ interface DashboardSummary {
 
 export function useDashboardSummary(): DashboardSummary {
     const { isDemo } = useAppMode();
-    const { data: dash, isLoading } = useOptimizedDashboard('month');
+    const { data: dash, isLoading, isError: dashFailed, refetch } = useOptimizedDashboard('month');
     const stats = dash?.data?.stats;
     const portfolio = dash?.data?.portfolio;
     // 'month', not '30d': the hero labels this delta "this month" and the stats
@@ -167,6 +170,7 @@ export function useDashboardSummary(): DashboardSummary {
             netWorth, changeAbs, changePct, income, expenses, net, expenseShare,
             pnl, pnlPct, portfolioValue, primaryGoal, goalPct,
             spark: buildSpark(nwSeries), stats: s, isLoading, isDemo, isNewUser,
+            isError: !isDemo && dashFailed && !s, refetch: () => { void refetch(); },
         };
-    }, [stats, portfolio, trend, trendBaseline, goals, goalsLoading, isDemo, isLoading]);
+    }, [stats, portfolio, trend, trendBaseline, goals, goalsLoading, isDemo, isLoading, dashFailed, refetch]);
 }

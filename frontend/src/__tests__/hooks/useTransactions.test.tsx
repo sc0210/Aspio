@@ -116,8 +116,18 @@ describe('authenticated fetch', () => {
 
     const { result } = renderHook(() => useTransactions({ fetchAll: true }), { wrapper: createQueryWrapper() });
 
-    await waitFor(() => expect(result.current.isLoading).toBe(false));
-    expect(svc.getTransactions).toHaveBeenCalledTimes(1);
+    // An error the page can show, not an empty success ("No transactions yet").
+    await waitFor(() => expect(result.current.error).toBeTruthy(), { timeout: 5000 });
+    expect((result.current.error as Error).message).toBe('Unauthorized');
+    expect(result.current.transactions).toEqual([]);
+    // Never pages past a failed first page (each attempt, incl. the retry, is page 1).
+    for (const [args] of svc.getTransactions.mock.calls) expect((args as { page?: number }).page).toBe(1);
+  });
+
+  it('a single-page fetch also surfaces the failure as an error', async () => {
+    svc.getTransactions.mockResolvedValue({ success: false, data: [], message: 'Failed to load transactions (503)' } as never);
+    const { result } = renderHook(() => useTransactions({ limit: 5 }), { wrapper: createQueryWrapper() });
+    await waitFor(() => expect(result.current.error).toBeTruthy(), { timeout: 5000 });
     expect(result.current.transactions).toEqual([]);
   });
 });
