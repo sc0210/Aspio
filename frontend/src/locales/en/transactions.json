@@ -495,5 +495,14 @@
   "wallet": {
     "emergency": "Emergency Wallet",
     "life": "Life Wallet"
+  },
+  "mobile": {
+    "desktopOnly": "Heatmap & bulk import on tablet / desktop",
+    "loadMore": "Load more",
+    "loading": "Loading…",
+    "noMatch": "No transactions match",
+    "searchLabel": "Search transactions",
+    "searchPlaceholder": "Search description, category, tag…",
+    "typeFilter": "Type"
   }
 }

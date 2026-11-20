@@ -1,7 +1,8 @@
 'use client';
 
+import { useDebounce } from '@/hooks/useDebounce';
 import { categoryLabel } from '@/lib/transactions/categoryLabel';
-import { useMemo } from 'react';
+import { useMemo, useState } from 'react';
 import Link from 'next/link';
 import { useTranslation } from 'react-i18next';
 import { CameraIcon, PlusIcon } from '@heroicons/react/24/outline';
@@ -25,6 +26,8 @@ function startOfMonth(): Date {
     return new Date(n.getFullYear(), n.getMonth(), 1);
 }
 
+const PAGE = 40;
+
 export function MobileTransactions() {
     // Edit links carry the list view they were opened from, so saving comes back to it.
     const editHref = useEditHref();
@@ -34,6 +37,28 @@ export function MobileTransactions() {
     const { isValueVisible } = usePrivacy();
 
     const rows = (transactions ?? []) as Transaction[];
+
+    // The list has its own query: search, a type filter and "Load more". The phone
+    // list was capped at 40 with none of these ("Filters, search… on tablet /
+    // desktop"), so older entries were unreachable. The hero keeps the base query,
+    // so filtering the list never changes this month's totals.
+    const [search, setSearch] = useState('');
+    const [type, setType] = useState<'' | 'expense' | 'income'>('');
+    const [limit, setLimit] = useState(PAGE);
+    const debouncedSearch = useDebounce(search.trim(), 400);
+    const list = useTransactions({
+        search: debouncedSearch || undefined,
+        type: type || undefined,
+        limit,
+        sortBy: 'date',
+        sortOrder: 'desc',
+    });
+    const listRows = useMemo(() => {
+        const all = (list.transactions ?? []) as Transaction[];
+        // Demo returns everything (it paginates client-side elsewhere): cap here too.
+        return all.slice(0, limit);
+    }, [list.transactions, limit]);
+    const canLoadMore = ((list.transactions ?? []) as Transaction[]).length >= limit;
 
     const model = useMemo(() => {
         const monthStart = startOfMonth();
@@ -55,20 +80,20 @@ export function MobileTransactions() {
         const expenseShare = total > 0 ? (expense / total) * 100 : 0;
 
         // Most-recent first, grouped by day for a scannable list.
-        const sorted = [...rows].sort((a, b) => {
+        const sorted = [...listRows].sort((a, b) => {
             const da = new Date(typeof a.date === 'string' ? a.date : a.date).getTime();
             const db = new Date(typeof b.date === 'string' ? b.date : b.date).getTime();
             return db - da;
         });
         const groups = new Map<string, Transaction[]>();
-        for (const tx of sorted.slice(0, 40)) {
+        for (const tx of sorted) {
             const d = typeof tx.date === 'string' ? new Date(tx.date) : tx.date;
             const key = d.toISOString().slice(0, 10);
             if (!groups.has(key)) groups.set(key, []);
             groups.get(key)!.push(tx);
         }
         return { income, expense, net, expenseShare, groups: Array.from(groups.entries()) };
-    }, [rows]);
+    }, [rows, listRows]);
 
     if (isLoading && rows.length === 0) {
         return (
@@ -151,8 +176,34 @@ export function MobileTransactions() {
                 {/* Recent transactions — grouped by day */}
                 <section data-tour="tx-m-recent">
                     <p className="px-1 mb-2.5 text-sm font-extrabold tracking-tight text-gray-900 dark:text-white">{t('transactions:recent', 'Recent')}</p>
-                    {error && model.groups.length === 0 ? (
-                        <QueryErrorCard onRetry={() => refetch()} />
+                    <div className="mb-3 space-y-2">
+                        <input
+                            type="search"
+                            value={search}
+                            onChange={(e) => { setSearch(e.target.value); setLimit(PAGE); }}
+                            placeholder={t('transactions:mobile.searchPlaceholder', 'Search description, category, tag…')}
+                            aria-label={t('transactions:mobile.searchLabel', 'Search transactions')}
+                            className="w-full min-h-[44px] rounded-xl border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 px-3 text-sm text-gray-900 dark:text-white placeholder:text-gray-400 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-400"
+                        />
+                        <div role="group" aria-label={t('transactions:mobile.typeFilter', 'Type')} className="flex gap-2">
+                            {(['', 'expense', 'income'] as const).map((v) => (
+                                <button key={v || 'all'} type="button" aria-pressed={type === v}
+                                    onClick={() => { setType(v); setLimit(PAGE); }}
+                                    className={cn('min-h-[44px] px-4 rounded-full text-xs font-semibold border focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-400',
+                                        type === v ? 'bg-primary-700 border-primary-700 text-white' : 'bg-white dark:bg-gray-800 border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-200')}>
+                                    {v === '' ? t('common:common.all', 'All') : v === 'expense' ? t('transactions:types.expense', 'Expense') : t('transactions:types.income', 'Income')}
+                                </button>
+                            ))}
+                        </div>
+                    </div>
+                    {list.error && model.groups.length === 0 ? (
+                        <QueryErrorCard onRetry={() => list.refetch()} />
+                    ) : list.isLoading && model.groups.length === 0 ? (
+                        <div className="flex justify-center py-8"><LoadingSpinner /></div>
+                    ) : (search || type) && model.groups.length === 0 ? (
+                        <Card padding="xl" shadow="none" className="text-center">
+                            <p className="text-sm text-gray-500 dark:text-gray-400">{t('transactions:mobile.noMatch', 'No transactions match')}</p>
+                        </Card>
                     ) : model.groups.length === 0 ? (
                         <Card padding="xl" shadow="none" className="text-center">
                             <p className="text-sm text-gray-500 dark:text-gray-400">{t('transactions:empty.title', 'No transactions yet')}</p>
@@ -196,10 +247,16 @@ export function MobileTransactions() {
                     )}
                 </section>
 
+                {canLoadMore && model.groups.length > 0 && (
+                    <button type="button" onClick={() => setLimit((n) => n + PAGE)} disabled={list.isFetching}
+                        className="block mx-auto min-h-[44px] px-5 rounded-xl border border-gray-300 dark:border-gray-600 text-sm font-semibold text-gray-700 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-gray-700 disabled:opacity-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-400">
+                        {list.isFetching ? t('transactions:mobile.loading', 'Loading…') : t('transactions:mobile.loadMore', 'Load more')}
+                    </button>
+                )}
+
+                {/* Muted, not a link: what remains desktop-only is the heatmap and bulk import. */}
                 <p className="text-center px-4 pt-1 text-xs font-semibold leading-relaxed text-gray-500 dark:text-gray-400">
-                    {t('dashboard:mobile.fullTransactions', 'Filters, search, heatmap & bulk import')}
-                    <br />
-                    <span className="text-primary-700 dark:text-primary-400">→ {t('dashboard:mobile.onLargerScreen', 'on tablet / desktop')}</span>
+                    {t('transactions:mobile.desktopOnly', 'Heatmap & bulk import on tablet / desktop')}
                 </p>
             </div>
         </DashboardLayout>

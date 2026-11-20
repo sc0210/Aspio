@@ -495,5 +495,14 @@
   "wallet": {
     "emergency": "緊急錢包",
     "life": "生活錢包"
+  },
+  "mobile": {
+    "desktopOnly": "熱力圖與批次匯入請用平板／電腦",
+    "loadMore": "載入更多",
+    "loading": "載入中…",
+    "noMatch": "沒有符合的交易",
+    "searchLabel": "搜尋交易",
+    "searchPlaceholder": "搜尋描述、分類、標籤…",
+    "typeFilter": "類型"
   }
 }
