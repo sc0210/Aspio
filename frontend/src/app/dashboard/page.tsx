@@ -1,5 +1,6 @@
 'use client';
 
+import { useTranslation } from 'react-i18next';
 import { DashboardLayout } from '@/components/layout/DashboardLayout';
 import { ComprehensiveDashboardSkeleton } from '@/components/ui/DashboardSkeleton';
 import { useEffect } from 'react';
@@ -29,6 +30,7 @@ export default function DashboardPage() {
     const router = useRouter();
 
     const isLoading = status === 'loading';
+    const { t } = useTranslation('dashboard');
     const isMobile = useIsMobile(); // null until the breakpoint resolves (post-mount)
     const [viewMode] = useDashboardViewMode(); // null until the preference resolves
     const hasAccess = isAuthenticated || isDemo;
@@ -48,7 +50,7 @@ export default function DashboardPage() {
         // sidebar vanish between the route skeleton and the content, then come back.
         return (
             <DashboardLayout>
-                <div role="status" aria-busy="true" aria-label="Loading dashboard">
+                <div role="status" aria-busy="true" aria-label={t('dashboard:loading', 'Loading dashboard')}>
                     <ComprehensiveDashboardSkeleton />
                 </div>
             </DashboardLayout>
