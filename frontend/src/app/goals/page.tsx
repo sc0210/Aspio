@@ -80,11 +80,14 @@ function DesktopGoalsPage() {
     // offered "No retirement goal set yet"; an empty filter read as "no goals yet".
     const { data: allGoalsData, isLoading, isError, refetch: refetchGoals } = useGoals();
     const allGoals = useMemo(() => allGoalsData ?? [], [allGoalsData]);
-    const goals = useMemo(
-        () => allGoals.filter((g) =>
-            (!filterStatus || g.status === filterStatus) && (!filterCategory || g.category === filterCategory)),
-        [allGoals, filterStatus, filterCategory],
+    const matchesFilters = useCallback(
+        (g: Goal) => (!filterStatus || g.status === filterStatus) && (!filterCategory || g.category === filterCategory),
+        [filterStatus, filterCategory],
     );
+    const goals = useMemo(() => allGoals.filter(matchesFilters), [allGoals, matchesFilters]);
+    // Only when nothing is on screen: a failed background refetch keeps the goals
+    // already loaded rather than hiding half the page behind an error.
+    const showError = isError && !allGoalsData;
     const filtersActive = Boolean(filterStatus || filterCategory);
     const deleteGoal = useDeleteGoal();
     const { portfolio, refetch: refetchPortfolio } = usePortfolio();
@@ -293,9 +296,9 @@ function DesktopGoalsPage() {
                 />
 
                 {/* ── Portfolio-Linked Retirement Goal ─────────────────────────── */}
-                {isError && <QueryErrorCard onRetry={() => refetchGoals()} />}
+                {showError && <QueryErrorCard onRetry={() => refetchGoals()} />}
 
-                {!isLoading && !isError && (
+                {!isLoading && !showError && (
                     <div data-tour="goals-retire" className="rounded-xl border border-primary-200 dark:border-primary-800/40 bg-gradient-to-br from-primary-50 via-white to-primary-50/40 dark:from-primary-900/20 dark:via-indigo-900/20 dark:to-primary-900/10 overflow-hidden shadow-sm">
                         {/* Header bar */}
                         <div className="flex items-center justify-between px-4 py-3 border-b border-primary-200 dark:border-primary-700/40 bg-primary-50 dark:bg-primary-900/20 gap-2">
@@ -458,7 +461,7 @@ function DesktopGoalsPage() {
                 </div>
 
                 {/* Goal Health Insights */}
-                {!isLoading && !isError && allGoals.length > 0 && (
+                {!isLoading && !showError && allGoals.length > 0 && (
                     <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                         <Card padding="none" clip>
                             <div className="h-px bg-gradient-to-r from-indigo-400/60 via-purple-400/60 to-violet-400/60" />
@@ -499,7 +502,7 @@ function DesktopGoalsPage() {
                 )}
 
                 {/* Empty State */}
-                {!isLoading && !isError && allGoals.length === 0 && (
+                {!isLoading && !showError && allGoals.length === 0 && (
                     <div className="bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 p-6 sm:p-12 text-center">
                         <div className="max-w-md mx-auto">
                             <div className="w-12 h-12 sm:w-16 sm:h-16 mx-auto mb-3 sm:mb-4 rounded-full bg-primary-100 dark:bg-primary-900/20 flex items-center justify-center">
@@ -525,8 +528,10 @@ function DesktopGoalsPage() {
                 )}
 
                 {/* Filters matched nothing: say so, never "create your first goal" */}
-                {!isLoading && !isError && allGoals.length > 0 && filtersActive
-                    && activeGoals.length === 0 && completedGoals.length === 0 && otherGoals.length === 0 && (
+                {!isLoading && !showError && allGoals.length > 0 && filtersActive
+                    && activeGoals.length === 0 && completedGoals.length === 0 && otherGoals.length === 0
+                    // The pinned retirement panel ignores filters; if it is the match, it is on screen.
+                    && !(retirementGoal && matchesFilters(retirementGoal)) && (
                     <EmptyState
                         title={t('goals:noMatch.title')}
                         description={t('goals:noMatch.subtitle')}
