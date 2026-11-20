@@ -1,5 +1,6 @@
 'use client';
 
+import { PAYMENT_METHODS } from '@/components/transactions/TransactionFormFields';
 import { useState, useRef, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
@@ -62,10 +63,13 @@ export default function ScanReceiptPage() {
     q.set('description', data.merchant
       ? t('transactions:scan.purchaseAt', { merchant: data.merchant })
       : t('transactions:scan.receiptPurchase'));
-    const day = data.date ? localDateString(new Date(data.date)) : '';
+    // A plain YYYY-MM-DD passes through: parsing it reads UTC midnight, a day early west of UTC.
+    const day = /^\d{4}-\d{2}-\d{2}/.test(data.date ?? '') ? data.date.slice(0, 10)
+      : data.date ? localDateString(new Date(data.date)) : '';
     if (day && !day.includes('NaN')) q.set('date', day);
+    // Only a method the form offers: the prefill drops any other, silently.
     const pm = toBackendPaymentMethod(data.paymentMethod);
-    if (pm) q.set('paymentMethod', pm);
+    if (pm && PAYMENT_METHODS.some((m) => m.value === pm)) q.set('paymentMethod', pm);
     return `/transactions/add?${q.toString()}`;
   };
 
