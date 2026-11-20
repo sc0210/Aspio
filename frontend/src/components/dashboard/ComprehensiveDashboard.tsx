@@ -401,9 +401,7 @@ export function ComprehensiveDashboard() {
             </section>
 
             <section aria-label="Recent Activity">
-              <MemoizedRecentTransactions
-                dateRange={dateRange}
-              />
+              <MemoizedRecentTransactions />
             </section>
           </div>
 

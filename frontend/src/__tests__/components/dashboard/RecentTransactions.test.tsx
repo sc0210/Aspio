@@ -187,42 +187,21 @@ describe('RecentTransactions', () => {
     });
   });
 
-  describe('date filter — all period values produce a date range', () => {
-    const periodsWithFilter = ['7d', '14d', 'month', '30d', '90d', '6m', 'ytd', '1y'];
-
-    periodsWithFilter.forEach((period) => {
-      it(`passes a dateRange to useTransactions when period is "${period}"`, () => {
-        render(<RecentTransactions dateRange={period} />);
-        const callArgs = mockUseTransactions.mock.calls[0]?.[0] as Record<string, unknown> | undefined;
-        expect(callArgs?.dateRange).toBeDefined();
-        const dr = callArgs?.dateRange as { start: Date; end: Date };
-        expect(dr.start).toBeInstanceOf(Date);
-        expect(dr.end).toBeInstanceOf(Date);
-        expect(dr.start.getTime()).toBeLessThan(dr.end.getTime());
-      });
-    });
-
-    it('passes undefined dateRange to useTransactions when no period is set', () => {
+  describe('always the latest five', () => {
+    it('sends no date range: the widget does not follow the period selector', () => {
+      // Following it told an established user "No transactions yet" on a quiet 7D.
       render(<RecentTransactions />);
       const callArgs = mockUseTransactions.mock.calls[0]?.[0] as Record<string, unknown> | undefined;
       expect(callArgs?.dateRange).toBeUndefined();
     });
 
-    it('7d start is midnight on the day 7 days before today', () => {
-      render(<RecentTransactions dateRange="7d" />);
-      const dr = (mockUseTransactions.mock.calls[0]?.[0] as { dateRange: { start: Date } }).dateRange;
-      const expected = new Date();
-      expected.setDate(expected.getDate() - 7);
-      expected.setHours(0, 0, 0, 0);
-      // Allow ±1 second for test execution time
-      expect(Math.abs(dr.start.getTime() - expected.getTime())).toBeLessThan(1000);
-    });
-
-    it('ytd start is January 1st of the current year', () => {
-      render(<RecentTransactions dateRange="ytd" />);
-      const dr = (mockUseTransactions.mock.calls[0]?.[0] as { dateRange: { start: Date } }).dateRange;
-      expect(dr.start.getMonth()).toBe(0);
-      expect(dr.start.getDate()).toBe(1);
+    it('shows at most five rows even when the source returns more (demo ignores limit)', () => {
+      mockTransactions = Array.from({ length: 14 }, (_, i) =>
+        makeTransaction({ id: String(i), description: `Item ${i}` }),
+      );
+      render(<RecentTransactions />);
+      expect(screen.getByText('Item 4')).toBeInTheDocument();
+      expect(screen.queryByText('Item 5')).toBeNull();
     });
   });
 });
