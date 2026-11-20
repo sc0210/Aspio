@@ -117,7 +117,9 @@ function HoldingRowBase({
             {/* A button, so the row is reachable by keyboard: the <tr onClick> was mouse-only. */}
             <button
               type="button"
-              onClick={(e) => { e.stopPropagation(); if (!bulkEditMode) onOpen(holding); }}
+              // In bulk edit it selects the row instead, so it is never a dead tab stop.
+              onClick={(e) => { e.stopPropagation(); if (bulkEditMode) onToggleSelect(holding); else onOpen(holding); }}
+              aria-pressed={bulkEditMode ? isSelected : undefined}
               className="text-sm font-medium text-gray-900 dark:text-gray-100 rounded hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-500"
               aria-label={t('portfolio:openHolding', { symbol: holding.symbol, defaultValue: 'Open {{symbol}}' })}
             >
