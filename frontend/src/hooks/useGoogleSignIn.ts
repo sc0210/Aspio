@@ -18,8 +18,9 @@ export function useGoogleSignIn(): boolean {
   useEffect(() => {
     let cancelled = false;
     getProviders()
-      .then((p) => { if (!cancelled) setFrontendHasGoogle(Boolean(p?.google)); })
-      // Unknown: offer it rather than lock anyone out.
+      // getProviders() resolves null on a failed fetch rather than throwing; null is
+      // "unknown", and unknown offers the button rather than lock anyone out.
+      .then((p) => { if (!cancelled) setFrontendHasGoogle(p ? Boolean(p.google) : true); })
       .catch(() => { if (!cancelled) setFrontendHasGoogle(true); });
     return () => { cancelled = true; };
   }, []);
