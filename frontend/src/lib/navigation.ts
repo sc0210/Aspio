@@ -62,7 +62,8 @@ export interface NavItem {
   /** Extra terms the ⌘K palette matches on, so search works in both languages. */
   keywords?: string[];
   /** An optional add-on the page depends on; hidden when the instance lacks it. */
-  feature?: keyof Features;
+  /** Nav items gate on add-ons only (not sign-in options). */
+  feature?: 'lineBot';
   /** Shown only to a premium account (lib/access.ts); the route's layout gates it too. */
   premium?: true;
 }
@@ -205,7 +206,7 @@ export function getNavigationSections({ isAdmin, isPremium, features }: NavAcces
 
 /** Whether `item`'s add-on, if it has one, is configured on this instance. */
 export function isNavItemAvailable(item: NavItem, features: Features): boolean {
-  return !item.feature || features[item.feature];
+  return !item.feature || features[item.feature] === true;
 }
 
 /** Flat list, in sidebar order — what the ⌘K palette searches. */

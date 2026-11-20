@@ -1,5 +1,7 @@
 'use client';
 
+import { useFeatures } from '@/hooks/useFeatures';
+import { useDemo } from '@/contexts/DemoContext';
 import { useState, useMemo, Suspense } from 'react';
 import { signIn } from 'next-auth/react';
 import { useRouter, useSearchParams } from 'next/navigation';
@@ -62,6 +64,9 @@ export default function SignInPage() {
 function SignInForm() {
   const [isLoading, setIsLoading] = useState(false);
   const [isGoogleLoading, setIsGoogleLoading] = useState(false);
+  const { enableDemo } = useDemo();
+  const { googleLogin } = useFeatures();
+  const showGoogle = googleLogin !== false;
   const [isDemoLoading, setIsDemoLoading] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
   const { t } = useTranslation(['auth']);
@@ -114,21 +119,14 @@ function SignInForm() {
     }
   };
 
-  const handleDemoSignIn = async () => {
+  // The client-side demo, as the landing page uses: the 'demo' NextAuth provider
+  // needs DEMO_EMAIL/DEMO_PASSWORD on the frontend, and without them this button
+  // only ever said "Demo account unavailable".
+  const handleDemoSignIn = () => {
     setIsDemoLoading(true);
-    try {
-      const result = await signIn('demo', { redirect: false });
-      if (result?.error) {
-        toast.error(t('auth:signIn.toast.demoUnavailable'));
-      } else {
-        toast.success(t('auth:signIn.toast.demoWelcome'));
-        router.push('/');
-      }
-    } catch {
-      toast.error(t('auth:signIn.toast.genericError'));
-    } finally {
-      setIsDemoLoading(false);
-    }
+    enableDemo();
+    toast.success(t('auth:signIn.toast.demoWelcome'));
+    window.location.assign('/dashboard');
   };
 
   const handleGoogleSignIn = async () => {
@@ -272,6 +270,8 @@ function SignInForm() {
                 </Button>
               </form>
 
+              {/* Divider + Google: only where this instance has Google sign-in. */}
+              {showGoogle && (<>
               {/* Divider */}
               <div className="relative">
                 <div className="absolute inset-0 flex items-center">
@@ -292,6 +292,7 @@ function SignInForm() {
                 {isGoogleLoading ? <LoadingSpinner size="sm" /> : GoogleIcon}
                 {t('auth:signIn.signInWithGoogle')}
               </button>
+              </>)}
 
               {/* Demo */}
               <div>

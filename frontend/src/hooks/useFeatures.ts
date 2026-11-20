@@ -27,8 +27,14 @@ export function useFeatures(): Features & { isLoading: boolean; isError: boolean
   const query = useQuery({
     queryKey: [QUERY_KEYS.FEATURES],
     queryFn: async (): Promise<Features> => {
-      const res = await apiClient.get<{ line_bot: boolean }>('/features');
-      return { lineBot: res.data?.line_bot === true };
+      const res = await apiClient.get<{ line_bot: boolean; google_login?: boolean; email?: boolean }>('/features');
+      return {
+        lineBot: res.data?.line_bot === true,
+        // Only an explicit false hides sign-in options: an older backend that does
+        // not report them must not lock anyone out.
+        googleLogin: res.data?.google_login !== false,
+        email: res.data?.email !== false,
+      };
     },
     enabled: !isDemo,
     // Configuration, not data: it changes only when the instance restarts.

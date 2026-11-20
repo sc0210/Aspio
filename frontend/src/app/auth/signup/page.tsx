@@ -1,5 +1,6 @@
 'use client';
 
+import { useFeatures } from '@/hooks/useFeatures';
 import { useState, useMemo, Suspense } from 'react';
 import { signIn } from 'next-auth/react';
 import { useRouter, useSearchParams } from 'next/navigation';
@@ -72,6 +73,8 @@ export default function SignUpPage() {
 function SignUpForm() {
   const [isLoading, setIsLoading] = useState(false);
   const [isGoogleLoading, setIsGoogleLoading] = useState(false);
+  const { googleLogin } = useFeatures();
+  const showGoogle = googleLogin !== false;
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirm, setShowConfirm] = useState(false);
   const router = useRouter();
@@ -232,6 +235,8 @@ function SignUpForm() {
             <div className="h-px bg-gradient-to-r from-indigo-400/60 via-primary-400/60 to-violet-400/60" />
             <div className="px-6 py-6 space-y-4">
 
+              {/* Google + divider: only where this instance has Google sign-in. */}
+              {showGoogle && (<>
               {/* Google — shown first on signup to encourage SSO */}
               <button
                 type="button"
@@ -251,6 +256,7 @@ function SignUpForm() {
                   <span className="px-3 bg-white dark:bg-gray-800 text-gray-500 dark:text-gray-400 font-medium">{t('auth:signUp.orSignUpWithEmail')}</span>
                 </div>
               </div>
+              </>)}
 
               <form className="space-y-3.5" onSubmit={handleSubmit(onSubmit)}>
                 <Input
