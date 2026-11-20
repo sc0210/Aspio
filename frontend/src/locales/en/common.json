@@ -422,6 +422,7 @@
       "noCrossover": "No crossover before retirement",
       "noCrossoverHint": "At these savings the debt never stops outweighing your own money. Raise savings or lower the target share.",
       "noDebtLine": "no debt",
+      "noLoanYet": "No investment loan yet",
       "note": "A projection, not a forecast: it assumes a steady return and that you keep saving. Loan repayments already sit in your recorded expenses, so the payment is added back to savings the month the loan clears.",
       "retireAge": "Retirement age",
       "return": "Expected annual return",
@@ -430,8 +431,7 @@
       "shareHint": "The book's own default is 83%; most people who run this for real sit between 50% and 67%.",
       "subtitle": "Target leverage falls on its own as savings accumulate. Your job is to follow it down, not to predict the market.",
       "targetLine": "Target",
-      "title": "The glidepath",
-      "noLoanYet": "No investment loan yet"
+      "title": "The glidepath"
     },
     "history": {
       "title": "Leverage over time",
