@@ -1,8 +1,10 @@
 'use client';
 
+import { Card } from '@/components/ui/Card';
+import { groupsPosition } from '@/lib/groups/position';
 import { RelatedMoneyLinks } from '@/components/layout/RelatedMoneyLinks';
 import { LineBotGate } from '@/components/line/LineBotGate';
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import Link from 'next/link';
 import {
   UserGroupIcon,
@@ -62,10 +64,16 @@ function short(uuid: string) {
   return uuid.slice(0, 8);
 }
 
-function GroupCard({ group, isDemo, selfId }: { group: Group; isDemo: boolean; selfId: string }) {
+function GroupCard({ group, isDemo, selfId, preloaded, net }: {
+  group: Group; isDemo: boolean; selfId: string;
+  /** Balances the page already fetched for the summary, so expanding needs no request. */
+  preloaded?: GroupBalances | null;
+  /** Your net in this group (+ owed to you), shown in the header like the phone list. */
+  net?: number | null;
+}) {
   const { t } = useTranslation('groups');
   const [expanded, setExpanded] = useState(false);
-  const [balances, setBalances] = useState<GroupBalances | null>(null);
+  const [balances, setBalances] = useState<GroupBalances | null>(preloaded ?? null);
   const [loading, setLoading] = useState(false);
   const [balancesFailed, setBalancesFailed] = useState(false);
 
@@ -119,12 +127,18 @@ function GroupCard({ group, isDemo, selfId }: { group: Group; isDemo: boolean; s
             </p>
             <p className="text-xs text-gray-500 dark:text-gray-400 mt-0.5">
               {t('members', { count: group.member_count })} · {group.currency}
+              {net != null && net !== 0 && (
+                <span className={`ml-1.5 font-semibold ${net > 0 ? 'text-green-700 dark:text-green-400' : 'text-red-700 dark:text-red-400'}`}>
+                  · {net > 0 ? t('mobile.netOwedToYou') : t('mobile.netYouOwe')} {fmt(Math.abs(net), group.currency)}
+                </span>
+              )}
             </p>
           </div>
         </Link>
         <button
           onClick={toggle}
-          className="flex items-center gap-1.5 text-xs px-3 py-1.5 rounded-lg border border-gray-200 dark:border-gray-600 text-gray-600 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors shrink-0"
+          aria-expanded={expanded}
+          className="flex items-center gap-1.5 text-xs px-3 py-1.5 min-h-[44px] rounded-lg border border-gray-200 dark:border-gray-600 text-gray-600 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors shrink-0"
         >
           {loading ? (
             <LoadingSpinner size="sm" />
@@ -198,6 +212,14 @@ function DesktopGroupsPage() {
   const [groups, setGroups] = useState<Group[]>([]);
   const [loading, setLoading] = useState(true);
   const [loadFailed, setLoadFailed] = useState(false);
+  const [balancesById, setBalancesById] = useState<Record<string, GroupBalances | null>>({});
+  const position = useMemo(() => groupsPosition(groups.map((g) => ({
+    id: g.id, name: g.name, currency: g.currency,
+    balances: balancesById[g.id]?.balances ?? [],
+    member_names: balancesById[g.id]?.member_names ?? {},
+    failed: g.id in balancesById && balancesById[g.id] === null,
+  })), selfId), [groups, balancesById, selfId]);
+  const netById = useMemo(() => Object.fromEntries(position.groups.map((g) => [g.id, g.failed ? null : g.net])), [position]);
   const [attempt, setAttempt] = useState(0);
 
   useEffect(() => {
@@ -205,6 +227,7 @@ function DesktopGroupsPage() {
     if (isDemo) {
       setLinkStatus(demoLineLinkStatus);
       setGroups(demoGroups);
+      setBalancesById(Object.fromEntries(demoGroups.map((g) => [g.id, (demoGroupBalances[g.id] ?? null) as GroupBalances | null])));
       setLoading(false);
       return;
     }
@@ -220,7 +243,14 @@ function DesktopGroupsPage() {
         if (status?.linked) {
           const groupsRes = await apiClient.get<Group[]>('/line-bot/groups');
           if (cancelled) return;
-          setGroups(groupsRes.data ?? []);
+          const list = groupsRes.data ?? [];
+          setGroups(list);
+          // Every group's balances up front, as the phone view does, so desktop can
+          // show where you stand instead of only names behind a "Balances" button.
+          const all = await Promise.all(list.map((g) =>
+            apiClient.get<GroupBalances>(`/line-bot/groups/${g.id}/balances`).then((r) => r.data ?? null).catch(() => null)));
+          if (cancelled) return;
+          setBalancesById(Object.fromEntries(list.map((g, i) => [g.id, all[i]])));
         }
       } catch {
         // Not "ignore": a null link status rendered the Connect LINE prompt to a
@@ -316,7 +346,28 @@ function DesktopGroupsPage() {
         ) : (
           /* Group list */
           <div className="space-y-3">
-            {groups.map(g => <GroupCard key={g.id} group={g} isDemo={isDemo} selfId={selfId} />)}
+            {/* Where you stand across every group, per currency (the phone's hero). */}
+            {position.totals.length > 0 && (
+              <Card padding="md" radius="2xl" shadow="sm">
+                <p className="text-sm font-semibold text-gray-500 dark:text-gray-400">{t('groups:mobile.position')}</p>
+                <div className="mt-2 grid gap-4 sm:grid-cols-2">
+                  {position.totals.map((tot) => (
+                    <div key={tot.currency}>
+                      <p className={`text-2xl font-bold tabular-nums ${tot.net > 0 ? 'text-green-700 dark:text-green-400' : tot.net < 0 ? 'text-red-700 dark:text-red-400' : 'text-gray-900 dark:text-white'}`}>
+                        {tot.net > 0 ? '+' : tot.net < 0 ? '−' : ''}{fmt(Math.abs(tot.net), tot.currency)}
+                      </p>
+                      <p className="text-xs text-gray-500 dark:text-gray-400 mt-0.5">
+                        {t('groups:mobile.owedToYou')} {fmt(tot.owedToYou, tot.currency)} · {t('groups:mobile.youOwe')} {fmt(tot.youOwe, tot.currency)}
+                      </p>
+                    </div>
+                  ))}
+                </div>
+              </Card>
+            )}
+            {groups.map(g => (
+              <GroupCard key={g.id} group={g} isDemo={isDemo} selfId={selfId}
+                preloaded={balancesById[g.id]} net={netById[g.id]} />
+            ))}
           </div>
         )}
 
