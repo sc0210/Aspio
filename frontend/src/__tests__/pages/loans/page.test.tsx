@@ -282,7 +282,8 @@ describe('LoansPage', () => {
     setupLoans([activeLoan], mockSummary);
     render(<LoansPage />);
     fireEvent.click(screen.getByText('Delete'));
-    fireEvent.click(screen.getByText('Cancel'));
+    // The shared ConfirmDialog labels Cancel from the common namespace.
+    fireEvent.click(screen.getByRole('button', { name: /cancel/i }));
     expect(screen.queryByText('Remove Loan?')).not.toBeInTheDocument();
   });
 

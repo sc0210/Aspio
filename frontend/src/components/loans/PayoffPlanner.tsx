@@ -171,6 +171,8 @@ export function PayoffPlanner({ loans }: Props) {
                     {plan.months !== null && (
                         <p className="text-xs text-gray-500 dark:text-gray-400">{t('planner.in', { span: fmtSpan(plan.months) })}</p>
                     )}
+                    {/* Why this is sooner than a card's own estimate. */}
+                    <p className="text-xs text-gray-500 dark:text-gray-400">{t('planner.rolloverNote')}</p>
                 </div>
 
                 <div>

@@ -40,7 +40,7 @@
     "goal": "Goal: {{amount}}",
     "interestLeft": "Interest left: {{amount}}",
     "minPayment": "Min Payment",
-    "monthsLeft": "Months Left",
+    "monthsLeft": "Contract months left",
     "next": "Next: {{date}}",
     "paidOff": "Paid Off",
     "payoffEstimate": "≈{{count}} at current payment",
@@ -61,7 +61,8 @@
     "message": "This will remove <strong>{{name}}</strong>. Payment history linked to this loan will be preserved in your transactions.",
     "remove": "Remove",
     "removing": "Removing…",
-    "title": "Remove Loan?"
+    "title": "Remove Loan?",
+    "plainMessage": "This will remove {{name}}. Payment history linked to this loan will be preserved in your transactions."
   },
   "editModal": {
     "save": "Save Changes",
@@ -146,7 +147,8 @@
     "years_one": "{{count}} yr",
     "years_other": "{{count}} yrs",
     "months_one": "{{count}} mo",
-    "months_other": "{{count}} mo"
+    "months_other": "{{count}} mo",
+    "rolloverNote": "Assumes each cleared loan's payment rolls into the next, so it can be sooner than a loan's own estimate."
   },
   "upcoming": {
     "mixedCurrencies": "Mixed currencies — no single total",
