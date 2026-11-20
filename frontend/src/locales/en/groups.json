@@ -91,5 +91,6 @@
     "position": "Your position",
     "youOwe": "You owe",
     "youOweName": "You owe {{name}}"
-  }
+  },
+  "balancesFailed": "Couldn't load this group's balances"
 }

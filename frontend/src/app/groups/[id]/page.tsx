@@ -9,6 +9,7 @@ import { Button } from '@/components/ui/Button';
 import { Modal, ModalFooter } from '@/components/ui/Modal';
 import { apiClient } from '@/lib/api-client';
 import { useTranslation } from 'react-i18next';
+import { QueryErrorCard } from '@/components/ui/QueryErrorCard';
 import { useAppMode } from '@/hooks/useAppMode';
 import { formatCurrency } from '@/utils/formatters';
 import {
@@ -483,9 +484,7 @@ function GroupDetailContent() {
 
         {/* Error state */}
         {error && (
-          <div className="rounded-2xl bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 p-4 text-sm text-red-700 dark:text-red-400">
-            {error}
-          </div>
+          <QueryErrorCard onRetry={() => { setError(null); setLoading(true); reload(); }} />
         )}
 
         {!loading && !error && (
@@ -549,7 +548,10 @@ function GroupDetailContent() {
                 </h2>
               </div>
               <div className="px-4 sm:px-5 pb-4 pt-2">
-                {!balancesData || balancesData.balances.length === 0 ? (
+                {/* Settled only on an answer saying so; no data is not "all settled". */}
+                {!balancesData ? (
+                  <p className="text-sm text-gray-500 dark:text-gray-400 text-center py-3">—</p>
+                ) : balancesData.balances.length === 0 ? (
                   <div className="rounded-xl bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800 px-4 py-3 text-sm font-medium text-green-700 dark:text-green-400 text-center">
                     ✓ {t('allSettled')}
                   </div>

@@ -91,5 +91,6 @@
     "position": "你的收支",
     "youOwe": "你欠別人",
     "youOweName": "你欠 {{name}}"
-  }
+  },
+  "balancesFailed": "無法載入此群組的餘額"
 }
