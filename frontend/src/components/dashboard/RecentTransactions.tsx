@@ -62,7 +62,10 @@ export function RecentTransactions() {
 
   // Demo returns the whole fixture set whatever the limit (the transactions page
   // paginates it client-side), so cap here: demo listed 14+ rows.
-  const transactions: Transaction[] = (fetchedTransactions || []).slice(0, 5);
+  // Demo also ignores the sort (and prepends new rows), so sort by date first.
+  const transactions: Transaction[] = [...(fetchedTransactions || [])]
+    .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime())
+    .slice(0, 5);
 
   return (
     <Card padding="none" clip className="h-full flex flex-col">

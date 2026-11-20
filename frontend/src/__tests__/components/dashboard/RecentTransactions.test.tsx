@@ -203,5 +203,16 @@ describe('RecentTransactions', () => {
       expect(screen.getByText('Item 4')).toBeInTheDocument();
       expect(screen.queryByText('Item 5')).toBeNull();
     });
+
+    it('picks the latest five by date, whatever order the source returns', () => {
+      const day = (n: number) => new Date(Date.now() - n * 86_400_000).toISOString();
+      mockTransactions = [
+        makeTransaction({ id: 'old', description: 'Backdated', date: day(30) }),
+        ...Array.from({ length: 5 }, (_, i) => makeTransaction({ id: String(i), description: `Recent ${i}`, date: day(i) })),
+      ];
+      render(<RecentTransactions />);
+      expect(screen.queryByText('Backdated')).toBeNull();
+      expect(screen.getByText('Recent 4')).toBeInTheDocument();
+    });
   });
 });
