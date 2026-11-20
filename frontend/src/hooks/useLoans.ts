@@ -75,7 +75,10 @@ export function useLoans() {
   const { isDemo } = useAppMode();
   const scope = useLoansScope();
   const { status: sessionStatus } = useSession();
-  const enabled = !isDemo && sessionStatus === 'authenticated';
+  // Both: authenticated, and a user id to scope the cache key by. Every sign-in
+  // sets session.user.id (lib/auth.ts jwt callback), so this never stalls; it
+  // keeps one account's loans out of a shared 'anon' cache entry.
+  const enabled = !isDemo && sessionStatus === 'authenticated' && scope !== 'anon';
   const { data, isPending, error, isError, refetch } = useQuery({
     queryKey: [...LOANS_KEY, scope],
     queryFn: async () => {

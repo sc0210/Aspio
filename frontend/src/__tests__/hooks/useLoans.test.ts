@@ -180,11 +180,19 @@ describe('useLoans', () => {
       expect(renderHook(() => useLoans()).result.current.isLoading).toBe(false);
     });
 
-    it('queries an authenticated session even if it carries no user id', () => {
-      withSession('authenticated', { email: 'a@b.c' });
+    it('queries a signed-in session under its own user id', () => {
       mockUseQuery.mockReturnValue(loansQuery({ data: [] }));
       renderHook(() => useLoans());
-      expect(mockUseQuery.mock.calls[0][0].enabled).toBe(true);
+      const opts = mockUseQuery.mock.calls[0][0];
+      expect(opts.enabled).toBe(true);
+      expect(opts.queryKey).toContain('test-user-id');
+    });
+
+    it('never caches loans under the shared anon key', () => {
+      withSession('authenticated', { email: 'a@b.c' });
+      mockUseQuery.mockReturnValue(loansQuery(undefined, { isPending: true }));
+      renderHook(() => useLoans());
+      expect(mockUseQuery.mock.calls[0][0].enabled).toBe(false);
     });
   });
 
