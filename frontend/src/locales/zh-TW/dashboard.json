@@ -524,7 +524,7 @@
     "savingsRate": "儲蓄率 {{rate}}%",
     "totalAssets": "總資產",
     "noIncome": "本期沒有收入",
-    "portfolioChangeCaption": "價值變化，含買進與賣出"
+    "portfolioChangeCaption": "含買進與賣出"
   },
   "view": {
     "compact": "精簡",

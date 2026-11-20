@@ -524,7 +524,7 @@
     "savingsRate": "{{rate}}% savings rate",
     "totalAssets": "Total Assets",
     "noIncome": "No income this period",
-    "portfolioChangeCaption": "Value change, incl. buys & sells"
+    "portfolioChangeCaption": "Incl. buys & sells"
   },
   "view": {
     "compact": "Compact",
