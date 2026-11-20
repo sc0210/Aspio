@@ -381,11 +381,12 @@ function LineBotSection() {
       </div>
 
       {/* Command reference */}
-      <div>
-        <p className="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wide mb-2">
+      {/* Folded: nine rows of reference pushed Account and Danger Zone far down. */}
+      <details className="group">
+        <summary className="flex items-center min-h-[44px] cursor-pointer text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wide rounded focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-500">
           {t('settings.lineBot.commandsTitle')}
-        </p>
-        <div className="space-y-1.5">
+        </summary>
+        <div className="space-y-1.5 pt-1">
           {COMMANDS.map(({ cmd, desc }) => (
             <div key={cmd} className="flex items-start gap-2">
               <code className="font-mono text-xs px-1.5 py-0.5 rounded bg-gray-100 dark:bg-gray-700 text-green-700 dark:text-green-400 whitespace-nowrap shrink-0">
@@ -395,7 +396,7 @@ function LineBotSection() {
             </div>
           ))}
         </div>
-      </div>
+      </details>
     </SectionCard>
   );
 }
@@ -444,6 +445,12 @@ export default function SettingsPage() {
   const [preferredCurrency, setPreferredCurrency] = useState('TWD');
   const [currencySaving, setCurrencySaving] = useState(false);
   const [currencyMsg, setCurrencyMsg] = useState<{ type: 'ok' | 'err'; text: string } | null>(null);
+  // A failed profile read showed empty fields; say so instead.
+  const [profileLoadFailed, setProfileLoadFailed] = useState(false);
+  const [profileAttempt, setProfileAttempt] = useState(0);
+  // The goal-alert window saved silently; flash a confirmation like the currency row.
+  const [prefsSaved, setPrefsSaved] = useState(false);
+  const flashSaved = () => { setPrefsSaved(true); window.setTimeout(() => setPrefsSaved(false), 2000); };
 
   // Seed form with current session/fetched data
   useEffect(() => {
@@ -453,12 +460,13 @@ export default function SettingsPage() {
     } else if (user) {
       setDisplayName(user.name || '');
       // Fetch full profile for username + preferred currency
+      setProfileLoadFailed(false);
       apiClient.getCurrentUser?.().then((u) => {
         if (u?.username) setUsername(u.username);
         if (u?.preferred_currency) setPreferredCurrency(u.preferred_currency);
-      }).catch(() => {/* ignore */});
+      }).catch(() => setProfileLoadFailed(true));
     }
-  }, [user, isDemoMode]);
+  }, [user, isDemoMode, profileAttempt]);
 
   const handleCurrencyChange = async (code: string) => {
     if (isDemoMode) return;
@@ -530,6 +538,15 @@ export default function SettingsPage() {
 
         {/* ── Profile ─────────────────────────────────────────────────── */}
         <SectionCard title={t('settings.profile', 'Profile')} icon={UserIcon}>
+          {profileLoadFailed && (
+            <div role="alert" className="flex items-center justify-between gap-3 rounded-lg bg-red-50 dark:bg-red-900/20 px-3 py-2">
+              <p className="text-xs text-red-700 dark:text-red-400">{t('settings.profileLoadFailed')}</p>
+              <button type="button" onClick={() => setProfileAttempt((n) => n + 1)}
+                className="shrink-0 text-xs px-3 min-h-[44px] rounded-lg border border-gray-200 dark:border-gray-600 text-gray-600 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-500">
+                {t('settings.lineBot.retry')}
+              </button>
+            </div>
+          )}
           {/* Avatar row */}
           <div className="flex items-center gap-4 pb-3 border-b border-gray-100 dark:border-gray-700">
             {/*
@@ -728,7 +745,7 @@ export default function SettingsPage() {
               <select
                 id="page-settings-goalalertwindow"
                 value={preferences.goalAlertDays}
-                onChange={(e) => updatePreference('goalAlertDays', Number(e.target.value))}
+                onChange={(e) => { updatePreference('goalAlertDays', Number(e.target.value)); flashSaved(); }}
                 className="w-full px-3 py-2 text-sm border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:outline-none focus-visible:ring-2 focus-visible:ring-primary-500"
               >
                 {[30, 60, 90, 180].map(d => (
@@ -738,9 +755,12 @@ export default function SettingsPage() {
             </div>
           </div>
 
-          <div className="flex justify-end pt-1">
+          <div className="flex items-center justify-end gap-3 pt-1">
+            {prefsSaved && (
+              <span role="status" className="text-xs text-prosperity-700 dark:text-prosperity-400">{t('settings.saved')}</span>
+            )}
             <button
-              onClick={resetPreferences}
+              onClick={() => { resetPreferences(); flashSaved(); }}
               className="flex items-center gap-1.5 text-xs text-gray-500 dark:text-gray-400 hover:text-gray-600 dark:hover:text-gray-200 transition-colors"
             >
               <ArrowPathIcon className="w-3.5 h-3.5" />

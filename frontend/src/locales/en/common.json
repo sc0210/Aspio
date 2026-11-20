@@ -1143,7 +1143,9 @@
     "notifSpendingBills": "Spending & bill alerts",
     "notifSpendingBillsDesc": "Warn me when this month's spending runs above my usual, and before a loan payment is due",
     "notifLoadFailed": "Couldn't load your notification settings.",
-    "notifSaveFailed": "Couldn't save that change. Try again."
+    "notifSaveFailed": "Couldn't save that change. Try again.",
+    "profileLoadFailed": "Couldn't load your profile. The fields below may be empty.",
+    "saved": "Saved"
   },
   "status": {
     "active": "Active",

@@ -1141,7 +1141,9 @@
     "notifSpendingBills": "支出與帳單提醒",
     "notifSpendingBillsDesc": "本月支出高於平常時，以及貸款繳款日前提醒我",
     "notifLoadFailed": "無法載入通知設定。",
-    "notifSaveFailed": "無法儲存這項變更，請再試一次。"
+    "notifSaveFailed": "無法儲存這項變更，請再試一次。",
+    "profileLoadFailed": "無法載入個人資料，下方欄位可能是空的。",
+    "saved": "已儲存"
   },
   "status": {
     "active": "啟用",
