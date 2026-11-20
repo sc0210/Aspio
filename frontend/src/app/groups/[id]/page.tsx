@@ -17,6 +17,7 @@ import {
   demoGroupBalances,
   demoGroupMembers,
   demoGroupExpenses,
+  DEMO_GROUP_SELF_ID,
 } from '@/data/demoData';
 
 // ─── API response types ───────────────────────────────────────────────────────
@@ -213,7 +214,9 @@ export default function GroupDetailPage() {
 
 function GroupDetailContent() {
   const { t } = useTranslation('groups');
-  const { isDemo } = useAppMode();
+  const { isDemo, user } = useAppMode();
+  // Group members are keyed by Aspiro user id, so "you" is the session's id.
+  const selfId = isDemo ? DEMO_GROUP_SELF_ID : (user?.id ?? '');
   const params = useParams();
   const groupId = params?.id as string;
 
@@ -557,34 +560,45 @@ function GroupDetailContent() {
                   </div>
                 ) : (
                   <ul className="space-y-2.5">
-                    {balancesData.balances.map((b, i) => (
+                    {balancesData.balances.map((b, i) => {
+                      // As the groups list reads them: your own edges from your side,
+                      // coloured by direction; everyone else's neutral. Every edge was red.
+                      const youOwe = !!selfId && b.owed_by === selfId;
+                      const owedToYou = !!selfId && b.owed_to === selfId;
+                      return (
                       <li
                         key={`${b.owed_by}-${b.owed_to}-${i}`}
                         className="flex items-center justify-between text-sm gap-3"
                       >
                         <span className="text-gray-700 dark:text-gray-300 min-w-0 truncate">
-                          <span className="font-semibold text-gray-900 dark:text-white">
-                            {resolveName(b.owed_by)}
-                          </span>
-                          {' '}{t('owes')}{' '}
-                          <span className="font-semibold text-gray-900 dark:text-white">
-                            {resolveName(b.owed_to)}
-                          </span>
+                          {youOwe ? (
+                            <span className="font-semibold text-gray-900 dark:text-white">{t('mobile.youOweName', { name: resolveName(b.owed_to) })}</span>
+                          ) : owedToYou ? (
+                            <span className="font-semibold text-gray-900 dark:text-white">{t('mobile.owesYou', { name: resolveName(b.owed_by) })}</span>
+                          ) : (
+                            <>
+                              <span className="font-semibold text-gray-900 dark:text-white">{resolveName(b.owed_by)}</span>
+                              {' '}{t('owes')}{' '}
+                              <span className="font-semibold text-gray-900 dark:text-white">{resolveName(b.owed_to)}</span>
+                            </>
+                          )}
                         </span>
                         <div className="flex items-center gap-2 flex-shrink-0">
-                          <span className="font-bold text-red-700 dark:text-red-500">
+                          <span className={`font-bold ${owedToYou ? 'text-green-700 dark:text-green-400'
+                            : youOwe ? 'text-red-700 dark:text-red-500' : 'text-gray-700 dark:text-gray-300'}`}>
                             {formatAmount(b.amount, b.currency)}
                           </span>
                           <button
                             type="button"
                             onClick={() => setSettleTarget(b)}
-                            className="text-xs font-semibold px-2.5 py-1 rounded-full border border-green-200 dark:border-green-700 text-green-700 dark:text-green-400 hover:bg-green-50 dark:hover:bg-green-900/20 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-1 focus-visible:ring-[#06C755]"
+                            className="min-h-[44px] text-xs font-semibold px-3 py-1 rounded-full border border-green-200 dark:border-green-700 text-green-700 dark:text-green-400 hover:bg-green-50 dark:hover:bg-green-900/20 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-1 focus-visible:ring-[#06C755]"
                           >
                             {t('settle')}
                           </button>
                         </div>
                       </li>
-                    ))}
+                      );
+                    })}
                   </ul>
                 )}
               </div>
