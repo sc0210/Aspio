@@ -75,7 +75,7 @@ function SignUpForm() {
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirm, setShowConfirm] = useState(false);
   const router = useRouter();
-  const { t } = useTranslation(['auth']);
+  const { t } = useTranslation(['auth', 'common']);
 
   const schema = useMemo(
     () =>
