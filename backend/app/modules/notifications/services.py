@@ -7,6 +7,7 @@ behavior required by router endpoints. Keeps queries efficient.
 
 import uuid
 from typing import Optional
+from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from .repositories import (
@@ -57,9 +58,17 @@ class NotificationService:
     async def update_preferences(self, user_id, updates: dict):
         pref = await self.pref_repo.get_by_user(user_id)
         if not pref:
-            # create default pref
-            pref = await self.pref_repo.create(user_id=user_id, **updates)
-            return pref
+            # Two first saves can race (Settings saves each switch on its own);
+            # both see no row, and the unique index on user_id rejects the
+            # second insert. Insert in a savepoint and, on that conflict, fall
+            # through to updating the row the other request just created.
+            try:
+                async with self.db.begin_nested():
+                    return await self.pref_repo.create(user_id=user_id, **updates)
+            except IntegrityError:
+                pref = await self.pref_repo.get_by_user(user_id)
+                if pref is None:
+                    raise
 
         # apply updates
         for key, value in updates.items():

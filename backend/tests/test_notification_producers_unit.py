@@ -177,3 +177,26 @@ class TestSettingsSwitches:
             async_session, user_id=test_user.id, type=NotificationType.ACHIEVEMENT_UNLOCKED,
             title="t", message="m")
         assert n is not None
+
+
+async def test_a_racing_first_save_updates_instead_of_failing(async_session, test_user):
+    """Settings saves each switch on its own; two first saves both see no row."""
+    from app.modules.notifications.models import NotificationPreference
+    from app.modules.notifications.services import NotificationService
+
+    svc = NotificationService(async_session)
+    # The other request's insert lands between this one's read and its insert.
+    real_get = svc.pref_repo.get_by_user
+    calls = {"n": 0}
+
+    async def racing_get(user_id):
+        calls["n"] += 1
+        if calls["n"] == 1:
+            async_session.add(NotificationPreference(id=uuid4(), user_id=user_id, achievement_notifications=False))
+            await async_session.flush()
+            return None  # what this request saw before the other insert
+        return await real_get(user_id)
+
+    svc.pref_repo.get_by_user = racing_get
+    pref = await svc.update_preferences(test_user.id, {"transaction_alerts": False})
+    assert pref.transaction_alerts is False and pref.achievement_notifications is False
