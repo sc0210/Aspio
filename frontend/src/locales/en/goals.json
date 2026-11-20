@@ -116,11 +116,11 @@
     "currentAmount": "Current Amount",
     "description": "Description",
     "priority": "Priority",
+    "reserveNow": "Reserve now (optional)",
     "status": "Status",
     "targetAmount": "Target Amount",
     "targetDate": "Target Date",
-    "title": "Goal Title",
-    "reserveNow": "Reserve now (optional)"
+    "title": "Goal Title"
   },
   "filters": {
     "active": "Active",

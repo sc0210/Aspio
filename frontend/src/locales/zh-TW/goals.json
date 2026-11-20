@@ -116,11 +116,11 @@
     "currentAmount": "目前金額",
     "description": "說明",
     "priority": "優先級",
+    "reserveNow": "現在先預留（選填）",
     "status": "狀態",
     "targetAmount": "目標金額",
     "targetDate": "目標日期",
-    "title": "目標標題",
-    "reserveNow": "現在先預留（選填）"
+    "title": "目標標題"
   },
   "filters": {
     "active": "進行中",
