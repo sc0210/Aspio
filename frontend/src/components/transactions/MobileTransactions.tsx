@@ -110,6 +110,8 @@ export function MobileTransactions() {
 
                 <BiggerScreenHint />
 
+                {/* The totals come from the same rows: on a failed fetch they would read NT$0. */}
+                {!(error && rows.length === 0) && (<>
                 {/* HERO — spent vs income this month */}
                 <section data-tour="tx-m-hero" className="rounded-3xl bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 shadow-sm p-5">
                     <p className="text-xs font-bold tracking-wide text-gray-500 dark:text-gray-400">
@@ -143,6 +145,7 @@ export function MobileTransactions() {
                         </div>
                     </div>
                 </section>
+                </>)}
 
                 {/* Recent transactions — grouped by day */}
                 <section data-tour="tx-m-recent">
