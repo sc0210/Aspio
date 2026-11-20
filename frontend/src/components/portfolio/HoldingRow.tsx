@@ -191,7 +191,7 @@ function HoldingRowBase({
         {isValueVisible ? (
           <div className="flex flex-col items-end">
             <div className="flex items-center gap-1.5">
-              {!isCash && isPriceStale(holding.lastUpdated, holding.marketState) && (
+              {!isCash && isPriceStale(holding.lastUpdated, holding.marketState, undefined, holding.priceStale) && (
                 <span
                   className="flex items-center gap-1 px-1.5 py-0.5 rounded bg-warning-50 dark:bg-warning-900/30 cursor-help"
                   title={`Price updated ${formatTimeAgo(holding.lastUpdated, t)} - Click Refresh to update`}
@@ -201,7 +201,7 @@ function HoldingRowBase({
               )}
               <span className={cn(
                 "text-sm font-medium",
-                !isCash && isPriceStale(holding.lastUpdated, holding.marketState)
+                !isCash && isPriceStale(holding.lastUpdated, holding.marketState, undefined, holding.priceStale)
                   ? "text-warning-700 dark:text-warning-300"
                   : "text-gray-900 dark:text-gray-100"
               )}>

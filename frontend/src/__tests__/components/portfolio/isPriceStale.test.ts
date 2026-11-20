@@ -24,3 +24,17 @@ describe('isPriceStale', () => {
         expect(isPriceStale(undefined, 'closed', NOW)).toBe(true);
     });
 });
+
+describe('isPriceStale with the backend verdict', () => {
+    it('defers to priceStale when the server sends it (holidays are its call)', () => {
+        // Lunar New Year: a 7-day-old close on a closed market is not stale if the server says so.
+        expect(isPriceStale(hoursAgo(168), 'closed', NOW, false)).toBe(false);
+        expect(isPriceStale(hoursAgo(1), 'open', NOW, true)).toBe(true);
+    });
+
+    it('sits on the boundary the fallback uses', () => {
+        expect(isPriceStale(hoursAgo(96), 'closed', NOW)).toBe(false);
+        expect(isPriceStale(hoursAgo(96.1), 'closed', NOW)).toBe(true);
+        expect(isPriceStale(hoursAgo(4), 'open', NOW)).toBe(false);
+    });
+});

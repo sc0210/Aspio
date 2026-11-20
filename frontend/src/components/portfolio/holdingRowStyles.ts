@@ -27,7 +27,12 @@ export const isPriceStale = (
   lastUpdated: Date | string | undefined,
   marketState?: string,
   now: number = Date.now(),
+  /** The backend's verdict, which counts the market's real sessions and holidays. */
+  priceStale?: boolean,
 ): boolean => {
+  // The server's session-aware answer wins, so this badge and the data-issues
+  // banner cannot disagree; the clock rule below is only its fallback.
+  if (priceStale !== undefined) return priceStale;
   if (!lastUpdated) return true;
   const age = now - new Date(lastUpdated).getTime();
   const HOUR = 60 * 60 * 1000;

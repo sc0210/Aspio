@@ -187,7 +187,7 @@ function HoldingCardMobileBase({
         <div>
           <p className="text-xs text-gray-500 dark:text-gray-400 mb-1 flex items-center gap-1">
             {t('portfolio:holdings.price')}
-            {!isCash && isPriceStale(holding.lastUpdated, holding.marketState) && (
+            {!isCash && isPriceStale(holding.lastUpdated, holding.marketState, undefined, holding.priceStale) && (
               <span
                 className="inline-flex items-center"
                 title={`Updated ${formatTimeAgo(holding.lastUpdated, t)}`}
@@ -198,7 +198,7 @@ function HoldingCardMobileBase({
           </p>
           <p className={cn(
             "text-sm font-semibold",
-            !isCash && isPriceStale(holding.lastUpdated, holding.marketState)
+            !isCash && isPriceStale(holding.lastUpdated, holding.marketState, undefined, holding.priceStale)
               ? "text-warning-700 dark:text-warning-300"
               : "text-gray-900 dark:text-white"
           )}>
