@@ -107,7 +107,7 @@ function DesktopLoansPage() {
         {/* Stats grid */}
         {isError && <QueryErrorCard onRetry={() => refetch()} />}
 
-        {!isError && summary && summary.loan_count > 0 && (
+        {summary && summary.loan_count > 0 && (
           <div data-tour="loans-stats" className="grid grid-cols-1 md:grid-cols-3 gap-4 animate-fade-in">
             <Card padding="sm" accent="rose">
               <div className="flex items-center gap-2 mb-1">

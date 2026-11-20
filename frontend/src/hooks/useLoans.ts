@@ -74,7 +74,7 @@ export function deriveSummary(loans: DebtAccount[]): DebtAccountSummary {
 export function useLoans() {
   const { isDemo } = useAppMode();
   const scope = useLoansScope();
-  const { data, isLoading, error, isError, refetch } = useQuery({
+  const { data, isPending, error, isError, refetch } = useQuery({
     queryKey: [...LOANS_KEY, scope],
     queryFn: async () => {
       try {
@@ -92,14 +92,20 @@ export function useLoans() {
     },
     staleTime: 5 * 60 * 1000,
     retry: false,
-    // Demo mode uses fixtures — never hit the real API (avoids 401s).
-    enabled: !isDemo,
+    // Demo mode uses fixtures — never hit the real API (avoids 401s). Nor before
+    // the session has a user: that request 401s and would flash the error card.
+    enabled: !isDemo && scope !== 'anon',
   });
 
   const loans = isDemo ? demoLoans : (data?.data ?? []);
   const summary = deriveSummary(loans);
 
-  return { loans, summary, isLoading, error, isError: !isDemo && isError, refetch };
+  // An error only when there is nothing to show: a failed background refetch
+  // keeps the loans already on screen.
+  // Loading until the first answer, including while the session has no user yet
+  // (the query is disabled then, and a bare isLoading would flash the empty state).
+  const isLoading = !isDemo && isPending;
+  return { loans, summary, isLoading, error, isError: !isDemo && isError && data === undefined, refetch };
 }
 
 /**
