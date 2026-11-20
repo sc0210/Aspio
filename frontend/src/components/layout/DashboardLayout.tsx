@@ -29,6 +29,16 @@ export function DashboardLayout({ children, rightSidebar, topBarActions }: Dashb
   // Desktop (lg+): expanded by default
   const [sidebarCollapsed, setSidebarCollapsed] = useState(true);
   const [isMounted, setIsMounted] = useState(false);
+
+  // The phone drawer is a modal (focus trap, scroll lock) but md:hidden: left open
+  // across a widen to md+ it would trap Tab on an element that is not displayed.
+  useEffect(() => {
+    const mq = window.matchMedia('(min-width: 768px)');
+    const close = (e: MediaQueryListEvent) => { if (e.matches) setSidebarOpen(false); };
+    mq.addEventListener('change', close);
+    return () => mq.removeEventListener('change', close);
+  }, []);
+
   // Auto-collapse/expand sidebar based on screen size
   useEffect(() => {
     const saved = localStorage.getItem('sidebar_collapsed');

@@ -14,7 +14,6 @@ import {
 import { cn } from '@/utils/cn';
 import { useDemo } from '@/contexts/DemoContext';
 import { useIsAdmin } from '@/hooks/useAdmin';
-import { useScrollLock } from '@/hooks/useScrollLock';
 import { useDialog } from '@/hooks/useDialog';
 import { getNavigationSections, type NavSection } from '@/lib/navigation';
 import { useFeatures } from '@/hooks/useFeatures';
@@ -120,9 +119,8 @@ export function DashboardSidebar({ open, collapsed, onToggleCollapsed, onClose }
     };
   }, [open, onClose]);
 
-  // Freeze the page behind the drawer. This used to set body.style.overflow,
-  // which does nothing here: <main> is the scroll container, not body.
-  useScrollLock(open);
+  // The page behind the drawer is frozen by useDialog's useScrollLock, which
+  // locks <main> (the scroll container here), not body.
 
   // Swipe-left to close
   useEffect(() => {
