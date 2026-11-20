@@ -1,4 +1,4 @@
-import { renderHook, waitFor } from '@testing-library/react';
+import { act, renderHook, waitFor } from '@testing-library/react';
 import { getProviders } from 'next-auth/react';
 import { useGoogleSignIn } from '@/hooks/useGoogleSignIn';
 import { useFeatures } from '@/hooks/useFeatures';
@@ -23,7 +23,8 @@ describe('useGoogleSignIn', () => {
     it('hides it when the frontend has no Google provider', async () => {
         features(); mockProviders.mockResolvedValue({ credentials: {} });
         const { result } = renderHook(() => useGoogleSignIn());
-        await waitFor(() => expect(mockProviders).toHaveBeenCalled());
+        // Let the providers answer land before asserting, or this passes on the initial state.
+        await act(async () => { await mockProviders.mock.results[0].value; });
         expect(result.current).toBe(false);
     });
 
