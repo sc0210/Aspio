@@ -47,7 +47,8 @@
     "title": "成就",
     "toBadge_other": "再 {{count}} 天解鎖 {{target}} 天徽章",
     "unlocked": "已解鎖",
-    "viewDetails": "查看「{{title}}」詳情"
+    "viewDetails": "查看「{{title}}」詳情",
+    "viewDetailsLocked": "查看「{{title}}」詳情（未解鎖）"
   },
   "card": {
     "aria": {

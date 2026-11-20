@@ -362,7 +362,8 @@ function AchievementCard({ a, onSelect }: { a: AchievementProgress; onSelect: (a
     <button
       type="button"
       onClick={() => onSelect(a)}
-      aria-label={t('goals:achievements.viewDetails', { title: a.title })}
+      // The label replaces the contents for screen readers, so it carries the state.
+      aria-label={t(a.is_unlocked ? 'goals:achievements.viewDetails' : 'goals:achievements.viewDetailsLocked', { title: a.title })}
       // Locked badges keep full-strength text (the card-wide opacity-60 made them
       // nearly vanish in dark mode); only the icon dims, and a lock says why.
       className={cn(

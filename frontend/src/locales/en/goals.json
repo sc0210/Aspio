@@ -50,7 +50,8 @@
     "toBadge_one": "{{count}} day to {{target}}-day badge",
     "toBadge_other": "{{count}} days to {{target}}-day badge",
     "unlocked": "unlocked",
-    "viewDetails": "View {{title}} details"
+    "viewDetails": "View {{title}} details",
+    "viewDetailsLocked": "View {{title}} details (locked)"
   },
   "card": {
     "aria": {
