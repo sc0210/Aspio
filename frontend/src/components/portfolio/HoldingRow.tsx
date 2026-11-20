@@ -94,10 +94,11 @@ function HoldingRowBase({
                 : "hover:border-l-error-500 dark:hover:border-l-error-400 hover:bg-error-50/30 dark:hover:bg-error-900/10"
             )
       )}
+      // In bulk edit a row click selects it (the checkbox cell stops propagation, so
+      // it never double-toggles); otherwise it opens the holding.
       onClick={() => {
-        if (!bulkEditMode) {
-          onOpen(holding);
-        }
+        if (bulkEditMode) onToggleSelect(holding);
+        else onOpen(holding);
       }}
     >
       {bulkEditMode && (
