@@ -67,6 +67,8 @@ interface TransactionListProps {
 export function TransactionList({ transactions, isLoading, isFetching, isSearching = false, searchQuery, canReorder = false, isDemo = false, canSplit = false, dayTotals }: TransactionListProps) {
   const [selectedTransactions, setSelectedTransactions] = useState<string[]>([]);
   const [expandedDays, setExpandedDays] = useState<Set<string>>(new Set());
+  // Days the user closed by hand; auto-expansion leaves them closed.
+  const userCollapsed = useRef(new Set<string>());
   const [pendingDeleteId, setPendingDeleteId] = useState<string | null>(null);
   const deleteTransactionMutation = useDeleteTransaction();
   const updateTransactionMutation = useUpdateTransaction();
@@ -136,7 +138,7 @@ export function TransactionList({ transactions, isLoading, isFetching, isSearchi
   transactionsRef.current = transactions;
   const handleSplitTransaction = useCallback((id: string) => {
     setSplitTarget(transactionsRef.current.find((tx) => tx.id === id) ?? null);
-  }, []);
+  }, [setSplitTarget]); // a state setter is stable; listed for the compiler
 
   const confirmDelete = async () => {
     if (!pendingDeleteId) return;
@@ -301,13 +303,14 @@ export function TransactionList({ transactions, isLoading, isFetching, isSearchi
   };
 
   const toggleDayExpansion = (dateString: string) => {
+    // Record the user's choice outside the updater (updaters stay pure).
+    const closing = expandedDays.has(dateString);
+    if (closing) userCollapsed.current.add(dateString);
+    else userCollapsed.current.delete(dateString);
     setExpandedDays(prev => {
       const newSet = new Set(prev);
-      if (newSet.has(dateString)) {
-        newSet.delete(dateString);
-      } else {
-        newSet.add(dateString);
-      }
+      if (closing) newSet.delete(dateString);
+      else newSet.add(dateString);
       return newSet;
     });
   };
@@ -343,25 +346,20 @@ export function TransactionList({ transactions, isLoading, isFetching, isSearchi
     const wasSearching = wasSearchingRef.current;
     wasSearchingRef.current = isSearching;
 
-    const now = new Date();
-    const today = now.toDateString();
-    const yesterday = new Date(now.getTime() - 24 * 60 * 60 * 1000).toDateString();
-
+    // Every day on the page opens; only a day the user closed stays closed. Opening
+    // just today and yesterday left the rest of a page as headers with a total pill,
+    // one click each to read (19 of 21 days in the review screenshot).
+    const days = Object.keys(groupedTransactions);
     if (isSearching) {
       // Expand all days when searching (including when new data arrives)
-      setExpandedDays(new Set(Object.keys(groupedTransactions)));
+      setExpandedDays(new Set(days));
     } else if (wasSearching) {
-      // Exiting search: reset to today/yesterday
-      const auto = new Set<string>();
-      if (groupedTransactions[today]) auto.add(today);
-      if (groupedTransactions[yesterday]) auto.add(yesterday);
-      setExpandedDays(auto);
+      setExpandedDays(new Set(days.filter(d => !userCollapsed.current.has(d))));
     } else {
-      // Not searching (initial load or background refetch): only add new days, preserve user state
+      // Initial load, a new page or a refetch: open new days, keep the user's closed ones
       setExpandedDays(prev => {
         const next = new Set(prev);
-        if (groupedTransactions[today]) next.add(today);
-        if (groupedTransactions[yesterday]) next.add(yesterday);
+        for (const d of days) if (!userCollapsed.current.has(d)) next.add(d);
         return next.size === prev.size ? prev : next;
       });
     }
