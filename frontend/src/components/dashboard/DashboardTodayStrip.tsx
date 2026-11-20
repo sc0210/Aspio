@@ -159,6 +159,11 @@ function StripGrid({
           <PctBadge pct={portfolioChangePercent} />
           <ChangeAmount amount={portfolioChangeAmount} pct={portfolioChangePercent} fmtDelta={fmtDelta} />
         </div>
+        {/* Visible, not hover-only: beside the P&L calendar a +0.7% "change" read as a
+            market gain while the calendar showed a loss. */}
+        <p className="text-xs text-gray-500 dark:text-gray-400 truncate">
+          {t('dashboard:todayStrip.portfolioChangeCaption', { defaultValue: 'Value change, incl. buys & sells' })}
+        </p>
       </div>
     </div>
   );
