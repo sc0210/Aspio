@@ -17,7 +17,7 @@ import { cn } from '@/utils/cn';
 import { useDemo } from '@/contexts/DemoContext';
 import { useAuthContext } from '@/contexts/AuthContext';
 import { languages } from '@/lib/i18n';
-import { getSecondaryNavItems, primaryNavItems } from '@/lib/navigation';
+import { getSecondaryNavItems, navPathFor, primaryNavItems } from '@/lib/navigation';
 import { useFeatures } from '@/hooks/useFeatures';
 import { useAccessTier } from '@/hooks/useAccessTier';
 import { changeAppLanguage, signOutCompletely } from '@/lib/session-actions';
@@ -58,11 +58,12 @@ const NAV_TABS: NavTab[] = [
 // Helper — determine which tab is active from the current pathname
 // ---------------------------------------------------------------------------
 
-function useActiveTab(pathname: string): string {
+function useActiveTab(pathname: string): string | null {
   // Derived from the same `primary` flags the bar renders from — a hardcoded
   // list here would keep rendering a tab that highlighting had stopped knowing
-  // about, with nothing to catch it.
-  return primaryNavItems.find((item) => pathname.startsWith(item.href))?.href ?? pathname;
+  // about, with nothing to catch it. null: a page reached through More.
+  const path = navPathFor(pathname);
+  return primaryNavItems.find((item) => path.startsWith(item.href))?.href ?? null;
 }
 
 // ---------------------------------------------------------------------------
@@ -253,7 +254,9 @@ export function MobileBottomNav() {
       >
         <div className="flex items-stretch h-14">
           {NAV_TABS.map((tab) => {
-            const isActive = tab.isMore ? sheetOpen : activeHref === tab.href;
+            // On a page reached through More (loans, review, settings…) More is the
+            // lit tab; before, all five were grey and the bar said "you are nowhere".
+            const isActive = tab.isMore ? sheetOpen || activeHref === null : activeHref === tab.href;
             const Icon = isActive ? tab.iconSolid : tab.icon;
 
             if (tab.isMore) {

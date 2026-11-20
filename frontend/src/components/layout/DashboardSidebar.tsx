@@ -15,7 +15,7 @@ import { cn } from '@/utils/cn';
 import { useDemo } from '@/contexts/DemoContext';
 import { useIsAdmin } from '@/hooks/useAdmin';
 import { useDialog } from '@/hooks/useDialog';
-import { getNavigationSections, type NavSection } from '@/lib/navigation';
+import { getNavigationSections, navPathFor, type NavSection } from '@/lib/navigation';
 import { useFeatures } from '@/hooks/useFeatures';
 import { useAccessTier } from '@/hooks/useAccessTier';
 import { openCommandPalette } from './CommandPalette';
@@ -89,7 +89,8 @@ export function DashboardSidebar({ open, collapsed, onToggleCollapsed, onClose }
   const features = useFeatures();
   const { isPremium } = useAccessTier();
   const navigationSections = getNavigationSections({ isAdmin, isPremium, features });
-  const isActiveRoute = (href: string) => pathname === href || pathname.startsWith(href + '/');
+  const navPath = navPathFor(pathname);
+  const isActiveRoute = (href: string) => navPath === href || navPath.startsWith(href + '/');
 
   // Which section opens itself when the reader has expressed no preference:
   // only the one holding the current route. The everyday pages are standalone
