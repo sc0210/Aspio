@@ -188,7 +188,8 @@
       "upfront": "自備款＋購屋成本",
       "withRaises": "假設每年加薪 {{pct}}%",
       "noIncomeTitle": "收入資料不足",
-      "noIncomeHint": "過去 12 個完整月份沒有收入紀錄，算出的價格只會是 NT$0。請記錄收入，或在下方輸入每月收入，即可查看可負擔的房價。"
+      "noIncomeHint": "過去 12 個完整月份沒有收入紀錄，算出的價格只會是 NT$0。請記錄收入，或在下方輸入每月收入，即可查看可負擔的房價。",
+      "termsFromSimulator": "貸款：頭期款 {{down}}% · 利率 {{rate}}% · {{years}} 年 — 請在下方「買房 vs. 租屋」調整。"
     },
     "car": {
       "baseUnreachable": "請先改善現金流，才能估算購屋時程。",

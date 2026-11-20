@@ -188,7 +188,8 @@
       "upfront": "Cash at closing",
       "withRaises": "with {{pct}}%/yr raises",
       "noIncomeTitle": "Not enough income data yet",
-      "noIncomeHint": "There's no recorded income in your last 12 complete months, so a price would just read NT$0. Record your income, or enter a monthly income below, to see what you can afford."
+      "noIncomeHint": "There's no recorded income in your last 12 complete months, so a price would just read NT$0. Record your income, or enter a monthly income below, to see what you can afford.",
+      "termsFromSimulator": "Loan: {{down}}% down · {{rate}}% · {{years}} years — set in Buy vs. Rent below."
     },
     "car": {
       "baseUnreachable": "Improve your cash flow first to estimate a house timeline.",
