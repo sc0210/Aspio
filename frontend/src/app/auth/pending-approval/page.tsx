@@ -30,7 +30,11 @@ export default function PendingApprovalPage() {
   // Signed out first: a pending Google sign-up can hold a session, and the app
   // treats a session as authenticated, not demo, so /dashboard would dead-end.
   const handleTryDemo = async () => {
-    await signOut({ redirect: false });
+    try {
+      await signOut({ redirect: false });
+    } catch {
+      // Still enter the demo: a failed sign-out must not leave the button dead.
+    }
     enableDemo();
     window.location.assign('/dashboard');
   };
