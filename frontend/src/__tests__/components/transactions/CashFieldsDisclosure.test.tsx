@@ -148,10 +148,8 @@ describe('CashFields — guarding against easy mistakes', () => {
 describe('CashFields — the optional detail under a category', () => {
   const details = () => screen.queryByRole('group', { name: /Detail/ });
 
-  it('offers no detail until a group that has some is chosen', () => {
+  it('offers no detail until a group is chosen', () => {
     renderFields(form());
-    expect(details()).not.toBeInTheDocument();
-    renderFields(form({ category: 'Transportation' }));
     expect(details()).not.toBeInTheDocument();
   });
 
@@ -230,6 +228,15 @@ describe('CashFields — expense groups first, finer choices optional', () => {
     renderFields(form({ category: 'Groceries' }), { onChange });
     await userEvent.click(tile(/^Food$/));
     expect(onChange).not.toHaveBeenCalled();
+  });
+
+  it('offers Transport details: public transit, maintenance, parking, car rental', async () => {
+    const onChange = jest.fn();
+    renderFields(form({ category: 'Transportation' }), { onChange });
+    const names = within(details()!).getAllByRole('button').map((b) => b.textContent);
+    expect(names).toEqual(['🚇Public transit', '🔧Maintenance', '🅿️Parking', '🚙Car rental']);
+    await userEvent.click(within(details()!).getByRole('button', { name: /Parking/ }));
+    expect(onChange).toHaveBeenCalledWith('subcategory', 'Parking');
   });
 
   it('offers Insurance under Others', async () => {

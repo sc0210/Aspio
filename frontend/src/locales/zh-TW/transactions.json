@@ -282,7 +282,11 @@
       "Beauty": "美容",
       "Clothing": "服飾",
       "Electronics": "3C 電子",
-      "Household": "居家用品"
+      "Household": "居家用品",
+      "Public Transit": "大眾運輸",
+      "Car Maintenance": "保養",
+      "Parking": "停車費",
+      "Car Rental": "租車"
     }
   },
   "importExport": {

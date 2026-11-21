@@ -84,6 +84,12 @@ export const SUBCATEGORIES: Record<string, { value: string; label: string; icon:
     { value: 'Electronics', label: 'Electronics', icon: '📱' },
     { value: 'Household',   label: 'Household',   icon: '🧴' },
   ],
+  Transportation: [
+    { value: 'Public Transit',  label: 'Public transit', icon: '🚇' },
+    { value: 'Car Maintenance', label: 'Maintenance',    icon: '🔧' },
+    { value: 'Parking',         label: 'Parking',        icon: '🅿️' },
+    { value: 'Car Rental',      label: 'Car rental',     icon: '🚙' },
+  ],
 };
 
 /** One choice in a group's optional detail row: a category, or a category plus its detail. */
@@ -115,6 +121,11 @@ export interface CategoryGroup {
 const choice = (category: string, label: string, icon: string, labelKey = `categories.${category}`): CategoryChoice =>
   ({ category, label, icon, labelKey });
 
+/** A category's details (SUBCATEGORIES) as the finer choices under its group. */
+const detailsOf = (category: string): CategoryChoice[] => (SUBCATEGORIES[category] ?? []).map(
+  (d) => ({ category, subcategory: d.value, label: d.label, icon: d.icon, labelKey: `subcategories.${d.value}` }),
+);
+
 export const EXPENSE_GROUPS: CategoryGroup[] = [
   { key: 'food', label: 'Food', icon: '🍽️', category: 'Dining', options: [
     choice('Dining', 'Eating out', '🍜', 'choices.Dining'),
@@ -124,10 +135,8 @@ export const EXPENSE_GROUPS: CategoryGroup[] = [
     choice('Housing', 'Rent', '🔑', 'choices.Housing'),
     choice('Utilities', 'Utilities', '💡'),
   ] },
-  { key: 'transport', label: 'Transport', icon: '🚗', category: 'Transportation', options: [] },
-  { key: 'shopping', label: 'Shopping', icon: '🛍️', category: 'Shopping', options: SUBCATEGORIES.Shopping.map(
-    (d) => ({ category: 'Shopping', subcategory: d.value, label: d.label, icon: d.icon, labelKey: `subcategories.${d.value}` }),
-  ) },
+  { key: 'transport', label: 'Transport', icon: '🚗', category: 'Transportation', options: detailsOf('Transportation') },
+  { key: 'shopping', label: 'Shopping', icon: '🛍️', category: 'Shopping', options: detailsOf('Shopping') },
   { key: 'fun', label: 'Fun', icon: '🎬', category: 'Entertainment', options: [
     choice('Entertainment', 'Fun', '🎬'),
     choice('Travel', 'Travel', '✈️'),

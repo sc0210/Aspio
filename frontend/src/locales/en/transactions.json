@@ -282,7 +282,11 @@
       "Beauty": "Beauty",
       "Clothing": "Clothing",
       "Electronics": "Electronics",
-      "Household": "Household"
+      "Household": "Household",
+      "Public Transit": "Public transit",
+      "Car Maintenance": "Maintenance",
+      "Parking": "Parking",
+      "Car Rental": "Car rental"
     }
   },
   "importExport": {

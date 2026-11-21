@@ -104,6 +104,8 @@ EXPENSE_KEYWORDS: dict[str, tuple[str, ...]] = {
     "Transportation": (
         "捷運", "公車", "客運", "計程車", "小黃", "高鐵", "台鐵", "火車", "加油", "油錢", "停車",
         "悠遊卡", "一卡通", "etc", "uber", "taxi", "mrt", "bus", "train", "parking", "gas", "fuel",
+        # Longer than Shopping's "保養" (skincare), so a car service wins over beauty.
+        "汽車保養", "機車保養", "車保養", "保養廠", "修車", "換機油", "租車", "car rental",
     ),
     "Shopping": (
         "蝦皮", "momo", "淘寶", "衣服", "褲子", "鞋", "包包", "日用品", "amazon", "shopee", "clothes", "shoes",
@@ -135,6 +137,12 @@ SUBCATEGORY_KEYWORDS: dict[str, dict[str, tuple[str, ...]]] = {
         "Beauty": ("剪髮", "理髮", "美髮", "美甲", "美容", "保養", "化妝", "彩妝", "haircut", "salon", "nail", "makeup"),
         "Clothing": ("衣服", "褲子", "鞋", "包包", "clothes", "shoes"),
         "Household": ("日用品",),
+    },
+    "Transportation": {
+        "Public Transit": ("捷運", "公車", "客運", "高鐵", "台鐵", "火車", "悠遊卡", "一卡通", "mrt", "bus", "train"),
+        "Car Maintenance": ("保養", "修車", "換機油", "維修"),
+        "Parking": ("停車", "parking"),
+        "Car Rental": ("租車", "car rental"),
     },
 }
 

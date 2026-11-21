@@ -84,6 +84,9 @@ def test_ignores_chat(text):
         ("年終", True, "Bonus"),
         ("美甲", False, "Shopping"),     # beauty is a detail under Shopping, not its own category
         ("車險保費", False, "Insurance"),
+        ("機車保養", False, "Transportation"),  # a car service, not skincare
+        ("保養品", False, "Shopping"),
+        ("租車", False, "Transportation"),
         ("隨便", False, "Others"),
         ("午餐", True, "Others"),        # income never takes an expense keyword
     ],
@@ -98,6 +101,10 @@ def test_guesses_category(description, is_income, expected):
         ("美甲", "Shopping", "Beauty"),
         ("剪髮", "Shopping", "Beauty"),
         ("買衣服", "Shopping", "Clothing"),
+        ("捷運", "Transportation", "Public Transit"),
+        ("機車保養", "Transportation", "Car Maintenance"),
+        ("停車費", "Transportation", "Parking"),
+        ("租車", "Transportation", "Car Rental"),
         ("蝦皮", "Shopping", None),      # Shopping, but no detail suggested
         ("美甲", "Dining", None),        # a detail only under its own category
     ],
