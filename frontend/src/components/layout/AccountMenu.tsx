@@ -1,5 +1,6 @@
 'use client';
 
+import { xpProgressPercent } from '@/lib/xpProgress';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { useTranslation } from 'react-i18next';
@@ -56,8 +57,7 @@ export function AccountMenu({ collapsed }: AccountMenuProps) {
   const xpPercent = isDemoMode
     ? 78
     : gamificationStats
-      ? Math.round(Math.min(100, (gamificationStats.experience_points /
-          (gamificationStats.experience_points + gamificationStats.experience_to_next_level)) * 100))
+      ? xpProgressPercent(gamificationStats)
       : 0;
 
   const handleSignOut = async () => {

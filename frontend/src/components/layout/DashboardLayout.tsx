@@ -107,6 +107,7 @@ export function DashboardLayout({ children, rightSidebar, topBarActions }: Dashb
                 type="button"
                 onClick={openCommandPalette}
                 aria-label={t('navigation.search', 'Search')}
+                data-tour="search"
                 className="flex h-11 w-11 items-center justify-center rounded-full text-gray-600 hover:bg-gray-100 dark:text-gray-400 dark:hover:bg-gray-700 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-500"
               >
                 <MagnifyingGlassIcon className="w-5 h-5" />

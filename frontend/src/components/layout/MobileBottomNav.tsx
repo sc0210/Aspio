@@ -1,5 +1,6 @@
 'use client';
 
+import { xpProgressPercent } from '@/lib/xpProgress';
 import { useState } from 'react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
@@ -97,7 +98,7 @@ function MoreSheet({ open, onClose, isDemoMode, onExitDemo }: MoreSheetProps) {
   const xpPercent = isDemoMode
     ? 78
     : stats
-      ? Math.round(Math.min(100, (stats.experience_points / (stats.experience_points + stats.experience_to_next_level)) * 100))
+      ? xpProgressPercent(stats)
       : 0;
 
   const handleSignOut = async () => {
