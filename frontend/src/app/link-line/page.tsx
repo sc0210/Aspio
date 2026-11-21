@@ -1,5 +1,6 @@
 'use client';
 
+import { useGoogleSignIn } from '@/hooks/useGoogleSignIn';
 import { LineBotGate } from '@/components/line/LineBotGate';
 import { useEffect, useState, Suspense } from 'react';
 import { signIn } from 'next-auth/react';
@@ -85,6 +86,9 @@ function LinkLineContent() {
       });
   };
 
+  // As on sign-in: only where Google is configured, or the click hits a missing provider.
+  const showGoogle = useGoogleSignIn();
+
   const handleGoogleSignIn = () => {
     signIn('google', {
       callbackUrl: `/link-line?token=${encodeURIComponent(token ?? '')}`,
@@ -123,6 +127,7 @@ function LinkLineContent() {
             <p className="text-sm text-center text-gray-600 dark:text-gray-300">
               {t('common:lineLink.signInHint')}
             </p>
+            {showGoogle && (
             <button
               onClick={handleGoogleSignIn}
               className="w-full flex items-center justify-center gap-3 px-4 py-3 border border-gray-300 dark:border-gray-600 rounded-xl text-sm font-medium text-gray-700 dark:text-gray-200 bg-white dark:bg-gray-700 hover:bg-gray-50 dark:hover:bg-gray-600 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-500"
@@ -130,6 +135,7 @@ function LinkLineContent() {
               {GoogleIcon}
               {t('common:lineLink.continueGoogle')}
             </button>
+            )}
             {/* Password accounts could not finish linking: Google was the only way in.
                 The sign-in page returns here, token and all. */}
             <Link

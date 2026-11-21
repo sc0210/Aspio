@@ -25,6 +25,7 @@ jest.mock('next/navigation', () => ({
   useSearchParams: () => new URLSearchParams('token=11111111-1111-1111-1111-111111111111'),
 }));
 jest.mock('next-auth/react', () => ({ signIn: jest.fn() }));
+jest.mock('@/hooks/useGoogleSignIn', () => ({ useGoogleSignIn: () => true }));
 jest.mock('react-i18next', () => ({
   useTranslation: () => ({ t: (key: string) => key }),
 }));
