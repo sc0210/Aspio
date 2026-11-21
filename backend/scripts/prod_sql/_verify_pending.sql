@@ -192,7 +192,10 @@ WITH checks(sort, object, source_file, present) AS (
         NOT EXISTS (SELECT 1 FROM information_schema.tables
                      WHERE table_schema = 'public' AND table_name = 'saving_records')
         AND NOT EXISTS (SELECT 1 FROM information_schema.columns
-                         WHERE table_name = 'shared_goals' AND column_name = 'target_amount'))
+                         WHERE table_name = 'shared_goals' AND column_name = 'target_amount')),
+    (42, 'table tw_market_valuations', '2026_11_21_tw_market_valuations.sql',
+        (SELECT count(*) > 0 FROM information_schema.tables
+          WHERE table_schema = 'public' AND table_name = 'tw_market_valuations'))
 )
 SELECT
     CASE WHEN present THEN 'OK     ' ELSE 'MISSING' END AS status,
@@ -239,3 +242,7 @@ WHERE sg.status <> 'cancelled'
 -- 2026_11_21_insurance_category: expect 1 (an active Insurance expense category).
 SELECT 'insurance expense category' AS what, count(*)::text AS value
 FROM transaction_categories WHERE name = 'Insurance' AND type = 'EXPENSE'::categorytype AND is_active;
+-- 2026_11_21_tw_market_valuations: months stored for the Taiwan CAPE. 0 right
+-- after the apply; ~250 once the first daily sync has backfilled from 2005.
+SELECT 'tw_market_valuations months' AS what, count(*)::text AS value
+FROM tw_market_valuations;

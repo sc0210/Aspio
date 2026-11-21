@@ -41,6 +41,7 @@ from app.modules.transactions.router import router as transactions_router
 from app.modules.users.router_simple import router as users_router
 from app.modules.users.enhanced_router import router as enhanced_users_router
 from app.modules.loans.router import router as loans_router
+from app.modules.market.router import router as market_router
 from app.modules.users.dependencies import require_premium
 from app.modules.peers.router import router as peers_router
 from app.modules.line_bot.router import router as line_bot_router
@@ -232,6 +233,7 @@ def create_app() -> FastAPI:
         portfolio_router, prefix=f"{api_prefix}/portfolio", tags=["Portfolio"]
     )
     app.include_router(reports_router, prefix=f"{api_prefix}/reports", tags=["Reports"])
+    app.include_router(market_router, prefix=f"{api_prefix}/market", tags=["Market"])
     app.include_router(
         transactions_router, prefix=f"{api_prefix}/transactions", tags=["Transactions"]
     )
