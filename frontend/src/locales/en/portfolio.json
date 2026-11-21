@@ -284,7 +284,14 @@
     "modeCandles": "Candles",
     "lotCount_one": "{{count}} lot",
     "lotCount_other": "{{count}} lots",
-    "col": {"date": "Date", "qty": "Qty", "costPerShare": "Cost / Share", "totalCost": "Total Cost", "currentValue": "Current Value", "gainLoss": "Gain / Loss"},
+    "col": {
+      "date": "Date",
+      "qty": "Qty",
+      "costPerShare": "Cost / Share",
+      "totalCost": "Total Cost",
+      "currentValue": "Current Value",
+      "gainLoss": "Gain / Loss"
+    },
     "avgCost": "Avg Cost",
     "backToPortfolio": "Portfolio",
     "chartViewMode": "Chart view mode",
@@ -459,7 +466,7 @@
   "stats": {
     "alphaLabel": "Alpha vs {{benchmark}}",
     "alphaTooltip": "Jensen's Alpha: excess return vs {{benchmark}} after adjusting for market risk (beta). Positive means outperforming the market.",
-    "analysisSubtitle": "Risk, growth rate, dividends and realised gains",
+    "analysisSubtitle": "Risk, dividends and realised gains",
     "analysisTitle": "Analysis",
     "cagrCaption": "Time-weighted, per year",
     "cagrLabel": "Annual return",
@@ -501,7 +508,8 @@
     "volatility": "Vol (ann.)",
     "yieldOnCost": "YoC",
     "yieldOnValue": "Yield",
-    "lastSessionChange": "Change · {{day}}"
+    "lastSessionChange": "Change · {{day}}",
+    "annualReturnInline": "Annual return {{value}} · time-weighted"
   },
   "subtitle": "Track your investment performance in real-time",
   "sync": {

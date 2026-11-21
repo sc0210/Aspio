@@ -92,6 +92,12 @@ describe('PortfolioStats', () => {
         expect(screen.getByText('+NT$1,200')).toBeInTheDocument();
     });
 
+    it('shows the time-weighted annual return beside the gain, not behind the fold', () => {
+        const { container } = show(analysis);
+        const line = screen.getByText(/Annual return \+8\.1% · time-weighted/);
+        expect(container.querySelector('details')!.contains(line)).toBe(false);
+    });
+
     it('keeps the analysis closed until it is asked for', () => {
         const { container } = show(analysis);
         const details = container.querySelector('details');
@@ -107,7 +113,7 @@ describe('PortfolioStats', () => {
         const { container } = show(analysis);
         const details = container.querySelector('details')!;
 
-        for (const label of ['Sharpe', 'Beta', 'Annual return', 'Max DD', 'Volatility']) {
+        for (const label of ['Sharpe', 'Beta', 'Max DD', 'Volatility']) {
             // getAllBy: each label also appears in its card's tooltip copy.
             expect(within(details).getAllByText(label, { exact: false }).length).toBeGreaterThan(0);
         }
