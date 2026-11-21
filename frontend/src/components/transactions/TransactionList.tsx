@@ -432,13 +432,13 @@ export function TransactionList({ transactions, isLoading, isFetching, isSearchi
             <div className="flex space-x-2">
               <button
                 onClick={handleBulkExport}
-                className="btn btn-sm bg-white dark:bg-gray-800 text-primary-700 dark:text-primary-300 hover:bg-primary-100 dark:hover:bg-primary-900/30"
+                className="min-h-[44px] px-3 rounded-lg text-sm font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-500 bg-white dark:bg-gray-800 text-primary-700 dark:text-primary-300 hover:bg-primary-100 dark:hover:bg-primary-900/30"
               >
                 {t('transactions:list.export')}
               </button>
               <button
                 onClick={handleBulkDelete}
-                className="btn btn-sm bg-white dark:bg-gray-800 text-error-700 dark:text-error-400 hover:bg-error-100 dark:hover:bg-error-900/30"
+                className="min-h-[44px] px-3 rounded-lg text-sm font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-500 bg-white dark:bg-gray-800 text-error-700 dark:text-error-400 hover:bg-error-100 dark:hover:bg-error-900/30"
               >
                 {t('transactions:list.delete')}
               </button>

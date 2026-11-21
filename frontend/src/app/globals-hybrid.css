@@ -102,50 +102,6 @@ body {
     box-shadow: 0 10px 15px -3px rgb(0 0 0 / 0.1), 0 4px 6px -4px rgb(0 0 0 / 0.1);
   }
 
-  /* Button styles */
-  .btn {
-    padding: 0.5rem 1rem;
-    border-radius: 0.5rem;
-    font-weight: 500;
-    transition: all 200ms;
-    outline: none;
-    min-height: 44px;
-    min-width: 44px;
-  }
-
-  .btn:focus {
-    outline: 2px solid transparent;
-    outline-offset: 2px;
-    box-shadow: 0 0 0 2px rgb(59 130 246);
-  }
-
-  .btn-primary {
-    background-color: rgb(37 99 235);
-    color: white;
-  }
-
-  .btn-primary:hover {
-    background-color: rgb(29 78 216);
-  }
-
-  .btn-secondary {
-    background-color: rgb(229 231 235);
-    color: rgb(17 24 39);
-  }
-
-  .btn-secondary:hover {
-    background-color: rgb(209 213 219);
-  }
-
-  .dark .btn-secondary {
-    background-color: rgb(55 65 81);
-    color: rgb(243 244 246);
-  }
-
-  .dark .btn-secondary:hover {
-    background-color: rgb(75 85 99);
-  }
-
   /* Financial data styling */
   .financial-positive {
     background-color: rgb(236 253 245);
@@ -371,13 +327,6 @@ body {
     box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
   }
 
-  .btn {
-    font-size: 0.875rem;
-    padding: 0.625rem 1rem; /* Increased padding for better thumb access */
-    min-height: 48px;
-    min-width: 48px;
-  }
-
   .chart-container {
     height: 14rem; /* Reduced for mobile screens */
   }
@@ -458,19 +407,6 @@ body {
     color: rgb(254 202 202);
     border: 2px solid rgb(254 202 202);
   }
-
-  /* Enhanced button contrast */
-  .btn-primary {
-    border: 2px solid white;
-  }
-
-  .btn-secondary {
-    border: 2px solid rgb(17 24 39);
-  }
-
-  .dark .btn-secondary {
-    border: 2px solid rgb(243 244 246);
-  }
 }
 
 /* Enhanced Reduced motion support */
@@ -486,7 +422,6 @@ body {
   }
 
   /* Maintain focus indicators for accessibility */
-  .btn:focus,
   .input:focus {
     outline: 3px solid rgb(59 130 246);
     outline-offset: 2px;
