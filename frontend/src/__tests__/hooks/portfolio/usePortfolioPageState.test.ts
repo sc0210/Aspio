@@ -13,7 +13,7 @@ describe('usePortfolioFilters', () => {
 
   it('starts from the defaults', () => {
     const { result } = renderHook(() => usePortfolioFilters());
-    expect(result.current.filters).toEqual({ type: 'all', walletType: 'all', sortBy: 'value', sortOrder: 'desc' });
+    expect(result.current.filters).toEqual({ type: 'all', sortBy: 'value', sortOrder: 'desc' });
     expect(result.current.hasActiveFilters).toBe(false);
     expect(result.current.hasCustomSort).toBe(false);
   });
@@ -39,13 +39,19 @@ describe('usePortfolioFilters', () => {
     expect(result.current.filters.type).toBe('crypto');
   });
 
+  it('drops a wallet tab remembered from before the page was Portfolio-only', () => {
+    sessionStorage.setItem('portfolio-filters', JSON.stringify({ type: 'etf', walletType: 'emergency' }));
+    const { result } = renderHook(() => usePortfolioFilters());
+    expect(result.current.filters).toEqual({ type: 'etf', sortBy: 'value', sortOrder: 'desc' });
+  });
+
   it('ignores unreadable stored state', () => {
     sessionStorage.setItem('portfolio-filters', '{not json');
     const { result } = renderHook(() => usePortfolioFilters());
     expect(result.current.filters.type).toBe('all');
   });
 
-  it('toggles, sets and resets sort and wallet', () => {
+  it('toggles, sets and resets sort', () => {
     const { result } = renderHook(() => usePortfolioFilters());
     act(() => result.current.toggleSortOrder());
     expect(result.current.filters.sortOrder).toBe('asc');
@@ -53,14 +59,14 @@ describe('usePortfolioFilters', () => {
     expect(result.current.filters).toMatchObject({ sortBy: 'gainLoss', sortOrder: 'desc' });
     act(() => {
       result.current.setSortOrder('asc');
-      result.current.setWalletType('emergency');
+      result.current.setType('etf');
     });
-    expect(result.current.filters).toMatchObject({ sortOrder: 'asc', walletType: 'emergency' });
+    expect(result.current.filters).toMatchObject({ sortOrder: 'asc', type: 'etf' });
 
     act(() => result.current.resetFilters());
-    expect(result.current.filters.walletType).toBe('all');
+    expect(result.current.filters.type).toBe('all');
     // The reset write lands after the removal, so storage holds the defaults.
-    expect(JSON.parse(sessionStorage.getItem('portfolio-filters') ?? '{}').walletType).toBe('all');
+    expect(JSON.parse(sessionStorage.getItem('portfolio-filters') ?? '{}').type).toBe('all');
   });
 });
 

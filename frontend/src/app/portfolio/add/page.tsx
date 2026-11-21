@@ -21,7 +21,6 @@ import {
   ArrowLeftIcon,
   ChartBarIcon,
   CurrencyDollarIcon,
-  CheckCircleIcon,
 } from '@heroicons/react/24/outline';
 import { Button } from '@/components/ui/Button';
 import { Input } from '@/components/ui/Input';
@@ -141,28 +140,9 @@ export default function AddInvestmentPage() {
   const [selectedQuote, setSelectedQuote] = useState<SymbolQuote | null>(null);
   const [popularSymbols, setPopularSymbols] = useState<PopularSymbol[]>([]);
   const [isLoadingQuote, setIsLoadingQuote] = useState(false);
-  const [walletType, setWalletType] = useState<'portfolio' | 'emergency'>('portfolio');
   // Paid with a goal's reserved cash ('' = the user's own free cash).
   const [goalId, setGoalId] = useState('');
   const { data: allGoals = [] } = useGoals();
-
-  // Wallet type options for portfolio holdings
-  const WALLET_TYPES = [
-    {
-      value: 'portfolio' as const,
-      label: t('portfolio:holdingWallet.portfolio.label'),
-      description: t('portfolio:holdingWallet.portfolio.description'),
-      icon: '📈',
-      color: 'from-blue-500 to-indigo-500',
-    },
-    {
-      value: 'emergency' as const,
-      label: t('portfolio:holdingWallet.emergency.label'),
-      description: t('portfolio:holdingWallet.emergency.description'),
-      icon: '🚨',
-      color: 'from-amber-500 to-orange-500',
-    },
-  ];
 
   const {
     register,
@@ -198,7 +178,7 @@ export default function AddInvestmentPage() {
         symbol: data.symbol,
         name: data.name,
         type: data.type as HoldingInput['type'],
-        walletType: walletType as 'portfolio' | 'emergency',
+        walletType: 'portfolio',
         quantity: data.quantity,
         averageCost: data.averageCost,
         currency: data.currency,
@@ -550,56 +530,11 @@ export default function AddInvestmentPage() {
                   )}
                 </div>
 
-                {/* Wallet Type Selector */}
-                <div className="md:col-span-2">
-                  <label className="label font-semibold mb-3 block">
-                    {t('portfolio:holdingWallet.title')} <span className="text-error-700 dark:text-error-500">*</span>
-                  </label>
-                  <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-                    {WALLET_TYPES.map((wallet) => {
-                      const isSelected = walletType === wallet.value;
-                      return (
-                        <button
-                          key={wallet.value}
-                          type="button"
-                          onClick={() => {
-                            setWalletType(wallet.value);
-                            setValue('walletType', wallet.value);
-                          }}
-                          className={`relative flex flex-col items-start gap-2 p-4 rounded-xl border-2 transition-all duration-200 text-left ${isSelected
-                              ? `bg-gradient-to-br ${wallet.color} border-transparent shadow-lg scale-[1.02]`
-                              : 'bg-white dark:bg-gray-800 border-gray-200 dark:border-gray-700 hover:border-primary-300 dark:hover:border-primary-700 hover:shadow-sm'
-                            }`}
-                        >
-                          <div className="flex items-center justify-between w-full">
-                            <span className="text-2xl">{wallet.icon}</span>
-                            {isSelected && (
-                              <CheckCircleIcon className="w-5 h-5 text-white" />
-                            )}
-                          </div>
-                          <div>
-                            <div className={`text-sm font-bold ${isSelected
-                                ? 'text-white'
-                                : 'text-gray-700 dark:text-gray-300'
-                              }`}>
-                              {wallet.label}
-                            </div>
-                            <div className={`text-xs mt-1 ${isSelected
-                                ? 'text-white/90'
-                                : 'text-gray-500 dark:text-gray-400'
-                              }`}>
-                              {wallet.description}
-                            </div>
-                          </div>
-                        </button>
-                      );
-                    })}
-                  </div>
-                  <input type="hidden" {...register('walletType')} value={walletType} />
-                  {errors.walletType && (
-                    <p className="mt-2 text-sm text-error-700 dark:text-error-600">{errors.walletType.message}</p>
-                  )}
-                </div>
+                {/* No wallet choice: a holding is an investment, so it goes in the
+                    Portfolio wallet. Emergency money is cash (since #137), and the
+                    Portfolio page no longer lists Emergency holdings, so one made
+                    here would have vanished from view. */}
+                <input type="hidden" {...register('walletType')} value="portfolio" />
 
                 <div className="md:col-span-2">
                   <GoalFundingPicker
