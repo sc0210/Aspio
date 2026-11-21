@@ -3,7 +3,7 @@
 import { useState, useMemo } from 'react';
 import { XMarkIcon, CheckIcon } from '@heroicons/react/24/outline';
 import { cn } from '@/utils/cn';
-import { formatCurrency, formatCashAmount } from '@/utils/formatters';
+import { formatCurrency, formatMoney } from '@/utils/formatters';
 import { calculateCostBasis, CostBasisMethod, formatCostBasisMethod, Lot } from '@/utils/costBasis';
 import { useDialog } from '@/hooks/useDialog';
 import toast from 'react-hot-toast';
@@ -194,7 +194,7 @@ export function LotSelectionModal({
                             "text-sm font-semibold",
                             gainLoss >= 0 ? "text-rise-700 dark:text-rise-400" : "text-fall-700 dark:text-fall-400"
                           )}>
-                            {gainLoss >= 0 ? '+' : ''}{formatCashAmount(gainLoss, currency)}
+                            {gainLoss >= 0 ? '+' : ''}{formatMoney(gainLoss, currency)}
                           </div>
                           <div className={cn(
                             "text-xs",
@@ -226,13 +226,13 @@ export function LotSelectionModal({
                 <div className="flex justify-between text-sm">
                   <span className="text-gray-600 dark:text-gray-400">Sale Proceeds:</span>
                   <span className="font-semibold text-gray-900 dark:text-white">
-                    {formatCashAmount(costBasisPreview.proceeds, currency)}
+                    {formatMoney(costBasisPreview.proceeds, currency)}
                   </span>
                 </div>
                 <div className="flex justify-between text-sm">
                   <span className="text-gray-600 dark:text-gray-400">Cost Basis:</span>
                   <span className="font-semibold text-gray-900 dark:text-white">
-                    {formatCashAmount(costBasisPreview.totalCostBasis, currency)}
+                    {formatMoney(costBasisPreview.totalCostBasis, currency)}
                   </span>
                 </div>
                 <div className="pt-2 border-t border-gray-300 dark:border-gray-600">
@@ -248,7 +248,7 @@ export function LotSelectionModal({
                           : "text-fall-700 dark:text-fall-400"
                       )}>
                         {costBasisPreview.gainLoss >= 0 ? '+' : ''}
-                        {formatCashAmount(costBasisPreview.gainLoss, currency)}
+                        {formatMoney(costBasisPreview.gainLoss, currency)}
                       </div>
                       <div className={cn(
                         "text-sm",
@@ -273,7 +273,7 @@ export function LotSelectionModal({
                       {costBasisPreview.saleLots.map((sale, idx) => (
                         <div key={idx} className="flex justify-between text-xs text-gray-600 dark:text-gray-400">
                           <span>{new Date(sale.purchaseDate).toLocaleDateString()}</span>
-                          <span>{sale.quantitySold.toLocaleString()} shares - {formatCurrency(sale.costBasis, currency)}</span>
+                          <span>{sale.quantitySold.toLocaleString()} shares - {formatMoney(sale.costBasis, currency)}</span>
                         </div>
                       ))}
                     </div>

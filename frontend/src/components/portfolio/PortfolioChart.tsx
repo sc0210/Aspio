@@ -13,7 +13,7 @@ import {
 import { ChartBarIcon, ExclamationTriangleIcon } from '@heroicons/react/24/outline';
 import { useTheme } from '@/contexts/ThemeContext';
 import { cn } from '@/utils/cn';
-import { formatCurrency, formatCashAmount } from '@/utils/formatters';
+import { formatMoney } from '@/utils/formatters';
 import { PortfolioHolding, MarketType } from '@/shared/types';
 import { portfolioService } from '@/services/portfolioService';
 import { chartChrome, SERIES } from '@/lib/charts/palette';
@@ -298,10 +298,9 @@ export const PortfolioChart = memo(function PortfolioChart({ holdings, baseCurre
     // Calculate if portfolio is trending up or down for gradient color
     const isPositiveGrowth = chartData.length > 1 && chartData[chartData.length - 1].value > chartData[0].value;
 
-    // Define gradient colors based on growth direction
-    const lineColor = isPositiveGrowth
-      ? (isDark ? '#34d399' : SERIES.emerald)  // prosperity green
-      : (isDark ? '#f87171' : SERIES.red); // error red
+    // A market move, so it follows the gains-in-red setting (rise/fall variables).
+    const marketColor = (up: boolean) => `rgb(var(--${up ? 'rise' : 'fall'}-${isDark ? 400 : 500}))`;
+    const lineColor = marketColor(isPositiveGrowth);
 
     return (
       <div className="w-full h-full px-2">
@@ -409,21 +408,21 @@ export const PortfolioChart = memo(function PortfolioChart({ holdings, baseCurre
                           fontWeight: 600,
                           color: isDark ? '#e5e7eb' : '#374151'
                         }}>
-                          {formatCashAmount(actualValue, baseCurrency)}
+                          {formatMoney(actualValue, baseCurrency)}
                         </span>
                       </div>
                       {showProjection && projectedValue !== undefined && (
                         <>
                           <div style={{ display: 'flex', justifyContent: 'space-between', gap: '12px' }}>
                             <span style={{ fontSize: '12px', color: isDark ? '#fbbf24' : SERIES.amber }}>
-                              Target ({formatCurrency(monthlyInvestment, baseCurrency)}/mo @ {targetIRR}%):
+                              Target ({formatMoney(monthlyInvestment, baseCurrency)}/mo @ {targetIRR}%):
                             </span>
                             <span style={{
                               fontSize: '13px',
                               fontWeight: 600,
                               color: isDark ? '#fbbf24' : SERIES.amber
                             }}>
-                              {formatCashAmount(projectedValue, baseCurrency)}
+                              {formatMoney(projectedValue, baseCurrency)}
                             </span>
                           </div>
                           <div style={{
@@ -438,12 +437,10 @@ export const PortfolioChart = memo(function PortfolioChart({ holdings, baseCurre
                               <span style={{
                                 fontSize: '13px',
                                 fontWeight: 700,
-                                color: actualValue >= projectedValue
-                                  ? (isDark ? '#34d399' : SERIES.emerald)
-                                  : (isDark ? '#f87171' : SERIES.red)
+                                color: marketColor(actualValue >= projectedValue)
                               }}>
                                 {actualValue >= projectedValue ? '+' : ''}
-                                {formatCurrency(actualValue - projectedValue, baseCurrency)}
+                                {formatMoney(actualValue - projectedValue, baseCurrency)}
                                 {' '}
                                 ({((actualValue - projectedValue) / projectedValue * 100).toFixed(1)}%)
                               </span>
@@ -533,7 +530,7 @@ export const PortfolioChart = memo(function PortfolioChart({ holdings, baseCurre
               </div>
               <div className="text-right">
                 <div className="text-sm font-bold text-gray-900 dark:text-white">
-                  {formatCashAmount(item.value, baseCurrency)}
+                  {formatMoney(item.value, baseCurrency)}
                 </div>
                 <div className="text-xs font-semibold text-primary-700 dark:text-primary-400">
                   {item.percentage.toFixed(1)}%

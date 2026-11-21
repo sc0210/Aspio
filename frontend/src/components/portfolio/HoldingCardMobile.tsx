@@ -5,7 +5,7 @@ import Link from 'next/link';
 import { ArrowTrendingUpIcon, ArrowTrendingDownIcon, ClockIcon } from '@heroicons/react/24/outline';
 import { useTranslation } from 'react-i18next';
 import { cn } from '@/utils/cn';
-import { formatCurrency, formatCashAmount } from '@/utils/formatters';
+import { formatCurrency, formatMoney } from '@/utils/formatters';
 import { Sparkline } from './Sparkline';
 import type { Holding } from './HoldingsList';
 import {
@@ -216,7 +216,7 @@ function HoldingCardMobileBase({
               'text-xs mt-0.5 leading-tight',
               holding.dayChange >= 0 ? 'text-rise-700 dark:text-rise-400' : 'text-fall-700 dark:text-fall-400'
             )}>
-              {holding.dayChange >= 0 ? '+' : ''}{formatCashAmount(holding.dayChange, holding.currency)}
+              {holding.dayChange >= 0 ? '+' : ''}{formatMoney(holding.dayChange, holding.currency)}
               {holding.dayChangePercentage != null && (
                 <span className="ml-1">({holding.dayChangePercentage >= 0 ? '+' : ''}{holding.dayChangePercentage.toFixed(2)}%)</span>
               )}
@@ -229,13 +229,13 @@ function HoldingCardMobileBase({
         <div>
           <p className="text-xs text-gray-500 dark:text-gray-400 mb-1">{t('portfolio:holdings.value')}</p>
           <p className="text-base font-bold text-gray-900 dark:text-white">
-            {isValueVisible ? formatCashAmount(holding.totalValue, holding.currency) : '•••••'}
+            {isValueVisible ? formatMoney(holding.totalValue, holding.currency) : '•••••'}
           </p>
           {isValueVisible && baseRate !== undefined && (
             // Same rule as the desktop row: absent when the pair could not be
             // priced, never a guess.
             <p className="text-xs text-gray-500 dark:text-gray-400 tabular-nums">
-              ≈ {formatCurrency(holding.totalValue * baseRate, baseCurrency)}
+              ≈ {formatMoney(holding.totalValue * baseRate, baseCurrency)}
             </p>
           )}
         </div>
@@ -252,7 +252,7 @@ function HoldingCardMobileBase({
                 {isValueVisible ? (
                   <>
                     {holding.gainLoss >= 0 ? '+' : ''}
-                    {formatCashAmount(holding.gainLoss, holding.currency)}
+                    {formatMoney(holding.gainLoss, holding.currency)}
                   </>
                 ) : '•••'}
               </p>

@@ -17,7 +17,7 @@ import { buildMiniCalendarCells } from '@/components/portfolio/calendarGrid';
 import { dailyPerformanceKey, DAILY_PERFORMANCE_DAYS_DEFAULT } from '@/lib/queryKeys';
 import { fetchDailyPerformance } from '@/hooks/portfolio/fetchDailyPerformance';
 import { usePrivacy } from '@/contexts/PrivacyContext';
-import { formatCurrency, formatCompactChange, formatCashAmount } from '@/utils/formatters';
+import { formatCurrency, formatCompactChange, formatMoney } from '@/utils/formatters';
 import { cn } from '@/utils/cn';
 import { useMemo } from 'react';
 import { Card } from '@/components/ui/Card';
@@ -139,7 +139,7 @@ function MiniCalendarSection({
                     key={cell.dateStr}
                     title={
                       cell.change !== null
-                        ? `${cell.dateStr}: ${cell.change >= 0 ? '+' : ''}${formatCashAmount(cell.change, currency)}${cell.changePercent !== null ? ` (${cell.changePercent >= 0 ? '+' : ''}${cell.changePercent.toFixed(2)}%)` : ''}${cell.provisional ? ` — ${provisionalNote}` : ''}`
+                        ? `${cell.dateStr}: ${cell.change >= 0 ? '+' : ''}${formatMoney(cell.change, currency)}${cell.changePercent !== null ? ` (${cell.changePercent >= 0 ? '+' : ''}${cell.changePercent.toFixed(2)}%)` : ''}${cell.provisional ? ` — ${provisionalNote}` : ''}`
                         : cell.dateStr
                     }
                     className={cn(
@@ -164,7 +164,7 @@ function MiniCalendarSection({
               })}
               {/* Weekly sum — no fill, colored text only */}
               <div
-                title={hasWeekData ? t('dashboard:portfolioOverview.weekTotal', { value: `${weekSum >= 0 ? '+' : ''}${formatCashAmount(weekSum, currency)}` }) : undefined}
+                title={hasWeekData ? t('dashboard:portfolioOverview.weekTotal', { value: `${weekSum >= 0 ? '+' : ''}${formatMoney(weekSum, currency)}` }) : undefined}
                 className="h-10 flex items-center justify-center"
               >
                 {hasWeekData && (

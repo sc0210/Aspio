@@ -7,7 +7,7 @@
  * use `rgb(var(--rise-500))` / `rgb(var(--fall-500))` or `useMarketColors()`.
  */
 
-/** Series colours: Tailwind's 500 shades. */
+/** Series colours: Tailwind's 500 shades, except `gray`, which is gray-400 (the muted series). */
 export const SERIES = {
   sky: '#0ea5e9',
   blue: '#3b82f6',

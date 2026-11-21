@@ -12,7 +12,6 @@ import fs from 'fs';
 import path from 'path';
 
 const LEGACY = new Set([
-  'app/portfolio/page.tsx',
   'components/compare/AddPeerModal.tsx',
   'components/dashboard/FinancialTermsHelp.tsx',
   'components/goals/AchievementDetailModal.tsx',
@@ -55,15 +54,19 @@ function walk(dir: string, out: string[] = []): string[] {
   return out;
 }
 
+/** Not modals: a dropdown and a tour step carry role="dialog" but block nothing. */
+const NOT_MODALS = new Set(['components/layout/NotificationBell.tsx', 'components/tour/ProductTour.tsx']);
+
 function buildsItsOwnDialog(source: string): boolean {
-  const headless = /from '@headlessui\/react'/.test(source) && /\bDialog\b/.test(source);
-  return headless || /\buseDialog\(/.test(source);
+  const headless = /from ['"]@headlessui\/react['"]/.test(source) && /<Dialog\b|\bDialogPanel\b/.test(source);
+  const handMade = /role=["']dialog["']|aria-modal/.test(source);
+  return headless || handMade || /\buseDialog\(/.test(source);
 }
 
 it('builds no new dialog outside <Modal>', () => {
   const own = [...walk(path.join(SRC, 'app')), ...walk(path.join(SRC, 'components'))]
     .map((f) => path.relative(SRC, f).split(path.sep).join('/'))
-    .filter((f) => f !== 'components/ui/Modal.tsx' && f !== 'components/ui/ConfirmDialog.tsx')
+    .filter((f) => f !== 'components/ui/Modal.tsx' && f !== 'components/ui/ConfirmDialog.tsx' && !NOT_MODALS.has(f))
     .filter((f) => buildsItsOwnDialog(fs.readFileSync(path.join(SRC, f), 'utf8')));
   expect(own.filter((f) => !LEGACY.has(f))).toEqual([]);
   // A file moved to <Modal> must leave the list, so the backlog only shrinks.

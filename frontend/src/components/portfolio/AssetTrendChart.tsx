@@ -22,7 +22,7 @@ import {
 } from '@heroicons/react/24/outline';
 import { useTranslation } from 'react-i18next';
 import { cn } from '@/utils/cn';
-import { compactAxisFormatter, formatCurrency, formatCashAmount } from '@/utils/formatters';
+import { compactAxisFormatter, formatCurrency, formatMoney } from '@/utils/formatters';
 import { getLocaleByLanguage } from '@/lib/i18n';
 import { niceAxis } from '@/utils/niceAxis';
 
@@ -370,7 +370,7 @@ export const AssetTrendChart = memo(function AssetTrendChart({
                             {t('portfolio:trend.tooltipValueOnDate')}
                         </span>
                         <span className="text-sm font-bold text-gray-900 dark:text-white tabular-nums">
-                            {isValueVisible ? formatCashAmount(d.value, currency) : '•••••'}
+                            {isValueVisible ? formatMoney(d.value, currency) : '•••••'}
                         </span>
                     </div>
 
@@ -380,7 +380,7 @@ export const AssetTrendChart = memo(function AssetTrendChart({
                             {t('portfolio:trend.summaryInvestedCapital')}
                         </span>
                         <span className="text-sm font-medium text-gray-700 dark:text-gray-300 tabular-nums">
-                            {isValueVisible ? formatCurrency(d.costBasis ?? 0, currency) : '•••••'}
+                            {isValueVisible ? formatMoney(d.costBasis ?? 0, currency) : '•••••'}
                         </span>
                     </div>
 
@@ -399,7 +399,7 @@ export const AssetTrendChart = memo(function AssetTrendChart({
                                     <>{(d.periodReturnPct ?? 0) >= 0 ? '+' : ''}{d.periodReturnPct?.toFixed(2)}%</>
                                 ) : (
                                     <>
-                                        {isPositive ? '+' : ''}{formatCurrency(d.returnAmount ?? 0, currency)}
+                                        {isPositive ? '+' : ''}{formatMoney(d.returnAmount ?? 0, currency)}
                                         <span className="text-xs ml-1">
                                             ({isPositive ? '+' : ''}{(d.returnPercent ?? 0).toFixed(2)}%)
                                         </span>
@@ -420,7 +420,7 @@ export const AssetTrendChart = memo(function AssetTrendChart({
                         )}>
                             {isValueVisible ? (
                                 <>
-                                    {d.change >= 0 ? '+' : ''}{formatCashAmount(d.change, currency)}
+                                    {d.change >= 0 ? '+' : ''}{formatMoney(d.change, currency)}
                                     <span className="ml-1">({d.change >= 0 ? '+' : ''}{d.changePercent.toFixed(2)}%)</span>
                                 </>
                             ) : '•••'}
@@ -436,7 +436,7 @@ export const AssetTrendChart = memo(function AssetTrendChart({
                                     {t('portfolio:trend.tooltipBought')}
                                 </span>
                                 <span className="text-sm font-bold text-blue-600 dark:text-blue-400 tabular-nums">
-                                    {isValueVisible ? `+${formatCurrency(d.capitalAdded ?? 0, currency)}` : '•••••'}
+                                    {isValueVisible ? `+${formatMoney(d.capitalAdded ?? 0, currency)}` : '•••••'}
                                 </span>
                             </div>
                             {/* Per-asset purchase details */}
@@ -448,7 +448,7 @@ export const AssetTrendChart = memo(function AssetTrendChart({
                                                 {p.symbol} <span className="text-gray-500 dark:text-gray-400 font-normal">{p.name !== p.symbol ? p.name : ''}</span>
                                             </span>
                                             <span className="text-[11px] font-semibold text-blue-500 dark:text-blue-300 tabular-nums flex-shrink-0">
-                                                {formatCurrency(p.cost, currency)}
+                                                {formatMoney(p.cost, currency)}
                                             </span>
                                         </div>
                                     ))}
@@ -465,7 +465,7 @@ export const AssetTrendChart = memo(function AssetTrendChart({
                                 {t('portfolio:trend.tooltipSold')}
                             </span>
                             <span className="text-sm font-bold text-orange-700 dark:text-orange-400 tabular-nums">
-                                {isValueVisible ? `-${formatCurrency(d._sellAmount ?? 0, currency)}` : '•••••'}
+                                {isValueVisible ? `-${formatMoney(d._sellAmount ?? 0, currency)}` : '•••••'}
                             </span>
                         </div>
                     )}
@@ -498,7 +498,7 @@ export const AssetTrendChart = memo(function AssetTrendChart({
                                             'text-xs font-bold tabular-nums',
                                             holding.change >= 0 ? 'text-rise-700 dark:text-rise-400' : 'text-fall-700 dark:text-fall-400'
                                         )}>
-                                            {isValueVisible ? `${holding.change >= 0 ? '+' : ''}${formatCashAmount(holding.change, currency)}` : '•••'}
+                                            {isValueVisible ? `${holding.change >= 0 ? '+' : ''}${formatMoney(holding.change, currency)}` : '•••'}
                                         </span>
                                     </div>
                                 ))}
@@ -621,7 +621,7 @@ export const AssetTrendChart = memo(function AssetTrendChart({
                             'text-xs font-medium tabular-nums mt-0.5',
                             isPositivePeriod ? 'text-rise-700 dark:text-rise-300' : 'text-fall-700 dark:text-fall-300'
                         )}>
-                            {isValueVisible ? `${isPositivePeriod ? '+' : ''}${formatCurrency(Math.round(stats.periodGain), currency)}` : '•••'}
+                            {isValueVisible ? `${isPositivePeriod ? '+' : ''}${formatMoney((stats.periodGain), currency)}` : '•••'}
                         </p>
                         <p className="text-xs text-gray-500 dark:text-gray-400 mt-0.5">
                             {t('portfolio:trend.summaryAllTimeValue', {
@@ -639,7 +639,7 @@ export const AssetTrendChart = memo(function AssetTrendChart({
                             </p>
                         </div>
                         <p className="text-lg sm:text-xl font-bold text-blue-900 dark:text-blue-100 tabular-nums">
-                            {isValueVisible ? formatCurrency(Math.round(stats.totalCapitalAdded), currency) : '•••••'}
+                            {isValueVisible ? formatMoney((stats.totalCapitalAdded), currency) : '•••••'}
                         </p>
                         {stats.buyEventCount > 0 && (
                             <p className="text-xs font-medium text-blue-600 dark:text-blue-400 mt-0.5">

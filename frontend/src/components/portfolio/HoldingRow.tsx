@@ -10,7 +10,7 @@ import {
 } from '@heroicons/react/24/outline';
 import { useTranslation } from 'react-i18next';
 import { cn } from '@/utils/cn';
-import { formatCurrency, formatCashAmount } from '@/utils/formatters';
+import { formatCurrency, formatMoney } from '@/utils/formatters';
 import { Sparkline } from './Sparkline';
 import type { Holding } from './HoldingsList';
 import {
@@ -232,7 +232,7 @@ function HoldingRowBase({
                 'text-xs mt-0.5 leading-tight',
                 holding.dayChange >= 0 ? 'text-rise-700 dark:text-rise-400' : 'text-fall-700 dark:text-fall-400'
               )}>
-                {holding.dayChange >= 0 ? '+' : ''}{formatCashAmount(holding.dayChange, holding.currency)}
+                {holding.dayChange >= 0 ? '+' : ''}{formatMoney(holding.dayChange, holding.currency)}
                 {holding.dayChangePercentage != null && (
                   <span className="ml-1">({holding.dayChangePercentage >= 0 ? '+' : ''}{holding.dayChangePercentage.toFixed(2)}%)</span>
                 )}
@@ -268,14 +268,14 @@ function HoldingRowBase({
       <td className="px-3 md:px-6 py-4 whitespace-nowrap text-right text-sm font-medium text-gray-900 dark:text-gray-100">
         {isValueVisible ? (
           <>
-            <div>{formatCashAmount(holding.totalValue, holding.currency)}</div>
+            <div>{formatMoney(holding.totalValue, holding.currency)}</div>
             {baseRate !== undefined && (
               // The native currency stays primary — it is what the position
               // trades in. The converted figure is secondary and marked
               // approximate, because it moves with the rate and the rate is a
               // snapshot.
               <div className="text-xs font-normal text-gray-500 dark:text-gray-400 tabular-nums">
-                ≈ {formatCurrency(holding.totalValue * baseRate, baseCurrency)}
+                ≈ {formatMoney(holding.totalValue * baseRate, baseCurrency)}
               </div>
             )}
           </>
@@ -302,7 +302,7 @@ function HoldingRowBase({
                   (holding.gainLoss || 0) >= 0 ? 'text-rise-700 dark:text-rise-400' : 'text-fall-700 dark:text-fall-400'
                 )}>
                   {isValueVisible
-                    ? `${(holding.gainLoss || 0) >= 0 ? '+' : ''}${formatCashAmount(holding.gainLoss || 0, holding.currency)}`
+                    ? `${(holding.gainLoss || 0) >= 0 ? '+' : ''}${formatMoney(holding.gainLoss || 0, holding.currency)}`
                     : '•••'
                   }
                 </div>

@@ -6,7 +6,7 @@ import { Dialog, DialogPanel, DialogTitle } from '@headlessui/react';
 import { XMarkIcon, CurrencyDollarIcon, BanknotesIcon, MagnifyingGlassIcon, ArrowPathIcon } from '@heroicons/react/24/outline';
 import { Button } from '@/components/ui/Button';
 import type { PortfolioHolding } from '@/shared/types';
-import { formatCurrency, formatCashAmount } from '@/utils/formatters';
+import { formatCurrency, formatMoney } from '@/utils/formatters';
 import { cn } from '@/utils/cn';
 import { useScrollLock } from '@/hooks/useScrollLock';
 
@@ -252,7 +252,7 @@ export function SellHoldingModal({
                                                                 <div>
                                                                     <div className="text-xs text-gray-500 dark:text-gray-400">{t('sell.field.marketValue')}</div>
                                                                     <div className="font-semibold text-gray-900 dark:text-white">
-                                                                        {formatCashAmount(h.totalValue, h.currency)}
+                                                                        {formatMoney(h.totalValue, h.currency)}
                                                                     </div>
                                                                 </div>
                                                             </div>
@@ -262,7 +262,7 @@ export function SellHoldingModal({
                                                                 'text-sm font-bold mb-1',
                                                                 isProfit ? 'text-prosperity-700 dark:text-prosperity-400' : 'text-error-700 dark:text-error-400'
                                                             )}>
-                                                                {isProfit ? '+' : ''}{formatCashAmount(gainLoss, h.currency)}
+                                                                {isProfit ? '+' : ''}{formatMoney(gainLoss, h.currency)}
                                                             </div>
                                                             <div className={cn(
                                                                 'text-xs font-semibold',
@@ -446,19 +446,19 @@ export function SellHoldingModal({
                                         <div className="flex justify-between">
                                             <span className="text-gray-600 dark:text-gray-400">{t('sell.label.grossProceeds')}</span>
                                             <span className="font-semibold text-gray-900 dark:text-white">
-                                                {formatCashAmount(totalProceeds, holding.currency)}
+                                                {formatMoney(totalProceeds, holding.currency)}
                                             </span>
                                         </div>
                                         <div className="flex justify-between">
                                             <span className="text-gray-600 dark:text-gray-400">{t('sell.label.feesAndTax')}</span>
                                             <span className="font-semibold text-gray-900 dark:text-white">
-                                                -{formatCurrency(feesNum + taxesNum, holding.currency)}
+                                                -{formatMoney(feesNum + taxesNum, holding.currency)}
                                             </span>
                                         </div>
                                         <div className="flex justify-between pt-2 border-t border-prosperity-200 dark:border-prosperity-800">
                                             <span className="font-bold text-gray-900 dark:text-white">{t('sell.label.netProceeds')}</span>
                                             <span className="font-bold text-xl text-prosperity-700 dark:text-prosperity-400">
-                                                {formatCashAmount(netProceeds, holding.currency)}
+                                                {formatMoney(netProceeds, holding.currency)}
                                             </span>
                                         </div>
                                         <div className="flex justify-between pt-2 border-t border-prosperity-200 dark:border-prosperity-800">
@@ -467,7 +467,7 @@ export function SellHoldingModal({
                                                 "font-bold text-base",
                                                 estimatedGainLoss >= 0 ? "text-prosperity-700 dark:text-prosperity-400" : "text-error-700 dark:text-error-400"
                                             )}>
-                                                {estimatedGainLoss >= 0 ? '+' : ''}{formatCashAmount(estimatedGainLoss, holding.currency)}
+                                                {estimatedGainLoss >= 0 ? '+' : ''}{formatMoney(estimatedGainLoss, holding.currency)}
                                                 {' '}({estimatedGainLossPct >= 0 ? '+' : ''}{estimatedGainLossPct.toFixed(2)}%)
                                             </span>
                                         </div>

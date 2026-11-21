@@ -11,7 +11,7 @@ import {
 } from 'recharts';
 import { useTranslation } from 'react-i18next';
 import type { CompareDataResponse, PeerStatCard } from '@/shared/types';
-import { formatCashAmount, formatCurrency as formatCurrencyUtil } from '@/utils/formatters';
+import { formatMoney } from '@/utils/formatters';
 import { CURRENCIES } from '@/utils/constants';
 import { PERSON_COLORS, personColors } from './personColors';
 
@@ -40,8 +40,9 @@ const formatCompact = (value: number, currency: string) => {
 
 // Force en-US so TWD shows its distinct "NT$" symbol (zh-TW renders TWD as a
 // bare "$", indistinguishable from USD).
-// A whole TWD amount without ".00", as the stat cards below show it.
-const formatFull = (value: number, currency: string) => formatCashAmount(value, currency);
+// Whole dollars for TWD, in the currency's own locale (zh-TW for TWD), as every
+// other money figure in the app shows it; it used to force en-US with cents.
+const formatFull = (value: number, currency: string) => formatMoney(value, currency);
 
 const formatDate = (dateStr: string) =>
   new Date(dateStr).toLocaleDateString('en-US', { month: 'short', day: 'numeric' });

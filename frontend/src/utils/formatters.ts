@@ -317,6 +317,17 @@ export function formatCashAmount(amount: number, currency: string = DEFAULT_CURR
   return formatCurrency(amount, currency, whole ? { precision: 0 } : {});
 }
 
+/**
+ * A money figure (a value, a cost, a gain, a total) as opposed to a price: TWD
+ * in whole dollars, every other currency with cents. The rule is the currency's,
+ * not the number's, so a column of market values lines up instead of mixing
+ * NT$1,085,000 with NT$6,931.95. Prices keep formatCurrency's two decimals;
+ * a recorded cash amount, which may carry cents, uses formatCashAmount.
+ */
+export function formatMoney(amount: number, currency: string = DEFAULT_CURRENCY): string {
+  return formatCurrency(amount, currency, currency === 'TWD' ? { precision: 0 } : {});
+}
+
 export function formatTWD(amount: number, options: {
   showSymbol?: boolean;
   precision?: number;

@@ -9,15 +9,15 @@
  * A raw `text-green-700` says none of that, and is how the portfolio page came
  * to show gains in red while the dashboard showed them in green.
  *
- * There were 748 when this was written, too many to move in one change, so
- * this is a ratchet: the count may not go up. When it goes down, lower
- * BASELINE to the new number so it cannot creep back.
+ * There were 763 when this was written, too many to move in one change, so
+ * this is a ratchet, and an exact one: removing some without lowering BASELINE
+ * fails too, so the room freed cannot be spent by the next change.
  */
 import fs from 'fs';
 import path from 'path';
 
-const BASELINE = 748;
-const RAW = /\b(?:text|bg|border|from|to|via|ring|fill|stroke)-(?:green|red|emerald|rose)-\d{2,3}\b/g;
+const BASELINE = 763;
+const RAW = /\b(?:text|bg|border|from|to|via|ring|fill|stroke|divide|outline|placeholder|shadow|accent|decoration)-(?:green|red|emerald|rose)-\d{2,3}\b/g;
 const SRC = path.join(__dirname, '../..');
 
 function walk(dir: string, out: string[] = []): string[] {
@@ -33,8 +33,11 @@ function walk(dir: string, out: string[] = []): string[] {
 }
 
 it('adds no raw red/green classes (use rise/fall, income/expense or success/error)', () => {
-  const files = [...walk(path.join(SRC, 'app')), ...walk(path.join(SRC, 'components'))];
+  const files = ['app', 'components', 'lib', 'hooks', 'contexts', 'utils'].flatMap((d) => walk(path.join(SRC, d)));
   const count = files.reduce((n, f) => n + (fs.readFileSync(f, 'utf8').match(RAW)?.length ?? 0), 0);
   expect(files.length).toBeGreaterThan(100);
+  if (count < BASELINE) {
+    throw new Error(`Raw red/green classes fell to ${count}. Lower BASELINE in this file from ${BASELINE} to ${count}.`);
+  }
   expect(count).toBeLessThanOrEqual(BASELINE);
 });
