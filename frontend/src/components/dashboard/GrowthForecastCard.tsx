@@ -30,6 +30,7 @@ import { useGoalPlanning, type GoalPlan } from '@/hooks/useGoalPlanning';
 import { netWorthOf } from '@/lib/dashboard/periodChange';
 import { Card } from '@/components/ui/Card';
 import { niceAxis } from '@/utils/niceAxis';
+import { SERIES } from '@/lib/charts/palette';
 
 interface GrowthForecastCardProps {
     stats: {
@@ -48,9 +49,9 @@ const FALLBACK_RETURN = 7; // typical long-run global-index average
 const HORIZONS = [6, 12, 36] as const;
 
 const COLORS = {
-    estimate: '#6366f1', // indigo-500 — full projection (savings + investment return)
-    savings: '#10b981',  // emerald-500 — savings-only trajectory (0% return)
-    actual: '#64748b',   // slate-500 — real history
+    estimate: SERIES.indigo, // indigo-500 — full projection (savings + investment return)
+    savings: SERIES.emerald,  // emerald-500 — savings-only trajectory (0% return)
+    actual: SERIES.slate,   // slate-500 — real history
 };
 
 function clamp(v: number, min: number, max: number) {
@@ -478,7 +479,7 @@ export function GrowthForecastCard({ stats, loading = false }: GrowthForecastCar
                             <ReferenceLine
                                 key={g.id}
                                 y={g.targetAmount}
-                                stroke="#f59e0b"
+                                stroke={SERIES.amber}
                                 strokeDasharray="6 4"
                                 strokeOpacity={0.75}
                                 label={{ value: `${g.icon} ${isValueVisible ? formatTWDCompact(g.targetAmount) : '•••'}`, position: 'insideBottomRight', fontSize: 10, fill: '#d97706' }}

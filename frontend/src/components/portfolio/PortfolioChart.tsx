@@ -16,6 +16,7 @@ import { cn } from '@/utils/cn';
 import { formatCurrency, formatCashAmount } from '@/utils/formatters';
 import { PortfolioHolding, MarketType } from '@/shared/types';
 import { portfolioService } from '@/services/portfolioService';
+import { chartChrome, SERIES } from '@/lib/charts/palette';
 
 interface DailyPerformanceEntry {
   date: string;
@@ -36,12 +37,12 @@ type ChartType = 'timeline' | 'allocation' | 'performance';
 
 const getMarketColor = (market: MarketType) => {
   const colors: Record<MarketType, string> = {
-    'US': '#3B82F6',
-    'TW': '#EF4444',
-    'HK': '#F59E0B',
-    'SG': '#10B981',
-    'JP': '#8B5CF6',
-    'CRYPTO': '#F97316'
+    'US': SERIES.blue,
+    'TW': SERIES.red,
+    'HK': SERIES.amber,
+    'SG': SERIES.emerald,
+    'JP': SERIES.violet,
+    'CRYPTO': SERIES.orange
   };
   return colors[market] || '#6B7280';
 };
@@ -299,8 +300,8 @@ export const PortfolioChart = memo(function PortfolioChart({ holdings, baseCurre
 
     // Define gradient colors based on growth direction
     const lineColor = isPositiveGrowth
-      ? (isDark ? '#34d399' : '#10b981')  // prosperity green
-      : (isDark ? '#f87171' : '#ef4444'); // error red
+      ? (isDark ? '#34d399' : SERIES.emerald)  // prosperity green
+      : (isDark ? '#f87171' : SERIES.red); // error red
 
     return (
       <div className="w-full h-full px-2">
@@ -322,7 +323,7 @@ export const PortfolioChart = memo(function PortfolioChart({ holdings, baseCurre
 
             <CartesianGrid
               strokeDasharray="5 5"
-              stroke={isDark ? '#374151' : '#e5e7eb'}
+              stroke={chartChrome(isDark).grid}
               strokeOpacity={0.5}
               vertical={false}
             />
@@ -333,7 +334,7 @@ export const PortfolioChart = memo(function PortfolioChart({ holdings, baseCurre
               tickLine={false}
               tick={{
                 fontSize: 11,
-                fill: isDark ? '#9ca3af' : '#6b7280',
+                fill: chartChrome(isDark).tick,
                 fontWeight: 500
               }}
               interval={
@@ -353,7 +354,7 @@ export const PortfolioChart = memo(function PortfolioChart({ holdings, baseCurre
               tickLine={false}
               tick={{
                 fontSize: 12,
-                fill: isDark ? '#9ca3af' : '#6b7280',
+                fill: chartChrome(isDark).tick,
                 fontWeight: 500
               }}
               tickFormatter={(value) => {
@@ -377,7 +378,7 @@ export const PortfolioChart = memo(function PortfolioChart({ holdings, baseCurre
                   <div
                     style={{
                       backgroundColor: isDark ? '#1f2937' : 'white',
-                      border: `1px solid ${isDark ? '#4b5563' : '#d1d5db'}`,
+                      border: `1px solid ${chartChrome(isDark).border}`,
                       borderRadius: '12px',
                       boxShadow: isDark
                         ? '0 10px 25px -5px rgba(0, 0, 0, 0.5), 0 4px 10px -2px rgba(0, 0, 0, 0.3)'
@@ -400,7 +401,7 @@ export const PortfolioChart = memo(function PortfolioChart({ holdings, baseCurre
                     </p>
                     <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
                       <div style={{ display: 'flex', justifyContent: 'space-between', gap: '12px' }}>
-                        <span style={{ fontSize: '12px', color: isDark ? '#9ca3af' : '#6b7280' }}>
+                        <span style={{ fontSize: '12px', color: chartChrome(isDark).tick }}>
                           Actual:
                         </span>
                         <span style={{
@@ -414,32 +415,32 @@ export const PortfolioChart = memo(function PortfolioChart({ holdings, baseCurre
                       {showProjection && projectedValue !== undefined && (
                         <>
                           <div style={{ display: 'flex', justifyContent: 'space-between', gap: '12px' }}>
-                            <span style={{ fontSize: '12px', color: isDark ? '#fbbf24' : '#f59e0b' }}>
+                            <span style={{ fontSize: '12px', color: isDark ? '#fbbf24' : SERIES.amber }}>
                               Target ({formatCurrency(monthlyInvestment, baseCurrency)}/mo @ {targetIRR}%):
                             </span>
                             <span style={{
                               fontSize: '13px',
                               fontWeight: 600,
-                              color: isDark ? '#fbbf24' : '#f59e0b'
+                              color: isDark ? '#fbbf24' : SERIES.amber
                             }}>
                               {formatCashAmount(projectedValue, baseCurrency)}
                             </span>
                           </div>
                           <div style={{
-                            borderTop: `1px solid ${isDark ? '#374151' : '#e5e7eb'}`,
+                            borderTop: `1px solid ${chartChrome(isDark).grid}`,
                             paddingTop: '6px',
                             marginTop: '2px'
                           }}>
                             <div style={{ display: 'flex', justifyContent: 'space-between', gap: '12px' }}>
-                              <span style={{ fontSize: '12px', color: isDark ? '#9ca3af' : '#6b7280', fontWeight: 600 }}>
+                              <span style={{ fontSize: '12px', color: chartChrome(isDark).tick, fontWeight: 600 }}>
                                 Gap:
                               </span>
                               <span style={{
                                 fontSize: '13px',
                                 fontWeight: 700,
                                 color: actualValue >= projectedValue
-                                  ? (isDark ? '#34d399' : '#10b981')
-                                  : (isDark ? '#f87171' : '#ef4444')
+                                  ? (isDark ? '#34d399' : SERIES.emerald)
+                                  : (isDark ? '#f87171' : SERIES.red)
                               }}>
                                 {actualValue >= projectedValue ? '+' : ''}
                                 {formatCurrency(actualValue - projectedValue, baseCurrency)}
@@ -483,13 +484,13 @@ export const PortfolioChart = memo(function PortfolioChart({ holdings, baseCurre
               <Line
                 type="monotone"
                 dataKey="projectedValue"
-                stroke={isDark ? '#fbbf24' : '#f59e0b'}
+                stroke={isDark ? '#fbbf24' : SERIES.amber}
                 strokeWidth={2.5}
                 strokeDasharray="8 4"
                 dot={false}
                 activeDot={{
                   r: 5,
-                  stroke: isDark ? '#fbbf24' : '#f59e0b',
+                  stroke: isDark ? '#fbbf24' : SERIES.amber,
                   strokeWidth: 2,
                   fill: isDark ? '#1f2937' : 'white'
                 }}

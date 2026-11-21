@@ -11,6 +11,7 @@ import type { SplitOut } from '@/shared/types';
 import { accepted, byCategory, byMonth, currenciesByUse, frontedByPartner, monthLabel as formatMonth, monthOf, shiftMonth, summarize, type PartnerLabels } from './sharedSpendingStats';
 
 import { Card } from '@/components/ui/Card';
+import { chartChrome } from '@/lib/charts/palette';
 // As the rest of the tab: whole dollars for TWD.
 const money = (value: number, currency: string) =>
   formatCurrency(value, currency, currency === 'TWD' ? { precision: 0 } : {});
@@ -191,9 +192,9 @@ export default function SplitInsights({ splits, partnerName, partnerLabels }: Sp
             <div className="h-48" role="img" aria-label={t('savings.splits.insights.trendAlt', 'Shared spending per month, your part and {{name}}’s', { name: partnerLabel })}>
               <ResponsiveContainer width="100%" height="100%">
                 <BarChart data={trend} margin={{ top: 4, right: 4, bottom: 0, left: 0 }} barCategoryGap="30%">
-                  <CartesianGrid vertical={false} stroke={isDark ? '#374151' : '#e5e7eb'} />
-                  <XAxis dataKey="month" tickFormatter={(m: string) => monthLabel(m, 'short')} tick={{ fontSize: 11, fill: isDark ? '#9ca3af' : '#6b7280' }} axisLine={false} tickLine={false} />
-                  <YAxis width={48} tick={{ fontSize: 11, fill: isDark ? '#9ca3af' : '#6b7280' }} axisLine={false} tickLine={false}
+                  <CartesianGrid vertical={false} stroke={chartChrome(isDark).grid} />
+                  <XAxis dataKey="month" tickFormatter={(m: string) => monthLabel(m, 'short')} tick={{ fontSize: 11, fill: chartChrome(isDark).tick }} axisLine={false} tickLine={false} />
+                  <YAxis width={48} tick={{ fontSize: 11, fill: chartChrome(isDark).tick }} axisLine={false} tickLine={false}
                     tickFormatter={(v: number) => (Math.abs(v) >= 1000 ? `${Math.round(v / 1000)}K` : String(v))} />
                   <Tooltip
                     cursor={{ fill: isDark ? 'rgba(255,255,255,0.06)' : 'rgba(0,0,0,0.04)' }}
@@ -211,8 +212,8 @@ export default function SplitInsights({ splits, partnerName, partnerLabels }: Sp
                     }}
                   />
                   {/* A 2px surface gap between the stacked segments. */}
-                  <Bar dataKey="mine" stackId="s" fill={colors.mine} stroke={isDark ? '#1f2937' : '#ffffff'} strokeWidth={2} isAnimationActive={false} />
-                  <Bar dataKey="partner" stackId="s" fill={colors.partner} stroke={isDark ? '#1f2937' : '#ffffff'} strokeWidth={2} radius={[4, 4, 0, 0]} isAnimationActive={false} />
+                  <Bar dataKey="mine" stackId="s" fill={colors.mine} stroke={chartChrome(isDark).surface} strokeWidth={2} isAnimationActive={false} />
+                  <Bar dataKey="partner" stackId="s" fill={colors.partner} stroke={chartChrome(isDark).surface} strokeWidth={2} radius={[4, 4, 0, 0]} isAnimationActive={false} />
                 </BarChart>
               </ResponsiveContainer>
             </div>

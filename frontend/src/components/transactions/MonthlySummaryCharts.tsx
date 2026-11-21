@@ -29,6 +29,7 @@ import { useTranslation } from 'react-i18next';
 import { Card } from '@/components/ui/Card';
 import { chartTooltipStyle } from '@/lib/charts/tooltipStyle';
 import { useIsDark } from '@/contexts/ThemeContext';
+import { SERIES } from '@/lib/charts/palette';
 
 interface ChartDataPoint {
     month: string;
@@ -76,24 +77,24 @@ interface MonthlySummaryChartsProps {
 const INVEST = '#0891b2';
 
 const PIE_CATEGORIES = [
-    { name: 'Housing', key: 'housing' as const, color: '#3b82f6' },
-    { name: 'Eat', key: 'eat' as const, color: '#f59e0b' },
+    { name: 'Housing', key: 'housing' as const, color: SERIES.blue },
+    { name: 'Eat', key: 'eat' as const, color: SERIES.amber },
     { name: 'Invest', key: 'investment' as const, color: INVEST },
     // Money that only changed pocket: its own slice, not spending hidden in Others.
-    { name: 'Transfer', key: 'transfer' as const, color: '#64748b' },
+    { name: 'Transfer', key: 'transfer' as const, color: SERIES.slate },
     // Servicing debt is not discretionary, so it gets its own slice rather than
     // inflating Others.
     { name: 'Debt', key: 'debt' as const, color: '#be123c' },
-    { name: 'Others', key: 'others' as const, color: '#8b5cf6' },
+    { name: 'Others', key: 'others' as const, color: SERIES.violet },
 ];
 
 /** The expense stack, bottom to top. */
 const STACK = [
-    { key: 'Housing', fill: '#3b82f6' },
-    { key: 'Eat', fill: '#f59e0b' },
-    { key: 'Transfer', fill: '#64748b' },
+    { key: 'Housing', fill: SERIES.blue },
+    { key: 'Eat', fill: SERIES.amber },
+    { key: 'Transfer', fill: SERIES.slate },
     { key: 'Debt', fill: '#be123c' },
-    { key: 'Others', fill: '#8b5cf6' },
+    { key: 'Others', fill: SERIES.violet },
     { key: 'Investment', fill: INVEST },
 ] as const;
 
@@ -216,16 +217,16 @@ export function MonthlySummaryCharts({
                     <div className="flex flex-wrap items-center gap-x-4 gap-y-2 mb-3 text-xs">
                         {[
                             ...(showBarChart ? [
-                                { color: '#3b82f6', label: t('transactions:monthlySummaryPage.housing', 'Housing') },
-                                { color: '#f59e0b', label: t('transactions:monthlySummaryPage.eat', 'Eat') },
-                                { color: '#64748b', label: t('transactions:monthlySummaryPage.transfer', 'Transfer') },
+                                { color: SERIES.blue, label: t('transactions:monthlySummaryPage.housing', 'Housing') },
+                                { color: SERIES.amber, label: t('transactions:monthlySummaryPage.eat', 'Eat') },
+                                { color: SERIES.slate, label: t('transactions:monthlySummaryPage.transfer', 'Transfer') },
                                 { color: '#be123c', label: t('transactions:monthlySummaryPage.debt', 'Debt') },
-                                { color: '#8b5cf6', label: t('transactions:monthlySummaryPage.others', 'Others') },
+                                { color: SERIES.violet, label: t('transactions:monthlySummaryPage.others', 'Others') },
                                 { color: INVEST, label: t('transactions:monthlySummaryPage.invest', 'Invest') },
                             ] : []),
                             ...(showLineChart ? [
                                 { color: '#22c55e', label: t('transactions:monthlySummaryPage.income', 'Income') },
-                                { color: '#ef4444', label: t('transactions:monthlySummaryPage.totalExpLabel', 'Total Exp') },
+                                { color: SERIES.red, label: t('transactions:monthlySummaryPage.totalExpLabel', 'Total Exp') },
                             ] : []),
                         ].map(({ color, label }) => (
                             <div key={label} className="flex items-center gap-1.5">
@@ -246,10 +247,10 @@ export function MonthlySummaryCharts({
                             <ComposedChart data={chartData} margin={{ top: 30, right: 10, left: 0, bottom: 0 }}>
                                 <defs>
                                     {[
-                                        { id: 'housingGradient', color: '#3b82f6' },
-                                        { id: 'eatGradient', color: '#f59e0b' },
+                                        { id: 'housingGradient', color: SERIES.blue },
+                                        { id: 'eatGradient', color: SERIES.amber },
                                         { id: 'investmentGradient', color: INVEST },
-                                        { id: 'othersGradient', color: '#8b5cf6' },
+                                        { id: 'othersGradient', color: SERIES.violet },
                                     ].map(({ id, color }) => (
                                         <linearGradient key={id} id={id} x1="0" y1="0" x2="0" y2="1">
                                             <stop offset="5%" stopColor={color} stopOpacity={0.4} />
@@ -304,8 +305,8 @@ export function MonthlySummaryCharts({
                                         name="Income" isAnimationActive={false} />
                                 )}
                                 {showLineChart && (
-                                    <Line type="monotone" dataKey="Total" stroke="#ef4444" strokeWidth={3} strokeDasharray="6 4"
-                                        dot={{ r: 4, fill: '#ef4444' }} activeDot={{ r: 6, fill: '#ef4444', stroke: '#fff', strokeWidth: 3 }}
+                                    <Line type="monotone" dataKey="Total" stroke={SERIES.red} strokeWidth={3} strokeDasharray="6 4"
+                                        dot={{ r: 4, fill: SERIES.red }} activeDot={{ r: 6, fill: SERIES.red, stroke: '#fff', strokeWidth: 3 }}
                                         name="Total Exp" isAnimationActive={false} />
                                 )}
                             </ComposedChart>

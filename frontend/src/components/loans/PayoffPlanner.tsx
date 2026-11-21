@@ -22,8 +22,9 @@ import {
     type PayoffStrategy,
 } from '@/lib/finance/payoffPlan';
 import { formatCurrency } from '@/utils/formatters';
+import { SERIES } from '@/lib/charts/palette';
 
-const PLAN = '#f43f5e'; // rose — the loans page's accent
+const PLAN = SERIES.rose; // rose — the loans page's accent
 const BASE = '#9ca3af'; // gray-400 — the do-nothing line
 
 // Per-viewer conveniences only; the plan works without them.

@@ -6,12 +6,13 @@ import { Area, AreaChart, CartesianGrid, ReferenceLine, ResponsiveContainer, Too
 import { useIsDark } from '@/contexts/ThemeContext';
 import { formatCurrency } from '@/utils/formatters';
 import type { SharedGoalHistoryPoint } from '@/shared/types';
+import { chartChrome, SERIES } from '@/lib/charts/palette';
 
 const money = (v: number) => formatCurrency(v, 'TWD', { precision: 0 });
 const compact = (v: number) => (v >= 1_000_000 ? `${(v / 1_000_000).toFixed(1)}M` : v >= 1_000 ? `${Math.round(v / 1_000)}K` : String(v));
 
 // The goal card's own pair: you in the primary blue, the partner in prosperity green.
-const COLORS = { light: { mine: '#0ea5e9', theirs: '#10b981' }, dark: { mine: '#38bdf8', theirs: '#34d399' } };
+const COLORS = { light: { mine: SERIES.sky, theirs: SERIES.emerald }, dark: { mine: '#38bdf8', theirs: '#34d399' } };
 
 export interface HistoryPoint {
   date: string;
@@ -56,7 +57,7 @@ export default function GoalHistoryChart({ points, target, partnerName }: GoalHi
 
   const youLabel = t('savings.card.you', 'You');
   const axis = isDark ? '#9ca3af' : '#4b5563';
-  const grid = isDark ? '#374151' : '#e5e7eb';
+  const grid = chartChrome(isDark).grid;
   const day = (ms: number) =>
     new Date(ms).toLocaleDateString(i18n?.language || 'en', { month: 'short', day: 'numeric', timeZone: 'UTC' });
   const last = data[data.length - 1];
@@ -81,7 +82,7 @@ export default function GoalHistoryChart({ points, target, partnerName }: GoalHi
             <Tooltip
               formatter={(v: number, key: string) => [money(v), key === 'mine' ? youLabel : partnerName]}
               labelFormatter={(l: number) => day(l)}
-              contentStyle={{ background: isDark ? '#1f2937' : '#fff', border: `1px solid ${grid}`, borderRadius: 8, fontSize: 12 }}
+              contentStyle={{ background: chartChrome(isDark).surface, border: `1px solid ${grid}`, borderRadius: 8, fontSize: 12 }}
             />
             {target > 0 && <ReferenceLine y={target} stroke={axis} strokeDasharray="4 4" />}
             <Area type="stepAfter" dataKey="mine" stackId="1" stroke={colors.mine} fill={colors.mine} fillOpacity={0.35} />

@@ -21,6 +21,7 @@ import {
 import { cn } from '@/utils/cn';
 import { formatCurrency } from '@/utils/formatters';
 import type { ChartPoint } from './AssetPriceChart';
+import { SERIES } from '@/lib/charts/palette';
 
 // Taiwan / East-Asian convention: up = red, down = green (opposite of the West).
 const UP = 'rgb(239, 68, 68)';   // red-500
@@ -28,8 +29,8 @@ const DOWN = 'rgb(34, 197, 94)'; // green-500
 
 // Moving-average overlay colors (distinct from the red/green candles + blue avg-cost)
 const MA = [
-    { key: 'ma5' as const, period: 5, label: 'MA5', color: '#f59e0b' },   // amber
-    { key: 'ma10' as const, period: 10, label: 'MA10', color: '#8b5cf6' }, // violet
+    { key: 'ma5' as const, period: 5, label: 'MA5', color: SERIES.amber },   // amber
+    { key: 'ma10' as const, period: 10, label: 'MA10', color: SERIES.violet }, // violet
     { key: 'ma20' as const, period: 20, label: 'MA20', color: '#ec4899' }, // pink
 ];
 

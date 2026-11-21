@@ -16,6 +16,7 @@ import { CURRENCIES } from '@/utils/constants';
 import { PERSON_COLORS, personColors } from './personColors';
 
 import { Card } from '@/components/ui/Card';
+import { chartChrome } from '@/lib/charts/palette';
 interface CompareLineChartProps {
   chart: CompareDataResponse['chart'];
   users: PeerStatCard[];
@@ -65,12 +66,12 @@ export default function CompareLineChart({ chart, users, currency }: CompareLine
     typeof document !== 'undefined' &&
     document.documentElement.classList.contains('dark');
 
-  const gridColor = isDark ? '#374151' : '#e5e7eb';
-  const tickColor = isDark ? '#9ca3af' : '#6b7280';
-  const tooltipBg = isDark ? '#1f2937' : '#ffffff';
-  const tooltipBorder = isDark ? '#4b5563' : '#d1d5db';
+  const gridColor = chartChrome(isDark).grid;
+  const tickColor = chartChrome(isDark).tick;
+  const tooltipBg = chartChrome(isDark).surface;
+  const tooltipBorder = chartChrome(isDark).border;
   const tooltipTextPrimary = isDark ? '#f3f4f6' : '#111827';
-  const tooltipTextSecondary = isDark ? '#9ca3af' : '#6b7280';
+  const tooltipTextSecondary = chartChrome(isDark).tick;
 
   return (
     <Card padding="none" className="p-4 sm:p-6">
@@ -195,7 +196,7 @@ export default function CompareLineChart({ chart, users, currency }: CompareLine
                     r: 6,
                     stroke: color,
                     strokeWidth: 3,
-                    fill: isDark ? '#1f2937' : '#ffffff',
+                    fill: chartChrome(isDark).surface,
                     style: { filter: 'drop-shadow(0 2px 4px rgba(0,0,0,0.2))' },
                   }}
                   animationDuration={800}

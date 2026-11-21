@@ -24,6 +24,7 @@ import { netWorthOf } from '@/lib/dashboard/periodChange';
 import { Card } from '@/components/ui/Card';
 import { niceAxis } from '@/utils/niceAxis';
 import type { LifeCash } from '@/hooks/useGoals';
+import { SERIES } from '@/lib/charts/palette';
 
 interface WalletNetWorthCardProps {
     stats: {
@@ -80,21 +81,21 @@ const WALLET_DEF_CONFIGS = [
 ] as const;
 
 const WALLET_COLORS = {
-    sky: { border: 'border-l-sky-400', text: 'text-sky-700 dark:text-sky-400', dot: '#0ea5e9' },
-    violet: { border: 'border-l-violet-400', text: 'text-violet-600 dark:text-violet-400', dot: '#8b5cf6' },
-    amber: { border: 'border-l-amber-400', text: 'text-amber-700 dark:text-amber-400', dot: '#f59e0b' },
+    sky: { border: 'border-l-sky-400', text: 'text-sky-700 dark:text-sky-400', dot: SERIES.sky },
+    violet: { border: 'border-l-violet-400', text: 'text-violet-600 dark:text-violet-400', dot: SERIES.violet },
+    amber: { border: 'border-l-amber-400', text: 'text-amber-700 dark:text-amber-400', dot: SERIES.amber },
 };
 
 /** The empty allocation ring: drawn in the wrapper's text colour, so it follows the theme. */
 const EMPTY_RING = 'currentColor';
 
 const CHART_COLORS = {
-    life:       '#0ea5e9', // sky-500
-    portfolio:  '#8b5cf6', // violet-500
-    emergency:  '#f59e0b', // amber-500
+    life:       SERIES.sky, // sky-500
+    portfolio:  SERIES.violet, // violet-500
+    emergency:  SERIES.amber, // amber-500
     debt:       '#dc2626', // error-600 (was rose-500 #f43f5e — corrected to match error token)
-    total:      '#6366f1', // indigo-500
-    netWorth:   '#10b981', // emerald-500 — assets − liabilities (the card's headline metric)
+    total:      SERIES.indigo, // indigo-500
+    netWorth:   SERIES.emerald, // emerald-500 — assets − liabilities (the card's headline metric)
 } as const;
 
 interface TooltipProps {
@@ -458,24 +459,24 @@ export function WalletNetWorthCard({
                                     <CartesianGrid strokeDasharray="3 3" stroke="currentColor" className="text-gray-200 dark:text-gray-700 opacity-50" vertical={false} />
                                     <XAxis dataKey="displayDate" tick={{ fill: 'currentColor', fontSize: 12, fontWeight: 500 }} className="text-gray-500 dark:text-gray-400" tickLine={false} interval="preserveStartEnd" />
                                     <YAxis tick={{ fill: 'currentColor', fontSize: 12, fontWeight: 500 }} className="text-gray-500 dark:text-gray-400" tickLine={false} tickFormatter={(v) => isValueVisible ? yTick(v) : '•••'} width={84} tickMargin={4} domain={animatedDomain} ticks={axisSettled ? yAxis.ticks : undefined} />
-                                    <Tooltip content={<CustomTooltip isValueVisible={isValueVisible} walletDefs={WALLET_DEFS} t={t} />} cursor={{ stroke: '#0ea5e9', strokeWidth: 1.5, strokeDasharray: '5 5' }} />
+                                    <Tooltip content={<CustomTooltip isValueVisible={isValueVisible} walletDefs={WALLET_DEFS} t={t} />} cursor={{ stroke: SERIES.sky, strokeWidth: 1.5, strokeDasharray: '5 5' }} />
                                     {lineVisibility.totalAsset && (
-                                        <Area type="monotone" dataKey="totalAsset" stroke={CHART_COLORS.total} strokeWidth={2.5} fill="none" fillOpacity={1} dot={false} activeDot={{ r: 4, fill: '#6366f1', stroke: 'white', strokeWidth: 2 }} name="Total Assets" />
+                                        <Area type="monotone" dataKey="totalAsset" stroke={CHART_COLORS.total} strokeWidth={2.5} fill="none" fillOpacity={1} dot={false} activeDot={{ r: 4, fill: SERIES.indigo, stroke: 'white', strokeWidth: 2 }} name="Total Assets" />
                                     )}
                                     {lineVisibility.netWorth && (
                                         <Area type="monotone" dataKey="netWorth" stroke={CHART_COLORS.netWorth} strokeWidth={2.5} fill="url(#nwc-netWorthGrad)" fillOpacity={1} dot={false} activeDot={{ r: 4, fill: CHART_COLORS.netWorth, stroke: 'white', strokeWidth: 2 }} name={t('wallet.netWorth', 'Net Worth')} />
                                     )}
                                     {lineVisibility.emergencyWallet && (
-                                        <Area type="monotone" dataKey="emergencyWallet" stroke={CHART_COLORS.emergency} strokeWidth={2} fill="url(#nwc-emergencyGrad)" fillOpacity={1} dot={false} activeDot={{ r: 4, fill: '#f59e0b', stroke: 'white', strokeWidth: 2 }} name={t('wallet.emergencyFund', 'Emergency Fund')} />
+                                        <Area type="monotone" dataKey="emergencyWallet" stroke={CHART_COLORS.emergency} strokeWidth={2} fill="url(#nwc-emergencyGrad)" fillOpacity={1} dot={false} activeDot={{ r: 4, fill: SERIES.amber, stroke: 'white', strokeWidth: 2 }} name={t('wallet.emergencyFund', 'Emergency Fund')} />
                                     )}
                                     {lineVisibility.portfolioWallet && (
-                                        <Area type="monotone" dataKey="portfolioWallet" stroke={CHART_COLORS.portfolio} strokeWidth={2} fill="url(#nwc-portfolioGrad)" fillOpacity={1} dot={false} activeDot={{ r: 4, fill: '#8b5cf6', stroke: 'white', strokeWidth: 2 }} name={t('wallet.portfolioWallet', 'Portfolio')} />
+                                        <Area type="monotone" dataKey="portfolioWallet" stroke={CHART_COLORS.portfolio} strokeWidth={2} fill="url(#nwc-portfolioGrad)" fillOpacity={1} dot={false} activeDot={{ r: 4, fill: SERIES.violet, stroke: 'white', strokeWidth: 2 }} name={t('wallet.portfolioWallet', 'Portfolio')} />
                                     )}
                                     {lineVisibility.lifeWallet && (
-                                        <Area type="monotone" dataKey="lifeWallet" stroke={CHART_COLORS.life} strokeWidth={2} fill="url(#nwc-lifeGrad)" fillOpacity={1} dot={false} activeDot={{ r: 4, fill: '#0ea5e9', stroke: 'white', strokeWidth: 2 }} name={t('wallet.lifeWallet', 'Life Wallet')} />
+                                        <Area type="monotone" dataKey="lifeWallet" stroke={CHART_COLORS.life} strokeWidth={2} fill="url(#nwc-lifeGrad)" fillOpacity={1} dot={false} activeDot={{ r: 4, fill: SERIES.sky, stroke: 'white', strokeWidth: 2 }} name={t('wallet.lifeWallet', 'Life Wallet')} />
                                     )}
                                     {hasDebtTrend && lineVisibility.debtBalance && (
-                                        <Area type="monotone" dataKey="debtBalance" stroke={CHART_COLORS.debt} strokeWidth={2} strokeDasharray="5 3" fill="none" fillOpacity={1} dot={false} activeDot={{ r: 4, fill: '#f43f5e', stroke: 'white', strokeWidth: 2 }} name={t('wallet.debtBalance', 'Debt Balance')} />
+                                        <Area type="monotone" dataKey="debtBalance" stroke={CHART_COLORS.debt} strokeWidth={2} strokeDasharray="5 3" fill="none" fillOpacity={1} dot={false} activeDot={{ r: 4, fill: SERIES.rose, stroke: 'white', strokeWidth: 2 }} name={t('wallet.debtBalance', 'Debt Balance')} />
                                     )}
                                 </AreaChart>
                             </ResponsiveContainer>
@@ -609,9 +610,9 @@ export function WalletNetWorthCard({
                                         // Nothing held yet: one grey ring. Three equal slices
                                         // read as a split that doesn't exist.
                                         data={hasAssets ? [
-                                            { name: WALLET_DEFS[0].label, value: Math.max(composition.life, 0.01), raw: stats.life_wallet, color: '#0ea5e9' },
-                                            { name: WALLET_DEFS[1].label, value: Math.max(composition.portfolio, 0.01), raw: stats.portfolio_wallet, color: '#8b5cf6' },
-                                            { name: WALLET_DEFS[2].label, value: Math.max(composition.emergency, 0.01), raw: stats.emergency_wallet, color: '#f59e0b' },
+                                            { name: WALLET_DEFS[0].label, value: Math.max(composition.life, 0.01), raw: stats.life_wallet, color: SERIES.sky },
+                                            { name: WALLET_DEFS[1].label, value: Math.max(composition.portfolio, 0.01), raw: stats.portfolio_wallet, color: SERIES.violet },
+                                            { name: WALLET_DEFS[2].label, value: Math.max(composition.emergency, 0.01), raw: stats.emergency_wallet, color: SERIES.amber },
                                         ] : [{ name: '', value: 1, raw: 0, color: EMPTY_RING }]}
                                         cx="50%"
                                         cy="50%"
@@ -663,7 +664,7 @@ export function WalletNetWorthCard({
                                             const isDebtSlice = entry.isDebt === true;
                                             return (
                                                 <div style={{ background: '#111827', border: '1px solid rgba(255,255,255,0.08)', borderRadius: 8, padding: '8px 12px', fontSize: 12, color: '#f9fafb', minWidth: 140 }}>
-                                                    <p className="font-semibold mb-1" style={{ color: isDebtSlice ? '#f43f5e' : entry.color }}>{entry.name}</p>
+                                                    <p className="font-semibold mb-1" style={{ color: isDebtSlice ? SERIES.rose : entry.color }}>{entry.name}</p>
                                                     <p className="tabular-nums text-gray-300">{isDebtSlice ? `${(debtRatio * 100).toFixed(1)}% ${t('wallet.ofAssets', 'of assets')}` : `${Number(entry.value).toFixed(1)}%`}</p>
                                                     <p className="tabular-nums font-medium text-white mt-0.5">{isValueVisible ? formatTWD(entry.raw) : '•••'}</p>
                                                 </div>
@@ -688,7 +689,7 @@ export function WalletNetWorthCard({
                         {/* Legend rows */}
                         <div className="w-full space-y-2">
                             {WALLET_DEFS.map(({ key, changeKey, label }, i) => {
-                                const DONUT_COLORS = ['#0ea5e9', '#8b5cf6', '#f59e0b'];
+                                const DONUT_COLORS = [SERIES.sky, SERIES.violet, SERIES.amber];
                                 // The 400 shades for text on dark: the 500s fell short of 4.5:1.
                                 const DONUT_TEXT_DARK = ['#38bdf8', '#a78bfa', '#fbbf24'];
                                 const color = DONUT_COLORS[i];
