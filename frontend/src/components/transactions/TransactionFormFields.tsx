@@ -57,6 +57,7 @@ export const CATEGORIES = {
     { value: 'Shopping',        label: 'Shopping',   icon: '🛍️' },
     { value: 'Entertainment',   label: 'Fun',        icon: '🎬' },
     { value: 'Healthcare',      label: 'Health',     icon: '🏥' },
+    { value: 'Insurance',       label: 'Insurance',  icon: '🛡️' },
     { value: 'Travel',          label: 'Travel',     icon: '✈️' },
     { value: 'Gift',            label: 'Gift',       icon: '🎁' },
     { value: 'Loan Payment',    label: 'Loan',       icon: '💳' },
@@ -134,6 +135,7 @@ export const EXPENSE_GROUPS: CategoryGroup[] = [
   ] },
   { key: 'other', label: 'Others', icon: '📦', category: 'Others', options: [
     choice('Healthcare', 'Health', '🏥'),
+    choice('Insurance', 'Insurance', '🛡️'),
     choice('Loan Payment', 'Loan', '💳'),
     choice('Others', 'Others', '📦'),
   ] },

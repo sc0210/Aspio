@@ -83,6 +83,7 @@ def test_ignores_chat(text):
         ("薪水", True, "Salary"),
         ("年終", True, "Bonus"),
         ("美甲", False, "Shopping"),     # beauty is a detail under Shopping, not its own category
+        ("車險保費", False, "Insurance"),
         ("隨便", False, "Others"),
         ("午餐", True, "Others"),        # income never takes an expense keyword
     ],

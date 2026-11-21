@@ -116,6 +116,7 @@ EXPENSE_KEYWORDS: dict[str, tuple[str, ...]] = {
     "Housing": ("房租", "租金", "管理費", "rent"),
     "Education": ("課程", "學費", "補習", "書", "udemy", "course", "tuition", "book"),
     "Gift": ("禮物", "紅包", "禮金", "gift"),
+    "Insurance": ("保險", "保費", "壽險", "醫療險", "車險", "insurance"),
     "Travel": ("機票", "住宿", "飯店", "旅館", "民宿", "訂房", "flight", "hotel", "airbnb"),
 }
 

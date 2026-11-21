@@ -117,10 +117,10 @@ describe('CashFields — guarding against easy mistakes', () => {
   });
 
   it('shows a category it does not list as its own chip, which is not a control', () => {
-    renderFields(form({ category: 'Insurance' }));
+    renderFields(form({ category: 'Education' }));
     // Shown, so the row reads as what it is; not a toggle, since it does nothing when pressed.
-    expect(screen.getByText('Insurance')).toBeInTheDocument();
-    expect(screen.queryByRole('button', { name: /Insurance/ })).not.toBeInTheDocument();
+    expect(screen.getByText('Education')).toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: /Education/ })).not.toBeInTheDocument();
   });
 
   it('keeps the two sides of a transfer different: picking From sets To to the other wallet', async () => {
@@ -230,6 +230,13 @@ describe('CashFields — expense groups first, finer choices optional', () => {
     renderFields(form({ category: 'Groceries' }), { onChange });
     await userEvent.click(tile(/^Food$/));
     expect(onChange).not.toHaveBeenCalled();
+  });
+
+  it('offers Insurance under Others', async () => {
+    const onChange = jest.fn();
+    renderFields(form({ category: 'Others' }), { onChange });
+    await userEvent.click(within(details()!).getByRole('button', { name: /Insurance/ }));
+    expect(onChange).toHaveBeenCalledWith('category', 'Insurance');
   });
 
   it('keeps income a flat list', () => {
