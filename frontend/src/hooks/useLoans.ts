@@ -16,6 +16,7 @@ import { QUERY_KEYS, invalidateDashboardData } from '@/hooks/useDataSynchronizat
 import { useSession } from 'next-auth/react';
 import { useAppMode } from '@/hooks/useAppMode';
 import { demoLoans } from '@/data/demoData';
+import { ApiError } from '@/lib/api-client';
 
 // From the shared map, so the invalidation group and this query cannot
 // disagree about what the key is.
@@ -73,25 +74,43 @@ export function deriveSummary(loans: DebtAccount[]): DebtAccountSummary {
 export function useLoans() {
   const { isDemo } = useAppMode();
   const scope = useLoansScope();
-  const { data, isLoading, error, refetch } = useQuery({
+  const { status: sessionStatus } = useSession();
+  // Both: authenticated, and a user id to scope the cache key by. Every sign-in
+  // sets session.user.id (lib/auth.ts jwt callback), so this never stalls; it
+  // keeps one account's loans out of a shared 'anon' cache entry.
+  const enabled = !isDemo && sessionStatus === 'authenticated' && scope !== 'anon';
+  const { data, isPending, error, isError, refetch } = useQuery({
     queryKey: [...LOANS_KEY, scope],
     queryFn: async () => {
       try {
         return await loanService.getLoans();
-      } catch {
-        return { success: true, data: [] as DebtAccount[], message: '' };
+      } catch (err) {
+        // A free account gets 403 PREMIUM_REQUIRED on the pages that only read its
+        // debt (dashboard, lifecycle): that genuinely means no loans to count. Any
+        // other failure used to return [] too, so /loans told a user with a mortgage
+        // to "add your first loan". Those must surface as errors.
+        if (err instanceof ApiError && err.status === 403) {
+          return { success: true, data: [] as DebtAccount[], message: '' };
+        }
+        throw err;
       }
     },
     staleTime: 5 * 60 * 1000,
     retry: false,
-    // Demo mode uses fixtures — never hit the real API (avoids 401s).
-    enabled: !isDemo,
+    // Demo mode uses fixtures — never hit the real API (avoids 401s). Nor before
+    // the session is authenticated: that request 401s and would flash the error card.
+    enabled,
   });
 
   const loans = isDemo ? demoLoans : (data?.data ?? []);
   const summary = deriveSummary(loans);
 
-  return { loans, summary, isLoading, error, refetch };
+  // An error only when there is nothing to show: a failed background refetch
+  // keeps the loans already on screen.
+  // Loading until the first answer, including while the session has no user yet
+  // (the query is disabled then, and a bare isLoading would flash the empty state).
+  const isLoading = !isDemo && (sessionStatus === 'loading' || (enabled && isPending));
+  return { loans, summary, isLoading, error, isError: !isDemo && isError && data === undefined, refetch };
 }
 
 /**

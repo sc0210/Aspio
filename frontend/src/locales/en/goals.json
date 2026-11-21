@@ -68,6 +68,7 @@
     "done": "✓ Done",
     "editTitle": "Edit goal details",
     "left": "{{amount}} left",
+    "over": "{{amount}} over target",
     "perMonth": "~{{amount}}/mo"
   },
   "categories": {
@@ -339,5 +340,10 @@
     "horizonShort": "Due within 3 years, with money in stocks, funds or crypto.",
     "goalLot": "Goal",
     "goalLotHint": "Bought with a goal's reserved money; selling it returns the proceeds to that goal."
+  },
+  "noMatch": {
+    "title": "No goals match these filters",
+    "subtitle": "Your goals are still here. Change or clear the filters to see them.",
+    "clear": "Clear filters"
   }
 }

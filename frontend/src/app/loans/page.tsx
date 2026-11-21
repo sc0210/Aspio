@@ -20,6 +20,7 @@ import { LoanCard } from '@/components/loans/LoanCard';
 import { AddLoanModal } from '@/components/loans/AddLoanModal';
 import { EditLoanModal } from '@/components/loans/EditLoanModal';
 import { RecordPaymentModal } from '@/components/loans/RecordPaymentModal';
+import { QueryErrorCard } from '@/components/ui/QueryErrorCard';
 import { useLoans, useDeleteLoan } from '@/hooks/useLoans';
 import { DebtAccount } from '@/services/loanService';
 import { formatCurrency } from '@/utils/formatters';
@@ -47,7 +48,7 @@ function fmtDate(dateStr: string | null) {
 
 function DesktopLoansPage() {
   const { t } = useTranslation('loans');
-  const { loans, summary, isLoading } = useLoans();
+  const { loans, summary, isLoading, isError, refetch } = useLoans();
   const deleteLoan = useDeleteLoan();
 
   const [showAddModal, setShowAddModal] = useState(false);
@@ -104,6 +105,8 @@ function DesktopLoansPage() {
         <RelatedMoneyLinks current="loans" />
 
         {/* Stats grid */}
+        {isError && <QueryErrorCard onRetry={() => refetch()} />}
+
         {summary && summary.loan_count > 0 && (
           <div data-tour="loans-stats" className="grid grid-cols-1 md:grid-cols-3 gap-4 animate-fade-in">
             <Card padding="sm" accent="rose">
@@ -152,7 +155,7 @@ function DesktopLoansPage() {
         {activeLoans.length > 0 && <div data-tour="loans-plan"><PayoffPlanner loans={activeLoans} /></div>}
 
         {/* Empty state */}
-        {!isLoading && loans.length === 0 && (
+        {!isLoading && !isError && loans.length === 0 && (
           <div className="bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 p-6 sm:p-12 text-center">
             <div className="max-w-md mx-auto">
               <div className="w-12 h-12 sm:w-16 sm:h-16 mx-auto mb-3 sm:mb-4 rounded-full bg-primary-100 dark:bg-primary-900/20 flex items-center justify-center">

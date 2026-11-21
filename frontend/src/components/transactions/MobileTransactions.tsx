@@ -7,6 +7,7 @@ import { CameraIcon, PlusIcon } from '@heroicons/react/24/outline';
 import { DashboardLayout } from '@/components/layout/DashboardLayout';
 import { LoadingSpinner } from '@/components/ui/LoadingSpinner';
 import { BiggerScreenHint } from '@/components/dashboard/BiggerScreenHint';
+import { QueryErrorCard } from '@/components/ui/QueryErrorCard';
 import { useTransactions } from '@/hooks/useTransactions';
 import { usePrivacy } from '@/contexts/PrivacyContext';
 import { getCategoryIcon } from '@/utils/categoryIcon';
@@ -28,7 +29,7 @@ export function MobileTransactions() {
     const editHref = useEditHref();
     const addHref = useAddHref();
     const { t, i18n } = useTranslation(['transactions', 'dashboard', 'common']);
-    const { transactions, isLoading } = useTransactions();
+    const { transactions, isLoading, error, refetch } = useTransactions();
     const { isValueVisible } = usePrivacy();
 
     const rows = (transactions ?? []) as Transaction[];
@@ -109,6 +110,8 @@ export function MobileTransactions() {
 
                 <BiggerScreenHint />
 
+                {/* The totals come from the same rows: on a failed fetch they would read NT$0. */}
+                {!(error && rows.length === 0) && (<>
                 {/* HERO — spent vs income this month */}
                 <section data-tour="tx-m-hero" className="rounded-3xl bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 shadow-sm p-5">
                     <p className="text-xs font-bold tracking-wide text-gray-500 dark:text-gray-400">
@@ -142,11 +145,14 @@ export function MobileTransactions() {
                         </div>
                     </div>
                 </section>
+                </>)}
 
                 {/* Recent transactions — grouped by day */}
                 <section data-tour="tx-m-recent">
                     <p className="px-1 mb-2.5 text-sm font-extrabold tracking-tight text-gray-900 dark:text-white">{t('transactions:recent', 'Recent')}</p>
-                    {model.groups.length === 0 ? (
+                    {error && model.groups.length === 0 ? (
+                        <QueryErrorCard onRetry={() => refetch()} />
+                    ) : model.groups.length === 0 ? (
                         <Card padding="xl" shadow="none" className="text-center">
                             <p className="text-sm text-gray-500 dark:text-gray-400">{t('transactions:empty.title', 'No transactions yet')}</p>
                         </Card>

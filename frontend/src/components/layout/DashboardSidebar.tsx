@@ -14,7 +14,7 @@ import {
 import { cn } from '@/utils/cn';
 import { useDemo } from '@/contexts/DemoContext';
 import { useIsAdmin } from '@/hooks/useAdmin';
-import { useScrollLock } from '@/hooks/useScrollLock';
+import { useDialog } from '@/hooks/useDialog';
 import { getNavigationSections, type NavSection } from '@/lib/navigation';
 import { useFeatures } from '@/hooks/useFeatures';
 import { useAccessTier } from '@/hooks/useAccessTier';
@@ -72,6 +72,12 @@ export function DashboardSidebar({ open, collapsed, onToggleCollapsed, onClose }
   const { isAdmin } = useIsAdmin();
   const { overrides, setSectionOpen } = useSectionState();
   const mobileSidebarRef = useRef<HTMLDivElement>(null);
+  // The phone drawer is a modal while open: role, focus trap, Escape, focus return.
+  const { panelRef: dialogPanelRef, dialogProps } = useDialog({ isOpen: open, onClose });
+  const setMobileSidebar = useCallback((el: HTMLDivElement | null) => {
+    mobileSidebarRef.current = el;
+    dialogPanelRef.current = el;
+  }, [dialogPanelRef]);
   // The collapsed rail's tooltip, positioned in viewport coordinates.
   //
   // It cannot be a child of the row it describes: <nav> scrolls, and a box with
@@ -113,9 +119,8 @@ export function DashboardSidebar({ open, collapsed, onToggleCollapsed, onClose }
     };
   }, [open, onClose]);
 
-  // Freeze the page behind the drawer. This used to set body.style.overflow,
-  // which does nothing here: <main> is the scroll container, not body.
-  useScrollLock(open);
+  // The page behind the drawer is frozen by useDialog's useScrollLock, which
+  // locks <main> (the scroll container here), not body.
 
   // Swipe-left to close
   useEffect(() => {
@@ -340,7 +345,13 @@ export function DashboardSidebar({ open, collapsed, onToggleCollapsed, onClose }
           browser toolbar and home indicator cover it. z above the bar's
           backdrop, below dialogs (z-50). */}
       <div
-        ref={mobileSidebarRef}
+        ref={setMobileSidebar}
+        {...(open ? dialogProps : {})}
+        // It stays mounted and slides off-screen, so without inert its ~12 links
+        // stayed in the tab order and the a11y tree on every page (MoreSheet had
+        // the same bug and the same fix).
+        inert={!open}
+        aria-label={t('navigation.menu', 'Menu')}
         className={cn(
           'md:hidden fixed top-0 bottom-[calc(3.5rem+1px+env(safe-area-inset-bottom,0px))] left-0 z-[45] w-72 max-w-[85vw]',
           // flex-col like the desktop wrapper: the nav list (flex-1) scrolls and

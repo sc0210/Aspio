@@ -435,13 +435,12 @@
       "quantity": "持有數量:",
       "avgCost": "平均成本:",
       "currentPrice": "現價:",
-      "cashBalance": "現金餘額:",
       "grossProceeds": "總收入:",
       "feesAndTax": "手續費 & 稅:",
       "netProceeds": "淨收入:",
-      "estimatedPnl": "預估損益:",
-      "newCashBalance": "新現金餘額:"
+      "estimatedPnl": "預估損益:"
     },
+    "proceedsDestination": "淨收入會以新台幣存入生活錢包；若此批持股已預留給目標，則回到該目標。",
     "notesPlaceholder": "賣出原因或其他備註...",
     "pickHolding": "選擇要賣出的持倉 ({{count}})",
     "processing": "處理中...",

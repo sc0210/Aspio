@@ -12,6 +12,7 @@ import { AddLoanModal } from '@/components/loans/AddLoanModal';
 import { RecordPaymentModal } from '@/components/loans/RecordPaymentModal';
 import { UpcomingPayments } from '@/components/loans/UpcomingPayments';
 import { useLoans } from '@/hooks/useLoans';
+import { QueryErrorCard } from '@/components/ui/QueryErrorCard';
 import { usePrivacy } from '@/contexts/PrivacyContext';
 import type { DebtAccount } from '@/services/loanService';
 import { formatCurrency } from '@/utils/formatters';
@@ -36,7 +37,7 @@ function fmtDate(dateStr: string | null, locale?: string) {
  */
 export function MobileLoans() {
     const { t, i18n } = useTranslation(['loans', 'dashboard']);
-    const { loans, summary, isLoading } = useLoans();
+    const { loans, summary, isLoading, isError, refetch } = useLoans();
     const { isValueVisible } = usePrivacy();
     const [showAdd, setShowAdd] = useState(false);
     const [paying, setPaying] = useState<DebtAccount | null>(null);
@@ -77,7 +78,9 @@ export function MobileLoans() {
 
                 <BiggerScreenHint />
 
-                {active.length === 0 ? (
+                {isError ? (
+                    <QueryErrorCard onRetry={() => refetch()} />
+                ) : active.length === 0 ? (
                     <div className="rounded-3xl bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 p-8 text-center space-y-3">
                         <p className="text-4xl" aria-hidden="true">🏦</p>
                         <p className="text-sm text-gray-500 dark:text-gray-400">{t('loans:emptyState.title')}</p>

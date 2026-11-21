@@ -116,3 +116,13 @@ async def test_preferences_round_trip(authenticated_client):
     again = data_of(authenticated_client.get(f"{BASE}/preferences"))
     assert again["digest_frequency"] == "weekly" and again["email_enabled"] is False
     assert authenticated_client.patch(f"{BASE}/preferences", json={"quiet_hours_start": "25:00"}).status_code == 422
+
+
+async def test_preferences_can_be_changed_again(authenticated_client):
+    # The first PATCH creates the row; a later one updates it. The update used to 500
+    # (the expired updated_at lazy-loaded during serialisation) and roll back.
+    assert data_of(authenticated_client.patch(f"{BASE}/preferences", json={"transaction_alerts": False}))[
+        "transaction_alerts"] is False
+    r = authenticated_client.patch(f"{BASE}/preferences", json={"transaction_alerts": True})
+    assert r.status_code == 200 and r.json()["data"]["transaction_alerts"] is True
+    assert data_of(authenticated_client.get(f"{BASE}/preferences"))["transaction_alerts"] is True

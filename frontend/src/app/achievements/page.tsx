@@ -7,6 +7,7 @@ import { PageHeader } from '@/components/layout/PageHeader';
 import { LoadingSpinner } from '@/components/ui/LoadingSpinner';
 import { AchievementDetailModal } from '@/components/goals/AchievementDetailModal';
 import { cn } from '@/utils/cn';
+import { QueryErrorCard } from '@/components/ui/QueryErrorCard';
 import {
   useGamificationStats,
   useAchievementProgress,
@@ -423,8 +424,12 @@ export default function AchievementsPage() {
 
   // Fetch only when authenticated — gating on `!isDemo` alone races the async
   // demo-cookie detection and fires a 401 before demo mode resolves.
-  const { data: liveStats, isLoading: statsLoading } = useGamificationStats({ enabled: isAuthenticated });
-  const { data: liveProgress, isLoading: progressLoading } = useAchievementProgress({ enabled: isAuthenticated });
+  const { data: liveStats, isLoading: statsLoading, isError: statsFailed, refetch: refetchStats } =
+    useGamificationStats({ enabled: isAuthenticated });
+  const { data: liveProgress, isLoading: progressLoading, isError: progressFailed, refetch: refetchProgress } =
+    useAchievementProgress({ enabled: isAuthenticated });
+  // A failed fetch must not read as a reset account (Level 0, 0-day streak, no badges).
+  const loadFailed = !isDemo && ((statsFailed && !liveStats) || (progressFailed && !liveProgress));
   const updateStreak = useUpdateStreak();
   const checkAchievements = useCheckAchievements();
 
@@ -542,6 +547,8 @@ export default function AchievementsPage() {
 
         {isLoading ? (
           <div className="flex justify-center py-20"><LoadingSpinner /></div>
+        ) : loadFailed ? (
+          <QueryErrorCard onRetry={() => { void refetchStats(); void refetchProgress(); }} />
         ) : (
           <>
             {/* On phones the streak is the hero, above the level card. */}

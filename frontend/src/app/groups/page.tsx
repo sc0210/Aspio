@@ -19,6 +19,7 @@ import { apiClient } from '@/lib/api-client';
 import { useTranslation } from 'react-i18next';
 import { formatCurrency } from '@/utils/formatters';
 import { useAppMode } from '@/hooks/useAppMode';
+import { QueryErrorCard } from '@/components/ui/QueryErrorCard';
 import { useIsMobile } from '@/hooks/useMediaQuery';
 import { MobileGroups } from '@/components/groups/MobileGroups';
 import {
@@ -66,6 +67,22 @@ function GroupCard({ group, isDemo, selfId }: { group: Group; isDemo: boolean; s
   const [expanded, setExpanded] = useState(false);
   const [balances, setBalances] = useState<GroupBalances | null>(null);
   const [loading, setLoading] = useState(false);
+  const [balancesFailed, setBalancesFailed] = useState(false);
+
+  const fetchBalances = async () => {
+    setLoading(true);
+    setBalancesFailed(false);
+    try {
+      const res = await apiClient.get<GroupBalances>(`/line-bot/groups/${group.id}/balances`);
+      setBalances(res.data ?? null);
+    } catch {
+      // Not an empty balance list: that rendered "All settled up" on any failure.
+      setBalances(null);
+      setBalancesFailed(true);
+    } finally {
+      setLoading(false);
+    }
+  };
 
   const toggle = async () => {
     if (!expanded && !balances) {
@@ -82,15 +99,7 @@ function GroupCard({ group, isDemo, selfId }: { group: Group; isDemo: boolean; s
         setExpanded(true);
         return;
       }
-      setLoading(true);
-      try {
-        const res = await apiClient.get<GroupBalances>(`/line-bot/groups/${group.id}/balances`);
-        setBalances(res.data ?? null);
-      } catch {
-        setBalances({ group_id: group.id, currency: group.currency, balances: [], member_names: {} });
-      } finally {
-        setLoading(false);
-      }
+      await fetchBalances();
     }
     setExpanded(v => !v);
   };
@@ -127,6 +136,12 @@ function GroupCard({ group, isDemo, selfId }: { group: Group; isDemo: boolean; s
           )}
         </button>
       </div>
+
+      {expanded && balancesFailed && (
+        <div className="border-t border-gray-100 dark:border-gray-800 px-4 sm:px-5 py-4">
+          <QueryErrorCard onRetry={fetchBalances} title={t('balancesFailed')} />
+        </div>
+      )}
 
       {expanded && balances && (
         <div className="border-t border-gray-100 dark:border-gray-800 px-4 sm:px-5 py-4">
@@ -182,6 +197,8 @@ function DesktopGroupsPage() {
   const [linkStatus, setLinkStatus] = useState<LinkStatus | null>(null);
   const [groups, setGroups] = useState<Group[]>([]);
   const [loading, setLoading] = useState(true);
+  const [loadFailed, setLoadFailed] = useState(false);
+  const [attempt, setAttempt] = useState(0);
 
   useEffect(() => {
     // Demo mode: render from fixtures, never call the backend.
@@ -192,23 +209,32 @@ function DesktopGroupsPage() {
       return;
     }
 
+    // A retry can start while an older load is in flight; only the latest may land.
+    let cancelled = false;
     async function load() {
       try {
         const statusRes = await apiClient.get<LinkStatus>('/line-bot/link-status');
         const status = statusRes.data ?? null;
+        if (cancelled) return;
         setLinkStatus(status);
         if (status?.linked) {
           const groupsRes = await apiClient.get<Group[]>('/line-bot/groups');
+          if (cancelled) return;
           setGroups(groupsRes.data ?? []);
         }
       } catch {
-        // ignore
+        // Not "ignore": a null link status rendered the Connect LINE prompt to a
+        // user who is linked, and the groups list read as empty.
+        if (!cancelled) setLoadFailed(true);
       } finally {
-        setLoading(false);
+        if (!cancelled) setLoading(false);
       }
     }
     load();
-  }, [isDemo]);
+    return () => { cancelled = true; };
+  }, [isDemo, attempt]);
+
+  const retryLoad = () => { setLoadFailed(false); setLoading(true); setAttempt(a => a + 1); };
 
   return (
     <DashboardLayout>
@@ -240,6 +266,8 @@ function DesktopGroupsPage() {
           <div className="flex justify-center py-16">
             <LoadingSpinner size="lg" />
           </div>
+        ) : loadFailed ? (
+          <QueryErrorCard onRetry={retryLoad} />
         ) : !linkStatus?.linked ? (
           /* Not linked — connect prompt */
           <div className="rounded-2xl bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-700 shadow-sm overflow-hidden animate-fade-in">
@@ -255,11 +283,19 @@ function DesktopGroupsPage() {
               <p className="text-sm text-gray-500 dark:text-gray-400 mb-6 max-w-xs mx-auto">
                 {t('groups:notLinked.description')}
               </p>
-              <Button asChild>
-                <Link href="/link-line">
-                  {t('groups:notLinked.button')}
-                </Link>
-              </Button>
+              {/* Linking starts in LINE (/link replies with a one-time URL); a bare
+                  /link-line link only ever showed "No linking token found". */}
+              <ol className="inline-flex flex-col items-start gap-1.5 text-left text-sm text-gray-600 dark:text-gray-300">
+                {(['step1', 'step2', 'step3'] as const).map((step, i) => (
+                  <li key={step} className="flex gap-2">
+                    <span className="shrink-0 w-5 h-5 rounded-full bg-[#06C755]/10 text-[#05b34d] dark:text-[#06C755] text-xs font-semibold flex items-center justify-center">{i + 1}</span>
+                    <span>{t(`common:settings.lineBot.connectSteps.${step}`)}</span>
+                  </li>
+                ))}
+              </ol>
+              <div className="mt-5">
+                <Button variant="outline" onClick={retryLoad}>{t('common:settings.lineBot.checkAgain')}</Button>
+              </div>
             </div>
           </div>
         ) : groups.length === 0 ? (

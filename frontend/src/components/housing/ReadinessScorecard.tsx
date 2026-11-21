@@ -39,6 +39,8 @@ interface Props {
     monthlyHousingCost: number;
     /** Months the income/expense seed averages over (0 = current-month fallback). */
     cashFlowBasisMonths?: number;
+    /** The house price being scored, shown in the header so it is never hidden. */
+    housePrice?: number;
 }
 
 const STATUS_STYLES: Record<ConditionStatus, { bar: string; text: string; ring: string; dot: string }> = {
@@ -62,7 +64,7 @@ const STATUS_STYLES: Record<ConditionStatus, { bar: string; text: string; ring: 
     },
 };
 
-export function ReadinessScorecard({ seed, cashNeededAtPurchase, monthlyHousingCost, cashFlowBasisMonths = 0 }: Props) {
+export function ReadinessScorecard({ seed, cashNeededAtPurchase, monthlyHousingCost, cashFlowBasisMonths = 0, housePrice }: Props) {
     const { t } = useTranslation('common');
     const { isValueVisible } = usePrivacy();
 
@@ -155,6 +157,13 @@ export function ReadinessScorecard({ seed, cashNeededAtPurchase, monthlyHousingC
                     <h3 className="min-w-0 text-sm font-semibold text-gray-700 dark:text-gray-300 flex items-center gap-1.5">
                         <ShieldCheckIcon className="w-4 h-4 shrink-0 text-prosperity-700 dark:text-prosperity-500" />
                         <span className="truncate">{t('housing.ready.title', 'Am I ready to buy?')}</span>
+                        {housePrice != null && housePrice > 0 && (
+                            <span className="shrink-0 font-normal text-gray-500 dark:text-gray-400">
+                                · {t('housing.ready.scoringPrice', 'for a {{price}} home', {
+                                    price: isValueVisible ? formatTWDCompact(housePrice) : '•••',
+                                })}
+                            </span>
+                        )}
                     </h3>
                     <ChevronDownIcon className={cn('w-4 h-4 shrink-0 text-gray-500 dark:text-gray-400 transition-transform', open && 'rotate-180')} />
                 </button>

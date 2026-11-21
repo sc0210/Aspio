@@ -68,6 +68,7 @@
     "done": "✓ 完成",
     "editTitle": "編輯目標詳情",
     "left": "尚差 {{amount}}",
+    "over": "超出目標 {{amount}}",
     "perMonth": "~{{amount}}/月"
   },
   "categories": {
@@ -337,5 +338,10 @@
     "horizonShort": "3 年內到期，仍有資金投入股票、基金或加密貨幣。",
     "goalLot": "目標",
     "goalLotHint": "以目標預留的資金買入；賣出後資金會回到該目標。"
+  },
+  "noMatch": {
+    "title": "沒有符合篩選條件的目標",
+    "subtitle": "你的目標都還在，調整或清除篩選即可看到。",
+    "clear": "清除篩選"
   }
 }

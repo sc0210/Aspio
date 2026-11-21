@@ -220,7 +220,9 @@ export function useGoals(status?: string, category?: string) {
                 return filtered;
             }
 
-            const params = new URLSearchParams();
+            // The endpoint pages at 50 by default; the goals page filters on the
+            // client, so ask for its maximum.
+            const params = new URLSearchParams({ limit: '200' });
             if (status) params.append('status', status);
             if (category) params.append('category', category);
 

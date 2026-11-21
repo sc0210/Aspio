@@ -12,6 +12,7 @@ import { formatCashAmount } from '@/utils/formatters';
 import { Transaction } from '@/shared/types';
 import { useTransactions } from '@/hooks/useTransactions';
 import { getCategoryIcon } from '@/utils/categoryIcon';
+import { QueryErrorCard } from '@/components/ui/QueryErrorCard';
 import { Card } from '@/components/ui/Card';
 
 function RecentTransactionsSkeleton() {
@@ -105,7 +106,7 @@ export function RecentTransactions({ dateRange }: RecentTransactionsProps) {
 
   const dateRangeFilter = getDateFilter(dateRange);
 
-  const { transactions: fetchedTransactions, isLoading } = useTransactions({
+  const { transactions: fetchedTransactions, isLoading, error, refetch } = useTransactions({
     limit: 5,
     sortBy: 'date',
     sortOrder: 'desc',
@@ -132,6 +133,9 @@ export function RecentTransactions({ dateRange }: RecentTransactionsProps) {
 
       {isLoading ? (
         <RecentTransactionsSkeleton />
+      ) : error && transactions.length === 0 ? (
+        // Not "No transactions yet": that told a failed fetch it had nothing.
+        <QueryErrorCard onRetry={() => refetch()} className="border-0 shadow-none p-0" />
       ) : transactions.length === 0 ? (
         <div className="text-center py-8">
           <div className="inline-flex items-center justify-center w-12 h-12 rounded-full bg-gray-100 dark:bg-gray-700 mb-3">

@@ -117,6 +117,8 @@
   "errorState": {
     "description": "An unexpected error occurred while loading this page.",
     "iconLabel": "Error",
+    "loadFailed": "Couldn't load this",
+    "loadFailedHint": "Check your connection and try again. The figures here are not zero, they just didn't arrive.",
     "title": "Something went wrong",
     "titleWithSegment": "Failed to load {{segment}}",
     "tryAgain": "Try again"
@@ -249,7 +251,8 @@
       "scoreLabel": "readiness score",
       "short": "short",
       "target": "target",
-      "title": "Am I ready to buy?"
+      "title": "Am I ready to buy?",
+      "scoringPrice": "for a {{price}} home"
     },
     "sim": {
       "after": "After {{n}} years",
@@ -1063,15 +1066,7 @@
     "hideSmallPositionsDesc": "Simplify charts by hiding low-value holdings",
     "language": "Language",
     "languageDesc": "Choose your preferred language",
-    "notifGoals": "Goal deadline alerts",
-    "notifGoalsDesc": "Remind me when savings goals are approaching their target date",
-    "notifNote": "Push notifications require browser permission. In-app alerts are always on.",
-    "notifPeers": "Peer updates",
-    "notifPeersDesc": "Get notified when a peer accepts your invite or updates a shared goal",
-    "notifPortfolio": "Portfolio alerts",
-    "notifPortfolioDesc": "Notify me of significant portfolio movements",
-    "notifTransactions": "Weekly transaction summary",
-    "notifTransactionsDesc": "Receive a weekly digest of your spending",
+    "notifNote": "These alerts appear in the bell. Mute a shared-spending partner from the Savings page.",
     "notifications": "Notifications",
     "password": "Password",
     "passwordDesc": "Change your login password",
@@ -1114,8 +1109,7 @@
       "loadFailedHint": "Check your connection and try again",
       "retry": "Retry",
       "notConnected": "Not connected",
-      "notConnectedHint": "Run /link in a LINE group to connect",
-      "connect": "Connect",
+      "notConnectedHint": "Linking starts in LINE",
       "categoriesTitle": "/txn Categories",
       "commandsTitle": "Bot Commands",
       "commands": {
@@ -1128,10 +1122,22 @@
         "summary": "This month's group totals",
         "history": "Last 5 group expenses",
         "undo": "Remove your last expense"
+      },
+      "checkAgain": "Check again",
+      "connectSteps": {
+        "step1": "Open a chat with the Aspiro bot in LINE, or a group it is in.",
+        "step2": "Send /link.",
+        "step3": "Tap Connect in the bot's reply, then come back and tap Check again."
       }
     },
     "analytics": "Usage analytics",
-    "analyticsDesc": "Count page views and load speed to improve Aspiro. Never includes your financial data."
+    "analyticsDesc": "Count page views and load speed to improve Aspiro. Never includes your financial data.",
+    "notifGoalsAchievements": "Goals & achievements",
+    "notifGoalsAchievementsDesc": "Tell me when I reach a savings goal or unlock an achievement",
+    "notifSpendingBills": "Spending & bill alerts",
+    "notifSpendingBillsDesc": "Warn me when this month's spending runs above my usual, and before a loan payment is due",
+    "notifLoadFailed": "Couldn't load your notification settings.",
+    "notifSaveFailed": "Couldn't save that change. Try again."
   },
   "status": {
     "active": "Active",

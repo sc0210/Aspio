@@ -34,6 +34,8 @@ interface WalletNetWorthCardProps {
         emergency_wallet: number;
         monthlyIncome: number;
         monthlyExpenses: number;
+        /** Already normalised to a monthly spending rate; null when there was no spending. */
+        emergencyFundMonths?: number | null;
     };
     walletTrendsData: WalletTrendDataPoint[];
     netWorthChangePercent?: number;
@@ -227,9 +229,9 @@ export function WalletNetWorthCard({
         };
     }, [stats]);
 
-    const emergencyRunway = stats.monthlyExpenses > 0
-        ? stats.emergency_wallet / stats.monthlyExpenses
-        : null;
+    // Not emergency / monthlyExpenses: that field is the selected PERIOD's total,
+    // so the runway read ~0.3 mo on 1Y and was inflated on 7D.
+    const emergencyRunway = stats.emergencyFundMonths ?? null;
 
     const chartData = useMemo(() => {
         if (!walletTrendsData) return [];

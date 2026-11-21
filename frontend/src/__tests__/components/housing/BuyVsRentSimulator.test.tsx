@@ -83,3 +83,41 @@ describe('BuyVsRentSimulator — reported terms', () => {
         expect(latest().upfrontCash).toBeGreaterThan(before.upfrontCash);
     });
 });
+
+describe('BuyVsRentSimulator — suggested price', () => {
+    const priceInput = () => screen.getByLabelText('House price') as HTMLInputElement;
+    function renderWith(housePrice: number) {
+        const reported: SimulatorDerived[] = [];
+        const ui = (p: number) => (
+            <I18nextProvider i18n={i18n}>
+                <BuyVsRentSimulator defaults={{ housePrice: p }} onDerivedChange={(d) => reported.push(d)} />
+            </I18nextProvider>
+        );
+        const r = render(ui(housePrice));
+        fireEvent.click(screen.getByRole('button', { name: /Buy vs\. Rent/ }));
+        return { rerender: (p: number) => r.rerender(ui(p)), latest: () => reported[reported.length - 1] };
+    }
+
+    it('follows a suggestion that settles after mount, keeping other inputs', () => {
+        const { rerender, latest } = renderWith(25_000_000);
+        fireEvent.change(slider(/Mortgage rate/), { target: { value: '4' } });
+        rerender(6_800_000);
+        expect(latest().housePrice).toBe(6_800_000);
+        expect(latest().terms.mortgageRatePct).toBe(4);
+    });
+
+    it('stops following once the user sets a price', () => {
+        const { rerender, latest } = renderWith(6_800_000);
+        fireEvent.change(priceInput(), { target: { value: '1000' } });
+        rerender(7_000_000);
+        expect(latest().housePrice).toBe(10_000_000);
+    });
+
+    it('follows again after Reset', () => {
+        const { rerender, latest } = renderWith(6_800_000);
+        fireEvent.change(priceInput(), { target: { value: '1000' } });
+        fireEvent.click(screen.getByRole('button', { name: /Reset/ }));
+        rerender(7_000_000);
+        expect(latest().housePrice).toBe(7_000_000);
+    });
+});

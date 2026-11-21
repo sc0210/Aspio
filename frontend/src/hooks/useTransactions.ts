@@ -68,8 +68,13 @@ export function useTransactions(options: UseTransactionsOptions = {}) {
       ? ['transactions', cacheKeyOptions(options), 'demo', demoRevision ?? 0]
       : ['transactions', cacheKeyOptions(options)],
     async () => {
+      // The service reports a failure as { success: false, data: [] }. Throw it, so
+      // the query is in error and lists can say so; returning it made every list
+      // read "No transactions yet" when the request had failed.
       if (!options.fetchAll) {
-        return transactionService.getTransactions(options);
+        const res = await transactionService.getTransactions(options);
+        if (!res.success) throw new Error(res.message || 'Failed to load transactions');
+        return res;
       }
       // Aggregate every page in the selected range so client-side stats are
       // accurate. Backend caps a page at 200; loop until a short/empty page,
@@ -87,7 +92,7 @@ export function useTransactions(options: UseTransactionsOptions = {}) {
         const res = await transactionService.getTransactions({ ...options, page, limit: PAGE_LIMIT });
         if (!res.success) {
           // Surface the failure on the first page; otherwise keep what we have.
-          if (page === 1) return res;
+          if (page === 1) throw new Error(res.message || 'Failed to load transactions');
           break;
         }
         const batch = res.data || [];

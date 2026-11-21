@@ -215,15 +215,16 @@ describe('notifications', () => {
 });
 
 describe('gamification', () => {
-  it('useGamificationStats returns the stats, or null instead of an error', async () => {
+  it('useGamificationStats returns the stats, and reports a failure as an error', async () => {
     api.getGamificationStats.mockResolvedValueOnce({ level: 3 });
     const ok = renderHook(() => useGamificationStats(), { wrapper: createQueryWrapper() });
     await waitFor(() => expect(ok.result.current.data).toEqual({ level: 3 }));
 
     api.getGamificationStats.mockRejectedValueOnce(new Error('down'));
     const failed = renderHook(() => useGamificationStats(), { wrapper: createQueryWrapper() });
-    await waitFor(() => expect(failed.result.current.isSuccess).toBe(true));
-    expect(failed.result.current.data).toBeNull();
+    // An error, not null: null rendered /achievements as Level 0 with a 0-day streak.
+    await waitFor(() => expect(failed.result.current.isError).toBe(true));
+    expect(failed.result.current.data).toBeUndefined();
   });
 
   it('useGamificationStats can be held back', () => {
@@ -231,12 +232,12 @@ describe('gamification', () => {
     expect(api.getGamificationStats).not.toHaveBeenCalled();
   });
 
-  it('useAchievementProgress degrades to an empty list', async () => {
+  it('useAchievementProgress reports a failure as an error, not "no achievements"', async () => {
     api.getAchievementProgress.mockRejectedValue(new Error('down'));
     const { result } = renderHook(() => useAchievementProgress(), { wrapper: createQueryWrapper() });
 
-    await waitFor(() => expect(result.current.isSuccess).toBe(true));
-    expect(result.current.data).toEqual([]);
+    await waitFor(() => expect(result.current.isError).toBe(true));
+    expect(result.current.data).toBeUndefined();
   });
 
   it.each([

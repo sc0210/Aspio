@@ -117,6 +117,8 @@
   "errorState": {
     "description": "載入此頁面時發生未預期的錯誤。",
     "iconLabel": "錯誤",
+    "loadFailed": "無法載入",
+    "loadFailedHint": "請檢查網路連線後再試一次。這裡的數字並非零，只是尚未載入。",
     "title": "發生錯誤",
     "titleWithSegment": "{{segment}}載入失敗",
     "tryAgain": "重試"
@@ -249,7 +251,8 @@
       "scoreLabel": "準備度分數",
       "short": "不足",
       "target": "目標",
-      "title": "我準備好買房了嗎？"
+      "title": "我準備好買房了嗎？",
+      "scoringPrice": "以 {{price}} 的房子計算"
     },
     "sim": {
       "after": "{{n}} 年後",
@@ -1061,15 +1064,7 @@
     "hideSmallPositionsDesc": "隱藏低價值持倉以簡化圖表",
     "language": "語言",
     "languageDesc": "選擇您偏好的語言",
-    "notifGoals": "目標截止提醒",
-    "notifGoalsDesc": "在儲蓄目標接近截止日期時提醒我",
-    "notifNote": "推播通知需要瀏覽器權限。應用程式內通知永遠開啟。",
-    "notifPeers": "夥伴更新",
-    "notifPeersDesc": "當夥伴接受邀請或更新共同目標時通知我",
-    "notifPortfolio": "投資組合提醒",
-    "notifPortfolioDesc": "在投資組合出現重大變動時通知我",
-    "notifTransactions": "每週交易摘要",
-    "notifTransactionsDesc": "每週收到消費摘要",
+    "notifNote": "這些提醒會出現在鈴鐺通知中。要將共同支出的夥伴設為靜音，請到儲蓄頁面。",
     "notifications": "通知",
     "password": "密碼",
     "passwordDesc": "更改登入密碼",
@@ -1112,8 +1107,7 @@
       "loadFailedHint": "請檢查網路連線後再試一次",
       "retry": "重試",
       "notConnected": "尚未連結",
-      "notConnectedHint": "在 LINE 群組中輸入 /link 即可連結",
-      "connect": "連結",
+      "notConnectedHint": "連結需從 LINE 開始",
       "categoriesTitle": "/txn 類別",
       "commandsTitle": "機器人指令",
       "commands": {
@@ -1126,10 +1120,22 @@
         "summary": "本月群組總額",
         "history": "最近 5 筆群組支出",
         "undo": "刪除你的上一筆支出"
+      },
+      "checkAgain": "重新檢查",
+      "connectSteps": {
+        "step1": "在 LINE 開啟與 Aspiro 機器人的聊天，或它所在的群組。",
+        "step2": "傳送 /link。",
+        "step3": "點選機器人回覆中的「連結」，再回到這裡點「重新檢查」。"
       }
     },
     "analytics": "使用分析",
-    "analyticsDesc": "統計頁面瀏覽與載入速度以改進 Aspiro，絕不包含你的財務資料。"
+    "analyticsDesc": "統計頁面瀏覽與載入速度以改進 Aspiro，絕不包含你的財務資料。",
+    "notifGoalsAchievements": "目標與成就",
+    "notifGoalsAchievementsDesc": "達成儲蓄目標或解鎖成就時通知我",
+    "notifSpendingBills": "支出與帳單提醒",
+    "notifSpendingBillsDesc": "本月支出高於平常時，以及貸款繳款日前提醒我",
+    "notifLoadFailed": "無法載入通知設定。",
+    "notifSaveFailed": "無法儲存這項變更，請再試一次。"
   },
   "status": {
     "active": "啟用",

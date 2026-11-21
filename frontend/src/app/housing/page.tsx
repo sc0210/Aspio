@@ -1,5 +1,6 @@
 'use client';
 
+import { QueryErrorCard } from '@/components/ui/QueryErrorCard';
 import { useCallback, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { DashboardLayout } from '@/components/layout/DashboardLayout';
@@ -21,7 +22,7 @@ function DesktopHousingPage() {
     // through useHousingModel, which the phone view shares.
     const [derived, setDerived] = useState<SimulatorDerived>(INITIAL_DERIVED);
     const handleDerived = useCallback((d: SimulatorDerived) => setDerived(d), []);
-    const { seed, affordability, houseContext, cashFlowBasisMonths, showSpinner } = useHousingModel(derived);
+    const { seed, affordability, houseContext, cashFlowBasisMonths, showSpinner, loadFailed, retry, startingPrice } = useHousingModel(derived);
 
     return (
         <DashboardLayout>
@@ -37,6 +38,8 @@ function DesktopHousingPage() {
                     <div className="flex items-center justify-center py-24">
                         <LoadingSpinner />
                     </div>
+                ) : loadFailed ? (
+                    <QueryErrorCard onRetry={retry} />
                 ) : (
                     <>
                         <AffordabilityPanel
@@ -48,9 +51,10 @@ function DesktopHousingPage() {
                             cashNeededAtPurchase={derived.upfrontCash}
                             monthlyHousingCost={derived.monthlyHousingCost}
                             cashFlowBasisMonths={cashFlowBasisMonths}
+                            housePrice={derived.housePrice}
                         />
                         <CarImpactPanel context={houseContext} />
-                        <BuyVsRentSimulator onDerivedChange={handleDerived} />
+                        <BuyVsRentSimulator defaults={{ housePrice: startingPrice }} onDerivedChange={handleDerived} />
                         <HousingPrinciples />
                     </>
                 )}

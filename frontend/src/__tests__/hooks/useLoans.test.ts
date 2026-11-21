@@ -4,6 +4,8 @@ import toast from 'react-hot-toast';
 import { useLoans, useCreateLoan, useUpdateLoan, useDeleteLoan, useRecordPayment, deriveSummary } from '@/hooks/useLoans';
 import { loanService } from '@/services/loanService';
 import type { DebtAccount } from '@/services/loanService';
+import { ApiError } from '@/lib/api-client';
+import { useSession } from 'next-auth/react';
 
 // This suite drives useQuery/useMutation directly to check the hook's derive
 // logic and its service wiring; it has no interest in the cache. react-query is
@@ -62,6 +64,8 @@ const mockLoan: DebtAccount = {
 beforeEach(() => {
   jest.clearAllMocks();
   mockUseQueryClient.mockReturnValue({ invalidateQueries: jest.fn() });
+  // The session-gate tests change it; every other test runs signed in.
+  (useSession as jest.Mock).mockReturnValue({ data: { user: { id: 'test-user-id' } }, status: 'authenticated' });
 });
 
 // Helper to create a mock mutation that invokes mutationFn + onSuccess when mutateAsync is called
@@ -95,6 +99,8 @@ function makeMutationMock() {
 const loansQuery = (data: unknown, overrides: Record<string, unknown> = {}) => ({
   data,
   isLoading: false,
+  isPending: false,
+  isError: false,
   error: null,
   refetch: jest.fn(),
   ...overrides,
@@ -139,10 +145,73 @@ describe('useLoans', () => {
   });
 
   it('returns isLoading true while the query is loading', () => {
-    mockUseQuery.mockReturnValue(loansQuery(undefined, { isLoading: true }));
+    mockUseQuery.mockReturnValue(loansQuery(undefined, { isLoading: true, isPending: true }));
 
     const { result } = renderHook(() => useLoans());
     expect(result.current.isLoading).toBe(true);
+  });
+
+  it('reports an error only when there are no loans to show', () => {
+    mockUseQuery.mockReturnValue(loansQuery(undefined, { isError: true }));
+    expect(renderHook(() => useLoans()).result.current.isError).toBe(true);
+
+    // A failed background refetch keeps the loans already on screen.
+    mockUseQuery.mockReturnValue(loansQuery({ data: [mockLoan] }, { isError: true }));
+    const { result } = renderHook(() => useLoans());
+    expect(result.current.isError).toBe(false);
+    expect(result.current.loans).toHaveLength(1);
+  });
+
+  describe('session gate', () => {
+    const withSession = (status: string, user: object | null) =>
+      (useSession as jest.Mock).mockReturnValue({ data: user ? { user } : null, status });
+
+    it('does not query before the session is authenticated, and reads as loading meanwhile', () => {
+      withSession('loading', null);
+      mockUseQuery.mockReturnValue(loansQuery(undefined, { isPending: true }));
+      const { result } = renderHook(() => useLoans());
+      expect(mockUseQuery.mock.calls[0][0].enabled).toBe(false);
+      expect(result.current.isLoading).toBe(true);
+    });
+
+    it('is not stuck loading for a signed-out visitor (the auth guard takes over)', () => {
+      withSession('unauthenticated', null);
+      mockUseQuery.mockReturnValue(loansQuery(undefined, { isPending: true }));
+      expect(renderHook(() => useLoans()).result.current.isLoading).toBe(false);
+    });
+
+    it('queries a signed-in session under its own user id', () => {
+      mockUseQuery.mockReturnValue(loansQuery({ data: [] }));
+      renderHook(() => useLoans());
+      const opts = mockUseQuery.mock.calls[0][0];
+      expect(opts.enabled).toBe(true);
+      expect(opts.queryKey).toContain('test-user-id');
+    });
+
+    it('never caches loans under the shared anon key', () => {
+      withSession('authenticated', { email: 'a@b.c' });
+      mockUseQuery.mockReturnValue(loansQuery(undefined, { isPending: true }));
+      renderHook(() => useLoans());
+      expect(mockUseQuery.mock.calls[0][0].enabled).toBe(false);
+    });
+  });
+
+  describe('fetch errors', () => {
+    const queryFn = () => {
+      mockUseQuery.mockReturnValue(loansQuery({ data: [] }));
+      renderHook(() => useLoans());
+      return mockUseQuery.mock.calls[0][0].queryFn as () => Promise<{ data: DebtAccount[] }>;
+    };
+
+    it('treats a 403 (free tier) as no loans', async () => {
+      (loanService.getLoans as jest.Mock).mockRejectedValue(new ApiError('Premium required', 403));
+      await expect(queryFn()()).resolves.toMatchObject({ data: [] });
+    });
+
+    it('rethrows any other failure, so the page shows an error, not "add your first loan"', async () => {
+      (loanService.getLoans as jest.Mock).mockRejectedValue(new ApiError('Server error', 500));
+      await expect(queryFn()()).rejects.toThrow('Server error');
+    });
   });
 });
 
