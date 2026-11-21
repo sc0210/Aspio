@@ -104,10 +104,7 @@
     "VND": "Vietnamese Dong"
   },
   "demoAlert": {
-    "label": "Demo mode",
-    "rebalancing": "You're viewing the rebalancing dashboard in demo mode. Real figures are calculated dynamically from your portfolio.",
-    "sampleDataOnly": "— sample data only.",
-    "simulated": "Transactions, goals & portfolio are simulated.",
+    "rebalancing": "Sign in to set your own target allocation; these targets are a sample.",
     "changesSimulated": "Demo: changes simulated — sign up to save real data"
   },
   "error": {

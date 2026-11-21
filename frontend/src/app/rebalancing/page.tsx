@@ -27,7 +27,7 @@ import {
   CurrencyDollarIcon,
   BeakerIcon
 } from '@heroicons/react/24/outline';
-import { DemoAlert } from '@/components/ui/Alert';
+import { DemoNotice } from '@/components/ui/DemoNotice';
 import { log } from '@/utils/logger';
 import toast from 'react-hot-toast';
 import { useTranslation } from 'react-i18next';
@@ -142,9 +142,7 @@ export default function RebalancingPage() {
 
         {/* Demo Alert */}
         {isDemo && (
-          <DemoAlert className="mb-6">
-            <p>{t('common:demoAlert.rebalancing')}</p>
-          </DemoAlert>
+          <DemoNotice className="mb-6">{t('common:demoAlert.rebalancing')}</DemoNotice>
         )}
 
         {/* Tab Navigation */}

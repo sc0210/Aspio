@@ -33,6 +33,7 @@ import { cn } from '@/utils/cn';
 import { useIsMobile } from '@/hooks/useMediaQuery';
 
 import { Card } from '@/components/ui/Card';
+import { DemoNotice } from '@/components/ui/DemoNotice';
 // CompareLineChart imports recharts (~386 kB) — loaded only once the Compare
 // tab is opened, so a visit for goals never pays for it.
 // Reserve / Release on the caller's own goal behind a shared goal.
@@ -385,10 +386,9 @@ function SavingsGroups() {
           </div>
         </div>
 
-        {isDemo && (
-          <div className="bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-700 rounded-xl px-4 py-3 text-sm text-blue-700 dark:text-blue-300">
-            <span aria-hidden="true">👁️</span> {t('savings.demoBanner', 'Demo mode: showing sample data. Sign in to invite real partners and create goals.')}
-          </div>
+        {/* Shared spending says what it locks itself; two notices stacked there. */}
+        {isDemo && tab !== 'splits' && (
+          <DemoNotice>{t('savings.demoBanner', 'Demo mode: showing sample data. Sign in to invite real partners and create goals.')}</DemoNotice>
         )}
 
         {error && (

@@ -34,6 +34,7 @@ import { cn } from '@/utils/cn';
 import { Card } from '@/components/ui/Card';
 import { hasAnalyticsConsent, isAnalyticsAvailable, setAnalyticsConsent } from '@/lib/analytics/config';
 import { analyticsProvider } from '@/lib/analytics/provider';
+import { DemoNotice } from '@/components/ui/DemoNotice';
 
 // Currencies offered for the account default. Kept in sync with the backend
 // RegionalPreferencesUpdate pattern — trimmed to the two common ones for our
@@ -547,9 +548,7 @@ export default function SettingsPage() {
         </div>
 
         {isDemoMode && (
-          <div className="bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-700 rounded-xl px-4 py-3 text-sm text-amber-700 dark:text-amber-300">
-            👁️ {t('settings.demoNotice', 'Demo mode — profile changes are not saved.')}
-          </div>
+          <DemoNotice>{t('settings.demoNotice', 'Demo mode — profile changes are not saved.')}</DemoNotice>
         )}
 
         {/* ── Profile ─────────────────────────────────────────────────── */}

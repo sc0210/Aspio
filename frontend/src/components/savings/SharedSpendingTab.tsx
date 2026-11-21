@@ -19,6 +19,7 @@ import type { PeerBalanceOut, PeerConnectionOut, RecurringSplitOut, SettlementOu
 import { EVERY, perMonth, type RepeatFrequency } from '@/lib/savings/nextMonth';
 
 import { Card } from '@/components/ui/Card';
+import { DemoNotice } from '@/components/ui/DemoNotice';
 /** "Dec 1", or "Dec 1, 2027" when it isn't this year. */
 const shortDate = (isoDay: string, locale: string) => {
   const d = new Date(`${isoDay}T00:00:00`);
@@ -236,9 +237,7 @@ export default function SharedSpendingTab({ connections, demo }: { connections: 
       </div>
 
       {readOnly && (
-        <p className="text-sm rounded-lg px-3 py-2 bg-amber-50 dark:bg-amber-900/20 text-amber-900 dark:text-amber-100">
-          {t('savings.splits.demoSample', 'Sample shared bills. Sign in to split real bills with a partner and settle up.')}
-        </p>
+        <DemoNotice>{t('savings.splits.demoSample', 'Sample shared bills. Sign in to split real bills with a partner and settle up.')}</DemoNotice>
       )}
 
       <RelatedMoneyLinks current="splits" />

@@ -87,10 +87,6 @@ jest.mock('@/components/ui/DashboardSkeleton', () => ({
   ComprehensiveDashboardSkeleton: () => <div data-testid="skeleton" />,
 }));
 
-jest.mock('@/components/ui/Alert', () => ({
-  DemoAlert: () => <div data-testid="demo-alert" />,
-}));
-
 jest.mock('@/components/ui/DataRefreshButton', () => ({
   DataRefreshButton: () => <button data-testid="refresh-btn" />,
 }));
@@ -250,14 +246,6 @@ describe('ComprehensiveDashboard', () => {
       const dashPeriod = mockUseOptimizedDashboard.mock.calls[0][0];
       const trendPeriod = mockUseWalletTrends.mock.calls[0][0];
       expect(dashPeriod).toBe(trendPeriod);
-    });
-  });
-
-  describe('demo mode', () => {
-    it('does not show demo alert when not in demo mode', () => {
-      setupMocks();
-      render(<ComprehensiveDashboard />);
-      expect(screen.queryByTestId('demo-alert')).toBeNull();
     });
   });
 

@@ -45,6 +45,7 @@ import {
 import { useModeAwareUI } from '@/hooks/useAppMode';
 import { usePrivacy } from '@/contexts/PrivacyContext';
 import PortfolioLoading from './loading';
+import { DemoNotice } from '@/components/ui/DemoNotice';
 
 /**
  * Portfolio Page
@@ -294,11 +295,7 @@ function DesktopPortfolioPage() {
     }>
       {/* Demo Mode Indicator */}
       {isDemo && (
-        <div className="mb-4 p-3 bg-amber-50 border border-amber-200 rounded-lg dark:bg-amber-900/20 dark:border-amber-800">
-          <p className="text-sm text-amber-800 dark:text-amber-200">
-            {getModeMessage('general')}
-          </p>
-        </div>
+        <DemoNotice className="mb-4">{getModeMessage('general')}</DemoNotice>
       )}
 
       <div className="space-y-6">

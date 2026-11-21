@@ -104,10 +104,7 @@
     "VND": "越南盾"
   },
   "demoAlert": {
-    "label": "示範模式",
-    "rebalancing": "您正在查看示範模式的再平衡儀表板。實際數據將根據您的投資組合動態計算。",
-    "sampleDataOnly": "— 僅為範例資料。",
-    "simulated": "交易、目標與投資組合皆為模擬資料。",
+    "rebalancing": "登入後即可設定自己的目標配置；目前顯示的是範例目標。",
     "changesSimulated": "示範模式：變更僅為模擬，註冊後即可儲存真實資料"
   },
   "error": {
