@@ -186,6 +186,8 @@ describe('/housing — the headline and the simulator price the same loan', () =
         );
         fireEvent.click(screen.getByRole('button', { name: /Try a different situation/ }));
         expect(screen.getByText(/set in Buy vs\. Rent below/)).toBeInTheDocument();
+        // And no slider of its own: the simulator is folded, so no rate slider renders at all.
+        expect(screen.queryByRole('slider', { name: /Mortgage rate/ })).not.toBeInTheDocument();
     });
 
     it('honours a sub-1% move of its own mortgage-rate slider (phone, where it owns the terms)', () => {
