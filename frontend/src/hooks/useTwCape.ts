@@ -15,6 +15,9 @@ export interface TwCape {
   since: string;
   low: number;
   high: number;
+  /** The band's edges as CAPE values: cheap at or below, expensive above. */
+  cheapAtOrBelow: number;
+  expensiveAbove: number;
   taiex: number;
   marketPe: number;
   history: Array<{ month: string; cape: number }>;

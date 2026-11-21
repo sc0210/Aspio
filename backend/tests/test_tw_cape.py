@@ -13,6 +13,7 @@ from app.modules.market.sources import (
     NoTradingData,
     market_day,
     parse_codes,
+    cpi_url_from_catalogue,
     parse_cpi_xml,
     parse_fmtqik_taiex,
     parse_mi_index,
@@ -98,6 +99,14 @@ class TestParsing:
         with pytest.raises(NoTradingData):
             parse_fmtqik_taiex(_fmtqik(), date(2005, 12, 31))
 
+    def test_the_cpi_url_comes_from_the_catalogue_entry(self):
+        entry = {"result": {"distribution": [
+            {"resourceFormat": "JSON", "resourceDownloadUrl": "https://x/a.json"},
+            {"resourceFormat": "XML", "resourceDownloadUrl": "https://x/pr0101a1m.xml"},
+        ]}}
+        assert cpi_url_from_catalogue(entry) == "https://x/pr0101a1m.xml"
+        assert cpi_url_from_catalogue({"result": {"distribution": []}}) is None
+
     def test_cpi_takes_the_monthly_general_index_only(self):
         xml = """<?xml version="1.0" encoding="utf-8"?><Root>
         <Obs><Item>總指數(指數基期：民國110年=100)</Item><TIME_PERIOD>2026M10</TIME_PERIOD><FREQ>M</FREQ><TYPE>原始值</TYPE><Item_VALUE>112.9</Item_VALUE></Obs>
@@ -163,6 +172,26 @@ class TestCape:
 
         falling = [100.0] * 125 + [100.0 - 5 * i for i in range(1, 11)]
         assert read_cape(_rows(falling, [20.0] * 135)).band == "cheap"
+
+    def test_the_percentile_counts_other_months_strictly_below(self):
+        # A flat series: no other month is lower, so 0%, not "higher than 100%".
+        reading = read_cape(_rows([100.0] * 130, [20.0] * 130))
+        assert reading.percentile == 0.0
+        assert reading.band == "cheap"  # at or below the 20th-percentile edge
+
+    @pytest.mark.parametrize("bump", [0.0, 3.0, 6.0, 9.0, 12.0, 15.0, 20.0, 30.0, 45.0])
+    def test_the_drawn_edges_always_agree_with_the_band(self, bump):
+        # A wavy history, then a latest month anywhere in or beyond its range.
+        prices = [100.0 + 15 * ((i * 7) % 11) / 10 for i in range(140)] + [100.0 + bump]
+        r = read_cape(_rows(prices, [20.0] * 141))
+        expected = ("expensive" if r.cape > r.expensive_above
+                    else "cheap" if r.cape <= r.cheap_at_or_below else "fair")
+        assert r.band == expected
+        assert r.cheap_at_or_below <= r.expensive_above
+        if r.band == "expensive":
+            assert r.percentile > 80
+        if r.band == "cheap":
+            assert r.percentile < 20
 
 
 # ── The sync against a fake TWSE ────────────────────────────────────────────
@@ -246,6 +275,43 @@ async def test_backfill_then_daily_run_fetches_only_the_current_month(session_fa
 
 @pytest.mark.asyncio
 @pytest.mark.database
+async def test_a_failed_save_skips_that_month_and_the_run_goes_on(session_factory, monkeypatch):
+    from app.modules.market import services as svc
+
+    real_save = svc.TwMarketSync._save
+
+    async def flaky_save(self, month, reading, final):
+        if month == date(2010, 1, 1):
+            raise RuntimeError("duplicate key from a concurrent run")
+        return await real_save(self, month, reading, final)
+
+    monkeypatch.setattr(svc.TwMarketSync, "_save", flaky_save)
+    twse = FakeTwse(published=date(2026, 11, 20))
+    result = await TwMarketSync(session_factory, twse, sleep=_no_sleep).run(date(2026, 11, 20))
+    assert result["failed"] == 1
+    async with session_factory() as s:
+        months = {r.month for r in (await s.execute(select(TwMarketMonth))).scalars()}
+    assert date(2010, 1, 1) not in months and date(2026, 11, 1) in months
+    assert result["cpi_filled"] > 0  # the CPI step still ran
+
+
+@pytest.mark.asyncio
+@pytest.mark.database
+async def test_a_rebased_cpi_rewrites_every_month(session_factory):
+    from app.modules.market.repositories import TwMarketRepository
+
+    async with session_factory() as s:
+        for m in (date(2026, 8, 1), date(2026, 9, 1)):
+            s.add(TwMarketMonth(month=m, as_of=m, taiex=100, market_pe=20, companies=1, cpi=110, is_final=True))
+        await s.commit()
+        written = await TwMarketRepository(s).set_cpi({date(2026, 8, 1): 98.0, date(2026, 9, 1): 98.5})
+        await s.commit()
+        rows = {r.month: float(r.cpi) for r in (await s.execute(select(TwMarketMonth))).scalars()}
+    assert written == 2 and rows == {date(2026, 8, 1): 98.0, date(2026, 9, 1): 98.5}
+
+
+@pytest.mark.asyncio
+@pytest.mark.database
 async def test_before_publication_the_current_month_reads_the_last_published_day(session_factory):
     today = date(2026, 11, 20)
     twse = FakeTwse(published=date(2026, 11, 19))  # today's reports not out yet
@@ -301,4 +367,6 @@ async def test_endpoint_reads_the_cape_without_signing_in(client, async_session)
     assert body["band"] == "expensive"  # rising prices over flat earnings
     assert body["percentile"] == 100.0
     assert body["history"][-1]["month"] == _months(130)[-1].isoformat()[:7]
-    assert set(body) >= {"asOf", "cape", "since", "low", "high", "taiex", "marketPe"}
+    assert set(body) >= {"asOf", "cape", "since", "low", "high", "taiex", "marketPe",
+                         "cheapAtOrBelow", "expensiveAbove"}
+    assert body["cape"] > body["expensiveAbove"]

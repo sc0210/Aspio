@@ -27,6 +27,10 @@ import httpx
 logger = logging.getLogger(__name__)
 
 TWSE_BASE = "https://www.twse.com.tw/rwd/zh"
+# DGBAS re-uploads the CPI file under a new path now and then, so its current
+# URL is read from the data.gov.tw catalogue entry (dataset 6019); the path
+# last seen there is the fallback.
+CPI_DATASET_URL = "https://data.gov.tw/api/v2/rest/dataset/6019"
 CPI_XML_URL = "https://ws.dgbas.gov.tw/001/Upload/461/relfile/11525/230555/pr0101a1m.xml"
 REQUEST_INTERVAL_SECONDS = 3.5
 _HEADERS = {"User-Agent": "Mozilla/5.0 (compatible; Aspiro market data)"}
@@ -177,6 +181,15 @@ def parse_cpi_xml(content: bytes) -> Dict[date, float]:
     return out
 
 
+def cpi_url_from_catalogue(payload: dict) -> Optional[str]:
+    """The XML download URL in a data.gov.tw dataset entry, or None."""
+    for resource in (payload.get("result") or {}).get("distribution") or []:
+        url = resource.get("resourceDownloadUrl")
+        if url and str(resource.get("resourceFormat", "")).upper() == "XML":
+            return url
+    return None
+
+
 class MarketDataClient:
     """The HTTP side: one call per report, paced by the caller."""
 
@@ -203,7 +216,17 @@ class MarketDataClient:
         """The daily market summary for `day`'s month (one row per trading day)."""
         return await self._twse("afterTrading/FMTQIK", {"date": day.strftime("%Y%m01")})
 
+    async def _cpi_url(self) -> str:
+        try:
+            response = await self._client.get(CPI_DATASET_URL, headers=_HEADERS, timeout=30)
+            response.raise_for_status()
+            return cpi_url_from_catalogue(response.json()) or CPI_XML_URL
+        except Exception as e:
+            logger.warning("data.gov.tw catalogue unavailable, using the last known CPI URL: %s", e)
+            return CPI_XML_URL
+
     async def cpi(self) -> Dict[date, float]:
-        response = await self._client.get(CPI_XML_URL, headers=_HEADERS, timeout=120, follow_redirects=True)
+        url = await self._cpi_url()
+        response = await self._client.get(url, headers=_HEADERS, timeout=120, follow_redirects=True)
         response.raise_for_status()
         return parse_cpi_xml(response.content)

@@ -6,10 +6,10 @@ import logging
 from datetime import date, timedelta
 from typing import Awaitable, Callable, Dict, List, Optional
 
-from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from .models import TwMarketMonth
+from .repositories import TwMarketRepository
 from .sources import (
     REQUEST_INTERVAL_SECONDS,
     MarketDataClient,
@@ -91,7 +91,7 @@ class TwMarketSync:
 
     async def run(self, today: date) -> Dict[str, int]:
         async with self._session_factory() as session:
-            rows = {r.month: r for r in (await session.execute(select(TwMarketMonth))).scalars()}
+            rows = {r.month: r for r in await TwMarketRepository(session).all_months()}
 
         current = _month_start(today)
         fetched = failed = 0
@@ -101,15 +101,16 @@ class TwMarketSync:
             if not (row and row.is_final):
                 is_past = month < current
                 target = _month_end(month) if is_past else today
+                # One bad month (a fetch error, or a save colliding with another
+                # run of this job) must not stop the backfill or the CPI step.
                 try:
                     reading = await self._trading_day(target, floor=month)
-                except Exception as e:  # one bad month must not stop the backfill
-                    logger.warning("TW market %s: fetch failed: %s", month, e)
-                    reading = None
+                    if reading:
+                        await self._save(month, reading, final=is_past)
+                        fetched += 1
+                except Exception as e:
+                    logger.warning("TW market %s: sync failed: %s", month, e)
                     failed += 1
-                if reading:
-                    await self._save(month, reading, final=is_past)
-                    fetched += 1
             month = _next_month(month)
 
         cpi_filled = await self._fill_cpi(today)
@@ -118,27 +119,19 @@ class TwMarketSync:
 
     async def _save(self, month: date, reading: MarketDay, final: bool) -> None:
         async with self._session_factory() as session:
-            row = await session.get(TwMarketMonth, month)
-            if row is None:
-                row = TwMarketMonth(month=month)
-                session.add(row)
-            row.as_of = reading.day
-            row.taiex = round(reading.taiex, 2)
-            row.market_pe = round(reading.market_pe, 4)
-            row.companies = reading.companies
-            row.is_final = final
+            await TwMarketRepository(session).upsert_month(month, reading, final)
             await session.commit()
 
     async def _fill_cpi(self, today: date) -> int:
-        """Fill CPI on rows without one, fetching DGBAS only when one is due.
+        """Refresh CPI from DGBAS when a month's CPI is due and still missing.
 
         A month's CPI comes out about a week after it ends, so only rows from
         before last month — or last month, once a week has passed — are due.
+        Each fetch rewrites every month (a new base year moves them all).
         """
         async with self._session_factory() as session:
-            missing = list((await session.execute(
-                select(TwMarketMonth).where(TwMarketMonth.cpi.is_(None))
-            )).scalars())
+            repo = TwMarketRepository(session)
+            missing = await repo.months_missing_cpi()
             if not missing:
                 return 0
             latest_due = _month_start(today - timedelta(days=37))
@@ -149,18 +142,13 @@ class TwMarketSync:
             except Exception as e:
                 logger.warning("TW CPI fetch failed: %s", e)
                 return 0
-            filled = 0
-            for row in missing:
-                value = cpi.get(row.month)
-                if value:
-                    row.cpi = value
-                    filled += 1
+            written = await repo.set_cpi(cpi)
             await session.commit()
-            return filled
+            return written
 
 
 async def read_tw_cape(session: AsyncSession) -> CapeReading:
-    rows: List[TwMarketMonth] = list((await session.execute(select(TwMarketMonth))).scalars())
+    rows: List[TwMarketMonth] = await TwMarketRepository(session).all_months()
     return read_cape([
         MonthInput(
             month=r.month, as_of=r.as_of, taiex=float(r.taiex), market_pe=float(r.market_pe),

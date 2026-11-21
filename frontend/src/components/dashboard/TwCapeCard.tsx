@@ -1,12 +1,12 @@
 'use client';
 
-import { useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Area, AreaChart, ReferenceLine, ResponsiveContainer, Tooltip, YAxis } from 'recharts';
 import { InformationCircleIcon } from '@heroicons/react/24/outline';
 import { Card } from '@/components/ui/Card';
 import { QueryErrorCard } from '@/components/ui/QueryErrorCard';
 import { useTwCape, type CapeBand, type TwCape } from '@/hooks/useTwCape';
+import { useAppMode } from '@/hooks/useAppMode';
 
 const BAND_LABEL: Record<CapeBand, string> = { cheap: 'Cheap', fair: 'Fair', expensive: 'Expensive' };
 
@@ -16,14 +16,6 @@ const BAND_STYLE: Record<CapeBand, string> = {
   expensive: 'bg-warning-100 dark:bg-warning-900/40 text-warning-800 dark:text-warning-300',
 };
 
-/** The value at quantile q (0..1) of a sorted list. */
-function quantile(sorted: number[], q: number): number {
-  const i = (sorted.length - 1) * q;
-  const lo = Math.floor(i);
-  const hi = Math.ceil(i);
-  return sorted[lo] + (sorted[hi] - sorted[lo]) * (i - lo);
-}
-
 function monthLabel(isoMonth: string, language: string): string {
   const [y, m] = isoMonth.split('-').map(Number);
   return new Intl.DateTimeFormat(language, { year: 'numeric', month: 'short' }).format(new Date(y, m - 1, 1));
@@ -32,12 +24,8 @@ function monthLabel(isoMonth: string, language: string): string {
 function CapeBody({ cape }: { cape: TwCape }) {
   const { t, i18n } = useTranslation(['dashboard']);
   const language = i18n.language || 'en';
-  // The bands are the 20th and 80th percentiles of the history the server
-  // judged against, drawn so the line can be read without the number.
-  const [p20, p80] = useMemo(() => {
-    const sorted = cape.history.map((p) => p.cape).sort((a, b) => a - b);
-    return [quantile(sorted, 0.2), quantile(sorted, 0.8)];
-  }, [cape.history]);
+  // The band's edges exactly as the server applied them, so the dashed lines
+  // and the badge cannot disagree.
   const since = monthLabel(cape.since.slice(0, 7), language);
 
   return (
@@ -78,8 +66,8 @@ function CapeBody({ cape }: { cape: TwCape }) {
               </linearGradient>
             </defs>
             <YAxis hide domain={['dataMin - 2', 'dataMax + 2']} />
-            <ReferenceLine y={p80} stroke="#d97706" strokeDasharray="3 3" strokeOpacity={0.7} />
-            <ReferenceLine y={p20} stroke="#16a34a" strokeDasharray="3 3" strokeOpacity={0.7} />
+            <ReferenceLine y={cape.expensiveAbove} stroke="#d97706" strokeDasharray="3 3" strokeOpacity={0.7} />
+            <ReferenceLine y={cape.cheapAtOrBelow} stroke="#16a34a" strokeDasharray="3 3" strokeOpacity={0.7} />
             <Tooltip
               formatter={(value: number) => [value.toFixed(1), 'CAPE']}
               labelFormatter={(_, payload) => {
@@ -105,7 +93,12 @@ function CapeBody({ cape }: { cape: TwCape }) {
  */
 export function TwCapeCard() {
   const { t } = useTranslation(['dashboard']);
+  const { isDemo } = useAppMode();
   const { data, isLoading, isError, refetch } = useTwCape();
+
+  // A demo can run with no backend at all; market data is a nice-to-have
+  // there, not an error to show a visitor.
+  if (isDemo && isError && !data) return null;
 
   if (isError && !data) {
     return <QueryErrorCard onRetry={() => refetch()} title={t('dashboard:twCape.title', { defaultValue: 'Taiwan market valuation' })} />;

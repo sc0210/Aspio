@@ -12,6 +12,7 @@ profits grew much faster than a ten-year average can follow, so "above 30"
 would call it expensive every month.
 """
 
+import math
 from dataclasses import dataclass, field
 from datetime import date
 from typing import List, Optional, Sequence
@@ -50,6 +51,10 @@ class CapeReading:
     since: Optional[date] = None
     low: Optional[float] = None
     high: Optional[float] = None
+    # The band's edges: cheap at or below, expensive above. The chart draws
+    # these, so a line and the badge can never disagree.
+    cheap_at_or_below: Optional[float] = None
+    expensive_above: Optional[float] = None
     taiex: Optional[float] = None
     market_pe: Optional[float] = None
     history: List[CapePoint] = field(default_factory=list)
@@ -100,17 +105,30 @@ def cape_series(rows: Sequence[MonthInput]) -> List[CapePoint]:
 
 
 def read_cape(rows: Sequence[MonthInput]) -> CapeReading:
-    """The latest CAPE, its percentile in the series so far, and the band."""
+    """The latest CAPE, where it sits among every earlier month's, and the band.
+
+    The percentile is the share of the other months whose CAPE was strictly
+    lower, so "higher than 94% of months" is literally true and never reads
+    100% of a set that includes itself. Cheap is below the 20th percentile,
+    expensive above the 80th; both edges are returned as CAPE values.
+    """
     series = cape_series(rows)
-    if not series:
+    if len(series) < 2:
         return CapeReading(available=False)
     latest = series[-1]
     values = [p.cape for p in series]
-    percentile = 100.0 * sum(1 for v in values if v <= latest.cape) / len(values)
-    if percentile < CHEAP_BELOW_PERCENTILE:
-        band = "cheap"
-    elif percentile > EXPENSIVE_ABOVE_PERCENTILE:
+    others = sorted(values[:-1])
+    m = len(others)
+    percentile = 100.0 * sum(1 for v in others if v < latest.cape) / m
+    # With others sorted, "more than 80% of them are lower" holds exactly when
+    # the value is above others[floor(0.8m)], and "fewer than 20%" exactly
+    # when it is at or below others[ceil(0.2m) - 1].
+    expensive_above = others[math.floor(EXPENSIVE_ABOVE_PERCENTILE / 100 * m)]
+    cheap_at_or_below = others[max(math.ceil(CHEAP_BELOW_PERCENTILE / 100 * m) - 1, 0)]
+    if latest.cape > expensive_above:
         band = "expensive"
+    elif latest.cape <= cheap_at_or_below:
+        band = "cheap"
     else:
         band = "fair"
     source = next(r for r in rows if r.month == latest.month)
@@ -123,6 +141,8 @@ def read_cape(rows: Sequence[MonthInput]) -> CapeReading:
         since=series[0].month,
         low=min(values),
         high=max(values),
+        cheap_at_or_below=cheap_at_or_below,
+        expensive_above=expensive_above,
         taiex=source.taiex,
         market_pe=source.market_pe,
         history=series,

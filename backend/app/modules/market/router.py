@@ -30,6 +30,8 @@ async def get_tw_cape(db: AsyncSession = Depends(get_db)):
             "since": reading.since.isoformat(),
             "low": round(reading.low, 2),
             "high": round(reading.high, 2),
+            "cheapAtOrBelow": round(reading.cheap_at_or_below, 2),
+            "expensiveAbove": round(reading.expensive_above, 2),
             "taiex": reading.taiex,
             "marketPe": round(reading.market_pe, 2),
             "history": [

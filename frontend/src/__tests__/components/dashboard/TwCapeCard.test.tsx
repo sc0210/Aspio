@@ -5,6 +5,9 @@ import { useTwCape } from '@/hooks/useTwCape';
 
 jest.mock('@/hooks/useTwCape', () => ({ useTwCape: jest.fn() }));
 
+let mockIsDemo = false;
+jest.mock('@/hooks/useAppMode', () => ({ useAppMode: () => ({ isDemo: mockIsDemo }) }));
+
 // Interpolates the defaultValue so assertions read the copy a user sees.
 jest.mock('react-i18next', () => ({
   initReactI18next: { type: '3rdParty', init: () => {} },
@@ -37,6 +40,8 @@ const reading = {
   since: '2015-09-01',
   low: 15.21,
   high: 49.1,
+  cheapAtOrBelow: 16.0,
+  expensiveAbove: 30.0,
   taiex: 27000,
   marketPe: 22.4,
   history: [
@@ -47,6 +52,10 @@ const reading = {
 };
 
 const state = (over: Record<string, unknown>) => ({ data: undefined, isLoading: false, isError: false, refetch: jest.fn(), ...over });
+
+beforeEach(() => {
+  mockIsDemo = false;
+});
 
 describe('TwCapeCard', () => {
   it('states the CAPE, its band, and where it sits in Taiwan’s own history', () => {
@@ -81,6 +90,13 @@ describe('TwCapeCard', () => {
     render(<TwCapeCard />);
     expect(screen.getByTestId('tw-cape-loading')).toBeInTheDocument();
     expect(screen.queryByText(/Collecting/)).not.toBeInTheDocument();
+  });
+
+  it('stays out of the way in a demo without a backend', () => {
+    mockIsDemo = true;
+    mockUseTwCape.mockReturnValue(state({ isError: true }));
+    const { container } = render(<TwCapeCard />);
+    expect(container).toBeEmptyDOMElement();
   });
 
   it('shows a retryable error when the request fails', () => {
