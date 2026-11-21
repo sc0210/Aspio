@@ -98,7 +98,8 @@ describe('CashFields — the loan picker', () => {
 describe('CashFields — guarding against easy mistakes', () => {
   it('links the only loan when Loan Payment is picked', async () => {
     const onChange = jest.fn();
-    renderFields(form(), { onChange });
+    // Loan sits under the Others group.
+    renderFields(form({ category: 'Others' }), { onChange });
     await userEvent.click(screen.getByRole('button', { name: /Loan/ }));
     expect(onChange).toHaveBeenCalledWith('category', 'Loan Payment');
     expect(onChange).toHaveBeenCalledWith('loanId', 'loan-1');
@@ -116,10 +117,10 @@ describe('CashFields — guarding against easy mistakes', () => {
   });
 
   it('shows a category it does not list as its own chip, which is not a control', () => {
-    renderFields(form({ category: 'Insurance' }));
+    renderFields(form({ category: 'Education' }));
     // Shown, so the row reads as what it is; not a toggle, since it does nothing when pressed.
-    expect(screen.getByText('Insurance')).toBeInTheDocument();
-    expect(screen.queryByRole('button', { name: /Insurance/ })).not.toBeInTheDocument();
+    expect(screen.getByText('Education')).toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: /Education/ })).not.toBeInTheDocument();
   });
 
   it('keeps the two sides of a transfer different: picking From sets To to the other wallet', async () => {
@@ -141,5 +142,113 @@ describe('CashFields — guarding against easy mistakes', () => {
     renderFields(form({ paymentMethod: 'cash' }), { onChange });
     await userEvent.click(screen.getByRole('button', { name: /Not set/ }));
     expect(onChange).toHaveBeenCalledWith('paymentMethod', '');
+  });
+});
+
+describe('CashFields — the optional detail under a category', () => {
+  const details = () => screen.queryByRole('group', { name: /Detail/ });
+
+  it('offers no detail until a group is chosen', () => {
+    renderFields(form());
+    expect(details()).not.toBeInTheDocument();
+  });
+
+  it('offers Shopping details, Beauty among them, and picks one', async () => {
+    const onChange = jest.fn();
+    renderFields(form({ category: 'Shopping' }), { onChange });
+    await userEvent.click(within(details()!).getByRole('button', { name: /Beauty/ }));
+    expect(onChange).toHaveBeenCalledWith('subcategory', 'Beauty');
+  });
+
+  it('clears the chosen detail when it is tapped again', async () => {
+    const onChange = jest.fn();
+    renderFields(form({ category: 'Shopping', subcategory: 'Beauty' }), { onChange });
+    const beauty = within(details()!).getByRole('button', { name: /Beauty/ });
+    expect(beauty).toHaveAttribute('aria-pressed', 'true');
+    await userEvent.click(beauty);
+    expect(onChange).toHaveBeenCalledWith('subcategory', '');
+  });
+
+  it('drops the detail when the category changes, so Beauty never rides along to Dining', async () => {
+    const onChange = jest.fn();
+    renderFields(form({ category: 'Shopping', subcategory: 'Beauty' }), { onChange });
+    await userEvent.click(screen.getByRole('button', { name: /^Food$/ }));
+    expect(onChange).toHaveBeenCalledWith('subcategory', '');
+    expect(onChange).toHaveBeenCalledWith('category', 'Dining');
+  });
+
+  it('shows a detail this form does not list, but not as a chip a tap could erase', () => {
+    renderFields(form({ category: 'Shopping', subcategory: 'Books' }));
+    expect(details()).toHaveTextContent('Books');
+    expect(within(details()!).queryByRole('button', { name: /Books/ })).not.toBeInTheDocument();
+  });
+});
+
+describe('CashFields — expense groups first, finer choices optional', () => {
+  const details = () => screen.queryByRole('group', { name: /Detail/ });
+  const tile = (name: RegExp) => screen.getByRole('button', { name });
+
+  it('shows six groups for an expense, not every category', () => {
+    renderFields(form());
+    const grid = screen.getByRole('group', { name: /Category/ });
+    const labels = within(grid).getAllByRole('button').map((b) => b.lastElementChild?.textContent);
+    expect(labels).toEqual(['Food', 'Housing', 'Transport', 'Shopping', 'Fun', 'Others']);
+  });
+
+  it('saves a group on its own as its category, one tap', async () => {
+    const onChange = jest.fn();
+    renderFields(form(), { onChange });
+    await userEvent.click(tile(/^Housing$/));
+    expect(onChange).toHaveBeenCalledWith('category', 'Housing');
+  });
+
+  it('marks the group of a stored category and offers its finer choices', () => {
+    renderFields(form({ category: 'Utilities' }));
+    expect(tile(/^Housing$/)).toHaveAttribute('aria-pressed', 'true');
+    expect(within(details()!).getByRole('button', { name: /Utilities/ })).toHaveAttribute('aria-pressed', 'true');
+    expect(within(details()!).getByRole('button', { name: /Rent/ })).toHaveAttribute('aria-pressed', 'false');
+  });
+
+  it('refines within the group: Food → Groceries', async () => {
+    const onChange = jest.fn();
+    renderFields(form({ category: 'Dining' }), { onChange });
+    await userEvent.click(within(details()!).getByRole('button', { name: /Groceries/ }));
+    expect(onChange).toHaveBeenCalledWith('category', 'Groceries');
+  });
+
+  it('goes back to the group when the chosen finer choice is tapped again', async () => {
+    const onChange = jest.fn();
+    renderFields(form({ category: 'Groceries' }), { onChange });
+    await userEvent.click(within(details()!).getByRole('button', { name: /Groceries/ }));
+    expect(onChange).toHaveBeenCalledWith('category', 'Dining');
+  });
+
+  it('keeps the finer choice when its own group is tapped again', async () => {
+    const onChange = jest.fn();
+    renderFields(form({ category: 'Groceries' }), { onChange });
+    await userEvent.click(tile(/^Food$/));
+    expect(onChange).not.toHaveBeenCalled();
+  });
+
+  it('offers Transport details: public transit, maintenance, parking, car rental', async () => {
+    const onChange = jest.fn();
+    renderFields(form({ category: 'Transportation' }), { onChange });
+    const names = within(details()!).getAllByRole('button').map((b) => b.textContent);
+    expect(names).toEqual(['🚇Public transit', '🔧Maintenance', '🅿️Parking', '🚙Car rental']);
+    await userEvent.click(within(details()!).getByRole('button', { name: /Parking/ }));
+    expect(onChange).toHaveBeenCalledWith('subcategory', 'Parking');
+  });
+
+  it('offers Insurance under Others', async () => {
+    const onChange = jest.fn();
+    renderFields(form({ category: 'Others' }), { onChange });
+    await userEvent.click(within(details()!).getByRole('button', { name: /Insurance/ }));
+    expect(onChange).toHaveBeenCalledWith('category', 'Insurance');
+  });
+
+  it('keeps income a flat list', () => {
+    renderFields(form({ type: 'income' }));
+    expect(screen.getByRole('button', { name: /Salary/ })).toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: /^Food$/ })).not.toBeInTheDocument();
   });
 });
