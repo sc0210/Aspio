@@ -1,4 +1,4 @@
-import { periodChange, netWorthOf } from '@/lib/dashboard/periodChange';
+import { periodChange, netWorthOf, leverageOf, leverageChange } from '@/lib/dashboard/periodChange';
 
 const pts = (...vals: number[]) => vals.map((totalAsset) => ({ totalAsset }));
 
@@ -102,5 +102,48 @@ describe('netWorthOf — assets minus debt, never assets alone', () => {
         const after = { totalAsset: 2_000_000, debtBalance: 1_000_000 };
 
         expect(netWorthOf(after) - netWorthOf(before)).toBe(0);
+    });
+});
+
+describe('leverageChange — debt over the invested portfolio', () => {
+    const at = (portfolioWallet: number, debtBalance?: number) => ({ portfolioWallet, debtBalance });
+
+    it('rises when the market falls with no new borrowing', () => {
+        // 2026-11: NT$3.77M of debt, the portfolio 7.11M → 6.12M.
+        const r = leverageChange([at(7_114_276, 3_765_740), at(6_800_000, 3_765_740), at(6_123_098, 3_765_740)]);
+        expect(r?.start).toBeCloseTo(52.93, 2);
+        expect(r?.now).toBeCloseTo(61.50, 2);
+        expect(r?.debt).toBe(3_765_740);
+        expect(r?.invested).toBe(6_123_098);
+    });
+
+    it('falls as debt is repaid', () => {
+        const r = leverageChange([at(1_000, 500), at(1_000, 400)]);
+        expect(r!.now - r!.start!).toBeCloseTo(-10, 6);
+    });
+
+    it('is nothing to show without debt at either end', () => {
+        expect(leverageChange([at(1_000), at(2_000, 0)])).toBeUndefined();
+        expect(leverageChange(undefined)).toBeUndefined();
+        expect(leverageChange([])).toBeUndefined();
+    });
+
+    it('still shows a debt repaid to zero during the window', () => {
+        const r = leverageChange([at(1_000, 200), at(1_000, 0)]);
+        expect(r?.now).toBe(0);
+        expect(r?.start).toBeCloseTo(20, 6);
+    });
+
+    it('has no ratio when nothing is invested', () => {
+        expect(leverageOf(at(0, 500))).toBeUndefined();
+        expect(leverageChange([at(1_000, 500), at(0, 500)])).toBeUndefined();
+        // Nothing invested at the start: a level now, no change to report.
+        const r = leverageChange([at(0, 500), at(1_000, 500)]);
+        expect(r?.now).toBeCloseTo(50, 6);
+        expect(r?.start).toBeUndefined();
+    });
+
+    it('has no start from a single point', () => {
+        expect(leverageChange([at(1_000, 500)])?.start).toBeUndefined();
     });
 });

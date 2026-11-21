@@ -65,7 +65,7 @@ import {
 } from '@heroicons/react/24/outline';
 import { cn } from '@/utils/cn';
 import { DashboardTodayStrip } from './DashboardTodayStrip';
-import { periodChange, netWorthOf } from '@/lib/dashboard/periodChange';
+import { periodChange, netWorthOf, leverageChange } from '@/lib/dashboard/periodChange';
 import { PERIOD_FALLBACKS, periodLabelKey } from '@/lib/dashboard/periodLabels';
 
 const PERIOD_OPTIONS = [
@@ -200,23 +200,15 @@ export function ComprehensiveDashboard() {
     [netWorthSeries],
   );
 
-  // Portfolio change over the SELECTED period, read off the same wallet-trend
-  // series the hero card's net-worth delta uses.
+  // Leverage (debt over the Portfolio wallet) where the selected period opened
+  // and where it is now, off the same series as the net-worth delta.
   //
-  // It used to come from portfolio.gainLossPercentage / totalGainLoss, which is
-  // all-time unrealized P&L against cost basis — a figure with no period in it at
-  // all. So the two tiles sat side by side on the same strip with different time
-  // bases: changing the period moved the Total Assets delta and left Portfolio's
-  // untouched, which reads as the dashboard ignoring the selector.
-  //
-  // Note this is the change in portfolio *value* over the window, so contributions
-  // and withdrawals count toward it, not just market movement. That is the same
-  // basis Total Assets already uses. All-time unrealized P&L is still on the
-  // portfolio page, where it isn't sitting under a period selector.
-  const portfolioChange = useMemo(
-    () => periodChange(trendFromOpen, 'portfolioWallet'),
-    [trendFromOpen],
-  );
+  // This slot used to hold the Portfolio wallet's value and its change over the
+  // period, which the Portfolio section directly below already states, and the
+  // two were computed on different bases and disagreed (−1.03M vs −905K one
+  // month with no trades). Leverage is what nothing else on the page shows: a
+  // market fall raises it with no new borrowing.
+  const leverage = useMemo(() => leverageChange(trendFromOpen), [trendFromOpen]);
 
   const quickActions = useMemo(() => [
     { label: t('dashboard:quickActions.addTransaction.title', 'Add Transaction'), href: '/transactions/add', icon: PlusIcon },
@@ -356,11 +348,9 @@ export function ComprehensiveDashboard() {
             because the backend computes it over a different holding set. */}
         <section aria-label="This period" data-tour="dash-flow" className="animate-fade-in-up animation-delay-200">
           <DashboardTodayStrip
-            netSaved={memoizedDashboardData.stats.monthlyIncome - memoizedDashboardData.stats.monthlyExpenses}
-            savingsRate={memoizedDashboardData.stats.monthlyIncome > 0 ? memoizedDashboardData.stats.savingsRate : null}
-            portfolioValue={memoizedDashboardData.stats.portfolio_wallet}
-            portfolioChangePercent={portfolioChange.percent}
-            portfolioChangeAmount={portfolioChange.amount}
+            income={memoizedDashboardData.stats.monthlyIncome}
+            expenses={memoizedDashboardData.stats.monthlyExpenses}
+            leverage={leverage}
             isLoading={isLoading}
             periodLabel={periodLabel}
           />
