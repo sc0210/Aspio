@@ -29,6 +29,11 @@ const GrowthForecastCard = dynamic(
   () => import('./GrowthForecastCard').then(m => ({ default: m.GrowthForecastCard })),
   { ssr: false, loading: () => <div className="animate-pulse bg-gray-200 dark:bg-gray-700 rounded-2xl h-48" role="status" aria-label="Loading growth forecast" /> }
 );
+// The Taiwan CAPE card draws a recharts sparkline: lazy, like the cards above.
+const TwCapeCard = dynamic(
+  () => import('./TwCapeCard').then(m => ({ default: m.TwCapeCard })),
+  { ssr: false, loading: () => <div className="animate-pulse bg-gray-200 dark:bg-gray-700 rounded-xl h-40" role="status" aria-label="Loading Taiwan market valuation" /> }
+);
 // PortfolioHeatmap + TransactionHeatmap import recharts (Treemap) — lazy-load to
 // keep it out of the initial dashboard JS bundle, same as the cards above.
 const PortfolioHeatmap = dynamic(
@@ -375,6 +380,12 @@ export function ComprehensiveDashboard() {
               portfolio={memoizedDashboardData.portfolio}
               dateRange={dateRange}
             />
+          </section>
+
+          {/* The market your portfolio sits in: Taiwan's CAPE against its own
+              history, beside the portfolio rather than in Explore. */}
+          <section aria-label="Taiwan market valuation" className="animate-fade-in-up animation-delay-300">
+            <TwCapeCard />
           </section>
 
           {/* Goals · Cash Flow · Recent Activity — compact horizontal row.
