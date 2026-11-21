@@ -492,8 +492,8 @@ function HoldingsTable({ rows, currency, isValueVisible, isLoading }: HoldingsTa
                                                 className={cn(
                                                     'font-semibold tabular-nums text-sm',
                                                     isPositive
-                                                        ? 'text-success-700 dark:text-success-400'
-                                                        : 'text-error-700 dark:text-error-400',
+                                                        ? 'text-rise-700 dark:text-rise-400'
+                                                        : 'text-fall-700 dark:text-fall-400',
                                                 )}
                                             >
                                                 {isValueVisible
@@ -512,8 +512,8 @@ function HoldingsTable({ rows, currency, isValueVisible, isLoading }: HoldingsTa
                                                 className={cn(
                                                     'inline-flex items-center gap-1 font-bold tabular-nums text-xs px-2.5 py-1 rounded-full',
                                                     isPositive
-                                                        ? 'bg-success-100/80 dark:bg-success-900/30 text-success-700 dark:text-success-400'
-                                                        : 'bg-error-100/80 dark:bg-error-900/30 text-error-700 dark:text-error-400',
+                                                        ? 'bg-rise-100/80 dark:bg-rise-900/30 text-rise-700 dark:text-rise-400'
+                                                        : 'bg-fall-100/80 dark:bg-fall-900/30 text-fall-700 dark:text-fall-400',
                                                 )}
                                             >
                                                 {isPositive ? (
@@ -1313,7 +1313,7 @@ export default function TrendPage() {
                         <span
                             className={cn(
                                 'font-bold tabular-nums whitespace-nowrap flex-shrink-0',
-                                isPositiveChange ? 'text-success-700 dark:text-success-400' : 'text-error-700 dark:text-error-400',
+                                isPositiveChange ? 'text-rise-700 dark:text-rise-400' : 'text-fall-700 dark:text-fall-400',
                             )}
                             title="Total change in asset value over the period (includes deposits/withdrawals)"
                         >
@@ -1324,7 +1324,7 @@ export default function TrendPage() {
                         <span
                             className={cn(
                                 'font-bold tabular-nums whitespace-nowrap flex-shrink-0',
-                                isPositivePeriod ? 'text-success-700 dark:text-success-400' : 'text-error-700 dark:text-error-400',
+                                isPositivePeriod ? 'text-rise-700 dark:text-rise-400' : 'text-fall-700 dark:text-fall-400',
                             )}
                             title={
                                 periodStats.capitalAdded > 0

@@ -142,7 +142,7 @@ Shared app-level infrastructure lives outside `modules/`: `app/common/` (base re
 ### Frontend
 - `focus-visible:` not `focus:` for keyboard-only UI elements (avoids flash on page load).
 - LINE brand green: `#06C755` / `#05b34d` hover.
-- Tailwind `prosperity-*` color scale = the app's primary brand palette.
+- Tailwind `primary-*` (blue) is the brand palette; `prosperity-*` (green) is the accent for money growing or goals achieved (`docs/UI_CONVENTIONS.md`).
 - All images from external CDNs (LINE, etc.) use plain `<img>` not `next/image` — add `// eslint-disable-next-line @next/next/no-img-element` when needed.
 
 ## Sub-agent Ownership

@@ -1,12 +1,14 @@
 'use client';
 
-import { useMemo, useState } from 'react';
+import { useMemo } from 'react';
 import { Treemap, ResponsiveContainer, Tooltip } from 'recharts';
 import { useTranslation } from 'react-i18next';
 import { usePrivacy } from '@/contexts/PrivacyContext';
 import { usePortfolio } from '@/hooks/usePortfolio';
 import { formatCurrency, toTWD } from '@/utils/formatters';
 
+import { Card } from '@/components/ui/Card';
+import { useMarketColors } from '@/hooks/useMarketColors';
 // Per-holding metadata keyed by symbol so the treemap tile renderer and tooltip
 // can look up colour/percent/value without relying on recharts spreading custom
 // fields through its content component.
@@ -50,8 +52,6 @@ function legendColors(tw: boolean): string[] {
   const loss = tw ? GREENS : REDS;
   return [loss[2], loss[1], loss[0], NEUTRAL, gain[0], gain[1], gain[2]];
 }
-
-const HEATMAP_TW_KEY = 'aspiro-heatmap-tw-colors';
 
 const formatPct = (pct: number | null) => (pct == null ? '—' : `${pct >= 0 ? '+' : ''}${pct.toFixed(2)}%`);
 
@@ -123,16 +123,9 @@ export function PortfolioHeatmap() {
   const { holdings, isLoading: loading } = usePortfolio();
 
   // Colour convention: false = Western (gain green), true = TW/Asian (gain red).
-  // Persisted so it sticks across visits.
-  const [twMode, setTwMode] = useState<boolean>(
-    () => typeof window !== 'undefined' && localStorage.getItem(HEATMAP_TW_KEY) === '1',
-  );
-  const toggleTw = () =>
-    setTwMode(prev => {
-      const next = !prev;
-      try { localStorage.setItem(HEATMAP_TW_KEY, next ? '1' : '0'); } catch { /* ignore */ }
-      return next;
-    });
+  // The app-wide preference (also in Settings), so every market figure agrees.
+  const { redUp: twMode, setRedUp } = useMarketColors();
+  const toggleTw = () => setRedUp(!twMode);
 
   const { treeData, nodes, count, anyDaily } = useMemo(() => {
     // The Portfolio wallet's invested positions, as every other day-change figure
@@ -230,7 +223,7 @@ export function PortfolioHeatmap() {
   }, [holdings, t, twMode]);
 
   return (
-    <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-sm p-4 sm:p-6 h-full">
+    <Card padding="none" className="p-4 sm:p-6 h-full">
       <div className="mb-4">
         {/* Title row: heading left, colour legend + toggle on the right — the
             subtitle spans full-width below so a long subtitle can't push the
@@ -327,6 +320,6 @@ export function PortfolioHeatmap() {
           </ResponsiveContainer>
         </div>
       )}
-    </div>
+    </Card>
   );
 }

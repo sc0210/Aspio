@@ -217,14 +217,13 @@ export function AssetGoalCard({
     }
 
     return (
-        <div
-            className={`
-                bg-white dark:bg-gray-800 rounded-xl p-4 sm:p-5 transition-all duration-200 shadow-sm hover:shadow-md
-                ${isAtRisk && !isCompleted
-                    ? 'border border-amber-300 dark:border-amber-600 border-l-4 border-l-amber-500'
-                    : 'border border-gray-200 dark:border-gray-700 hover:border-primary-400 dark:hover:border-primary-500'
-                }
-            `}
+        <Card
+            padding="md"
+            className={
+                isAtRisk && !isCompleted
+                    ? 'transition-all duration-200 hover:shadow-md border-amber-300 dark:border-amber-600 border-l-4 border-l-amber-500'
+                    : 'transition-all duration-200 hover:shadow-md hover:border-primary-400 dark:hover:border-primary-500'
+            }
         >
             {/* Header */}
             <div className="flex items-start justify-between mb-3 gap-2">
@@ -439,6 +438,6 @@ export function AssetGoalCard({
                     )}
                 </div>
             )}
-        </div>
+        </Card>
     );
 }

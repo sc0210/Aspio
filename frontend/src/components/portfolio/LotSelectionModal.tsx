@@ -192,13 +192,13 @@ export function LotSelectionModal({
                         <div className="text-right">
                           <div className={cn(
                             "text-sm font-semibold",
-                            gainLoss >= 0 ? "text-success-700 dark:text-success-400" : "text-error-700 dark:text-error-400"
+                            gainLoss >= 0 ? "text-rise-700 dark:text-rise-400" : "text-fall-700 dark:text-fall-400"
                           )}>
                             {gainLoss >= 0 ? '+' : ''}{formatCurrency(gainLoss, currency)}
                           </div>
                           <div className={cn(
                             "text-xs",
-                            gainLoss >= 0 ? "text-success-700 dark:text-success-400" : "text-error-700 dark:text-error-400"
+                            gainLoss >= 0 ? "text-rise-700 dark:text-rise-400" : "text-fall-700 dark:text-fall-400"
                           )}>
                             {gainLossPercent >= 0 ? '+' : ''}{gainLossPercent.toFixed(2)}%
                           </div>
@@ -244,8 +244,8 @@ export function LotSelectionModal({
                       <div className={cn(
                         "font-bold",
                         costBasisPreview.gainLoss >= 0
-                          ? "text-success-700 dark:text-success-400"
-                          : "text-error-700 dark:text-error-400"
+                          ? "text-rise-700 dark:text-rise-400"
+                          : "text-fall-700 dark:text-fall-400"
                       )}>
                         {costBasisPreview.gainLoss >= 0 ? '+' : ''}
                         {formatCurrency(costBasisPreview.gainLoss, currency)}
@@ -253,8 +253,8 @@ export function LotSelectionModal({
                       <div className={cn(
                         "text-sm",
                         costBasisPreview.gainLoss >= 0
-                          ? "text-success-700 dark:text-success-400"
-                          : "text-error-700 dark:text-error-400"
+                          ? "text-rise-700 dark:text-rise-400"
+                          : "text-fall-700 dark:text-fall-400"
                       )}>
                         {costBasisPreview.gainLossPercentage >= 0 ? '+' : ''}
                         {costBasisPreview.gainLossPercentage.toFixed(2)}%

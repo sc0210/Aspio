@@ -197,6 +197,6 @@ describe('PortfolioStats', () => {
         show({ portfolio: { ...portfolio, totalGainLoss: 0.4, gainLossPercentage: 0.5 } });
 
         const roi = screen.getByText(/^\+0\.50% /);
-        expect(roi.className).toContain('text-success-700');
+        expect(roi.className).toContain('text-rise-700');
     });
 });

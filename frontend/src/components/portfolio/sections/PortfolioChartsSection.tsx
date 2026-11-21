@@ -9,6 +9,7 @@ import { usePrivacy } from '@/contexts/PrivacyContext';
 import type { DateRangePreset, DateRange } from '@/hooks/portfolio/usePortfolioViewState';
 import type { Portfolio } from '@/shared/types';
 
+import { Card } from '@/components/ui/Card';
 // Chart skeleton shared by all three lazy chart wrappers below
 const ChartSkeleton = ({ height = 400 }: { height?: number }) => (
   <div
@@ -159,7 +160,7 @@ export function PortfolioChartsSection({
   }
 
   return (
-    <div className="bg-white rounded-xl shadow-sm dark:bg-gray-800">
+    <Card padding="none">
       {/* Chart Header */}
       <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 p-4 border-b border-gray-200 dark:border-gray-700">
         <h2 className="text-lg font-semibold text-gray-900 dark:text-gray-100">
@@ -360,6 +361,6 @@ export function PortfolioChartsSection({
           </div>
         )}
       </div>
-    </div>
+    </Card>
   );
 }

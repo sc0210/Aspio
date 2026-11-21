@@ -23,6 +23,7 @@ import type { PortfolioFiltersState } from '@/hooks/portfolio/usePortfolioFilter
 import type { PortfolioEditState } from '@/hooks/portfolio/usePortfolioEdit';
 import type { PortfolioModalsState } from '@/hooks/portfolio/usePortfolioModals';
 
+import { Card } from '@/components/ui/Card';
 interface AnalyticsData {
   allocation: {
     byType: Array<{ type: string; value: number; percentage: number; color: string }>;
@@ -160,7 +161,7 @@ export function PortfolioHoldingsSection({
 
   if (!hasAnyHoldings) {
     return (
-      <div className="p-12 text-center bg-white rounded-xl shadow-sm dark:bg-gray-800">
+      <Card padding="none" className="p-12 text-center">
         <div className="mx-auto w-24 h-24 mb-4 text-gray-300 dark:text-gray-600">
           <svg
             fill="none"
@@ -201,12 +202,12 @@ export function PortfolioHoldingsSection({
           </svg>
           {t('portfolio:addFirstHolding')}
         </a>
-      </div>
+      </Card>
     );
   }
 
   return (
-    <div className="bg-white rounded-xl shadow-sm dark:bg-gray-800">
+    <Card padding="none">
       {/* Section Header */}
       <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 p-4 border-b border-gray-200 dark:border-gray-700">
         <div className="flex items-center gap-3">
@@ -318,6 +319,6 @@ export function PortfolioHoldingsSection({
           </Suspense>
         )}
       </div>
-    </div>
+    </Card>
   );
 }

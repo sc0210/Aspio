@@ -104,10 +104,7 @@
     "VND": "越南盾"
   },
   "demoAlert": {
-    "label": "示範模式",
-    "rebalancing": "您正在查看示範模式的再平衡儀表板。實際數據將根據您的投資組合動態計算。",
-    "sampleDataOnly": "— 僅為範例資料。",
-    "simulated": "交易、目標與投資組合皆為模擬資料。",
+    "rebalancing": "登入後即可設定自己的目標配置；目前顯示的是範例目標。",
     "changesSimulated": "示範模式：變更僅為模擬，註冊後即可儲存真實資料"
   },
   "error": {
@@ -1143,7 +1140,9 @@
     "notifLoadFailed": "無法載入通知設定。",
     "notifSaveFailed": "無法儲存這項變更，請再試一次。",
     "profileLoadFailed": "無法載入個人資料，下方欄位可能是空的。",
-    "saved": "已儲存"
+    "saved": "已儲存",
+    "marketRedUp": "漲紅跌綠",
+    "marketRedUpDesc": "台股配色：價格上漲顯示紅色、下跌顯示綠色。收入與支出的顏色不變。"
   },
   "status": {
     "active": "啟用",

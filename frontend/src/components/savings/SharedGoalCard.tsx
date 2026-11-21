@@ -5,6 +5,7 @@ import { TrashIcon, CheckCircleIcon, ChartBarIcon, PencilSquareIcon } from '@her
 import type { SharedGoalOut } from '@/shared/types';
 import { formatCurrency as formatCurrencyUtil } from '@/utils/formatters';
 
+import { Card } from '@/components/ui/Card';
 interface SharedGoalCardProps {
   goal: SharedGoalOut;
   onViewHistory: (goal: SharedGoalOut) => void;
@@ -46,8 +47,9 @@ export default function SharedGoalCard({ goal, onViewHistory, onDelete, onEdit, 
     : t('savings.card.motivation.start', '💪 Great start — every contribution counts!');
 
   return (
-    <div
-      className={`bg-white dark:bg-gray-800 rounded-xl p-5 shadow-sm transition-shadow hover:shadow-md ${
+    <Card
+      padding="md"
+      className={`transition-shadow hover:shadow-md ${
         isCompleted ? 'ring-2 ring-prosperity-400/40 dark:ring-prosperity-500/30' : ''
       }`}
     >
@@ -222,6 +224,6 @@ export default function SharedGoalCard({ goal, onViewHistory, onDelete, onEdit, 
           </button>
         )}
       </div>
-    </div>
+    </Card>
   );
 }

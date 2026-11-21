@@ -104,10 +104,7 @@
     "VND": "Vietnamese Dong"
   },
   "demoAlert": {
-    "label": "Demo mode",
-    "rebalancing": "You're viewing the rebalancing dashboard in demo mode. Real figures are calculated dynamically from your portfolio.",
-    "sampleDataOnly": "— sample data only.",
-    "simulated": "Transactions, goals & portfolio are simulated.",
+    "rebalancing": "Sign in to set your own target allocation; these targets are a sample.",
     "changesSimulated": "Demo: changes simulated — sign up to save real data"
   },
   "error": {
@@ -1145,7 +1142,9 @@
     "notifLoadFailed": "Couldn't load your notification settings.",
     "notifSaveFailed": "Couldn't save that change. Try again.",
     "profileLoadFailed": "Couldn't load your profile. The fields below may be empty.",
-    "saved": "Saved"
+    "saved": "Saved",
+    "marketRedUp": "Gains in red",
+    "marketRedUpDesc": "Taiwan market colours: a price going up is red and going down is green. Income and spending keep their colours."
   },
   "status": {
     "active": "Active",

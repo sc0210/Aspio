@@ -5,6 +5,7 @@ import type { PeerStatCard } from '@/shared/types';
 import { formatCurrency as formatCurrencyUtil } from '@/utils/formatters';
 import { PERSON_COLORS, personColors } from './personColors';
 
+import { Card } from '@/components/ui/Card';
 interface CompareStatCardsProps {
   users: PeerStatCard[];
   /** Display currency (the signed-in user's preferred currency). */
@@ -20,10 +21,7 @@ export default function CompareStatCards({ users, currency }: CompareStatCardsPr
   return (
     <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
       {users.map((user) => (
-        <div
-          key={user.user_id}
-          className="bg-white dark:bg-gray-800 rounded-xl p-5 shadow-sm"
-        >
+        <Card key={user.user_id} padding="md">
           <div className="flex items-center gap-3 mb-4">
             <div
               className={`w-10 h-10 rounded-full ${(colors.get(user.user_id) ?? PERSON_COLORS[0]).avatar} flex items-center justify-center text-white font-semibold text-sm shrink-0`}
@@ -65,7 +63,7 @@ export default function CompareStatCards({ users, currency }: CompareStatCardsPr
               </div>
             </div>
           </div>
-        </div>
+        </Card>
       ))}
     </div>
   );

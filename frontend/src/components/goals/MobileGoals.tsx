@@ -21,6 +21,7 @@ import { usePrivacy } from '@/contexts/PrivacyContext';
 import { GOAL_CATEGORIES } from '@/utils/constants';
 import { formatTWD, formatTWDCompact } from '@/utils/formatters';
 import { Card } from '@/components/ui/Card';
+import { PageHeader } from '@/components/layout/PageHeader';
 
 // The same windows the desktop page uses, loaded only when opened.
 const CreateGoalModal = dynamic(
@@ -156,13 +157,14 @@ export function MobileGoals() {
     return (
         <DashboardLayout>
             <div className="max-w-md mx-auto space-y-4 pb-4">
-                <div className="flex items-center justify-between pt-1">
-                    <h1 className="text-xl font-extrabold tracking-tight text-gray-900 dark:text-white">{t('goals:title', 'Goals')}</h1>
-                    <button type="button" onClick={goCreate} aria-label={t('goals:create', 'New goal')}
-                        className="grid place-items-center w-11 h-11 rounded-full bg-primary-700 hover:bg-primary-800 text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-400">
-                        <PlusIcon className="w-5 h-5" />
-                    </button>
-                </div>
+                <PageHeader variant="flat"
+                    actions={<>
+                        <button type="button" onClick={goCreate} aria-label={t('goals:create', 'New goal')}
+                            className="grid place-items-center w-11 h-11 rounded-full bg-primary-700 hover:bg-primary-800 text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-400">
+                            <PlusIcon className="w-5 h-5" />
+                        </button>
+                    </>}
+                />
 
                 <BiggerScreenHint />
 

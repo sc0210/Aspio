@@ -4,7 +4,9 @@ import { ReactNode } from 'react';
 import Link from 'next/link';
 import { ArrowLeftIcon } from '@heroicons/react/24/outline';
 import { cn } from '@/utils/cn';
-import { ACCENTS, type Accent } from '@/components/ui/accent';
+import { type Accent } from '@/components/ui/accent';
+import { Card } from '@/components/ui/Card';
+import { useRouteTitle } from '@/components/layout/PageTitle';
 
 /**
  * The header a page renders for itself — on phones only.
@@ -24,7 +26,14 @@ import { ACCENTS, type Accent } from '@/components/ui/accent';
 type PageHeaderAccent = Accent;
 
 interface PageHeaderProps {
-    title: string;
+    /** Defaults to the route's nav name, which is almost always right. */
+    title?: ReactNode;
+    /**
+     * `card` is a white panel with an accent hairline. `flat` is a bare title
+     * row with its actions, which is what the focused phone screens (the
+     * Mobile* components) all drew by hand.
+     */
+    variant?: 'card' | 'flat';
     /** One line under the title. Skip it rather than restating the title. */
     subtitle?: ReactNode;
     accent?: PageHeaderAccent;
@@ -43,7 +52,8 @@ interface PageHeaderProps {
 }
 
 export function PageHeader({
-    title,
+    title: titleProp,
+    variant = 'card',
     subtitle,
     accent = 'prosperity',
     actions,
@@ -52,11 +62,13 @@ export function PageHeader({
     backLabel,
     className,
 }: PageHeaderProps) {
+    const routeTitle = useRouteTitle();
+    const title = titleProp ?? routeTitle;
     const back = backHref ? (
         <Link
             href={backHref}
             aria-label={backLabel}
-            className="-ml-2 p-2 rounded-lg text-gray-600 hover:text-gray-900 dark:text-gray-400 dark:hover:text-white hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors flex-shrink-0 min-w-[44px] min-h-[44px] flex items-center justify-center focus:outline-none focus-visible:ring-2 focus-visible:ring-primary-500"
+            className="-ml-2 p-2 rounded-lg text-gray-600 hover:text-gray-900 dark:text-gray-400 dark:hover:text-white hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors flex-shrink-0 min-w-[44px] min-h-[44px] flex items-center justify-center focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-500"
         >
             <ArrowLeftIcon className="w-5 h-5" />
         </Link>
@@ -65,20 +77,29 @@ export function PageHeader({
             type="button"
             onClick={onBack}
             aria-label={backLabel}
-            className="-ml-2 p-2 rounded-lg text-gray-600 hover:text-gray-900 dark:text-gray-400 dark:hover:text-white hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors flex-shrink-0 min-w-[44px] min-h-[44px] flex items-center justify-center focus:outline-none focus-visible:ring-2 focus-visible:ring-primary-500"
+            className="-ml-2 p-2 rounded-lg text-gray-600 hover:text-gray-900 dark:text-gray-400 dark:hover:text-white hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors flex-shrink-0 min-w-[44px] min-h-[44px] flex items-center justify-center focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-500"
         >
             <ArrowLeftIcon className="w-5 h-5" />
         </button>
     ) : null;
 
+    if (variant === 'flat') {
+        return (
+            <div className={cn('md:hidden flex items-center gap-3 pt-1', className)}>
+                {back}
+                <div className="min-w-0 flex-1">
+                    <h1 className="truncate text-xl font-extrabold tracking-tight text-gray-900 dark:text-white">
+                        {title}
+                    </h1>
+                    {subtitle && <p className="text-xs text-gray-500 dark:text-gray-400 mt-0.5">{subtitle}</p>}
+                </div>
+                {actions && <div className="flex shrink-0 items-center gap-2">{actions}</div>}
+            </div>
+        );
+    }
+
     return (
-        <div
-            className={cn(
-                'md:hidden rounded-2xl bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-700 shadow-sm overflow-hidden animate-fade-in',
-                className,
-            )}
-        >
-            <div className={cn('h-px bg-gradient-to-r', ACCENTS[accent])} />
+        <Card padding="none" accent={accent} className={cn('md:hidden animate-fade-in', className)}>
             <div className="px-4 sm:px-6 py-4 sm:py-5">
                 <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
                     <div className="flex items-center gap-1 min-w-0">
@@ -97,6 +118,6 @@ export function PageHeader({
                     {actions && <div className="flex items-center gap-2">{actions}</div>}
                 </div>
             </div>
-        </div>
+        </Card>
     );
 }

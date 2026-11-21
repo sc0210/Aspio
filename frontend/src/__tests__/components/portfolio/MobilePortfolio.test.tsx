@@ -58,11 +58,11 @@ it('asks the backend in demo mode too: it serves demo risk metrics unauthenticat
 });
 
 describe("today's change", () => {
-  it('reads a gain as up, in green with an arrow', async () => {
+  it('reads a gain as up, in the rise colour with an arrow', async () => {
     show();
     const line = await screen.findByText(/· \+0\.14%/);
     expect(line).toHaveTextContent('▲');
-    expect(line.className).toContain('text-prosperity-700');
+    expect(line.className).toContain('text-rise-700');
   });
 
   it('reads a day rounding to zero as flat: grey, no arrow, no sign', async () => {

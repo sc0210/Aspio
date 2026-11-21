@@ -19,6 +19,7 @@ import {
     demoGroups,
     demoLineLinkStatus,
 } from '@/data/demoData';
+import { PageHeader } from '@/components/layout/PageHeader';
 
 type LinkStatus = { linked: boolean; display_name?: string };
 type Group = { id: string; name: string | null; currency: string; member_count: number };
@@ -115,7 +116,7 @@ export function MobileGroups() {
     return (
         <DashboardLayout>
             <div className="max-w-md mx-auto space-y-4 pb-4">
-                <h1 className="pt-1 text-xl font-extrabold tracking-tight text-gray-900 dark:text-white">{t('title')}</h1>
+                <PageHeader variant="flat" />
 
                 {loading || authLoading ? (
                     <div className="flex items-center justify-center py-24"><LoadingSpinner /></div>

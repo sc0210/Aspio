@@ -11,6 +11,7 @@ import '@/styles/dashboard.css';
 // files — see the header of that file for why next/font/local cannot express
 // the unicode-range split this family needs.
 import '@/styles/noto-sans-tc.css';
+import { MARKET_COLORS_BOOT_SCRIPT } from '@/lib/marketColors';
 
 // Inter is vendored rather than pulled by next/font/google, which fetches from
 // fonts.gstatic.com at BUILD time — a Google Fonts outage failed CI on
@@ -117,6 +118,9 @@ export default function RootLayout({
 
         {/* Google OAuth avatar images — preconnect so avatar loads don't block LCP */}
         <link rel="preconnect" href="https://lh3.googleusercontent.com" crossOrigin="anonymous" />
+
+        {/* Gains-in-red, applied before first paint (lib/marketColors.ts). */}
+        <script dangerouslySetInnerHTML={{ __html: MARKET_COLORS_BOOT_SCRIPT }} />
 
         {/* Next.js automatically handles modulepreload for JS chunks */}
       </head>

@@ -17,6 +17,7 @@ import { usePrivacy } from '@/contexts/PrivacyContext';
 import type { DebtAccount } from '@/services/loanService';
 import { formatCurrency } from '@/utils/formatters';
 import { monthsFrom, payoffPlan, planInputs } from '@/lib/finance/payoffPlan';
+import { PageHeader } from '@/components/layout/PageHeader';
 
 const BAR = '#f43f5e'; // rose — the loans page's accent
 
@@ -68,13 +69,14 @@ export function MobileLoans() {
     return (
         <DashboardLayout>
             <div className="max-w-md mx-auto space-y-4 pb-4">
-                <div className="flex items-center justify-between pt-1">
-                    <h1 className="text-xl font-extrabold tracking-tight text-gray-900 dark:text-white">{t('loans:title')}</h1>
-                    <button type="button" onClick={() => setShowAdd(true)} aria-label={t('loans:addLoan')}
-                        className="grid place-items-center w-11 h-11 rounded-full bg-primary-700 hover:bg-primary-800 text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-400">
-                        <PlusIcon className="w-5 h-5" />
-                    </button>
-                </div>
+                <PageHeader variant="flat"
+                    actions={<>
+                        <button type="button" onClick={() => setShowAdd(true)} aria-label={t('loans:addLoan')}
+                            className="grid place-items-center w-11 h-11 rounded-full bg-primary-700 hover:bg-primary-800 text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-400">
+                            <PlusIcon className="w-5 h-5" />
+                        </button>
+                    </>}
+                />
 
                 <BiggerScreenHint />
 
