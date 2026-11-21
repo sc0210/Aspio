@@ -36,6 +36,12 @@ GRACE_MINUTES = 30
 _ALWAYS_OPEN = {"CRYPTO", "CRYPTOCURRENCY"}
 
 
+def session_timezone(market: Optional[str]) -> Optional[ZoneInfo]:
+    """The exchange's own timezone, or None for a market with no modelled session."""
+    session = _SESSIONS.get((market or "").upper())
+    return session[0] if session else None
+
+
 def session_closed(
     market: Optional[str],
     bar_date: date,
