@@ -2979,9 +2979,9 @@ async def handle_quick_set_category(
     # Re-filing the row is also how the bot learns: the next "<same description>"
     # resolves from this user's history before any keyword guess.
     if txn.category_id != category.id:
-        # A detail belongs to its category: re-filing drops it, or re-guesses
-        # one under the new category ("美甲" moved to Shopping is Beauty).
-        txn.subcategory = guess_subcategory(txn.description, category.name)
+        # A detail belongs to its category, so re-filing drops it. Not re-guessed:
+        # a word can mean another thing there (skincare 保養品 is not a car service).
+        txn.subcategory = None
     txn.category_id = category.id
     await db.flush()
     await _reply(

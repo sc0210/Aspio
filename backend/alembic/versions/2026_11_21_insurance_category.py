@@ -7,8 +7,9 @@ Create Date: 2026-11-21
 The expense picker offers Insurance (保險) under its Others group. Categories
 are global and an unknown name resolves to "Others"
 (transactions/services.py::_ensure_category_id), so without this row the
-choice would silently save as Others. Inserted only when no expense category
-of that name exists. Data only: no new table, so no RLS.
+choice would silently save as Others. An inactive Insurance row is reactivated
+(only active categories resolve); otherwise one is inserted when none exists.
+Data only: no new table, so no RLS.
 
 Matches backend/scripts/prod_sql/2026_11_21_insurance_category.sql.
 """
@@ -22,6 +23,16 @@ depends_on = None
 
 
 def upgrade() -> None:
+    op.execute(
+        """
+        UPDATE transaction_categories SET is_active = true, updated_at = now()
+        WHERE name = 'Insurance' AND type = 'EXPENSE'::categorytype AND NOT is_active
+          AND NOT EXISTS (
+            SELECT 1 FROM transaction_categories
+            WHERE name = 'Insurance' AND type = 'EXPENSE'::categorytype AND is_active
+          );
+        """
+    )
     op.execute(
         """
         INSERT INTO transaction_categories

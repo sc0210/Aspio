@@ -105,6 +105,7 @@ def test_guesses_category(description, is_income, expected):
         ("機車保養", "Transportation", "Car Maintenance"),
         ("保養", "Transportation", "Car Maintenance"),  # the same word reads by its category
         ("保養", "Shopping", "Beauty"),
+        ("business taxi", "Transportation", None),  # "bus" only as a whole word
         ("停車費", "Transportation", "Parking"),
         ("租車", "Transportation", "Car Rental"),
         ("蝦皮", "Shopping", None),      # Shopping, but no detail suggested
@@ -337,6 +338,20 @@ class TestQuickCategory:
         # The same words again now follow the user's choice.
         again = await _log(async_session, "麻辣燙 180")
         assert again.category_id == categories["Groceries"].id
+
+    @pytest.mark.asyncio
+    async def test_moving_drops_the_detail_instead_of_reguessing(self, async_session, link, categories):
+        shopping = _category("Shopping", CategoryType.EXPENSE, 20)
+        transport = _category("Transportation", CategoryType.EXPENSE, 20)
+        async_session.add_all([shopping, transport])
+        await async_session.flush()
+        txn = await _log(async_session, "保養品 500")  # skincare: Shopping · Beauty
+        assert (txn.category_id, txn.subcategory) == (shopping.id, "Beauty")
+        with patch.object(svc, "_reply", new_callable=AsyncMock):
+            await svc.handle_quick_set_category(
+                async_session, LINE_USER, REPLY_TOKEN, str(txn.id), str(transport.id))
+        # Not "Car Maintenance": the same word means something else there.
+        assert (txn.category_id, txn.subcategory) == (transport.id, None)
 
     @pytest.mark.asyncio
     async def test_rejects_a_category_of_the_other_type(self, async_session, link, categories):

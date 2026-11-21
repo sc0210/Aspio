@@ -107,8 +107,9 @@ export interface CategoryChoice {
  * its own (`category`), with an optional row of finer choices under it. One tap
  * for most entries; the detail is there for those who want it. Every choice
  * stores an ordinary category (plus, for Shopping, a subcategory), so reports,
- * budgets and older rows are unchanged. The groups follow the Transactions pie:
- * food, housing, transport, and the rest.
+ * budgets and older rows are unchanged. Not the pie's four spending groups
+ * (EXPENSE_GROUPS in utils/expenseGroups.ts), though Food, Housing and Transport
+ * line up with its slices. A category offered here must also be in CATEGORIES.
  */
 export interface CategoryGroup {
   key: string;
@@ -126,7 +127,7 @@ const detailsOf = (category: string): CategoryChoice[] => (SUBCATEGORIES[categor
   (d) => ({ category, subcategory: d.value, label: d.label, icon: d.icon, labelKey: `subcategories.${d.value}` }),
 );
 
-export const EXPENSE_GROUPS: CategoryGroup[] = [
+export const PICKER_GROUPS: CategoryGroup[] = [
   { key: 'food', label: 'Food', icon: '🍽️', category: 'Dining', options: [
     choice('Dining', 'Eating out', '🍜', 'choices.Dining'),
     choice('Groceries', 'Groceries', '🛒'),
@@ -152,7 +153,7 @@ export const EXPENSE_GROUPS: CategoryGroup[] = [
 
 /** The group a stored category belongs to, if the picker offers it. */
 export function groupOf(category: string): CategoryGroup | undefined {
-  return EXPENSE_GROUPS.find((g) => g.category === category || g.options.some((o) => o.category === category));
+  return PICKER_GROUPS.find((g) => g.category === category || g.options.some((o) => o.category === category));
 }
 
 // The common Taiwan methods the backend enum already accepts (PaymentMethod);
@@ -657,7 +658,7 @@ export function CashFields({ idPrefix: p, formData, errors, onChange, onTagsChan
                 <span className={CATEGORY_LABEL}>{t(`transactions:form.categories.${unknownCategory}`, unknownCategory)}</span>
               </span>
             )}
-            {grouped && EXPENSE_GROUPS.map((g) => {
+            {grouped && PICKER_GROUPS.map((g) => {
               const isSelected = activeGroup?.key === g.key;
               const tone = getCategoryColorGroup(g.category);
               return (

@@ -34,6 +34,8 @@ describe('readPrefill — what a link may start the add form with', () => {
     expect(read('type=expense&category=Shopping&subcategory=Beauty')).toEqual({ type: 'expense', category: 'Shopping', subcategory: 'Beauty' });
     expect(read('type=expense&category=Dining&subcategory=Beauty')).toEqual({ type: 'expense', category: 'Dining' });
     expect(read('type=expense&subcategory=Beauty')).toEqual({ type: 'expense' });
+    // A custom detail (imported) is copied, as the edit form shows it.
+    expect(read('type=expense&category=Shopping&subcategory=Books')).toEqual({ type: 'expense', category: 'Shopping', subcategory: 'Books' });
   });
 
   it('caps a long description', () => {

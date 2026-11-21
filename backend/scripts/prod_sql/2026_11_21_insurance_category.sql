@@ -8,6 +8,15 @@
 -- Matches alembic/versions/2026_11_21_insurance_category.py exactly. A second run
 -- changes nothing. Data only: no new table, so no RLS.
 
+-- An inactive Insurance row would block the insert yet never resolve (only active
+-- categories do), so reactivate it first.
+UPDATE transaction_categories SET is_active = true, updated_at = now()
+WHERE name = 'Insurance' AND type = 'EXPENSE'::categorytype AND NOT is_active
+  AND NOT EXISTS (
+    SELECT 1 FROM transaction_categories
+    WHERE name = 'Insurance' AND type = 'EXPENSE'::categorytype AND is_active
+  );
+
 INSERT INTO transaction_categories
   (id, name, name_en, name_zh, type, color, icon,
    is_default, is_active, is_system, usage_count, created_at, updated_at)

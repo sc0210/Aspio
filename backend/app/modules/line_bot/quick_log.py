@@ -107,11 +107,8 @@ EXPENSE_KEYWORDS: dict[str, tuple[str, ...]] = {
         # Longer than Shopping's "保養" (skincare), so a car service wins over beauty.
         "汽車保養", "機車保養", "車保養", "保養廠", "修車", "換機油", "租車", "car rental",
     ),
-    "Shopping": (
-        "蝦皮", "momo", "淘寶", "衣服", "褲子", "鞋", "包包", "日用品", "amazon", "shopee", "clothes", "shoes",
-        # Beauty is a detail under Shopping (see SUBCATEGORY_KEYWORDS), as the web form files it.
-        "剪髮", "理髮", "美髮", "美甲", "美容", "保養", "化妝", "彩妝", "haircut", "salon", "nail", "makeup",
-    ),
+    # Plus every Shopping detail's words (SUBCATEGORY_KEYWORDS), added below.
+    "Shopping": ("蝦皮", "momo", "淘寶", "amazon", "shopee"),
     "Entertainment": ("電影", "唱歌", "ktv", "遊戲", "演唱會", "netflix", "spotify", "youtube", "disney", "steam", "movie", "game", "concert"),
     "Healthcare": ("看醫生", "掛號", "診所", "醫院", "藥局", "藥", "牙醫", "健保", "doctor", "clinic", "hospital", "pharmacy", "dentist"),
     "Utilities": ("電費", "水費", "瓦斯", "電話費", "手機費", "網路費", "第四台", "electricity", "water bill", "internet", "phone bill"),
@@ -147,6 +144,19 @@ SUBCATEGORY_KEYWORDS: dict[str, dict[str, tuple[str, ...]]] = {
 }
 
 
+# A detail's words also suggest its category, so they are listed once.
+for _category, _details in SUBCATEGORY_KEYWORDS.items():
+    if _category == "Shopping":  # Transport keeps its own longer forms (汽車保養 beats skincare 保養)
+        EXPENSE_KEYWORDS[_category] += tuple(w for words in _details.values() for w in words)
+
+
+def _contains(text: str, word: str) -> bool:
+    """`word` in `text`; an English word only as a whole word ("bus" is not in "business")."""
+    if word.isascii() and word.isalpha():
+        return re.search(rf"\b{re.escape(word)}\b", text) is not None
+    return word in text
+
+
 def guess_category_name(description: str, is_income: bool) -> str:
     """The seeded category a description most likely belongs to, else "Others"."""
     text = description.lower()
@@ -165,6 +175,6 @@ def guess_subcategory(description: str, category_name: str) -> Optional[str]:
     best: tuple[int, str] | None = None
     for detail, words in SUBCATEGORY_KEYWORDS.get(category_name, {}).items():
         for word in words:
-            if word in text and (best is None or len(word) > best[0]):
+            if _contains(text, word) and (best is None or len(word) > best[0]):
                 best = (len(word), detail)
     return best[1] if best else None

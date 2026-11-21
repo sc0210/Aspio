@@ -23,9 +23,13 @@ export function readPrefill(params: Pick<URLSearchParams, 'get'>) {
   if (description) out.description = description.slice(0, 200);
   const category = params.get('category');
   if (category && CATEGORIES[type].some((c) => c.value === category)) out.category = category;
-  // A detail only under the category it belongs to.
-  const subcategory = params.get('subcategory');
-  if (subcategory && out.category && SUBCATEGORIES[out.category]?.some((s) => s.value === subcategory)) out.subcategory = subcategory;
+  // A detail only with a category, and never one that belongs to another category
+  // (no "Dining · Beauty"). A custom one (an imported "Books") is kept, as the edit
+  // form keeps it, so Duplicate copies what the row shows.
+  const subcategory = params.get('subcategory')?.trim().slice(0, 100);
+  const ownedElsewhere = (d: string) => Object.entries(SUBCATEGORIES)
+    .some(([cat, details]) => cat !== out.category && details.some((s) => s.value === d));
+  if (subcategory && out.category && !ownedElsewhere(subcategory)) out.subcategory = subcategory;
   const wallet = params.get('walletType');
   if (wallet === 'life' || wallet === 'emergency') out.walletType = wallet;
   const payment = params.get('paymentMethod');

@@ -473,13 +473,15 @@ class TestUpdateTransaction:
         assert "type" not in t_repo.update.await_args.args[2]
 
     @staticmethod
-    def _recategorise(stored_category_id, new_category, stored_subcategory="Beauty"):
-        """A service whose stored row is a Shopping · Beauty expense, moving to `new_category`."""
+    def _recategorise(stored_category, new_category, stored_subcategory="Beauty"):
+        """A service whose stored row is a `stored_category` · Beauty expense, moving to `new_category`."""
         c_repo = MagicMock(spec=TransactionCategoryRepository)
         c_repo.get_by_name = AsyncMock(return_value=new_category)
         c_repo.increment_usage = AsyncMock()
+        by_id = {str(stored_category.id): stored_category, str(new_category.id): new_category}
+        c_repo.get_by_id = AsyncMock(side_effect=lambda cid: by_id.get(str(cid)))
         t_repo = MagicMock(spec=TransactionRepository)
-        stored = make_mock_transaction(category_id=stored_category_id)
+        stored = make_mock_transaction(category_id=stored_category.id)
         stored.subcategory = stored_subcategory
         t_repo.get_by_id = AsyncMock(return_value=stored)
         t_repo.update = AsyncMock(return_value=stored)
@@ -489,7 +491,7 @@ class TestUpdateTransaction:
     async def test_moving_to_another_category_drops_its_subcategory(self):
         # Bulk reassign sends only the category: "Dining · Beauty" must not result.
         shopping, dining = make_mock_category("Shopping"), make_mock_category("Dining")
-        svc, t_repo = self._recategorise(shopping.id, dining)
+        svc, t_repo = self._recategorise(shopping, dining)
         await svc.update_transaction("tx-id", "user-id", TransactionUpdate(category_name="Dining"))
         assert t_repo.update.await_args.args[2]["subcategory"] is None
 
@@ -497,14 +499,22 @@ class TestUpdateTransaction:
     async def test_resending_the_same_category_keeps_its_subcategory(self):
         # The edit form resends the category on every save.
         shopping = make_mock_category("Shopping")
-        svc, t_repo = self._recategorise(shopping.id, shopping)
+        svc, t_repo = self._recategorise(shopping, shopping)
         await svc.update_transaction("tx-id", "user-id", TransactionUpdate(category_name="Shopping"))
+        assert "subcategory" not in t_repo.update.await_args.args[2]
+
+    @pytest.mark.asyncio
+    async def test_a_duplicate_row_of_the_same_name_keeps_the_subcategory(self):
+        # Dining has two global rows; re-sending "Dining" may resolve to the other one.
+        dining_a, dining_b = make_mock_category("Dining"), make_mock_category("Dining")
+        svc, t_repo = self._recategorise(dining_a, dining_b, stored_subcategory="Lunch")
+        await svc.update_transaction("tx-id", "user-id", TransactionUpdate(category_name="Dining"))
         assert "subcategory" not in t_repo.update.await_args.args[2]
 
     @pytest.mark.asyncio
     async def test_a_subcategory_sent_with_the_new_category_is_kept(self):
         shopping, other = make_mock_category("Shopping"), make_mock_category("Others")
-        svc, t_repo = self._recategorise(shopping.id, other)
+        svc, t_repo = self._recategorise(shopping, other)
         await svc.update_transaction(
             "tx-id", "user-id", TransactionUpdate(category_name="Others", subcategory="Books")
         )
