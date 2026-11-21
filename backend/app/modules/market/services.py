@@ -29,6 +29,10 @@ FIRST_MONTH = date(2005, 10, 1)
 # How far back from a target day to look for a trading day: long enough for
 # Lunar New Year, short enough not to wander into the previous month's data.
 MAX_LOOKBACK_DAYS = 12
+# A finished month is final only if it was read this close to its end. A
+# reading further back means a report was missing on the true last trading
+# day (a TWSE hiccup, not a holiday), so the month stays open and is retried.
+FINAL_WITHIN_DAYS = 10
 
 SessionFactory = Callable[[], "AsyncSession"]
 Sleep = Callable[[float], Awaitable[None]]
@@ -106,7 +110,8 @@ class TwMarketSync:
                 try:
                     reading = await self._trading_day(target, floor=month)
                     if reading:
-                        await self._save(month, reading, final=is_past)
+                        final = is_past and (_month_end(month) - reading.day).days <= FINAL_WITHIN_DAYS
+                        await self._save(month, reading, final=final)
                         fetched += 1
                 except Exception as e:
                     logger.warning("TW market %s: sync failed: %s", month, e)
@@ -130,19 +135,19 @@ class TwMarketSync:
         Each fetch rewrites every month (a new base year moves them all).
         """
         async with self._session_factory() as session:
-            repo = TwMarketRepository(session)
-            missing = await repo.months_missing_cpi()
-            if not missing:
-                return 0
-            latest_due = _month_start(today - timedelta(days=37))
-            if not any(r.month <= latest_due for r in missing):
-                return 0
-            try:
-                cpi = await self._client.cpi()
-            except Exception as e:
-                logger.warning("TW CPI fetch failed: %s", e)
-                return 0
-            written = await repo.set_cpi(cpi)
+            missing = [r.month for r in await TwMarketRepository(session).months_missing_cpi()]
+        latest_due = _month_start(today - timedelta(days=37))
+        if not any(m <= latest_due for m in missing):
+            return 0
+        # Fetched with no session open: the download can take a couple of
+        # minutes and must not hold a pooled connection idle in a transaction.
+        try:
+            cpi = await self._client.cpi()
+        except Exception as e:
+            logger.warning("TW CPI fetch failed: %s", e)
+            return 0
+        async with self._session_factory() as session:
+            written = await TwMarketRepository(session).set_cpi(cpi)
             await session.commit()
             return written
 

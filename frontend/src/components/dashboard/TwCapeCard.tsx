@@ -96,9 +96,9 @@ export function TwCapeCard() {
   const { isDemo } = useAppMode();
   const { data, isLoading, isError, refetch } = useTwCape();
 
-  // A demo can run with no backend at all; market data is a nice-to-have
-  // there, not an error to show a visitor.
-  if (isDemo && isError && !data) return null;
+  // Demo mode runs without a backend, so the market card is not part of it
+  // (useTwCape does not fetch there either).
+  if (isDemo) return null;
 
   if (isError && !data) {
     return <QueryErrorCard onRetry={() => refetch()} title={t('dashboard:twCape.title', { defaultValue: 'Taiwan market valuation' })} />;

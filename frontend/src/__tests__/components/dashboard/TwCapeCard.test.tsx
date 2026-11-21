@@ -92,9 +92,9 @@ describe('TwCapeCard', () => {
     expect(screen.queryByText(/Collecting/)).not.toBeInTheDocument();
   });
 
-  it('stays out of the way in a demo without a backend', () => {
+  it('is not part of demo mode, which runs without a backend', () => {
     mockIsDemo = true;
-    mockUseTwCape.mockReturnValue(state({ isError: true }));
+    mockUseTwCape.mockReturnValue(state({ isLoading: true }));
     const { container } = render(<TwCapeCard />);
     expect(container).toBeEmptyDOMElement();
   });

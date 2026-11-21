@@ -370,3 +370,72 @@ async def test_endpoint_reads_the_cape_without_signing_in(client, async_session)
     assert set(body) >= {"asOf", "cape", "since", "low", "high", "taiex", "marketPe",
                          "cheapAtOrBelow", "expensiveAbove"}
     assert body["cape"] > body["expensiveAbove"]
+
+
+# ── CPI timing, final months, and the scheduled wrapper ─────────────────────
+
+
+async def _seed(session_factory, months, cpi=None):
+    async with session_factory() as s:
+        for m in months:
+            s.add(TwMarketMonth(month=m, as_of=m, taiex=100, market_pe=20, companies=1, cpi=cpi, is_final=True))
+        await s.commit()
+
+
+@pytest.mark.asyncio
+@pytest.mark.database
+@pytest.mark.parametrize("today, fetches", [
+    (date(2026, 11, 3), False),   # October's CPI is not out yet: no download
+    (date(2026, 11, 20), True),   # it is now
+])
+async def test_cpi_is_downloaded_only_once_a_missing_month_is_due(session_factory, today, fetches):
+    await _seed(session_factory, [date(2026, 10, 1)])
+    twse = FakeTwse(published=today)
+    await TwMarketSync(session_factory, twse, sleep=_no_sleep)._fill_cpi(today)
+    assert (("cpi", None) in twse.calls) is fetches
+
+
+@pytest.mark.asyncio
+@pytest.mark.database
+async def test_no_cpi_download_when_nothing_is_missing(session_factory):
+    await _seed(session_factory, [date(2026, 9, 1)], cpi=110)
+    twse = FakeTwse(published=date(2026, 11, 20))
+    assert await TwMarketSync(session_factory, twse, sleep=_no_sleep)._fill_cpi(date(2026, 11, 20)) == 0
+    assert ("cpi", None) not in twse.calls
+
+
+@pytest.mark.asyncio
+@pytest.mark.database
+async def test_a_month_read_far_from_its_end_stays_open_for_a_retry(session_factory):
+    # TWSE publishes nothing after Oct 20 this time (a hiccup, not a holiday):
+    # within the lookback from Oct 31, but 11 days before the month ends.
+    twse = FakeTwse(published=date(2026, 10, 20))
+    sync = TwMarketSync(session_factory, twse, sleep=_no_sleep)
+    # Only October and November need fetching: everything before is final.
+    m = FIRST_MONTH
+    finals = []
+    while m < date(2026, 10, 1):
+        finals.append(m)
+        m = _next_month(m)
+    await _seed(session_factory, finals, cpi=100)
+    await sync.run(date(2026, 11, 20))
+    async with session_factory() as s:
+        october = await s.get(TwMarketMonth, date(2026, 10, 1))
+    assert october.as_of == date(2026, 10, 20)
+    assert october.is_final is False  # retried tomorrow, not frozen on the 20th
+
+
+@pytest.mark.asyncio
+@pytest.mark.database
+async def test_the_scheduled_job_wires_the_sync(session_factory, monkeypatch):
+    import app.core.scheduler as scheduler
+    import app.modules.market.services as services
+    import app.modules.market.sources as sources
+
+    twse = FakeTwse(published=date(2026, 11, 20))
+    monkeypatch.setattr(scheduler, "async_session", session_factory)
+    monkeypatch.setattr(sources, "MarketDataClient", lambda client: twse)
+    monkeypatch.setattr(services, "REQUEST_INTERVAL_SECONDS", 0)
+    monkeypatch.setattr("app.utils.datetime_helpers.business_today", lambda: date(2026, 11, 20))
+    result = await scheduler.sync_tw_market()
+    assert result["failed"] == 0 and result["fetched"] > 200
