@@ -24,6 +24,7 @@ import { formatTWD, formatTWDCompact } from '@/utils/formatters';
 import { cn } from '@/utils/cn';
 import { ARROW, DIRECTION_TEXT, SIGN, direction } from './direction';
 import { Card } from '@/components/ui/Card';
+import { PageHeader } from '@/components/layout/PageHeader';
 
 const NW_COLOR = '#10b981'; // emerald — matches the desktop net-worth chart
 
@@ -78,19 +79,18 @@ export function MobileDashboard() {
         <DashboardLayout>
             <div className="max-w-md mx-auto space-y-4 pb-4">
                 {/* Greeting */}
-                <div className="flex items-center justify-between gap-3 pt-1">
-                    <h1 className="min-w-0 truncate text-xl font-extrabold tracking-tight text-gray-900 dark:text-white">
-                        {greeting}, {name}
-                    </h1>
-                    {/* The most frequent action, one tap from home; the same button as the phone transactions list. */}
-                    <Link
-                        href="/transactions/add"
-                        aria-label={t('transactions:add', 'Add transaction')}
-                        className="grid place-items-center w-11 h-11 shrink-0 rounded-full bg-primary-700 hover:bg-primary-800 text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-400"
-                    >
-                        <PlusIcon className="w-5 h-5" aria-hidden="true" />
-                    </Link>
-                </div>
+                <PageHeader variant="flat" title={`${greeting}, ${name}`}
+                    actions={<>
+                        {/* The most frequent action, one tap from home; the same button as the phone transactions list. */}
+                        <Link
+                            href="/transactions/add"
+                            aria-label={t('transactions:add', 'Add transaction')}
+                            className="grid place-items-center w-11 h-11 shrink-0 rounded-full bg-primary-700 hover:bg-primary-800 text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-400"
+                        >
+                            <PlusIcon className="w-5 h-5" aria-hidden="true" />
+                        </Link>
+                    </>}
+                />
 
                 <DashboardDataNotice />
 

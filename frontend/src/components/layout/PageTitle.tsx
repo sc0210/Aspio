@@ -67,6 +67,18 @@ function matchRoute(pathname: string): SubRoute | null {
   return prefix ? { titleKey: DESTINATIONS[prefix] } : null;
 }
 
+/**
+ * This route's name, as the sidebar and the desktop top bar spell it. The phone
+ * header reads it too, so a page is called one thing at every width: phone
+ * headers had drifted to "Financial Goals" beside a "Goals" tab.
+ */
+export function useRouteTitle(): string | null {
+  const pathname = usePathname();
+  const { t } = useTranslation('common');
+  const entry = pathname ? matchRoute(pathname) : null;
+  return entry ? t(entry.titleKey) : null;
+}
+
 export function PageTitle() {
   const pathname = usePathname();
   const { t } = useTranslation('common');

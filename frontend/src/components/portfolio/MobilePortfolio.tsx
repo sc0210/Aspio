@@ -20,6 +20,7 @@ import { MarketStatusStrip } from '@/components/portfolio/MarketStatusStrip';
 import { lastSessionWeekday } from '@/utils/marketStatus';
 import { Card } from '@/components/ui/Card';
 import { isCashHolding } from '@/components/portfolio/holdingRowStyles';
+import { PageHeader } from '@/components/layout/PageHeader';
 
 
 // Fixed categorical order — colors follow the entity, never rank.
@@ -167,13 +168,14 @@ export function MobilePortfolio() {
     return (
         <DashboardLayout>
             <div className="max-w-md mx-auto space-y-4 pb-4">
-                <div className="flex items-center justify-between pt-1">
-                    <h1 className="text-xl font-extrabold tracking-tight text-gray-900 dark:text-white">{t('portfolio:title', 'Portfolio')}</h1>
-                    <Link href="/portfolio/add" aria-label={t('portfolio:header.addHolding', 'Add holding')}
-                        className="grid place-items-center w-11 h-11 rounded-full bg-primary-700 hover:bg-primary-800 text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-400">
-                        <PlusIcon className="w-5 h-5" />
-                    </Link>
-                </div>
+                <PageHeader variant="flat"
+                    actions={<>
+                        <Link href="/portfolio/add" aria-label={t('portfolio:header.addHolding', 'Add holding')}
+                            className="grid place-items-center w-11 h-11 rounded-full bg-primary-700 hover:bg-primary-800 text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-400">
+                            <PlusIcon className="w-5 h-5" />
+                        </Link>
+                    </>}
+                />
 
                 <BiggerScreenHint />
 

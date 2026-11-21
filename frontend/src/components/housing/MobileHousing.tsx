@@ -8,6 +8,7 @@ import { BiggerScreenHint } from '@/components/dashboard/BiggerScreenHint';
 import { AffordabilityPanel } from '@/components/housing/AffordabilityPanel';
 import { ReadinessScorecard } from '@/components/housing/ReadinessScorecard';
 import { useHousingModel, INITIAL_DERIVED } from '@/components/housing/useHousingModel';
+import { PageHeader } from '@/components/layout/PageHeader';
 
 /**
  * The house plan on a phone (#344): what you could pay today (the affordability
@@ -22,9 +23,7 @@ export function MobileHousing() {
     return (
         <DashboardLayout>
             <div className="max-w-md mx-auto space-y-4 pb-4">
-                <h1 className="pt-1 text-xl font-extrabold tracking-tight text-gray-900 dark:text-white">
-                    {t('common:housing.pageTitle', 'Buy vs. Rent — House Plan')}
-                </h1>
+                <PageHeader variant="flat" />
 
                 <BiggerScreenHint />
 

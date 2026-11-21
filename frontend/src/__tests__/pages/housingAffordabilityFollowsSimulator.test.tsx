@@ -19,6 +19,7 @@ import { DEFAULT_BUY_VS_RENT, loanTermsOf } from '@/lib/housing';
 
 jest.mock('next/navigation', () => ({
     useRouter: () => ({ replace: jest.fn(), push: jest.fn() }),
+    usePathname: () => '/housing',
 }));
 jest.mock('@/contexts/PrivacyContext', () => ({
     usePrivacy: () => ({ isValueVisible: true }),

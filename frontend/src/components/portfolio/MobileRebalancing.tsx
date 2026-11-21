@@ -1,7 +1,6 @@
 'use client';
 
 import { useTranslation } from 'react-i18next';
-import { ArrowLeftIcon } from '@heroicons/react/24/outline';
 import { DashboardLayout } from '@/components/layout/DashboardLayout';
 import { BiggerScreenHint } from '@/components/dashboard/BiggerScreenHint';
 import { usePrivacy } from '@/contexts/PrivacyContext';
@@ -9,6 +8,7 @@ import type { AssetAllocation, RebalancingAction } from '@/services/rebalancingS
 import { formatCurrency } from '@/utils/formatters';
 
 import { isNearTarget, isOffTarget } from '@/lib/portfolio/rebalanceThreshold';
+import { PageHeader } from '@/components/layout/PageHeader';
 
 function fmt(value: number) {
     return formatCurrency(value, 'TWD', value >= 100000 ? { compact: true } : { precision: 0 });
@@ -63,13 +63,7 @@ export function MobileRebalancing({ allocations, actions, onBack }: MobileRebala
     return (
         <DashboardLayout>
             <div className="max-w-md mx-auto space-y-4 pb-4">
-                <div className="flex items-center gap-2 pt-1">
-                    <button type="button" onClick={onBack} aria-label={t('rebalancing.page.back')}
-                        className="grid place-items-center w-11 h-11 -ml-2 rounded-full text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-800 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-400">
-                        <ArrowLeftIcon className="w-5 h-5" />
-                    </button>
-                    <h1 className="text-xl font-extrabold tracking-tight text-gray-900 dark:text-white">{t('rebalancing.page.title')}</h1>
-                </div>
+                <PageHeader variant="flat" onBack={onBack} backLabel={t('rebalancing.page.back')} />
 
                 <BiggerScreenHint />
 
