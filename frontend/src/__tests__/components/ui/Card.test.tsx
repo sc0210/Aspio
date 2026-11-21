@@ -107,6 +107,21 @@ describe('nothing hand-rolls a card any more', () => {
         ].every((needle) => needle.test(line));
 
     /**
+     * The same surface without the border: white, Card's dark value, rounded,
+     * a small shadow, and no border of any kind. The savings, compare and
+     * heatmap panels were all this, so they read as borderless next to every
+     * Card, and the bordered signature above never saw them. A card with its
+     * own border (an at-risk goal's amber edge) is a decision, not a miss.
+     */
+    const BORDERLESS_SHELL = (line: string) =>
+        [
+            /\bbg-white(?![\w/-])/,
+            /\bdark:bg-gray-800(?![\w/-])/,
+            /\brounded-(xl|2xl)\b/,
+            /(?<![\w:-])shadow-sm\b/,
+        ].every((needle) => needle.test(line)) && !/\bborder\b/.test(line);
+
+    /**
      * Dialogs, dropdowns and popovers are a different surface — a heavy
      * shadow, a stacking context, a max-width, an entrance animation — and
      * belong to `Modal` or their own menu component, not here.
@@ -139,7 +154,7 @@ describe('nothing hand-rolls a card any more', () => {
             fs.readFileSync(file, 'utf8')
                 .split('\n')
                 .forEach((line, i) => {
-                    if (SHELL(line) && !OVERLAY.test(line)) {
+                    if ((SHELL(line) || BORDERLESS_SHELL(line)) && !OVERLAY.test(line)) {
                         offenders.push(`${path.relative(SRC, file)}:${i + 1}  ${line.trim().slice(0, 70)}`);
                     }
                 });

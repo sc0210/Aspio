@@ -32,6 +32,7 @@ import { formatCurrency as formatCurrencyUtil } from '@/utils/formatters';
 import { cn } from '@/utils/cn';
 import { useIsMobile } from '@/hooks/useMediaQuery';
 
+import { Card } from '@/components/ui/Card';
 // CompareLineChart imports recharts (~386 kB) — loaded only once the Compare
 // tab is opened, so a visit for goals never pays for it.
 // Reserve / Release on the caller's own goal behind a shared goal.
@@ -412,7 +413,7 @@ function SavingsGroups() {
                 after every sample peer is removed; otherwise the page is a
                 roster and nothing else. */}
             {!hasPeers && (
-              <div className="bg-white dark:bg-gray-800 rounded-xl p-12 shadow-sm flex flex-col items-center text-center gap-4">
+              <Card padding="none" className="p-12 flex flex-col items-center text-center gap-4">
                 <UsersIcon className="w-14 h-14 text-gray-300 dark:text-gray-600" />
                 <div>
                   <p className="text-gray-700 dark:text-gray-300 font-medium">
@@ -431,7 +432,7 @@ function SavingsGroups() {
                     {t('savings.addPeer', 'Add Member')}
                   </button>
                 </DemoLocked>
-              </div>
+              </Card>
             )}
 
             {hasPeers && (
@@ -450,7 +451,7 @@ function SavingsGroups() {
                       {goals.length > 0 && <CombinedProgress goals={goals} pacePoints={pacePoints} />}
 
                       {goals.length === 0 ? (
-                        <div className="bg-white dark:bg-gray-800 rounded-xl p-10 shadow-sm flex flex-col items-center text-center gap-4">
+                        <Card padding="none" className="p-10 flex flex-col items-center text-center gap-4">
                           <div className="w-14 h-14 rounded-full bg-blue-50 dark:bg-blue-900/20 flex items-center justify-center">
                             <span className="text-2xl" aria-hidden="true">🎯</span>
                           </div>
@@ -471,7 +472,7 @@ function SavingsGroups() {
                               {t('savings.createGoal', 'New Goal')}
                             </button>
                           )}
-                        </div>
+                        </Card>
                       ) : (
                         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                           {goals.map((goal) => (
@@ -493,7 +494,7 @@ function SavingsGroups() {
                       {compareError}
                     </div>
                   ) : compareLoading || !compareData ? (
-                    <div aria-hidden="true" className="bg-white dark:bg-gray-800 rounded-xl shadow-sm animate-pulse h-80" />
+                    <Card padding="none" className="animate-pulse h-80" />
                   ) : (
                     <div className="space-y-6">
                       <CompareLineChart chart={compareData.chart} users={compareData.users} currency={compareCurrency} />
@@ -728,7 +729,7 @@ function PageSpinner() {
 function LoadingSkeleton() {
   return (
     <div className="space-y-4">
-      <div className="bg-white dark:bg-gray-800 rounded-xl p-4 shadow-sm animate-pulse">
+      <Card padding="sm" className="animate-pulse">
         <div className="flex gap-5">
           {[0, 1].map((i) => (
             <div key={i} className="flex flex-col items-center gap-2">
@@ -737,17 +738,17 @@ function LoadingSkeleton() {
             </div>
           ))}
         </div>
-      </div>
+      </Card>
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
         {[0, 1].map((i) => (
-          <div key={i} className="bg-white dark:bg-gray-800 rounded-xl p-5 shadow-sm animate-pulse">
+          <Card key={i} padding="md" className="animate-pulse">
             <div className="h-4 bg-gray-200 dark:bg-gray-700 rounded w-3/4 mb-4" />
             <div className="h-2.5 bg-gray-200 dark:bg-gray-700 rounded-full mb-3" />
             <div className="grid grid-cols-2 gap-3">
               <div className="h-16 bg-gray-100 dark:bg-gray-700 rounded-lg" />
               <div className="h-16 bg-gray-100 dark:bg-gray-700 rounded-lg" />
             </div>
-          </div>
+          </Card>
         ))}
       </div>
     </div>

@@ -11,6 +11,7 @@ import { formatCurrency, toTWD } from '@/utils/formatters';
 import type { Transaction } from '@/shared/types';
 import { isTransferCategory } from '@/utils/expenseGroups';
 
+import { Card } from '@/components/ui/Card';
 // Emerald (income) / red (expense) intensity by share of the parent total.
 const INCOME = ['#065f46', '#047857', '#059669']; // emerald 800 · 700 · 600
 const EXPENSE = ['#991b1b', '#b91c1c', '#dc2626']; // red 800 · 700 · 600
@@ -224,7 +225,7 @@ export function TransactionHeatmap() {
   }, [cats, catItems, expanded]);
 
   return (
-    <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-sm p-4 sm:p-6 h-full">
+    <Card padding="none" className="p-4 sm:p-6 h-full">
       <div className="flex items-center justify-between gap-3">
         <h2 className="text-base font-semibold text-gray-900 dark:text-white">
           {t('transactions.heatmapTitle', 'Cash Flow Heatmap')}
@@ -310,6 +311,6 @@ export function TransactionHeatmap() {
           </ResponsiveContainer>
         </div>
       )}
-    </div>
+    </Card>
   );
 }

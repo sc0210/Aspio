@@ -7,6 +7,7 @@ import { usePrivacy } from '@/contexts/PrivacyContext';
 import { usePortfolio } from '@/hooks/usePortfolio';
 import { formatCurrency, toTWD } from '@/utils/formatters';
 
+import { Card } from '@/components/ui/Card';
 // Per-holding metadata keyed by symbol so the treemap tile renderer and tooltip
 // can look up colour/percent/value without relying on recharts spreading custom
 // fields through its content component.
@@ -230,7 +231,7 @@ export function PortfolioHeatmap() {
   }, [holdings, t, twMode]);
 
   return (
-    <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-sm p-4 sm:p-6 h-full">
+    <Card padding="none" className="p-4 sm:p-6 h-full">
       <div className="mb-4">
         {/* Title row: heading left, colour legend + toggle on the right — the
             subtitle spans full-width below so a long subtitle can't push the
@@ -327,6 +328,6 @@ export function PortfolioHeatmap() {
           </ResponsiveContainer>
         </div>
       )}
-    </div>
+    </Card>
   );
 }

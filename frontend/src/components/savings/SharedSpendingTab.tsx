@@ -18,6 +18,7 @@ import { EMPTY_FILTER, filterSplits, monthLabel, monthOf, type SplitFilter, part
 import type { PeerBalanceOut, PeerConnectionOut, RecurringSplitOut, SettlementOut, SplitOut, SplitPolicy } from '@/shared/types';
 import { EVERY, perMonth, type RepeatFrequency } from '@/lib/savings/nextMonth';
 
+import { Card } from '@/components/ui/Card';
 /** "Dec 1", or "Dec 1, 2027" when it isn't this year. */
 const shortDate = (isoDay: string, locale: string) => {
   const d = new Date(`${isoDay}T00:00:00`);
@@ -248,7 +249,7 @@ export default function SharedSpendingTab({ connections, demo }: { connections: 
       {/* Balances */}
       <section aria-label={t('savings.splits.balances', 'Balances')} className="grid gap-3 sm:grid-cols-2">
         {balances.map((b) => (
-          <div key={b.connection_id} className="bg-white dark:bg-gray-800 rounded-xl p-4 shadow-sm">
+          <Card key={b.connection_id} padding="sm">
             {/* The sentence names the partner; a heading above it said it twice. */}
             {b.balances.every((x) => x.net === 0) ? (
               <p className="text-sm font-semibold text-gray-900 dark:text-white">
@@ -312,7 +313,7 @@ export default function SharedSpendingTab({ connections, demo }: { connections: 
               {t('savings.splits.notifyLabel', 'Notify me about {{name}}’s bills and repayments', { name: b.partner_name })}
             </label>
             )}
-          </div>
+          </Card>
         ))}
       </section>
 
@@ -416,7 +417,7 @@ export default function SharedSpendingTab({ connections, demo }: { connections: 
         <section aria-label={t('savings.splits.settle.history', 'Repayments')} className="space-y-2">
           <h3 className="text-sm font-semibold text-gray-900 dark:text-white">{t('savings.splits.settle.history', 'Repayments')}</h3>
           {repayments.map((p) => (
-            <div key={p.id} className="bg-white dark:bg-gray-800 rounded-xl p-4 shadow-sm flex flex-col sm:flex-row sm:items-center gap-2">
+            <Card key={p.id} padding="sm" className="flex flex-col sm:flex-row sm:items-center gap-2">
               <div className="flex-1 min-w-0">
                 <p className="text-sm font-semibold text-gray-900 dark:text-white truncate">
                   {p.i_paid
@@ -440,7 +441,7 @@ export default function SharedSpendingTab({ connections, demo }: { connections: 
                   {t('savings.splits.settle.undo', 'Undo')}
                 </button>
               )}
-            </div>
+            </Card>
           ))}
         </section>
       )}
@@ -463,7 +464,7 @@ export default function SharedSpendingTab({ connections, demo }: { connections: 
           {recurring.map((r) => {
             const mine = r.payer_is_me !== false;
             return (
-            <div key={r.id} className="bg-white dark:bg-gray-800 rounded-xl p-4 shadow-sm flex items-center gap-3">
+            <Card key={r.id} padding="sm" className="flex items-center gap-3">
               <div className="flex-1 min-w-0">
                 <div className="flex flex-wrap items-center gap-x-2 gap-y-1">
                   <p className="text-sm font-semibold text-gray-900 dark:text-white break-words min-w-0">{r.description}</p>
@@ -491,7 +492,7 @@ export default function SharedSpendingTab({ connections, demo }: { connections: 
                   {t('savings.splits.repeat.stop', 'Stop')}
                 </button>
               )}
-            </div>
+            </Card>
             );
           })}
         </section>
@@ -521,7 +522,7 @@ export default function SharedSpendingTab({ connections, demo }: { connections: 
               {monthLabel(monthOf(s.split_date), i18n?.language || 'en')}
             </h4>
           )}
-          <div className="bg-white dark:bg-gray-800 rounded-xl p-4 shadow-sm flex flex-col sm:flex-row sm:items-center gap-2">
+          <Card padding="sm" className="flex flex-col sm:flex-row sm:items-center gap-2">
             <div className="flex-1 min-w-0">
               <p className="text-sm font-semibold text-gray-900 dark:text-white truncate">
                 {s.description}
@@ -581,7 +582,7 @@ export default function SharedSpendingTab({ connections, demo }: { connections: 
                 {t('savings.splits.cancel', 'Cancel split')}
               </button>
             )}
-          </div>
+          </Card>
           </Fragment>
         ))}
       </section>

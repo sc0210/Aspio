@@ -15,6 +15,7 @@ import { formatCurrency as formatCurrencyUtil } from '@/utils/formatters';
 import { CURRENCIES } from '@/utils/constants';
 import { PERSON_COLORS, personColors } from './personColors';
 
+import { Card } from '@/components/ui/Card';
 interface CompareLineChartProps {
   chart: CompareDataResponse['chart'];
   users: PeerStatCard[];
@@ -51,11 +52,11 @@ export default function CompareLineChart({ chart, users, currency }: CompareLine
 
   if (chart.length <= 1) {
     return (
-      <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-sm flex items-center justify-center h-[300px]">
+      <Card padding="none" className="flex items-center justify-center h-[300px]">
         <p className="text-gray-500 dark:text-gray-400 text-sm text-center px-6">
           {t('compare.chartEmpty', 'Not enough historical data yet. Check back after a few days.')}
         </p>
-      </div>
+      </Card>
     );
   }
 
@@ -72,7 +73,7 @@ export default function CompareLineChart({ chart, users, currency }: CompareLine
   const tooltipTextSecondary = isDark ? '#9ca3af' : '#6b7280';
 
   return (
-    <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-sm p-4 sm:p-6">
+    <Card padding="none" className="p-4 sm:p-6">
       {/* Header */}
       <div className="mb-4">
         <h2 className="text-base font-semibold text-gray-900 dark:text-white">
@@ -221,6 +222,6 @@ export default function CompareLineChart({ chart, users, currency }: CompareLine
           );
         })}
       </div>
-    </div>
+    </Card>
   );
 }
