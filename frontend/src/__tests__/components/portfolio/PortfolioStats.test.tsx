@@ -98,6 +98,17 @@ describe('PortfolioStats', () => {
         expect(container.querySelector('details')!.contains(line)).toBe(false);
     });
 
+    it('masks the annual return with the other values', () => {
+        show({ ...analysis, isValueVisible: false });
+        expect(screen.getByText('Annual return •••% · time-weighted')).toBeInTheDocument();
+        expect(screen.queryByText(/8\.1%/)).not.toBeInTheDocument();
+    });
+
+    it('shows no annual return line before there is one', () => {
+        show({ ...analysis, riskMetrics: { ...analysis.riskMetrics, cagr: undefined } });
+        expect(screen.queryByText(/time-weighted/)).not.toBeInTheDocument();
+    });
+
     it('keeps the analysis closed until it is asked for', () => {
         const { container } = show(analysis);
         const details = container.querySelector('details');
