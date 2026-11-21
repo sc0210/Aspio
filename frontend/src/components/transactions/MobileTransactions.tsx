@@ -27,13 +27,18 @@ function startOfMonth(): Date {
 }
 
 const PAGE = 40;
+/** The backend's page cap (le=200); past it the list loads page by page. */
+const BACKEND_MAX_LIMIT = 200;
 
 export function MobileTransactions() {
     // Edit links carry the list view they were opened from, so saving comes back to it.
     const editHref = useEditHref();
     const addHref = useAddHref();
     const { t, i18n } = useTranslation(['transactions', 'dashboard', 'common']);
-    const { transactions, isLoading, error, refetch } = useTransactions();
+    // This month in full: the bare query was the backend's default page of 20, so the
+    // hero's month totals counted only the newest 20 rows.
+    const thisMonth = useMemo(() => ({ start: startOfMonth(), end: new Date() }), []);
+    const { transactions, isLoading, error, refetch } = useTransactions({ dateRange: thisMonth, fetchAll: true });
     const { isValueVisible } = usePrivacy();
 
     const rows = (transactions ?? []) as Transaction[];
@@ -49,7 +54,9 @@ export function MobileTransactions() {
     const list = useTransactions({
         search: debouncedSearch || undefined,
         type: type || undefined,
-        limit,
+        // Within one backend page, ask for exactly what is shown; past the cap a
+        // bigger `limit` is a 422, so fetch every page and show the next slice.
+        ...(limit > BACKEND_MAX_LIMIT ? { fetchAll: true } : { limit }),
         sortBy: 'date',
         sortOrder: 'desc',
     });
@@ -60,7 +67,11 @@ export function MobileTransactions() {
         const time = (tx: Transaction) => new Date(typeof tx.date === 'string' ? tx.date : tx.date).getTime();
         return [...all].sort((a, b) => time(b) - time(a)).slice(0, limit);
     }, [list.transactions, limit]);
-    const canLoadMore = ((list.transactions ?? []) as Transaction[]).length >= limit;
+    const fetched = ((list.transactions ?? []) as Transaction[]).length;
+    const canLoadMore = limit > BACKEND_MAX_LIMIT ? fetched > limit : fetched >= limit;
+    // While the next batch loads the old rows are still shown (fewer than the new
+    // limit), so keep the button up to say "Loading…" instead of vanishing.
+    const loadingMore = list.isFetching && limit > PAGE;
 
     const model = useMemo(() => {
         const monthStart = startOfMonth();
@@ -250,7 +261,7 @@ export function MobileTransactions() {
                     )}
                 </section>
 
-                {canLoadMore && model.groups.length > 0 && (
+                {(canLoadMore || loadingMore) && model.groups.length > 0 && (
                     <button type="button" onClick={() => setLimit((n) => n + PAGE)} disabled={list.isFetching}
                         className="block mx-auto min-h-[44px] px-5 rounded-xl border border-gray-300 dark:border-gray-600 text-sm font-semibold text-gray-700 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-gray-700 disabled:opacity-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-400">
                         {list.isFetching ? t('transactions:mobile.loading', 'Loading…') : t('transactions:mobile.loadMore', 'Load more')}
