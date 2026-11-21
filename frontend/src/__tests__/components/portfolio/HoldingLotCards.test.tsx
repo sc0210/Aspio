@@ -2,7 +2,7 @@
 import React from 'react';
 import { render, screen } from '@testing-library/react';
 import { HoldingLotCards } from '@/components/portfolio/HoldingLotCards';
-import { formatCurrency } from '@/utils/formatters';
+import { formatCurrency, formatCashAmount } from '@/utils/formatters';
 import type { PortfolioHolding } from '@/shared/types';
 
 jest.mock('react-i18next', () => ({
@@ -35,7 +35,7 @@ it('sums several lots into a Total card with the holding\'s figures', () => {
   show();
   const card = screen.getByTestId('lot-total');
   expect(card).toHaveTextContent('Total');
-  expect(card).toHaveTextContent(`200 × ${formatCurrency(110, 'TWD')} → ${formatCurrency(22_000, 'TWD')}`);
+  expect(card).toHaveTextContent(`200 × ${formatCurrency(110, 'TWD')} → ${formatCashAmount(22_000, 'TWD')}`);
 });
 
 it('has no Total card for a single lot, which would only repeat it', () => {
@@ -46,7 +46,7 @@ it('has no Total card for a single lot, which would only repeat it', () => {
 it('signs the total by the holding\'s own gain, so a loss never reads "+-"', () => {
   show({ holding: { ...total, gainLoss: -50, gainLossPercentage: -0.23 } });
   const card = screen.getByTestId('lot-total');
-  expect(card).toHaveTextContent(formatCurrency(-50, 'TWD'));
+  expect(card).toHaveTextContent(formatCashAmount(-50, 'TWD'));
   expect(card).toHaveTextContent('(-0.23%)');
   expect(card.textContent).not.toMatch(/\+-|\+\(-/);
   expect(card.querySelector('.text-error-700')).not.toBeNull();

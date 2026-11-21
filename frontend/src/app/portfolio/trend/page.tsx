@@ -42,7 +42,7 @@ import { aggregateHoldingsBySymbol } from '@/utils/portfolio-aggregation';
 import { usePrivacy } from '@/contexts/PrivacyContext';
 import { useAppMode } from '@/hooks/useAppMode';
 import { cn } from '@/utils/cn';
-import { formatCurrency } from '@/utils/formatters';
+import { formatCurrency, formatCashAmount } from '@/utils/formatters';
 import toast from 'react-hot-toast';
 import { useTranslation } from 'react-i18next';
 import { dailyPerformanceKey, DAILY_PERFORMANCE_DAYS_MAX } from '@/lib/queryKeys';
@@ -469,7 +469,7 @@ function HoldingsTable({ rows, currency, isValueVisible, isLoading }: HoldingsTa
                                             <span className="text-gray-600 dark:text-gray-400 tabular-nums text-sm">
                                                 {isValueVisible
                                                     ? row.startValue !== null
-                                                        ? formatCurrency(row.startValue, currency)
+                                                        ? formatCashAmount(row.startValue, currency)
                                                         : '—'
                                                     : '•••'}
                                             </span>
@@ -480,8 +480,8 @@ function HoldingsTable({ rows, currency, isValueVisible, isLoading }: HoldingsTa
                                         <span className="font-semibold text-gray-900 dark:text-white tabular-nums text-sm">
                                             {isValueVisible
                                                 ? row.endValue !== null
-                                                    ? formatCurrency(row.endValue, currency)
-                                                    : formatCurrency(row.currentValue, currency)
+                                                    ? formatCashAmount(row.endValue, currency)
+                                                    : formatCashAmount(row.currentValue, currency)
                                                 : '•••'}
                                         </span>
                                     </td>
@@ -620,7 +620,7 @@ function HoldingsTable({ rows, currency, isValueVisible, isLoading }: HoldingsTa
                                         <span className="text-gray-500 dark:text-gray-400 tabular-nums text-sm">
                                             {isValueVisible
                                                 ? row.startValue !== null
-                                                    ? formatCurrency(row.startValue, currency)
+                                                    ? formatCashAmount(row.startValue, currency)
                                                     : '—'
                                                 : '•••'}
                                         </span>
@@ -628,7 +628,7 @@ function HoldingsTable({ rows, currency, isValueVisible, isLoading }: HoldingsTa
                                     {/* Period End Balance */}
                                     <td className="px-4 py-3 text-right">
                                         <span className="font-semibold text-gray-700 dark:text-gray-300 tabular-nums text-sm">
-                                            {isValueVisible ? formatCurrency(row.currentValue, currency) : '•••'}
+                                            {isValueVisible ? formatCashAmount(row.currentValue, currency) : '•••'}
                                         </span>
                                     </td>
                                     {/* Change — cash doesn't generate market P&L */}
@@ -1300,13 +1300,13 @@ export default function TrendPage() {
                         <span className="text-gray-500 dark:text-gray-400 whitespace-nowrap flex-shrink-0 hidden sm:inline">
                             {t('trend.stripStart', 'Start')}:&nbsp;
                             <span className="font-semibold text-gray-900 dark:text-white tabular-nums">
-                                {isValueVisible ? formatCurrency(periodStats.startValue, currency) : '•••'}
+                                {isValueVisible ? formatCashAmount(periodStats.startValue, currency) : '•••'}
                             </span>
                         </span>
                         <span className="text-gray-500 dark:text-gray-400 whitespace-nowrap flex-shrink-0 hidden sm:inline">
                             {t('trend.stripEnd', 'End')}:&nbsp;
                             <span className="font-semibold text-gray-900 dark:text-white tabular-nums">
-                                {isValueVisible ? formatCurrency(periodStats.endValue, currency) : '•••'}
+                                {isValueVisible ? formatCashAmount(periodStats.endValue, currency) : '•••'}
                             </span>
                         </span>
                         {/* Total value movement (includes deposits) */}
@@ -1318,7 +1318,7 @@ export default function TrendPage() {
                             title="Total change in asset value over the period (includes deposits/withdrawals)"
                         >
                             {isPositiveChange ? '+' : ''}
-                            {isValueVisible ? formatCurrency(periodStats.change, currency) : '•••'}
+                            {isValueVisible ? formatCashAmount(periodStats.change, currency) : '•••'}
                         </span>
                         {/* Capital-adjusted investment return (excludes deposits) */}
                         <span

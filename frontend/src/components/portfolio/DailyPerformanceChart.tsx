@@ -13,7 +13,7 @@ import {
   type TooltipProps,
 } from 'recharts';
 import { cn } from '@/utils/cn';
-import { formatCurrency } from '@/utils/formatters';
+import { formatCurrency, formatCashAmount } from '@/utils/formatters';
 
 interface TopHolding {
   symbol: string;
@@ -144,7 +144,7 @@ export const DailyPerformanceChart = memo(function DailyPerformanceChart({
               Portfolio Value
             </span>
             <span className="text-sm font-bold text-gray-900 dark:text-white tabular-nums">
-              {isValueVisible ? formatCurrency(data.value, currency) : '•••••'}
+              {isValueVisible ? formatCashAmount(data.value, currency) : '•••••'}
             </span>
           </div>
 
@@ -164,7 +164,7 @@ export const DailyPerformanceChart = memo(function DailyPerformanceChart({
               {isValueVisible ? (
                 <>
                   {isPositive ? '+' : ''}
-                  {formatCurrency(data.change, currency)}
+                  {formatCashAmount(data.change, currency)}
                 </>
               ) : (
                 '•••••'
@@ -227,7 +227,7 @@ export const DailyPerformanceChart = memo(function DailyPerformanceChart({
                         {isValueVisible ? (
                           <>
                             {holdingIsPositive ? '+' : ''}
-                            {formatCurrency(holding.change, currency)}
+                            {formatCashAmount(holding.change, currency)}
                           </>
                         ) : (
                           '•••••'

@@ -22,7 +22,7 @@ import {
 } from '@heroicons/react/24/outline';
 import { useTranslation } from 'react-i18next';
 import { cn } from '@/utils/cn';
-import { compactAxisFormatter, formatCurrency } from '@/utils/formatters';
+import { compactAxisFormatter, formatCurrency, formatCashAmount } from '@/utils/formatters';
 import { getLocaleByLanguage } from '@/lib/i18n';
 import { niceAxis } from '@/utils/niceAxis';
 
@@ -370,7 +370,7 @@ export const AssetTrendChart = memo(function AssetTrendChart({
                             {t('portfolio:trend.tooltipValueOnDate')}
                         </span>
                         <span className="text-sm font-bold text-gray-900 dark:text-white tabular-nums">
-                            {isValueVisible ? formatCurrency(d.value, currency) : '•••••'}
+                            {isValueVisible ? formatCashAmount(d.value, currency) : '•••••'}
                         </span>
                     </div>
 
@@ -420,7 +420,7 @@ export const AssetTrendChart = memo(function AssetTrendChart({
                         )}>
                             {isValueVisible ? (
                                 <>
-                                    {d.change >= 0 ? '+' : ''}{formatCurrency(d.change, currency)}
+                                    {d.change >= 0 ? '+' : ''}{formatCashAmount(d.change, currency)}
                                     <span className="ml-1">({d.change >= 0 ? '+' : ''}{d.changePercent.toFixed(2)}%)</span>
                                 </>
                             ) : '•••'}
@@ -498,7 +498,7 @@ export const AssetTrendChart = memo(function AssetTrendChart({
                                             'text-xs font-bold tabular-nums',
                                             holding.change >= 0 ? 'text-rise-700 dark:text-rise-400' : 'text-fall-700 dark:text-fall-400'
                                         )}>
-                                            {isValueVisible ? `${holding.change >= 0 ? '+' : ''}${formatCurrency(holding.change, currency)}` : '•••'}
+                                            {isValueVisible ? `${holding.change >= 0 ? '+' : ''}${formatCashAmount(holding.change, currency)}` : '•••'}
                                         </span>
                                     </div>
                                 ))}

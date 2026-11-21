@@ -5,7 +5,7 @@ import { useState, useEffect, useRef } from 'react';
 import { Dialog, DialogPanel, DialogTitle } from '@headlessui/react';
 import { XMarkIcon, MagnifyingGlassIcon, ArrowPathIcon } from '@heroicons/react/24/outline';
 import { Button } from '@/components/ui/Button';
-import { formatCurrency, localDateString } from '@/utils/formatters';
+import { formatCurrency, localDateString, formatCashAmount } from '@/utils/formatters';
 import { cn } from '@/utils/cn';
 import symbolService from '@/services/symbolService';
 import { listingDefaults } from '@/lib/portfolio/holdingFormOptions';
@@ -516,7 +516,7 @@ export function BuyHoldingModal({ isOpen, onClose, onBuy, existingHoldings = [] 
                                                 {t('buy.totalCost')}
                                             </span>
                                             <span className="text-xl font-bold text-prosperity-900 dark:text-prosperity-300">
-                                                {formatCurrency(totalCost, currency)}
+                                                {formatCashAmount(totalCost, currency)}
                                             </span>
                                         </div>
                                         <div className="text-xs text-prosperity-700 dark:text-prosperity-400 mt-1">

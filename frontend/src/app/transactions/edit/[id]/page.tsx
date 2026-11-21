@@ -32,7 +32,7 @@ import { portfolioService } from '@/services/portfolioService';
 import { loanService } from '@/services/loanService';
 import { parseInvestDescription, buildInvestDescription } from '@/utils/investmentUtils';
 import { log } from '@/utils/logger';
-import { formatCurrency, localDateString, toDateInputValue } from '@/utils/formatters';
+import { formatCurrency, localDateString, toDateInputValue, formatCashAmount } from '@/utils/formatters';
 import { Card } from '@/components/ui/Card';
 import SplitExpenseModal, { canSplit } from '@/components/transactions/SplitExpenseModal';
 
@@ -662,7 +662,7 @@ export default function EditTransactionPage() {
   const walletName = (w: string) => t(`transactions:form.wallets.${w}`, w === 'emergency' ? 'Emergency Wallet' : 'Life Wallet');
   const deleteMessage = (() => {
     if (!loaded) return '';
-    const amount = formatCurrency(loaded.amount, loaded.currency);
+    const amount = formatCashAmount(loaded.amount, loaded.currency);
     if (isTransferRow) {
       if (transferUnlinked) {
         return t('transactions:form.deleteUnlinkedTransfer', "This removes only this side of an older transfer. Its other half isn't linked, so check the other wallet afterwards.");

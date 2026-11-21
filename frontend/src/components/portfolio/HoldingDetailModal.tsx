@@ -14,7 +14,7 @@ import {
 } from '@heroicons/react/24/outline';
 import Link from 'next/link';
 import { cn } from '@/utils/cn';
-import { formatCurrency, localDateString } from '@/utils/formatters';
+import { formatCurrency, localDateString, formatCashAmount } from '@/utils/formatters';
 import toast from 'react-hot-toast';
 import { useTranslation } from 'react-i18next';
 import { formatSectorLabel } from '@/utils/holdingLabels';
@@ -410,7 +410,7 @@ export function HoldingDetailModal({
                     : 'text-fall-700 dark:text-fall-400'
                 )}>
                   {isValueVisible
-                    ? `${aggregatedMetrics.gainLoss >= 0 ? '+' : ''}${formatCurrency(aggregatedMetrics.gainLoss, aggregatedMetrics.currency)}`
+                    ? `${aggregatedMetrics.gainLoss >= 0 ? '+' : ''}${formatCashAmount(aggregatedMetrics.gainLoss, aggregatedMetrics.currency)}`
                     : '•••••••'
                   }
                 </p>
@@ -612,7 +612,7 @@ export function HoldingDetailModal({
                           ) : (
                             <span className="text-sm font-medium text-gray-900 dark:text-white">
                               {isValueVisible
-                                ? formatCurrency(lotValue, lot.currency)
+                                ? formatCashAmount(lotValue, lot.currency)
                                 : '•••••••'
                               }
                             </span>
@@ -627,7 +627,7 @@ export function HoldingDetailModal({
                                 : 'text-fall-700 dark:text-fall-400'
                             )}>
                               {isValueVisible
-                                ? `${lotGainLoss >= 0 ? '+' : ''}${formatCurrency(lotGainLoss, lot.currency)}`
+                                ? `${lotGainLoss >= 0 ? '+' : ''}${formatCashAmount(lotGainLoss, lot.currency)}`
                                 : '•••••••'
                               }
                             </span>
@@ -789,13 +789,13 @@ export function HoldingDetailModal({
                     </td>
                     <td className="px-4 py-4 text-right text-sm text-gray-900 dark:text-white">
                       {isValueVisible
-                        ? formatCurrency(aggregatedMetrics.totalCost, aggregatedMetrics.currency)
+                        ? formatCashAmount(aggregatedMetrics.totalCost, aggregatedMetrics.currency)
                         : '•••••••'
                       }
                     </td>
                     <td className="px-4 py-4 text-right text-sm text-gray-900 dark:text-white">
                       {isValueVisible
-                        ? formatCurrency(aggregatedMetrics.totalValue, aggregatedMetrics.currency)
+                        ? formatCashAmount(aggregatedMetrics.totalValue, aggregatedMetrics.currency)
                         : '•••••••'
                       }
                     </td>
@@ -808,7 +808,7 @@ export function HoldingDetailModal({
                             : 'text-fall-700 dark:text-fall-400'
                         )}>
                           {isValueVisible
-                            ? `${aggregatedMetrics.gainLoss >= 0 ? '+' : ''}${formatCurrency(aggregatedMetrics.gainLoss, aggregatedMetrics.currency)}`
+                            ? `${aggregatedMetrics.gainLoss >= 0 ? '+' : ''}${formatCashAmount(aggregatedMetrics.gainLoss, aggregatedMetrics.currency)}`
                             : '•••••••'
                           }
                         </span>

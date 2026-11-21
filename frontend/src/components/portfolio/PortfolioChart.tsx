@@ -13,7 +13,7 @@ import {
 import { ChartBarIcon, ExclamationTriangleIcon } from '@heroicons/react/24/outline';
 import { useTheme } from '@/contexts/ThemeContext';
 import { cn } from '@/utils/cn';
-import { formatCurrency } from '@/utils/formatters';
+import { formatCurrency, formatCashAmount } from '@/utils/formatters';
 import { PortfolioHolding, MarketType } from '@/shared/types';
 import { portfolioService } from '@/services/portfolioService';
 
@@ -408,7 +408,7 @@ export const PortfolioChart = memo(function PortfolioChart({ holdings, baseCurre
                           fontWeight: 600,
                           color: isDark ? '#e5e7eb' : '#374151'
                         }}>
-                          {formatCurrency(actualValue, baseCurrency)}
+                          {formatCashAmount(actualValue, baseCurrency)}
                         </span>
                       </div>
                       {showProjection && projectedValue !== undefined && (
@@ -422,7 +422,7 @@ export const PortfolioChart = memo(function PortfolioChart({ holdings, baseCurre
                               fontWeight: 600,
                               color: isDark ? '#fbbf24' : '#f59e0b'
                             }}>
-                              {formatCurrency(projectedValue, baseCurrency)}
+                              {formatCashAmount(projectedValue, baseCurrency)}
                             </span>
                           </div>
                           <div style={{
@@ -532,7 +532,7 @@ export const PortfolioChart = memo(function PortfolioChart({ holdings, baseCurre
               </div>
               <div className="text-right">
                 <div className="text-sm font-bold text-gray-900 dark:text-white">
-                  {formatCurrency(item.value, baseCurrency)}
+                  {formatCashAmount(item.value, baseCurrency)}
                 </div>
                 <div className="text-xs font-semibold text-primary-700 dark:text-primary-400">
                   {item.percentage.toFixed(1)}%
