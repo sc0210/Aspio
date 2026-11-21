@@ -11,13 +11,15 @@
 import { readFileSync } from 'node:fs';
 import { dirname, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { chromium } from 'playwright';
+import { chromium } from '@playwright/test';
 
 const here = dirname(fileURLToPath(import.meta.url));
 const OUT_DIR = resolve(here, '../public/screenshots');
 const BASE_URL = process.argv[2] ?? 'http://localhost:3000';
 const changelog = readFileSync(resolve(here, '../src/data/changelog.ts'), 'utf8');
-const LATEST_VERSION = changelog.match(/version:\s*'([^']+)'/)[1];
+const versionMatch = changelog.match(/version:\s*'([^']+)'/);
+if (!versionMatch) throw new Error('no version found in src/data/changelog.ts');
+const LATEST_VERSION = versionMatch[1];
 
 const LAYOUTS = [
   { file: 'dashboard', options: { viewport: { width: 1440, height: 900 }, deviceScaleFactor: 1 } },
@@ -59,6 +61,8 @@ try {
         timeout: 60_000,
       });
       await page.waitForTimeout(2500); // chart entry animations
+      // A client-side redirect can land after the first check.
+      if (!onDashboard()) throw new Error(`/dashboard redirected to ${page.url()}`);
       // Dev overlay and the demo banner are not part of the product being shown.
       await page.addStyleTag({
         content: 'nextjs-portal { display: none !important; } [role="banner"].bg-primary-50 { display: none !important; }',
