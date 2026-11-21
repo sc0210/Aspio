@@ -1,13 +1,13 @@
 """The dashboard strip and the P&L calendar value the portfolio the same way.
 
-On 2026-11-21 the strip read "this month −NT$1,030,278" over a calendar summing
-to −905K, for one portfolio with no trades all month:
+On 2026-11-21 the strip's month change and the calendar's month sum differed
+by about an eighth, for one portfolio with no trades all month:
 
 - the strip's trend converted every past day at today's USD rate, the calendar
-  at each day's, so the month opened 39K apart;
+  at each day's, so the two opened the month at different values;
 - Friday's US close was in each lot's current_price but not yet in the stored
-  history, so the calendar carried Thursday's close over Friday and dropped an
-  86K fall.
+  history, so the calendar carried Thursday's close over Friday and dropped
+  that day's fall.
 
 Both series now share app/modules/portfolio/daily_valuation.py.
 """

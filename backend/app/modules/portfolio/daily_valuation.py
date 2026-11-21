@@ -3,8 +3,8 @@
 Three loops value the same holdings day by day: GET /portfolio/daily-performance
 (the dashboard chart and P&L calendar) and the dashboard's wallet trend and
 historical trend (the strip above them). They used to disagree on the same
-morning by about NT$125K on a NT$6M account, for two reasons this module fixes
-for all three:
+morning by about 2% of the portfolio, for two reasons this module fixes for
+all three:
 
 * FX. Only daily-performance converted each day at that day's rate; the trends
   used today's rate for every past day, so the month's opening value moved

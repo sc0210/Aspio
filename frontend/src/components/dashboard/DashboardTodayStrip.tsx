@@ -124,7 +124,7 @@ function StripGrid({
 }) {
   const netSaved = income - expenses;
   // A rate is only a rate when income covers spending. Mid-month, before pay
-  // lands, NT$17,500 in against NT$153,046 out read "-774.5%".
+  // lands, a little income against a month's spending read as "-650%".
   const showRate = income > 0 && income >= expenses;
   const columns = 1 + (totalAssets !== undefined ? 1 : 0) + (hasDebt ? 1 : 0);
 
@@ -186,7 +186,7 @@ function StripGrid({
           </div>
         ) : (
           // Debt with nothing invested: there is no ratio to state.
-          <p className="text-sm sm:text-xl font-bold text-gray-400 dark:text-gray-500 leading-tight">—</p>
+          <p className="text-sm sm:text-xl font-bold text-gray-500 dark:text-gray-400 leading-tight">—</p>
         )}
       </div>
       )}

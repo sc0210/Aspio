@@ -205,7 +205,7 @@ export function ComprehensiveDashboard() {
   //
   // This slot used to hold the Portfolio wallet's value and its change over the
   // period, which the Portfolio section directly below already states, and the
-  // two were computed on different bases and disagreed (−1.03M vs −905K one
+  // two were computed on different bases and disagreed (by an eighth one
   // month with no trades). Leverage is what nothing else on the page shows: a
   // market fall raises it with no new borrowing.
   const leverage = useMemo(() => leverageChange(trendFromOpen), [trendFromOpen]);

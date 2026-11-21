@@ -109,12 +109,12 @@ describe('leverageChange — debt over the invested portfolio', () => {
     const at = (portfolioWallet: number, debtBalance?: number) => ({ portfolioWallet, debtBalance });
 
     it('rises when the market falls with no new borrowing', () => {
-        // 2026-11: NT$3.77M of debt, the portfolio 7.11M → 6.12M.
-        const r = leverageChange([at(7_114_276, 3_765_740), at(6_800_000, 3_765_740), at(6_123_098, 3_765_740)]);
-        expect(r?.start).toBeCloseTo(52.93, 2);
-        expect(r?.now).toBeCloseTo(61.50, 2);
-        expect(r?.debt).toBe(3_765_740);
-        expect(r?.invested).toBe(6_123_098);
+        // The same debt over a portfolio that fell from 6M to 5M.
+        const r = leverageChange([at(6_000_000, 3_000_000), at(5_500_000, 3_000_000), at(5_000_000, 3_000_000)]);
+        expect(r?.start).toBeCloseTo(50, 6);
+        expect(r?.now).toBeCloseTo(60, 6);
+        expect(r?.debt).toBe(3_000_000);
+        expect(r?.invested).toBe(5_000_000);
     });
 
     it('falls as debt is repaid', () => {

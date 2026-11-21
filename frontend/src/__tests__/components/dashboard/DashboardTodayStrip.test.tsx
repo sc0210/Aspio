@@ -26,7 +26,7 @@ jest.mock('@/utils/formatters', () => ({
     o?.compact ? `C${Math.round(v)}` : `NT$${Math.round(v)}`,
 }));
 
-const leverage = { now: 61.5, start: 52.93, debt: 3_765_740, invested: 6_123_098 };
+const leverage = { now: 60, start: 50, debt: 3_000_000, invested: 5_000_000 };
 
 beforeEach(() => {
   mockVisible = true;
@@ -34,10 +34,10 @@ beforeEach(() => {
 
 describe('DashboardTodayStrip — Saved', () => {
   it('shows income and spending instead of a rate when income does not cover spending', () => {
-    // 2026-11-21: NT$17,500 in, NT$153,046 out, which read "-774.5% savings rate".
-    render(<DashboardTodayStrip income={17_500} expenses={153_046} periodLabel="This month" />);
-    expect(screen.getByText('NT$-135546')).toBeInTheDocument();
-    expect(screen.getByText('Income C17500 · Spent C153046')).toBeInTheDocument();
+    // Mid-month, before pay lands: 20,000 in against 150,000 out read "-650.0%".
+    render(<DashboardTodayStrip income={20_000} expenses={150_000} periodLabel="This month" />);
+    expect(screen.getByText('NT$-130000')).toBeInTheDocument();
+    expect(screen.getByText('Income C20000 · Spent C150000')).toBeInTheDocument();
     expect(screen.queryByText(/savingsRate/)).not.toBeInTheDocument();
   });
 
@@ -56,21 +56,21 @@ describe('DashboardTodayStrip — Saved', () => {
 describe('DashboardTodayStrip — Leverage', () => {
   it('states leverage now, where the period opened, and what it is made of', () => {
     render(<DashboardTodayStrip income={0} expenses={0} leverage={leverage} periodLabel="This month" />);
-    expect(screen.getByText('61.5%')).toBeInTheDocument();
-    expect(screen.getByText(/8\.6 pts/)).toBeInTheDocument();
-    expect(screen.getByText('from 52.9%')).toBeInTheDocument();
-    expect(screen.getByText('C3765740 debt / C6123098 invested')).toBeInTheDocument();
+    expect(screen.getByText('60.0%')).toBeInTheDocument();
+    expect(screen.getByText(/10\.0 pts/)).toBeInTheDocument();
+    expect(screen.getByText('from 50.0%')).toBeInTheDocument();
+    expect(screen.getByText('C3000000 debt / C5000000 invested')).toBeInTheDocument();
   });
 
   it('marks rising leverage red and falling green', () => {
     const { rerender } = render(
       <DashboardTodayStrip income={0} expenses={0} leverage={leverage} periodLabel="This month" />,
     );
-    expect(screen.getByText(/8\.6 pts/).className).toMatch(/error/);
+    expect(screen.getByText(/10\.0 pts/).className).toMatch(/error/);
     rerender(
-      <DashboardTodayStrip income={0} expenses={0} leverage={{ ...leverage, now: 50 }} periodLabel="This month" />,
+      <DashboardTodayStrip income={0} expenses={0} leverage={{ ...leverage, now: 45 }} periodLabel="This month" />,
     );
-    expect(screen.getByText(/2\.9 pts/).className).toMatch(/prosperity/);
+    expect(screen.getByText(/5\.0 pts/).className).toMatch(/prosperity/);
   });
 
   it('is left out without debt, and no longer repeats the portfolio value', () => {
@@ -89,7 +89,7 @@ describe('DashboardTodayStrip — Leverage', () => {
       <DashboardTodayStrip income={0} expenses={0} hasDebt leverage={leverage} periodLabel="This month" />,
     );
     expect(container.querySelector('.grid-cols-2')).not.toBeNull();
-    expect(screen.getByText('61.5%')).toBeInTheDocument();
+    expect(screen.getByText('60.0%')).toBeInTheDocument();
   });
 
   it('states no ratio for debt with nothing invested', () => {
@@ -100,10 +100,10 @@ describe('DashboardTodayStrip — Leverage', () => {
 
   it('hides the amounts but keeps the ratio when values are hidden', () => {
     mockVisible = false;
-    render(<DashboardTodayStrip income={17_500} expenses={153_046} leverage={leverage} periodLabel="This month" />);
-    expect(screen.getByText('61.5%')).toBeInTheDocument();
+    render(<DashboardTodayStrip income={20_000} expenses={150_000} leverage={leverage} periodLabel="This month" />);
+    expect(screen.getByText('60.0%')).toBeInTheDocument();
     expect(screen.getByText('••• debt / ••• invested')).toBeInTheDocument();
     expect(screen.getByText('Income ••• · Spent •••')).toBeInTheDocument();
-    expect(screen.queryByText(/3765740/)).not.toBeInTheDocument();
+    expect(screen.queryByText(/3000000/)).not.toBeInTheDocument();
   });
 });
