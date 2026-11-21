@@ -79,8 +79,6 @@ export default function EditHoldingPage() {
   const [walletType, setWalletType] = useState<'portfolio' | 'emergency'>('portfolio');
   const queryClient = useQueryClient();
 
-  // Wallet type options
-
   const {
     register,
     handleSubmit,

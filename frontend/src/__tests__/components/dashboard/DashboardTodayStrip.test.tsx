@@ -92,6 +92,12 @@ describe('DashboardTodayStrip — Leverage', () => {
     expect(screen.getByText('60.0%')).toBeInTheDocument();
   });
 
+  it('says a failed trend failed, rather than showing the no-ratio dash', () => {
+    render(<DashboardTodayStrip income={0} expenses={0} hasDebt leverageFailed periodLabel="This month" />);
+    expect(screen.getByText("Couldn't load — refresh to try again")).toBeInTheDocument();
+    expect(screen.queryByText('—')).not.toBeInTheDocument();
+  });
+
   it('states no ratio for debt with nothing invested', () => {
     render(<DashboardTodayStrip income={0} expenses={0} hasDebt periodLabel="This month" />);
     expect(screen.getByText('—')).toBeInTheDocument();

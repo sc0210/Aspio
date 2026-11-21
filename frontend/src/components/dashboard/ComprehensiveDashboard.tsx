@@ -137,7 +137,7 @@ export function ComprehensiveDashboard() {
 
   // Fetch wallet trends independently so transaction mutations invalidate it immediately
   // (useWalletTrends listens to 'dashboard-data-updated' events and has staleTime: 0)
-  const { data: walletTrendsData = [], isLoading: walletTrendsLoading } = useWalletTrends(
+  const { data: walletTrendsData = [], isLoading: walletTrendsLoading, isError: walletTrendsFailed } = useWalletTrends(
     dateRange as '7d' | 'month' | '30d' | '90d' | '6m' | '1y' | 'ytd'
   );
 
@@ -210,7 +210,9 @@ export function ComprehensiveDashboard() {
   // market fall raises it with no new borrowing.
   const leverage = useMemo(() => leverageChange(trendFromOpen), [trendFromOpen]);
   const stripStats = memoizedDashboardData.stats;
-  const hasDebt = 'total_debt' in stripStats && (stripStats.total_debt ?? 0) > 0;
+  // `|| leverage`: a debt repaid to zero during the period still has a start
+  // to show, though total_debt is now 0.
+  const hasDebt = ('total_debt' in stripStats && (stripStats.total_debt ?? 0) > 0) || leverage !== undefined;
 
   const quickActions = useMemo(() => [
     { label: t('dashboard:quickActions.addTransaction.title', 'Add Transaction'), href: '/transactions/add', icon: PlusIcon },
@@ -357,6 +359,7 @@ export function ComprehensiveDashboard() {
             leverage={leverage}
             hasDebt={hasDebt}
             leverageLoading={walletTrendsLoading}
+            leverageFailed={walletTrendsFailed}
             isLoading={isLoading}
             periodLabel={periodLabel}
           />

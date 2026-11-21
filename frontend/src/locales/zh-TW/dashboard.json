@@ -526,7 +526,8 @@
     "leverageHint": "負債佔投資組合的比例。市場下跌或增加借款時上升，還款或投資組合成長時下降。",
     "leverageFrom": "原為 {{pct}}%",
     "leveragePts": "{{pts}} 個百分點",
-    "leverageBasis": "負債 {{debt}} / 投資 {{invested}}"
+    "leverageBasis": "負債 {{debt}} / 投資 {{invested}}",
+    "leverageUnavailable": "無法載入，請重新整理再試"
   },
   "view": {
     "compact": "精簡",

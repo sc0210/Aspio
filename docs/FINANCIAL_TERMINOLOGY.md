@@ -106,25 +106,15 @@ Using the same scenario:
 ---
 
 ### 3. **Total Value** (Portfolio Page) 💼
-**What it is:** Current market value of all holdings shown on the portfolio page
+**What it is:** Current market value of the Portfolio wallet's holdings, the same figure as Investment Total
 
 **Context:**
-- On portfolio page with "All Wallets" filter: every holding you own
-- On portfolio page with a wallet filter (e.g. "Emergency"): holdings in that wallet only
+- The portfolio page shows the Portfolio wallet only. Emergency-wallet holdings (legacy cash at a fixed price; Emergency money is cash transactions) are left out of its list, charts and totals, and counted under Emergency on the dashboard.
 
 **Formula:**
 ```
-Total Value = Sum of (quantity × current_price) for all visible holdings
+Total Value = Sum of (quantity × current_price) for Portfolio-wallet holdings
 ```
-
-**Example:**
-If viewing only the Emergency Wallet:
-- Holdings parked as reserve: NT$150,000
-- **Total Value = NT$150,000**
-
-If viewing All Wallets:
-- All holdings across both holding wallets
-- **Total Value = NT$950,000** (Portfolio + Emergency — note this excludes Life Wallet cash, so it does *not* equal Total Asset)
 
 **Where you see it:** Portfolio page header, PortfolioStats component
 
@@ -310,13 +300,7 @@ All of these measure the **Portfolio wallet only**, in **TWD**, with your own de
 
 ### ❓ "Why don't Total Value and Total Asset match on Portfolio page?"
 
-**Answer:** Two reasons — the wallet filter, and Life Wallet cash.
-
-- **Filter = "All Wallets"** → Total Value = Portfolio + Emergency holdings
-- **Filter = "Portfolio"** → Total Value = Only invested assets ✅
-- **Filter = "Emergency"** → Total Value = Only holdings parked in the emergency fund ✅
-
-Total Value never includes Life Wallet cash, because the portfolio page shows *holdings*. So even at "All Wallets" it sits below Total Asset by the amount of your Life Wallet balance.
+**Answer:** Total Value is the Portfolio wallet only. Total Asset adds the Life and Emergency wallets (cash, plus any legacy Emergency holdings), so it is higher by those two balances.
 
 ---
 

@@ -26,6 +26,8 @@ interface DashboardTodayStripProps {
   hasDebt?: boolean;
   /** The series `leverage` comes from is still loading. */
   leverageLoading?: boolean;
+  /** That series failed to load: say so rather than show an empty state. */
+  leverageFailed?: boolean;
   currency?: string;
   isLoading?: boolean;
   periodLabel: string;
@@ -111,13 +113,13 @@ function StripSkeleton({ columns }: { columns: number }) {
 
 function StripGrid({
   totalAssets, totalAssetsChangePercent, totalAssetsChangeAmount,
-  income, expenses, leverage, hasDebt, leverageLoading,
+  income, expenses, leverage, hasDebt, leverageLoading, leverageFailed,
   periodLabel, fmt, fmtCompact, fmtDelta,
   t,
 }: {
   totalAssets?: number; totalAssetsChangePercent?: number; totalAssetsChangeAmount?: number;
   income: number; expenses: number; leverage?: LeverageChange;
-  hasDebt: boolean; leverageLoading: boolean;
+  hasDebt: boolean; leverageLoading: boolean; leverageFailed: boolean;
   periodLabel: string; fmt: (v: number) => string; fmtCompact: (v: number) => string;
   fmtDelta: (v: number) => string;
   t: (key: string, opts?: Record<string, unknown>) => string;
@@ -184,6 +186,11 @@ function StripGrid({
             <div className="h-6 bg-gray-200 dark:bg-gray-700 rounded w-1/2" />
             <div className="h-4 bg-gray-200 dark:bg-gray-700 rounded w-2/3" />
           </div>
+        ) : leverageFailed ? (
+          // A failed trend is not "nothing invested".
+          <p className="text-xs leading-snug text-gray-500 dark:text-gray-400">
+            {t('dashboard:todayStrip.leverageUnavailable', { defaultValue: "Couldn't load — refresh to try again" })}
+          </p>
         ) : (
           // Debt with nothing invested: there is no ratio to state.
           <p className="text-sm sm:text-xl font-bold text-gray-500 dark:text-gray-400 leading-tight">—</p>
@@ -242,6 +249,7 @@ export function DashboardTodayStrip({
   leverage,
   hasDebt = leverage !== undefined,
   leverageLoading = false,
+  leverageFailed = false,
   currency = 'TWD',
   isLoading = false,
   periodLabel,
@@ -268,7 +276,7 @@ export function DashboardTodayStrip({
         totalAssets={totalAssets} totalAssetsChangePercent={totalAssetsChangePercent}
         totalAssetsChangeAmount={totalAssetsChangeAmount}
         income={income} expenses={expenses} leverage={leverage}
-        hasDebt={hasDebt} leverageLoading={leverageLoading}
+        hasDebt={hasDebt} leverageLoading={leverageLoading} leverageFailed={leverageFailed}
         periodLabel={periodLabel} fmt={fmt} fmtCompact={fmtCompact} fmtDelta={fmtDelta} t={t}
       />
     );
@@ -284,7 +292,7 @@ export function DashboardTodayStrip({
           totalAssets={totalAssets} totalAssetsChangePercent={totalAssetsChangePercent}
           totalAssetsChangeAmount={totalAssetsChangeAmount}
           income={income} expenses={expenses} leverage={leverage}
-        hasDebt={hasDebt} leverageLoading={leverageLoading}
+        hasDebt={hasDebt} leverageLoading={leverageLoading} leverageFailed={leverageFailed}
           periodLabel={periodLabel} fmt={fmt} fmtCompact={fmtCompact} fmtDelta={fmtDelta} t={t}
         />
       )}
