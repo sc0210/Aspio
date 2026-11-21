@@ -1,5 +1,6 @@
 'use client';
 
+import { useIsAdmin } from '@/hooks/useAdmin';
 import { xpProgressPercent } from '@/lib/xpProgress';
 import { useState } from 'react';
 import Link from 'next/link';
@@ -88,6 +89,7 @@ function MoreSheet({ open, onClose, isDemoMode, onExitDemo }: MoreSheetProps) {
   const pathname = usePathname();
   const features = useFeatures();
   const { isPremium } = useAccessTier();
+  const { isAdmin } = useIsAdmin();
   // Hide values and your level lived only in the sidebar's account menu, reached
   // on a phone through a hamburger drawer that duplicated this sheet.
   const { isValueVisible, toggleValueVisibility } = usePrivacy();
@@ -112,7 +114,7 @@ function MoreSheet({ open, onClose, isDemoMode, onExitDemo }: MoreSheetProps) {
   // hand-written list had five entries and silently omitted loans, groups,
   // housing, lifecycle and achievements.
   const sheetLinks = [
-    ...getSecondaryNavItems({ features, isPremium }).map((item) => ({
+    ...getSecondaryNavItems({ features, isPremium, isAdmin }).map((item) => ({
       href: item.href,
       icon: item.icon,
       labelKey: item.nameKey,
@@ -298,8 +300,7 @@ export function MobileBottomNav() {
           'fixed bottom-0 left-0 right-0 z-40',
           'bg-white dark:bg-gray-800',
           'border-t border-gray-200 dark:border-gray-700',
-          // Was `pb-safe`, which no stylesheet defines. The mobile drawer
-          // (DashboardSidebar) stops at this bar's top: 3.5rem + 1px + this inset.
+          // Was `pb-safe`, which no stylesheet defines.
           'pb-[env(safe-area-inset-bottom,0px)]'
         )}
       >

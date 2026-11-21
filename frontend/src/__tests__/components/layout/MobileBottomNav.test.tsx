@@ -24,6 +24,7 @@ jest.mock('@/contexts/DemoContext', () => ({
   useDemo: () => ({ isDemoMode: false, exitDemo: jest.fn() }),
 }));
 jest.mock('@/contexts/AuthContext', () => ({ useAuthContext: () => ({ session: null }) }));
+jest.mock('@/hooks/useAdmin', () => ({ useIsAdmin: () => ({ isAdmin: false }) }));
 const mockToggleValues = jest.fn();
 jest.mock('@/contexts/PrivacyContext', () => ({ usePrivacy: () => ({ isValueVisible: true, toggleValueVisibility: mockToggleValues }) }));
 const mockStats: { data: unknown } = { data: undefined };

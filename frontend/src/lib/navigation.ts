@@ -232,6 +232,8 @@ export const primaryNavItems: NavItem[] = getNavigationItems({
 }).filter((i) => i.primary);
 
 /** The More sheet's links. */
-export function getSecondaryNavItems(access: Omit<NavAccess, 'isAdmin'>): NavItem[] {
-  return getNavigationItems({ ...access, isAdmin: false }).filter((i) => !i.primary);
+// Admin included when the account is one: with the phone drawer gone, the More sheet
+// is the only phone menu, and it had no way to /admin.
+export function getSecondaryNavItems(access: Omit<NavAccess, 'isAdmin'> & { isAdmin?: boolean }): NavItem[] {
+  return getNavigationItems({ ...access, isAdmin: access.isAdmin ?? false }).filter((i) => !i.primary);
 }
