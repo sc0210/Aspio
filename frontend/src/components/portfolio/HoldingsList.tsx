@@ -94,6 +94,10 @@ export interface Holding {
   exchange: string;
   sector?: string;
   lastUpdated: Date;
+  /** open / closed / manual / unknown: staleness is judged against the session. */
+  marketState?: string;
+  /** Server-side, session-aware staleness (counts holidays). */
+  priceStale?: boolean;
   purchaseDate?: string;
   sparklineData?: number[]; // Real historical price data from backend
 }

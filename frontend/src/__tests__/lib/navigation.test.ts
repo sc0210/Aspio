@@ -8,7 +8,7 @@
  * to ship a feature.
  */
 
-import { getNavigationItems, getNavigationSections, getSecondaryNavItems, primaryNavItems, type NavAccess } from '@/lib/navigation';
+import { getNavigationItems, getNavigationSections, getSecondaryNavItems, primaryNavItems, type NavAccess, navPathFor } from '@/lib/navigation';
 import { ALL_FEATURES, type Features } from '@/lib/features';
 import en from '@/locales/en/common.json';
 import zhTW from '@/locales/zh-TW/common.json';
@@ -150,5 +150,17 @@ describe('navigation labels', () => {
                 .filter(Boolean),
         );
         expect(Object.keys(bundle.navigation.sections).sort()).toEqual([...used].sort());
+    });
+});
+
+describe('navPathFor', () => {
+    it('maps a page to the nav item it belongs to', () => {
+        expect(navPathFor('/rebalancing')).toBe('/portfolio');
+        expect(navPathFor('/rebalancing/plan')).toBe('/portfolio');
+    });
+
+    it('leaves every other path as it is', () => {
+        expect(navPathFor('/loans')).toBe('/loans');
+        expect(navPathFor('/rebalancingx')).toBe('/rebalancingx');
     });
 });

@@ -63,4 +63,16 @@ class TestLineBotRouteMounting:
     def test_features_reports_flag_without_auth(self, monkeypatch, enabled):
         res = TestClient(self._app_with(monkeypatch, enabled=enabled)).get("/api/v1/features")
         assert res.status_code == 200
-        assert res.json()["data"] == {"line_bot": enabled}
+        assert res.json()["data"]["line_bot"] is enabled
+
+
+@pytest.mark.parametrize("google,email", [(True, False), (False, True)])
+def test_features_reports_google_and_email(monkeypatch, google, email):
+    """The sign-in page hides Google and forgot-password says email is off from these."""
+    import app.main as main_module
+
+    cls = type(main_module.settings)
+    monkeypatch.setattr(cls, "google_oauth_enabled", property(lambda self: google))
+    monkeypatch.setattr(cls, "email_enabled", property(lambda self: email))
+    data = TestClient(main_module.create_app()).get("/api/v1/features").json()["data"]
+    assert (data["google_login"], data["email"]) == (google, email)

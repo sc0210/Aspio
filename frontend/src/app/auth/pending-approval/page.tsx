@@ -4,10 +4,12 @@ import { useEffect, useState } from 'react';
 import { signOut } from 'next-auth/react';
 import Link from 'next/link';
 import { useTranslation } from 'react-i18next';
+import { useDemo } from '@/contexts/DemoContext';
 
 export default function PendingApprovalPage() {
   const [dots, setDots] = useState('');
   const { t } = useTranslation(['auth']);
+  const { enableDemo } = useDemo();
 
   // Animate the waiting dots
   useEffect(() => {
@@ -17,8 +19,24 @@ export default function PendingApprovalPage() {
     return () => clearInterval(interval);
   }, []);
 
-  const handleSignOut = async () => {
+  // Signing out also clears a session a Google sign-up may have left; with none
+  // it just lands on sign-in, which is the point ("Sign out" read as an action
+  // for someone with no session).
+  const handleBackToSignIn = async () => {
     await signOut({ callbackUrl: '/auth/signin' });
+  };
+
+  // Something to do while waiting: approval can take a while and nothing notifies.
+  // Signed out first: a pending Google sign-up can hold a session, and the app
+  // treats a session as authenticated, not demo, so /dashboard would dead-end.
+  const handleTryDemo = async () => {
+    try {
+      await signOut({ redirect: false });
+    } catch {
+      // Still enter the demo: a failed sign-out must not leave the button dead.
+    }
+    enableDemo();
+    window.location.assign('/dashboard');
   };
 
   return (
@@ -103,16 +121,23 @@ export default function PendingApprovalPage() {
         </div>
 
         {/* Footer actions */}
-        <div className="flex flex-col items-center gap-2">
-          <p className="text-xs text-white/50">
+        <div className="flex flex-col items-center gap-3">
+          <button
+            onClick={handleTryDemo}
+            className="min-h-[44px] px-5 rounded-xl bg-white text-primary-700 text-sm font-semibold shadow-sm hover:bg-primary-50 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white focus-visible:ring-offset-2 focus-visible:ring-offset-primary-700"
+          >
+            {t('auth:pendingApproval.tryDemo')}
+          </button>
+          <button
+            onClick={handleBackToSignIn}
+            className="min-h-[44px] px-3 text-white/90 hover:text-white text-sm transition-colors underline underline-offset-2 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white rounded"
+          >
+            {t('auth:pendingApproval.backToSignIn')}
+          </button>
+          {/* white/80, not /50: 12px at /50 on primary-700 was ~2.5:1. */}
+          <p className="text-xs text-white/80">
             {t('auth:pendingApproval.mistake')}
           </p>
-          <button
-            onClick={handleSignOut}
-            className="text-white/70 hover:text-white text-sm transition-colors underline underline-offset-2"
-          >
-            {t('auth:pendingApproval.signOut')}
-          </button>
         </div>
       </div>
     </main>

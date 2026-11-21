@@ -275,7 +275,7 @@ export function EditGoalModal({ isOpen, onClose, goal }: EditGoalModalProps) {
                                                 {t('goals:fields.currentAmount')}
                                             </label>
                                             {/* Progress moves only by reserving or releasing Life Wallet cash
-                                                (Contribute on the goal card), never by typing a number. */}
+                                                (Reserve / Release on the goal card), never by typing a number. */}
                                             <p
                                                 id="edit-goal-current-amount"
                                                 className="w-full px-4 py-2.5 border border-dashed border-gray-300 dark:border-gray-600 rounded-lg bg-gray-50 dark:bg-gray-700/50 text-gray-900 dark:text-white tabular-nums"

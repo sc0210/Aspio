@@ -45,6 +45,7 @@ function DesktopHousingPage() {
                         <AffordabilityPanel
                             inputs={affordability}
                             cashFlowBasisMonths={cashFlowBasisMonths}
+                            termsOwnedBySimulator
                         />
                         <ReadinessScorecard
                             seed={seed}

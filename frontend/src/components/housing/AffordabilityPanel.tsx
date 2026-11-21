@@ -39,6 +39,12 @@ interface Props {
     inputs: AffordabilityInputs;
     /** Months of transaction history the income/expense averages are built from. */
     cashFlowBasisMonths: number;
+    /**
+     * The Buy vs. Rent simulator on this page owns the loan terms (desktop). Then
+     * this panel shows them read-only: two sets of sliders let the page price two
+     * different mortgages at once. Without a simulator (phone) it keeps its own.
+     */
+    termsOwnedBySimulator?: boolean;
 }
 
 /** Copy for the constraint that is holding the ceiling down — the actionable bit. */
@@ -214,7 +220,7 @@ function LimitRow({
     );
 }
 
-export function AffordabilityPanel({ inputs, cashFlowBasisMonths }: Props) {
+export function AffordabilityPanel({ inputs, cashFlowBasisMonths, termsOwnedBySimulator = false }: Props) {
     const { t } = useTranslation('common');
     const { isValueVisible } = usePrivacy();
     const [withRaises, setWithRaises] = useState(false);
@@ -481,6 +487,14 @@ export function AffordabilityPanel({ inputs, cashFlowBasisMonths }: Props) {
                         </p>
                     </div>
 
+                    {termsOwnedBySimulator ? (
+                    <p className="pt-2 border-t border-gray-200 dark:border-gray-600 text-xs text-gray-600 dark:text-gray-300">
+                        {t('housing.afford.termsFromSimulator', {
+                            down: draft.downPaymentPct, rate: draft.mortgageRatePct, years: draft.mortgageTermYears,
+                            defaultValue: 'Loan: {{down}}% down · {{rate}}% · {{years}} years — set in Buy vs. Rent below.',
+                        })}
+                    </p>
+                    ) : (
                     <div className="space-y-2.5 pt-1 border-t border-gray-200 dark:border-gray-600">
                         <Slider
                             label={t('housing.afford.downPct', 'Down payment')}
@@ -498,6 +512,7 @@ export function AffordabilityPanel({ inputs, cashFlowBasisMonths }: Props) {
                             onChange={(v, step) => set('mortgageTermYears', v, step)}
                         />
                     </div>
+                    )}
                     </Fold>
 
                     {/* The working — three ceilings, lowest wins. */}

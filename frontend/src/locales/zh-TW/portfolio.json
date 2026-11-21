@@ -283,7 +283,14 @@
     "modeCandles": "K 線",
     "lotCount_one": "{{count}} 批",
     "lotCount_other": "{{count}} 批",
-    "col": {"date": "日期", "qty": "數量", "costPerShare": "每股成本", "totalCost": "總成本", "currentValue": "目前價值", "gainLoss": "損益"},
+    "col": {
+      "date": "日期",
+      "qty": "數量",
+      "costPerShare": "每股成本",
+      "totalCost": "總成本",
+      "currentValue": "目前價值",
+      "gainLoss": "損益"
+    },
     "avgCost": "平均成本",
     "backToPortfolio": "投資組合",
     "chartViewMode": "圖表檢視模式",
@@ -457,7 +464,7 @@
   "stats": {
     "alphaLabel": "相對 {{benchmark}} 的 Alpha",
     "alphaTooltip": "Jensen's Alpha：相對於 {{benchmark}} 並針對市場風險（beta）調整後的超額報酬。正值代表打敗市場。",
-    "analysisSubtitle": "風險、年化報酬、股利與已實現損益",
+    "analysisSubtitle": "風險、股利與已實現損益",
     "analysisTitle": "進階分析",
     "cagrCaption": "時間加權年化",
     "cagrLabel": "年化報酬",
@@ -497,7 +504,8 @@
     "volatility": "年化波動",
     "yieldOnCost": "成本殖利率",
     "yieldOnValue": "市值殖利率",
-    "lastSessionChange": "漲跌 · {{day}}"
+    "lastSessionChange": "漲跌 · {{day}}",
+    "annualReturnInline": "年化報酬 {{value}} · 時間加權"
   },
   "subtitle": "即時追蹤您的投資績效",
   "sync": {
@@ -781,5 +789,7 @@
     "closedSince": "已收盤 · 最近收盤 {{day}}",
     "fxLive": "即時",
     "fxEstimate": "估計值"
-  }
+  },
+  "openHolding": "開啟 {{symbol}}",
+  "sellHolding": "賣出 {{symbol}}"
 }

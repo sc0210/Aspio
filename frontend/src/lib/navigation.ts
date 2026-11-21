@@ -62,7 +62,8 @@ export interface NavItem {
   /** Extra terms the ⌘K palette matches on, so search works in both languages. */
   keywords?: string[];
   /** An optional add-on the page depends on; hidden when the instance lacks it. */
-  feature?: keyof Features;
+  /** Nav items gate on add-ons only (not sign-in options). */
+  feature?: 'lineBot';
   /** Shown only to a premium account (lib/access.ts); the route's layout gates it too. */
   premium?: true;
 }
@@ -205,12 +206,24 @@ export function getNavigationSections({ isAdmin, isPremium, features }: NavAcces
 
 /** Whether `item`'s add-on, if it has one, is configured on this instance. */
 export function isNavItemAvailable(item: NavItem, features: Features): boolean {
-  return !item.feature || features[item.feature];
+  return !item.feature || features[item.feature] === true;
 }
 
 /** Flat list, in sidebar order — what the ⌘K palette searches. */
 export function getNavigationItems(access: NavAccess): NavItem[] {
   return getNavigationSections(access).flatMap((section) => section.items);
+}
+
+/**
+ * Pages that belong to a nav item without sharing its path prefix, so the item
+ * still reads as "you are here" (the sidebar and the phone tab bar both use it).
+ */
+export const NAV_ALIASES: Record<string, string> = { '/rebalancing': '/portfolio' };
+
+/** The nav href a pathname belongs to, via NAV_ALIASES; otherwise the pathname. */
+export function navPathFor(pathname: string): string {
+  const alias = Object.keys(NAV_ALIASES).find((p) => pathname === p || pathname.startsWith(p + '/'));
+  return alias ? NAV_ALIASES[alias] : pathname;
 }
 
 /** The bottom bar's own tabs; everything else goes in its More sheet. None depends on an add-on or a tier. */
@@ -219,6 +232,8 @@ export const primaryNavItems: NavItem[] = getNavigationItems({
 }).filter((i) => i.primary);
 
 /** The More sheet's links. */
-export function getSecondaryNavItems(access: Omit<NavAccess, 'isAdmin'>): NavItem[] {
-  return getNavigationItems({ ...access, isAdmin: false }).filter((i) => !i.primary);
+// Admin included when the account is one: with the phone drawer gone, the More sheet
+// is the only phone menu, and it had no way to /admin.
+export function getSecondaryNavItems(access: Omit<NavAccess, 'isAdmin'> & { isAdmin?: boolean }): NavItem[] {
+  return getNavigationItems({ ...access, isAdmin: access.isAdmin ?? false }).filter((i) => !i.primary);
 }

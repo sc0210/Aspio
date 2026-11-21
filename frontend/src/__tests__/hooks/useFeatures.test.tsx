@@ -45,7 +45,7 @@ describe('useFeatures', () => {
   it('turns everything on in demo mode without asking the backend', () => {
     mockMode.isDemo = true;
     const { result } = renderHook(() => useFeatures(), { wrapper });
-    expect(result.current).toEqual({ lineBot: true, isLoading: false, isError: false });
+    expect(result.current).toEqual({ lineBot: true, googleLogin: true, email: true, isLoading: false, isError: false });
     expect(mockGet).not.toHaveBeenCalled();
   });
 });

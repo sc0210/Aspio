@@ -188,7 +188,8 @@
       "upfront": "自備款＋購屋成本",
       "withRaises": "假設每年加薪 {{pct}}%",
       "noIncomeTitle": "收入資料不足",
-      "noIncomeHint": "過去 12 個完整月份沒有收入紀錄，算出的價格只會是 NT$0。請記錄收入，或在下方輸入每月收入，即可查看可負擔的房價。"
+      "noIncomeHint": "過去 12 個完整月份沒有收入紀錄，算出的價格只會是 NT$0。請記錄收入，或在下方輸入每月收入，即可查看可負擔的房價。",
+      "termsFromSimulator": "貸款：頭期款 {{down}}% · 利率 {{rate}}% · {{years}} 年 — 請在下方「買房 vs. 租屋」調整。"
     },
     "car": {
       "baseUnreachable": "請先改善現金流，才能估算購屋時程。",
@@ -395,7 +396,7 @@
       "noAccountNeeded": "示範模式無需帳號、無需信用卡 — 完全使用範例資料在瀏覽器中執行。",
       "screenshotAlt": "Aspiro 儀表板，顯示淨資產、錢包餘額與本月現金流",
       "startJourney": "開啟您的理財之旅",
-      "subtitle": "追蹤支出、管理貸款、監控投資、實現目標並與同儕比較 — 專為台灣打造的全方位個人理財應用程式。",
+      "subtitle": "追蹤支出、監控投資、實現目標 — 專為台灣打造的全方位個人理財應用程式。",
       "title": "掌握您的",
       "titleHighlight": "財務未來",
       "tryDemo": "試用線上示範"
@@ -422,6 +423,7 @@
       "noCrossover": "退休前不會出現交叉點",
       "noCrossoverHint": "以目前的儲蓄，債務永遠大於自有資金。提高儲蓄或降低目標比例。",
       "noDebtLine": "無負債",
+      "noLoanYet": "尚無投資貸款",
       "note": "這是推估而非預測：假設報酬穩定且你持續儲蓄。貸款還款已計入你記錄的支出，因此貸款清償當月會把該筆還款加回儲蓄。",
       "retireAge": "退休年齡",
       "return": "預期年化報酬",
@@ -600,7 +602,12 @@
     "confirmWarning": "只有在您剛剛於自己與機器人的 LINE 聊天室輸入 /link 時才繼續。如果這個連結是別人傳給您的，請取消：連結後對方的 LINE 帳號將能在您的帳號記帳並查看餘額。",
     "confirmButton": "連結帳號",
     "cancel": "取消",
-    "cancelled": "未進行任何連結，您可以關閉此頁面。"
+    "cancelled": "未進行任何連結，您可以關閉此頁面。",
+    "linking": "正在連結你的帳號…",
+    "loading": "載入中…",
+    "continueGoogle": "使用 Google 繼續",
+    "signInEmail": "改用電子郵件登入",
+    "backToApp": "返回 Aspiro"
   },
   "loadingOverlay": {
     "hint": "正在從伺服器取得最新資料",
@@ -628,7 +635,6 @@
     "budgets": "預算管理",
     "cancelInvite": "取消邀請 {{name}}",
     "chat": "聊天",
-    "closeSidebar": "關閉側邊欄",
     "collapseSidebar": "收合側邊欄",
     "dashboard": "儀表板",
     "exitDemo": "退出示範",
@@ -659,7 +665,6 @@
     "signOut": "登出",
     "transactions": "交易記錄",
     "whatsNew": "更新內容",
-    "menu": "選單",
     "search": "搜尋",
     "accountMenu": "帳戶選單",
     "commandPalette": "搜尋頁面與操作",
@@ -675,7 +680,8 @@
     "editTransaction": "編輯交易",
     "trend": "資產走勢",
     "holdings": "持股明細",
-    "groupDetail": "群組"
+    "groupDetail": "群組",
+    "xpProgress": "經驗值進度"
   },
   "notFoundPage": {
     "description": "您要找的頁面不存在或已被移動。",
@@ -1135,7 +1141,9 @@
     "notifSpendingBills": "支出與帳單提醒",
     "notifSpendingBillsDesc": "本月支出高於平常時，以及貸款繳款日前提醒我",
     "notifLoadFailed": "無法載入通知設定。",
-    "notifSaveFailed": "無法儲存這項變更，請再試一次。"
+    "notifSaveFailed": "無法儲存這項變更，請再試一次。",
+    "profileLoadFailed": "無法載入個人資料，下方欄位可能是空的。",
+    "saved": "已儲存"
   },
   "status": {
     "active": "啟用",
@@ -1247,6 +1255,12 @@
       "tight": "有點吃緊，進來的錢幾乎都花掉了。",
       "steady": "平穩的一個月。",
       "strong": "表現很好的一個月。"
+    },
+    "verdictSoFar": {
+      "over": "本月到目前為止，花費多於收入。",
+      "tight": "到目前為止，這個月手頭偏緊。",
+      "steady": "到目前為止，收入多於支出 — 但這個月還沒結束。",
+      "strong": "到目前為止，收入多於支出 — 但這個月還沒結束。"
     },
     "kept": "存下",
     "overspent": "超出收入",
@@ -1532,5 +1546,6 @@
     "backToDashboard": "回到儀表板",
     "planFree": "免費",
     "planPremium": "進階"
-  }
+  },
+  "showLess": "收合"
 }

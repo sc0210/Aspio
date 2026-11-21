@@ -92,12 +92,13 @@ export function AssetGoalCard({
         ? t(`goals:categories.${category}`, categoryMeta?.name ?? category.replace(/_/g, ' '))
         : '';
 
+    // The bar shows progress only, in one calm scale. It used to turn red when at
+    // risk or under 25% and amber under 60%, stacking a third alarm beside the
+    // amber border and the risk chip (and phones painted every bar green).
     const getProgressColor = () => {
         if (isCompleted) return 'bg-success-500';
-        if (isAtRisk || progress < 25) return 'bg-error-500';
-        if (progress < 60) return 'bg-warning-500';
-        if (progress < 90) return 'bg-prosperity-500';
-        return 'bg-prosperity-600';
+        if (progress < 50) return 'bg-primary-500';
+        return 'bg-prosperity-500';
     };
 
     const getDateUrgency = () => {
@@ -242,18 +243,18 @@ export function AssetGoalCard({
                 </div>
 
                 <div className="flex flex-col items-end gap-1 flex-shrink-0">
+                    {/* The one risk signal: icon plus words, not colour alone. */}
                     {isAtRisk && !isCompleted && (
-                        <span className="px-2 py-0.5 rounded-full text-xs font-semibold bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400">
-                            {t('goals:card.atRisk')}
+                        <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-semibold bg-amber-100 text-amber-800 dark:bg-amber-900/30 dark:text-amber-300">
+                            <span aria-hidden="true">⚠</span>{t('goals:card.atRisk')}
                         </span>
                     )}
+                    {/* Priority is a preference, not a status: neutral, so "HIGH" no longer reads as an alert. */}
                     <div
                         className={`
                             px-2.5 py-1 rounded-full text-xs font-medium
                             ${isCompleted ? 'bg-success-100 text-success-700 dark:bg-success-900/30 dark:text-success-400' : ''}
-                            ${!isCompleted && priority === 'high' ? 'bg-error-100 text-error-700 dark:bg-error-900/30 dark:text-error-400' : ''}
-                            ${!isCompleted && priority === 'medium' ? 'bg-warning-100 text-warning-700 dark:bg-warning-900/30 dark:text-warning-400' : ''}
-                            ${!isCompleted && priority === 'low' ? 'bg-gray-100 text-gray-700 dark:bg-gray-700 dark:text-gray-300' : ''}
+                            ${!isCompleted ? 'bg-gray-100 text-gray-700 dark:bg-gray-700 dark:text-gray-300' : ''}
                         `}
                     >
                         {isCompleted ? t('goals:card.complete') : t(`goals:priorities.${priority}`).toUpperCase()}

@@ -163,8 +163,10 @@ export function PortfolioStats({ portfolio, performance, isValueVisible, apiStat
   /**
    * Three of these figures answer the question you land on this page with —
    * what am I worth, what has it made, what did it do today. The other six
-   * answer questions you ask occasionally: Sharpe, beta, CAGR, drawdown,
-   * volatility, alpha, dividend yield, realised P&L.
+   * answer questions you ask occasionally: Sharpe, beta, drawdown,
+   * volatility, alpha, dividend yield, realised P&L. The annual (time-weighted)
+   * return rides in the gain card: next to "+NT$75,000 · 3.9% ROI" it says
+   * whether that is good, which the gain alone cannot.
    *
    * All nine used to share a carousel showing four at a time, which hid them
    * by position rather than by importance: which ones you could not see
@@ -174,7 +176,7 @@ export function PortfolioStats({ portfolio, performance, isValueVisible, apiStat
    * disclosure — the treatment the dashboard's forecast and heatmaps got.
    */
   const hasAnalysis =
-    hasRiskMetrics || hasCagr || hasDrawdown || hasVolatility || hasAlpha || hasDividendIncome || hasRealizedPnl;
+    hasRiskMetrics || hasDrawdown || hasVolatility || hasAlpha || hasDividendIncome || hasRealizedPnl;
 
   // Calculate today's P/L (use performance.oneDay if todayGainLoss not provided)
   const todayChange = portfolio.todayGainLoss ?? (portfolio.totalValue * (performance.oneDay / 100));
@@ -357,6 +359,16 @@ export function PortfolioStats({ portfolio, performance, isValueVisible, apiStat
                           : '•••%'
                         }
                       </p>
+                      {hasCagr && (
+                        <p className="text-xs mt-0.5 text-gray-600 dark:text-gray-300 tabular-nums">
+                          {t('portfolio:stats.annualReturnInline', {
+                            value: isValueVisible
+                              ? `${asShown(riskMetrics!.cagr!, 1) > 0 ? '+' : ''}${asShown(riskMetrics!.cagr!, 1).toFixed(1)}%`
+                              : '•••%',
+                            defaultValue: 'Annual return {{value}} · time-weighted',
+                          })}
+                        </p>
+                      )}
                     </div>
                   </div>
                 </div>
@@ -379,7 +391,8 @@ export function PortfolioStats({ portfolio, performance, isValueVisible, apiStat
                       onClick={(e) => { e.stopPropagation(); onViewTrendClick(); }}
                       className={cn(
                         'absolute top-2.5 right-2.5 z-10 flex items-center gap-1 px-2 py-1 rounded-lg text-xs sm:text-xs font-semibold',
-                        'transition-all duration-200 opacity-0 group-hover:opacity-100 focus:opacity-100',
+                        // Always visible: hover-only, touch and keyboard users never found it.
+                        'transition-all duration-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-500',
                         'backdrop-blur-sm shadow-sm border',
                         tone('bg-success-100/80 dark:bg-success-900/40 text-success-700 dark:text-success-300 border-success-200/60 dark:border-success-700/40 hover:bg-success-200/80 dark:hover:bg-success-800/50', 'bg-rose-100/80 dark:bg-rose-900/40 text-error-700 dark:text-error-300 border-rose-200/60 dark:border-rose-700/40 hover:bg-rose-200/80 dark:hover:bg-rose-800/50', 'bg-gray-100/80 dark:bg-gray-800/60 text-gray-700 dark:text-gray-300 border-gray-200/60 dark:border-gray-700/40 hover:bg-gray-200/80 dark:hover:bg-gray-700/50')
                       )}
@@ -403,9 +416,11 @@ export function PortfolioStats({ portfolio, performance, isValueVisible, apiStat
                         tone('text-success-700 dark:text-success-400', 'text-error-700 dark:text-error-400', 'text-gray-500 dark:text-gray-400')
                       )} />
                     </div>
-                    <div className="flex-1">
+                    <div className="flex-1 min-w-0">
+                      {/* Only the label line clears the always-visible Trend pill (top-right). */}
                       <p className={cn(
                         "text-xs md:text-sm font-semibold mb-1 uppercase tracking-wider",
+                        onViewTrendClick && 'pr-16',
                         tone('text-success-700 dark:text-success-300', 'text-error-700 dark:text-error-300', 'text-gray-600 dark:text-gray-300')
                       )}>{lastSessionDay
                         ? t('portfolio:stats.lastSessionChange', { day: lastSessionDay, defaultValue: 'Change · {{day}}' })
@@ -522,35 +537,6 @@ export function PortfolioStats({ portfolio, performance, isValueVisible, apiStat
                             )}
                           </div>
                         </div>
-                      </div>
-                    </div>
-                  </div>
-                </Tooltip>
-              </div>
-            )}
-
-            {/* Card 5: CAGR */}
-            {hasCagr && (
-              <div>
-                <Tooltip content={t('portfolio:stats.cagrTooltip')}>
-                  <div className="w-full relative overflow-hidden bg-gradient-to-br from-amber-50 via-white to-amber-50/30 dark:from-amber-900/10 dark:via-gray-800/50 dark:to-amber-900/5 rounded-xl p-4 border border-amber-200/50 dark:border-amber-800/30 shadow-sm hover:shadow-md transition-all duration-300 group cursor-help min-h-[110px]">
-                    <div className="absolute top-0 right-0 w-20 h-20 bg-amber-500/8 dark:bg-amber-500/15 rounded-full -mr-10 -mt-10 group-hover:scale-150 transition-transform duration-500" />
-                    <div className="relative flex items-center gap-2 sm:gap-2.5 md:gap-3">
-                      <div className="flex-shrink-0 p-2.5 bg-amber-100 dark:bg-amber-900/30 rounded-lg shadow-sm group-hover:scale-110 transition-transform duration-300">
-                        <ArrowTrendingUpIcon className="w-6 h-6 text-amber-700 dark:text-amber-400" />
-                      </div>
-                      <div className="flex-1">
-                        <p className="text-xs md:text-sm font-semibold text-amber-700 dark:text-amber-300 mb-1 uppercase tracking-wider">{t('portfolio:stats.cagrLabel')}</p>
-                        <p className={cn(
-                          'text-xl sm:text-2xl font-bold tabular-nums',
-                          toneOf(direction(asShown(riskMetrics!.cagr!, 1)))('text-success-700 dark:text-success-400', 'text-error-700 dark:text-error-400', 'text-gray-500 dark:text-gray-400')
-                        )}>
-                          {isValueVisible
-                            ? `${asShown(riskMetrics!.cagr!, 1) > 0 ? '+' : ''}${asShown(riskMetrics!.cagr!, 1).toFixed(1)}%`
-                            : '•••%'
-                          }
-                        </p>
-                        <p className="text-xs text-gray-500 dark:text-gray-400 mt-0.5">{t('portfolio:stats.cagrCaption')}</p>
                       </div>
                     </div>
                   </div>

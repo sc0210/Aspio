@@ -3,6 +3,7 @@
     "allCaughtUp": "目前沒有新的成就。",
     "allStreaksEarned": "已獲得所有連續紀錄徽章 🎉",
     "almostThere": "就快達成",
+    "bestDays_other": "最佳紀錄：{{count}} 天",
     "checkFailed": "無法檢查成就，請重試。",
     "checkForNew": "檢查新成就",
     "checking": "檢查中…",
@@ -13,6 +14,7 @@
     "financialScores": "財務評分",
     "last7Days": "最近 7 天",
     "level": "等級",
+    "locked": "未解鎖",
     "newAchievements_one": "🎉 解鎖 {{count}} 項新成就！",
     "newAchievements_other": "🎉 解鎖 {{count}} 項新成就！",
     "relative": {
@@ -35,6 +37,7 @@
     "sortProgress": "進度最多",
     "sortRarity": "稀有度",
     "streakBadgeToast": "🎉 已解鎖連續紀錄徽章：{{name}}！",
+    "streakDays_other": "連續 {{count}} 天",
     "subtitle": "追蹤您的里程碑並贏得獎勵",
     "tabs": {
       "all": "全部",
@@ -42,20 +45,23 @@
       "unlocked": "已解鎖"
     },
     "title": "成就",
-    "unlocked": "已解鎖"
+    "toBadge_other": "再 {{count}} 天解鎖 {{target}} 天徽章",
+    "unlocked": "已解鎖",
+    "viewDetails": "查看「{{title}}」詳情",
+    "viewDetailsLocked": "查看「{{title}}」詳情（未解鎖）"
   },
   "card": {
     "aria": {
       "cancelDelete": "取消刪除",
       "confirmDelete": "刪除目標：{{title}}",
-      "contribute": "向「{{title}}」提撥",
+      "contribute": "為「{{title}}」預留或釋出資金",
       "delete": "刪除「{{title}}」",
       "edit": "編輯「{{title}}」",
       "progress": "「{{title}}」進度"
     },
     "atRisk": "進度落後",
     "complete": "✓ 已完成",
-    "contribute": "提撥",
+    "contribute": "預留 / 釋出",
     "date": {
       "days": "剩 {{days}} 天",
       "months": "剩 {{months}} 個月",
@@ -116,6 +122,7 @@
     "currentAmount": "目前金額",
     "description": "說明",
     "priority": "優先級",
+    "reserveNow": "現在先預留（選填）",
     "status": "狀態",
     "targetAmount": "目標金額",
     "targetDate": "目標日期",

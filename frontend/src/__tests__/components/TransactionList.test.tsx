@@ -88,7 +88,8 @@ function renderExpanded(ui: React.ReactElement) {
   const result = render(ui);
   screen
     .queryAllByRole('button', { name: /Expand|Collapse/i })
-    .forEach((header) => fireEvent.click(header));
+    // Days start open; click only a closed one.
+    .forEach((header) => { if (header.getAttribute('aria-expanded') === 'false') fireEvent.click(header); });
   return result;
 }
 

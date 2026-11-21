@@ -330,7 +330,7 @@ export function PortfolioOverview({ portfolio, dateRange }: PortfolioOverviewPro
         <div className="flex items-center gap-2">
           <button
             onClick={() => toggleValueVisibility()}
-            className="p-1.5 text-gray-500 hover:text-gray-600 dark:text-gray-400 dark:hover:text-gray-300 transition-colors rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700"
+            className="grid place-items-center min-w-[44px] min-h-[44px] lg:min-w-0 lg:min-h-0 p-1.5 text-gray-500 hover:text-gray-600 dark:text-gray-400 dark:hover:text-gray-300 transition-colors rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-500"
             aria-label={isValueVisible ? t('dashboard:portfolioOverview.hideValues') : t('dashboard:portfolioOverview.showValues')}
           >
             {isValueVisible ? <EyeSlashIcon className="w-4 h-4" /> : <EyeIcon className="w-4 h-4" />}
@@ -344,7 +344,9 @@ export function PortfolioOverview({ portfolio, dateRange }: PortfolioOverviewPro
           <Link
             href="/portfolio/trend?view=calendar"
             title={t('dashboard:portfolioOverview.calendarView')}
-            className="p-1 rounded-lg text-gray-500 dark:text-gray-400 hover:text-primary-600 dark:hover:text-primary-400 hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors"
+            // An icon-only link: the title is not an accessible name.
+            aria-label={t('dashboard:portfolioOverview.calendarView')}
+            className="grid place-items-center min-w-[44px] min-h-[44px] lg:min-w-0 lg:min-h-0 p-1 rounded-lg focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-500 text-gray-500 dark:text-gray-400 hover:text-primary-600 dark:hover:text-primary-400 hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors"
           >
             <CalendarDaysIcon className="w-4 h-4" />
           </Link>

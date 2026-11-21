@@ -50,10 +50,8 @@ const TOOLS = 'navigation.sections.more_tools';
 function renderSidebar(collapsed = false) {
   return render(
     <DashboardSidebar
-      open={false}
       collapsed={collapsed}
       onToggleCollapsed={jest.fn()}
-      onClose={jest.fn()}
     />,
   );
 }

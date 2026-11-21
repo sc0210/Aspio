@@ -89,15 +89,14 @@ jest.mock('react-i18next', () => ({
         'emptyState.title': 'No loans recorded',
         'emptyState.description': 'Track mortgages, personal loans, and credit card debt',
         'deleteModal.title': 'Remove Loan?',
-        'deleteModal.message': `Remove ${opts?.name ?? ''}`,
-        'deleteModal.cancel': 'Cancel',
+        'deleteModal.plainMessage': `Remove ${opts?.name ?? ''}`,
         'deleteModal.remove': 'Remove',
         'deleteModal.removing': 'Removing…',
       };
       if (key === 'sections.active') return `Active (${opts?.count ?? ''})`;
       if (key === 'sections.paidOff') return `Paid Off (${opts?.count ?? ''})`;
       if (key === 'summary.totalLoans') return `${opts?.count ?? ''} total loans`;
-      if (key === 'deleteModal.message') return `Remove ${opts?.name ?? ''}`;
+      if (key === 'deleteModal.plainMessage') return `Remove ${opts?.name ?? ''}`;
       return map[key] ?? key;
     },
   }),
@@ -282,7 +281,8 @@ describe('LoansPage', () => {
     setupLoans([activeLoan], mockSummary);
     render(<LoansPage />);
     fireEvent.click(screen.getByText('Delete'));
-    fireEvent.click(screen.getByText('Cancel'));
+    // The shared ConfirmDialog labels Cancel from the common namespace.
+    fireEvent.click(screen.getByRole('button', { name: /cancel/i }));
     expect(screen.queryByText('Remove Loan?')).not.toBeInTheDocument();
   });
 
@@ -290,6 +290,8 @@ describe('LoansPage', () => {
     setupLoans([activeLoan], mockSummary);
     render(<LoansPage />);
     fireEvent.click(screen.getByText('Delete'));
+    // The dialog names the loan it would remove.
+    expect(screen.getByRole('dialog')).toHaveTextContent(activeLoan.name);
     fireEvent.click(screen.getByText('Remove'));
     await waitFor(() => {
       expect(mockDeleteMutateAsync).toHaveBeenCalledWith('loan-1');

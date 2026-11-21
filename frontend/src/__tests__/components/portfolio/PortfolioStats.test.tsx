@@ -92,6 +92,23 @@ describe('PortfolioStats', () => {
         expect(screen.getByText('+NT$1,200')).toBeInTheDocument();
     });
 
+    it('shows the time-weighted annual return beside the gain, not behind the fold', () => {
+        const { container } = show(analysis);
+        const line = screen.getByText(/Annual return \+8\.1% · time-weighted/);
+        expect(container.querySelector('details')!.contains(line)).toBe(false);
+    });
+
+    it('masks the annual return with the other values', () => {
+        show({ ...analysis, isValueVisible: false });
+        expect(screen.getByText('Annual return •••% · time-weighted')).toBeInTheDocument();
+        expect(screen.queryByText(/8\.1%/)).not.toBeInTheDocument();
+    });
+
+    it('shows no annual return line before there is one', () => {
+        show({ ...analysis, riskMetrics: { ...analysis.riskMetrics, cagr: undefined } });
+        expect(screen.queryByText(/time-weighted/)).not.toBeInTheDocument();
+    });
+
     it('keeps the analysis closed until it is asked for', () => {
         const { container } = show(analysis);
         const details = container.querySelector('details');
@@ -107,7 +124,7 @@ describe('PortfolioStats', () => {
         const { container } = show(analysis);
         const details = container.querySelector('details')!;
 
-        for (const label of ['Sharpe', 'Beta', 'Annual return', 'Max DD', 'Volatility']) {
+        for (const label of ['Sharpe', 'Beta', 'Max DD', 'Volatility']) {
             // getAllBy: each label also appears in its card's tooltip copy.
             expect(within(details).getAllByText(label, { exact: false }).length).toBeGreaterThan(0);
         }

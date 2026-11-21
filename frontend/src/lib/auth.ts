@@ -143,10 +143,14 @@ export const authOptions: NextAuthOptions = {
     debug: () => { },
   },
   providers: [
-    GoogleProvider({
-      clientId: process.env.GOOGLE_CLIENT_ID!,
-      clientSecret: process.env.GOOGLE_CLIENT_SECRET!,
-    }),
+    // Only with credentials: unconfigured, the provider was still listed and the
+    // Google button failed. /api/auth/providers then tells the pages the truth.
+    ...(process.env.GOOGLE_CLIENT_ID && process.env.GOOGLE_CLIENT_SECRET
+      ? [GoogleProvider({
+          clientId: process.env.GOOGLE_CLIENT_ID,
+          clientSecret: process.env.GOOGLE_CLIENT_SECRET,
+        })]
+      : []),
     CredentialsProvider({
       id: 'demo',
       name: 'Demo',

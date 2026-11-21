@@ -1,6 +1,6 @@
 'use client';
 
-import { useCallback, useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { useTranslation } from 'react-i18next';
@@ -8,24 +8,24 @@ import {
   ChevronLeftIcon,
   ChevronRightIcon,
   ChevronDownIcon,
-  XMarkIcon,
   MagnifyingGlassIcon,
 } from '@heroicons/react/24/outline';
 import { cn } from '@/utils/cn';
 import { useDemo } from '@/contexts/DemoContext';
 import { useIsAdmin } from '@/hooks/useAdmin';
-import { useDialog } from '@/hooks/useDialog';
-import { getNavigationSections, type NavSection } from '@/lib/navigation';
+import { getNavigationSections, navPathFor, type NavSection } from '@/lib/navigation';
 import { useFeatures } from '@/hooks/useFeatures';
 import { useAccessTier } from '@/hooks/useAccessTier';
 import { openCommandPalette } from './CommandPalette';
 import { AccountMenu } from './AccountMenu';
 
+/**
+ * The md+ sidebar. Phones navigate by the bottom tab bar and its More sheet; the
+ * hamburger drawer this also rendered listed the same pages a second time.
+ */
 interface DashboardSidebarProps {
-  open: boolean;
   collapsed: boolean;
   onToggleCollapsed: () => void;
-  onClose: () => void;
 }
 
 const SECTION_STATE_KEY = 'aspiro-nav-sections';
@@ -65,19 +65,12 @@ function useSectionState() {
   return { overrides, setSectionOpen };
 }
 
-export function DashboardSidebar({ open, collapsed, onToggleCollapsed, onClose }: DashboardSidebarProps) {
+export function DashboardSidebar({ collapsed, onToggleCollapsed }: DashboardSidebarProps) {
   const pathname = usePathname();
   const { t } = useTranslation('common');
   const { isDemoMode } = useDemo();
   const { isAdmin } = useIsAdmin();
   const { overrides, setSectionOpen } = useSectionState();
-  const mobileSidebarRef = useRef<HTMLDivElement>(null);
-  // The phone drawer is a modal while open: role, focus trap, Escape, focus return.
-  const { panelRef: dialogPanelRef, dialogProps } = useDialog({ isOpen: open, onClose });
-  const setMobileSidebar = useCallback((el: HTMLDivElement | null) => {
-    mobileSidebarRef.current = el;
-    dialogPanelRef.current = el;
-  }, [dialogPanelRef]);
   // The collapsed rail's tooltip, positioned in viewport coordinates.
   //
   // It cannot be a child of the row it describes: <nav> scrolls, and a box with
@@ -89,7 +82,8 @@ export function DashboardSidebar({ open, collapsed, onToggleCollapsed, onClose }
   const features = useFeatures();
   const { isPremium } = useAccessTier();
   const navigationSections = getNavigationSections({ isAdmin, isPremium, features });
-  const isActiveRoute = (href: string) => pathname === href || pathname.startsWith(href + '/');
+  const navPath = navPathFor(pathname);
+  const isActiveRoute = (href: string) => navPath === href || navPath.startsWith(href + '/');
 
   // Which section opens itself when the reader has expressed no preference:
   // only the one holding the current route. The everyday pages are standalone
@@ -98,51 +92,8 @@ export function DashboardSidebar({ open, collapsed, onToggleCollapsed, onClose }
     (section) => section.titleKey && section.items.some((item) => isActiveRoute(item.href)),
   )?.titleKey;
 
-  // Handle click outside to close mobile sidebar
-  useEffect(() => {
-    if (!open) return;
-
-    const handleClickOutside = (event: MouseEvent) => {
-      const target = event.target as Node;
-      if (mobileSidebarRef.current && !mobileSidebarRef.current.contains(target)) {
-        onClose();
-      }
-    };
-
-    const timeoutId = setTimeout(() => {
-      document.addEventListener('mousedown', handleClickOutside);
-    }, 50);
-
-    return () => {
-      clearTimeout(timeoutId);
-      document.removeEventListener('mousedown', handleClickOutside);
-    };
-  }, [open, onClose]);
-
-  // The page behind the drawer is frozen by useDialog's useScrollLock, which
-  // locks <main> (the scroll container here), not body.
-
-  // Swipe-left to close
-  useEffect(() => {
-    const element = mobileSidebarRef.current;
-    if (!element || !open) return;
-
-    let touchStartX = 0;
-    const handleTouchStart = (e: TouchEvent) => { touchStartX = e.touches[0].clientX; };
-    const handleTouchEnd = (e: TouchEvent) => {
-      if (e.changedTouches[0].clientX - touchStartX < -50) onClose();
-    };
-
-    element.addEventListener('touchstart', handleTouchStart, false);
-    element.addEventListener('touchend', handleTouchEnd, false);
-    return () => {
-      element.removeEventListener('touchstart', handleTouchStart);
-      element.removeEventListener('touchend', handleTouchEnd);
-    };
-  }, [open, onClose]);
-
-  const sidebarContent = ({ forceExpanded = false }: { forceExpanded?: boolean } = {}) => {
-    const isCollapsed = collapsed && !forceExpanded;
+  const sidebarContent = () => {
+    const isCollapsed = collapsed;
 
     // The collapsed rail is icons only, so the name has to arrive on hover AND
     // on keyboard focus — the native `title` did neither for a keyboard, and
@@ -174,7 +125,6 @@ export function DashboardSidebar({ open, collapsed, onToggleCollapsed, onClose }
                 e.preventDefault();
                 window.scrollTo({ top: 0, behavior: 'smooth' });
               }
-              onClose();
             }}
             className={cn(
               'group relative flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-colors duration-150 touch-manipulation min-h-[44px]',
@@ -202,7 +152,7 @@ export function DashboardSidebar({ open, collapsed, onToggleCollapsed, onClose }
           isCollapsed ? 'justify-center' : 'justify-between',
         )}>
           {!isCollapsed && (
-            <Link href="/dashboard" className="flex items-center gap-2.5" onClick={onClose}>
+            <Link href="/dashboard" className="flex items-center gap-2.5">
               <div className="w-8 h-8 bg-gradient-to-br from-primary-600 to-primary-500 rounded-lg flex items-center justify-center flex-shrink-0">
                 <span className="text-white font-bold text-base">A</span>
               </div>
@@ -214,20 +164,13 @@ export function DashboardSidebar({ open, collapsed, onToggleCollapsed, onClose }
             onClick={onToggleCollapsed}
             aria-label={isCollapsed ? t('navigation.expandSidebar') : t('navigation.collapseSidebar')}
             className={cn(
-              'hidden md:flex items-center justify-center p-2 rounded-lg text-gray-500 dark:text-gray-400 hover:text-gray-600 hover:bg-gray-100 dark:hover:text-gray-200 dark:hover:bg-gray-700 transition-colors min-w-[44px] min-h-[44px]',
+              'flex items-center justify-center p-2 rounded-lg text-gray-500 dark:text-gray-400 hover:text-gray-600 hover:bg-gray-100 dark:hover:text-gray-200 dark:hover:bg-gray-700 transition-colors min-w-[44px] min-h-[44px]',
               isCollapsed && 'mx-auto',
             )}
           >
             {isCollapsed ? <ChevronRightIcon className="w-4 h-4" /> : <ChevronLeftIcon className="w-4 h-4" />}
           </button>
 
-          <button
-            onClick={onClose}
-            aria-label={t('navigation.closeSidebar')}
-            className="md:hidden flex items-center justify-center p-2 rounded-lg text-gray-500 dark:text-gray-400 hover:text-gray-600 hover:bg-gray-100 dark:hover:text-gray-200 dark:hover:bg-gray-700 min-w-[44px] min-h-[44px] touch-manipulation transition-colors"
-          >
-            <XMarkIcon className="w-5 h-5" />
-          </button>
         </div>
 
         {/* Search — the palette reaches every page, which is what lets this
@@ -235,7 +178,7 @@ export function DashboardSidebar({ open, collapsed, onToggleCollapsed, onClose }
         <div className={cn('pt-3', isCollapsed ? 'px-1' : 'px-3')}>
           <button
             type="button"
-            onClick={() => { onClose(); openCommandPalette(); }}
+            onClick={openCommandPalette}
             aria-label={t('navigation.search', 'Search')}
             data-tour="search"
             className={cn(
@@ -314,7 +257,7 @@ export function DashboardSidebar({ open, collapsed, onToggleCollapsed, onClose }
           'border-t border-gray-200 dark:border-gray-700 py-2 flex-shrink-0',
           isCollapsed ? 'px-1' : 'px-2',
         )}>
-          <AccountMenu collapsed={isCollapsed} onNavigate={onClose} />
+          <AccountMenu collapsed={isCollapsed} />
         </div>
 
         {isCollapsed && railTooltip && (
@@ -338,32 +281,6 @@ export function DashboardSidebar({ open, collapsed, onToggleCollapsed, onClose }
         collapsed ? 'md:w-14' : 'md:w-64',
       )}>
         {sidebarContent()}
-      </div>
-
-      {/* Mobile sidebar — stops at the top of the bottom tab bar (h-14 + 1px
-          border + safe-area inset, MobileBottomNav) rather than the screen edge, where the
-          browser toolbar and home indicator cover it. z above the bar's
-          backdrop, below dialogs (z-50). */}
-      <div
-        ref={setMobileSidebar}
-        {...(open ? dialogProps : {})}
-        // It stays mounted and slides off-screen, so without inert its ~12 links
-        // stayed in the tab order and the a11y tree on every page (MoreSheet had
-        // the same bug and the same fix).
-        inert={!open}
-        aria-label={t('navigation.menu', 'Menu')}
-        className={cn(
-          'md:hidden fixed top-0 bottom-[calc(3.5rem+1px+env(safe-area-inset-bottom,0px))] left-0 z-[45] w-72 max-w-[85vw]',
-          // flex-col like the desktop wrapper: the nav list (flex-1) scrolls and
-          // the account/level footer stays pinned instead of running off-screen.
-          'flex flex-col',
-          'bg-white dark:bg-gray-800',
-          'border-r border-gray-200 dark:border-gray-700',
-          'transform transition-transform duration-300 ease-in-out shadow-2xl',
-          open ? 'translate-x-0' : '-translate-x-full',
-        )}
-      >
-        {sidebarContent({ forceExpanded: true })}
       </div>
     </>
   );

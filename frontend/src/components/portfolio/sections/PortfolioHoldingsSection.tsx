@@ -107,7 +107,8 @@ interface PortfolioHoldingsSectionProps {
  */
 const WALLET_TYPE_OPTIONS = [
   { value: 'all',       label: 'All Wallets', description: 'Show all wallets',  icon: '💼' },
-  { value: 'life',      label: 'Life',        description: 'Daily spending',    icon: '💳' },
+  // No 'life': holdings live in the portfolio or emergency wallet only (cash is
+  // Life's), so that filter was always empty.
   { value: 'portfolio', label: 'Portfolio',   description: 'Invested assets',   icon: '📈' },
   { value: 'emergency', label: 'Emergency',   description: 'Emergency fund',    icon: '🚨' },
 ];

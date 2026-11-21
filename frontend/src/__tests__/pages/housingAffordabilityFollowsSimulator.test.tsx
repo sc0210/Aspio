@@ -14,6 +14,8 @@ import i18next from 'i18next';
 import { I18nextProvider, initReactI18next } from 'react-i18next';
 import en from '@/locales/en/common.json';
 import HousingPage from '@/app/housing/page';
+import { AffordabilityPanel } from '@/components/housing/AffordabilityPanel';
+import { DEFAULT_BUY_VS_RENT, loanTermsOf } from '@/lib/housing';
 
 jest.mock('next/navigation', () => ({
     useRouter: () => ({ replace: jest.fn(), push: jest.fn() }),
@@ -175,30 +177,45 @@ describe('/housing — the headline and the simulator price the same loan', () =
         expect(comfortablePrice()).toBeGreaterThan(atAccountAssets);
     });
 
-    it('honours a sub-1% move of its own mortgage-rate slider', () => {
-        // That slider steps in 0.05. Comparing the new value against the live one at a
-        // precision of 1 made 2.1 → 2.3 look like "back to my data", so the override was
-        // dropped, the slider snapped back and the headline never moved.
+    it('on desktop the panel shows the simulator\'s terms instead of its own sliders', () => {
+        // Two sets of sliders let one page price two different mortgages.
         render(
             <I18nextProvider i18n={i18n}>
                 <HousingPage />
+            </I18nextProvider>,
+        );
+        fireEvent.click(screen.getByRole('button', { name: /Try a different situation/ }));
+        expect(screen.getByText(/set in Buy vs\. Rent below/)).toBeInTheDocument();
+        // And no slider of its own: the simulator is folded, so no rate slider renders at all.
+        expect(screen.queryByRole('slider', { name: /Mortgage rate/ })).not.toBeInTheDocument();
+    });
+
+    it('honours a sub-1% move of its own mortgage-rate slider (phone, where it owns the terms)', () => {
+        // That slider steps in 0.05. Comparing the new value against the live one at a
+        // precision of 1 made 2.1 → 2.3 look like "back to my data", so the override was
+        // dropped, the slider snapped back and the headline never moved.
+        const inputs = {
+            financialAssets: RICH, liquidFunds: RICH, monthlyIncome: 150_000, monthlyExpenses: 60_000,
+            ...loanTermsOf(DEFAULT_BUY_VS_RENT),
+        };
+        render(
+            <I18nextProvider i18n={i18n}>
+                <AffordabilityPanel inputs={inputs} cashFlowBasisMonths={12} />
             </I18nextProvider>,
         );
 
         const atDefault = comfortablePrice();
         fireEvent.click(screen.getByRole('button', { name: /Try a different situation/ }));
         const rate = panelSlider(/Mortgage rate/);
-        expect(rate).toHaveValue('2.1');
+        expect(rate).toHaveValue(String(DEFAULT_BUY_VS_RENT.mortgageRatePct));
 
         fireEvent.change(rate, { target: { value: '2.3' } });
 
         expect(rate).toHaveValue('2.3');
         expect(comfortablePrice()).toBeLessThan(atDefault);
 
-        // And dragged back onto the live rate, it lets go again — the price alone
-        // cannot show that (an override pinned AT the live value prices the same),
-        // so this asserts the panel is no longer holding anything.
-        fireEvent.change(rate, { target: { value: '2.1' } });
+        // And dragged back onto the live rate, it lets go again.
+        fireEvent.change(rate, { target: { value: String(DEFAULT_BUY_VS_RENT.mortgageRatePct) } });
         expect(comfortablePrice()).toBe(atDefault);
         expect(screen.queryByRole('button', { name: /Reset to my data/ })).not.toBeInTheDocument();
     });

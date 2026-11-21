@@ -115,23 +115,33 @@
       "life": "Life"
     },
     "walletType": "Wallet Type",
-    "sharedOnly": "Shared bills only"
+    "sharedOnly": "Shared bills only",
+    "filterByCategory": "Filter by {{category}}"
   },
   "form": {
     "addTag": "Add",
     "categories": {
+      "Bonus": "Bonus",
       "Dining": "Dining",
+      "Education": "Education",
       "Entertainment": "Fun",
+      "Food & Dining": "Dining",
       "Freelance": "Freelance",
       "Gift": "Gift",
       "Groceries": "Groceries",
       "Healthcare": "Health",
       "Housing": "Housing",
+      "Investment": "Investment",
+      "Investment Purchase": "Investment buy",
       "Investment Returns": "Investment",
+      "Investment Sale": "Investment sale",
       "Loan Payment": "Loan",
+      "Loan Receipt": "Loan received",
       "Others": "Others",
+      "Personal Care": "Personal Care",
       "Salary": "Salary",
       "Shopping": "Shopping",
+      "Transfer": "Transfer",
       "Transportation": "Transport",
       "Travel": "Travel",
       "Utilities": "Utilities"
@@ -185,10 +195,15 @@
     "optional": "(optional)",
     "paymentMethodLabel": "Payment Method",
     "paymentMethods": {
+      "alipay": "Alipay",
       "bank_transfer": "Bank Transfer",
       "cash": "Cash",
       "credit_card": "Credit Card",
-      "digital_wallet": "E-Wallet"
+      "debit_card": "Debit Card",
+      "digital_wallet": "Other e-wallet",
+      "line_pay": "LINE Pay",
+      "shopee_pay": "ShopeePay",
+      "wechat_pay": "WeChat Pay"
     },
     "tagPlaceholder": "Add a tag (press Enter)",
     "toWallet": "To Wallet",
@@ -308,7 +323,8 @@
     "walletPlaceholder": "Reassign wallet",
     "holdingLinkedSkipped": "{{count}} selected entries belong to portfolio holdings and were left as they are. Change them on Portfolio.",
     "split": "Split with partner",
-    "manageSplit": "Manage split"
+    "manageSplit": "Manage split",
+    "actionsFor": "Actions for {{description}}"
   },
   "monthlySummary": "Monthly Summary",
   "monthlySummaryPage": {
@@ -345,7 +361,8 @@
     "totalInvested": "Total Invested {{year}}",
     "transfer": "Transfer",
     "debt": "Debt",
-    "movedBetweenWallets": "Moved between your wallets: {{amount}} (not spending)"
+    "movedBetweenWallets": "Moved between your wallets: {{amount}} (not spending)",
+    "totalIncludesInvest": "Total Exp includes money invested and moved between your wallets."
   },
   "monthlySummaryShort": "Summary",
   "pagination": {
@@ -417,12 +434,13 @@
     "uploadImage": "Upload Image",
     "uploadTitle": "Capture or Upload Receipt",
     "verifyBody": "Low confidence detected. Please review and correct if needed.",
-    "verifyTitle": "Please verify details"
+    "verifyTitle": "Please verify details",
+    "reviewAndSave": "Review & save"
   },
   "splitBadge": "Split",
   "stats": {
     "averageTransaction": "Average Transaction",
-    "hideTransfers": "Hide transfers",
+    "hideTransfers": "Exclude transfers from totals",
     "hideTransfersNote": "Moving money between your own wallets is left out. The list below still shows both legs, so these totals no longer match it.",
     "loadFailed": "Couldn't load totals",
     "netIncome": "Net Income",
@@ -478,5 +496,14 @@
   "wallet": {
     "emergency": "Emergency Wallet",
     "life": "Life Wallet"
+  },
+  "mobile": {
+    "desktopOnly": "Heatmap & bulk import on tablet / desktop",
+    "loadMore": "Load more",
+    "loading": "Loading…",
+    "noMatch": "No transactions match",
+    "searchLabel": "Search transactions",
+    "searchPlaceholder": "Search transactions…",
+    "typeFilter": "Type"
   }
 }

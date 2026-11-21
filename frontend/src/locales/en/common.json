@@ -188,7 +188,8 @@
       "upfront": "Cash at closing",
       "withRaises": "with {{pct}}%/yr raises",
       "noIncomeTitle": "Not enough income data yet",
-      "noIncomeHint": "There's no recorded income in your last 12 complete months, so a price would just read NT$0. Record your income, or enter a monthly income below, to see what you can afford."
+      "noIncomeHint": "There's no recorded income in your last 12 complete months, so a price would just read NT$0. Record your income, or enter a monthly income below, to see what you can afford.",
+      "termsFromSimulator": "Loan: {{down}}% down · {{rate}}% · {{years}} years — set in Buy vs. Rent below."
     },
     "car": {
       "baseUnreachable": "Improve your cash flow first to estimate a house timeline.",
@@ -395,7 +396,7 @@
       "noAccountNeeded": "The demo needs no account and no card — it runs on sample data in your browser.",
       "screenshotAlt": "The Aspiro dashboard showing net worth, wallet balances and this month’s cash flow",
       "startJourney": "Start Your Financial Journey",
-      "subtitle": "Track expenses, manage loans, monitor investments, achieve goals, and compare with peers — the all-in-one personal finance app built for Taiwan.",
+      "subtitle": "Track expenses, monitor investments and reach your goals — the all-in-one personal finance app built for Taiwan.",
       "title": "Take Control of Your",
       "titleHighlight": "Financial Future",
       "tryDemo": "Try the live demo"
@@ -422,6 +423,7 @@
       "noCrossover": "No crossover before retirement",
       "noCrossoverHint": "At these savings the debt never stops outweighing your own money. Raise savings or lower the target share.",
       "noDebtLine": "no debt",
+      "noLoanYet": "No investment loan yet",
       "note": "A projection, not a forecast: it assumes a steady return and that you keep saving. Loan repayments already sit in your recorded expenses, so the payment is added back to savings the month the loan clears.",
       "retireAge": "Retirement age",
       "return": "Expected annual return",
@@ -600,7 +602,12 @@
     "confirmWarning": "Only continue if you just typed /link in your own LINE chat with the bot. If someone sent you this link, cancel: linking would let their LINE account log transactions and read balances on your account.",
     "confirmButton": "Link account",
     "cancel": "Cancel",
-    "cancelled": "Nothing was linked. You can close this page."
+    "cancelled": "Nothing was linked. You can close this page.",
+    "linking": "Linking your account…",
+    "loading": "Loading…",
+    "continueGoogle": "Continue with Google",
+    "signInEmail": "Sign in with email instead",
+    "backToApp": "Back to Aspiro"
   },
   "loadingOverlay": {
     "hint": "Fetching the latest data from the server",
@@ -628,7 +635,6 @@
     "budgets": "Budgets",
     "cancelInvite": "Cancel invite to {{name}}",
     "chat": "Chat",
-    "closeSidebar": "Close sidebar",
     "collapseSidebar": "Collapse sidebar",
     "dashboard": "Dashboard",
     "exitDemo": "Exit Demo",
@@ -659,7 +665,6 @@
     "signOut": "Sign out",
     "transactions": "Transactions",
     "whatsNew": "What's New",
-    "menu": "Menu",
     "search": "Search",
     "accountMenu": "Account menu",
     "commandPalette": "Search pages and actions",
@@ -675,7 +680,8 @@
     "editTransaction": "Edit transaction",
     "trend": "Asset trend",
     "holdings": "Holdings",
-    "groupDetail": "Group"
+    "groupDetail": "Group",
+    "xpProgress": "XP progress"
   },
   "notFoundPage": {
     "description": "The page you're looking for doesn't exist or has been moved.",
@@ -1137,7 +1143,9 @@
     "notifSpendingBills": "Spending & bill alerts",
     "notifSpendingBillsDesc": "Warn me when this month's spending runs above my usual, and before a loan payment is due",
     "notifLoadFailed": "Couldn't load your notification settings.",
-    "notifSaveFailed": "Couldn't save that change. Try again."
+    "notifSaveFailed": "Couldn't save that change. Try again.",
+    "profileLoadFailed": "Couldn't load your profile. The fields below may be empty.",
+    "saved": "Saved"
   },
   "status": {
     "active": "Active",
@@ -1249,6 +1257,12 @@
       "tight": "A tight month — most of what came in went out again.",
       "steady": "A steady month.",
       "strong": "A strong month."
+    },
+    "verdictSoFar": {
+      "over": "So far this month you've spent more than you've earned.",
+      "tight": "So far, a tight month.",
+      "steady": "So far, more came in than went out — the month isn't over yet.",
+      "strong": "So far, more came in than went out — the month isn't over yet."
     },
     "kept": "kept",
     "overspent": "over what came in",
@@ -1536,5 +1550,6 @@
     "backToDashboard": "Back to dashboard",
     "planFree": "Free",
     "planPremium": "Premium"
-  }
+  },
+  "showLess": "Show less"
 }

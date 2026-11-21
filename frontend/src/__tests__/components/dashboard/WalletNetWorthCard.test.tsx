@@ -346,15 +346,15 @@ describe('WalletNetWorthCard', () => {
   // wallet areas rendered on mount, which was the default before the toggles
   // existed.
   describe('chart — series visibility defaults', () => {
-    it('renders totalAsset and netWorth areas by default', () => {
+    it('renders only the netWorth area by default, so its movement is not flattened', () => {
       render(
         <WalletNetWorthCard
           stats={baseStats}
           walletTrendsData={twoPointTrend}
         />,
       );
-      expect(screen.getByTestId('area-totalAsset')).toBeInTheDocument();
       expect(screen.getByTestId('area-netWorth')).toBeInTheDocument();
+      expect(screen.queryByTestId('area-totalAsset')).toBeNull();
     });
 
     it('leaves the three per-wallet areas off until toggled on', () => {
@@ -625,8 +625,8 @@ describe('WalletNetWorthCard', () => {
           walletTrendsData={twoPointTrend}
         />,
       );
-      // totalAsset is on by default; lifeWallet is opt-in via the legend toggle.
-      expect(screen.getByTestId('area-totalAsset')).toBeInTheDocument();
+      // netWorth is the only series on by default; the others are opt-in via the legend.
+      expect(screen.getByTestId('area-netWorth')).toBeInTheDocument();
     });
   });
 });
