@@ -142,7 +142,6 @@
       "type": "類型",
       "currency": "幣別",
       "exchange": "交易所",
-      "wallet": "錢包分類 *",
       "quantity": "數量 *",
       "price": "買入價格 *",
       "date": "購買日期 *",
@@ -157,17 +156,7 @@
     "sharesTimesPrice_other": "{{count}} 股 × {{price}}",
     "title": "🛒 買入股票",
     "titleDetails": "📝 交易詳情",
-    "totalCost": "總成本",
-    "wallet": {
-      "portfolio": {
-        "label": "投資組合",
-        "description": "已投資資產（股票、ETF等）"
-      },
-      "emergency": {
-        "label": "緊急錢包",
-        "description": "緊急備用金"
-      }
-    }
+    "totalCost": "總成本"
   },
   "charts": {
     "analytics": "分析",
@@ -327,17 +316,6 @@
   "holdingsList": "項目清單",
   "holdingsUnit_one": "{{count}} 筆持倉",
   "holdingsUnit_other": "{{count}} 筆持倉",
-  "holdingWallet": {
-    "title": "錢包分類",
-    "portfolio": {
-      "label": "投資組合",
-      "description": "已投資的股票、ETF等資產"
-    },
-    "emergency": {
-      "label": "緊急備用金",
-      "description": "緊急備用金，不用於交易"
-    }
-  },
   "loading": {
     "allocation": "載入配置...",
     "assetTrend": "載入資產趨勢...",
@@ -678,18 +656,6 @@
     "emergency": "緊急",
     "life": "生活",
     "portfolio": "組合"
-  },
-  "wallets": {
-    "all": "所有錢包",
-    "allDesc": "顯示所有投資組合",
-    "investment": "投資錢包",
-    "investmentDesc": "可用於交易的現金",
-    "label": "錢包",
-    "manage": "管理",
-    "portfolioPerformanceDesc": "已投資資產",
-    "portfolio_performance": "投資組合",
-    "urgent": "緊急錢包",
-    "urgentDesc": "緊急備用金"
   },
   "warnings": {
     "multiCurrencyDesc": "此錢包包含不同幣別的持股。所有價值以原始幣別顯示，若未換算為台幣可能無法反映準確總額。",

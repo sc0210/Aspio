@@ -60,3 +60,49 @@ export function periodChange<K extends string>(
 export function netWorthOf(point: { totalAsset: number; debtBalance?: number }): number {
     return (Number(point.totalAsset) || 0) - (Number(point.debtBalance) || 0);
 }
+
+/**
+ * Debt as a percentage of the Portfolio wallet on one day of the trend series,
+ * or undefined when there is nothing invested to set it against.
+ *
+ * Measured against the invested money rather than total assets because that
+ * is what borrowing to invest puts at risk: a market fall raises this with no
+ * new borrowing at all, which the debt ratio on the net-worth card (debt over
+ * total assets, cash included) barely shows.
+ */
+export function leverageOf(point: { portfolioWallet: number; debtBalance?: number }): number | undefined {
+    const invested = Number(point.portfolioWallet) || 0;
+    if (invested <= 0) return undefined;
+    return ((Number(point.debtBalance) || 0) / invested) * 100;
+}
+
+export interface LeverageChange {
+    /** Leverage at the end of the window, in percent. */
+    now: number;
+    /** Leverage where the window opened; undefined when nothing was invested then. */
+    start?: number;
+    debt: number;
+    invested: number;
+}
+
+/**
+ * Leverage at both ends of the window. Undefined when there is no debt at
+ * either end (nothing to show) or nothing invested now.
+ */
+export function leverageChange(
+    points: ReadonlyArray<{ portfolioWallet: number; debtBalance?: number }> | undefined | null,
+): LeverageChange | undefined {
+    if (!points || points.length === 0) return undefined;
+    const first = points[0];
+    const last = points[points.length - 1];
+    const debt = Number(last.debtBalance) || 0;
+    if (debt <= 0 && (Number(first.debtBalance) || 0) <= 0) return undefined;
+    const now = leverageOf(last);
+    if (now === undefined) return undefined;
+    return {
+        now,
+        start: points.length > 1 ? leverageOf(first) : undefined,
+        debt,
+        invested: Number(last.portfolioWallet) || 0,
+    };
+}
