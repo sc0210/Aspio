@@ -38,6 +38,7 @@
     "date": "Date",
     "description": "Description",
     "paymentMethod": "Payment Method",
+    "subcategory": "Subcategory",
     "type": "Type"
   },
   "fields": {
@@ -263,6 +264,18 @@
     },
     "splitSaveFirst": "Save your changes first, then split.",
     "currentSubcategory": "Current detail:",
+    "groups": {
+      "food": "Food",
+      "housing": "Housing",
+      "transport": "Transport",
+      "shopping": "Shopping",
+      "fun": "Fun",
+      "other": "Others"
+    },
+    "choices": {
+      "Dining": "Eating out",
+      "Housing": "Rent"
+    },
     "subcategoryLabel": "Detail",
     "subcategories": {
       "Beauty": "Beauty",

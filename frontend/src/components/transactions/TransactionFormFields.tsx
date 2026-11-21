@@ -85,6 +85,65 @@ export const SUBCATEGORIES: Record<string, { value: string; label: string; icon:
   ],
 };
 
+/** One choice in a group's optional detail row: a category, or a category plus its detail. */
+export interface CategoryChoice {
+  category: string;
+  subcategory?: string;
+  /** i18n key under transactions:form, and its English fallback. */
+  labelKey: string;
+  label: string;
+  icon: string;
+}
+
+/**
+ * The expense picker's top level: a few groups, each saving a real category on
+ * its own (`category`), with an optional row of finer choices under it. One tap
+ * for most entries; the detail is there for those who want it. Every choice
+ * stores an ordinary category (plus, for Shopping, a subcategory), so reports,
+ * budgets and older rows are unchanged. The groups follow the Transactions pie:
+ * food, housing, transport, and the rest.
+ */
+export interface CategoryGroup {
+  key: string;
+  label: string;
+  icon: string;
+  category: string;
+  options: CategoryChoice[];
+}
+
+const choice = (category: string, label: string, icon: string, labelKey = `categories.${category}`): CategoryChoice =>
+  ({ category, label, icon, labelKey });
+
+export const EXPENSE_GROUPS: CategoryGroup[] = [
+  { key: 'food', label: 'Food', icon: '🍽️', category: 'Dining', options: [
+    choice('Dining', 'Eating out', '🍜', 'choices.Dining'),
+    choice('Groceries', 'Groceries', '🛒'),
+  ] },
+  { key: 'housing', label: 'Housing', icon: '🏠', category: 'Housing', options: [
+    choice('Housing', 'Rent', '🔑', 'choices.Housing'),
+    choice('Utilities', 'Utilities', '💡'),
+  ] },
+  { key: 'transport', label: 'Transport', icon: '🚗', category: 'Transportation', options: [] },
+  { key: 'shopping', label: 'Shopping', icon: '🛍️', category: 'Shopping', options: SUBCATEGORIES.Shopping.map(
+    (d) => ({ category: 'Shopping', subcategory: d.value, label: d.label, icon: d.icon, labelKey: `subcategories.${d.value}` }),
+  ) },
+  { key: 'fun', label: 'Fun', icon: '🎬', category: 'Entertainment', options: [
+    choice('Entertainment', 'Fun', '🎬'),
+    choice('Travel', 'Travel', '✈️'),
+    choice('Gift', 'Gift', '🎁'),
+  ] },
+  { key: 'other', label: 'Others', icon: '📦', category: 'Others', options: [
+    choice('Healthcare', 'Health', '🏥'),
+    choice('Loan Payment', 'Loan', '💳'),
+    choice('Others', 'Others', '📦'),
+  ] },
+];
+
+/** The group a stored category belongs to, if the picker offers it. */
+export function groupOf(category: string): CategoryGroup | undefined {
+  return EXPENSE_GROUPS.find((g) => g.category === category || g.options.some((o) => o.category === category));
+}
+
 export const PAYMENT_METHODS = [
   { value: 'cash',           label: 'Cash'          },
   { value: 'credit_card',    label: 'Credit Card'   },
@@ -358,26 +417,36 @@ export function CashFields({ idPrefix: p, formData, errors, onChange, onTagsChan
   const payment = PAYMENT_METHODS.find((method) => method.value === formData.paymentMethod);
   // A category this form does not list (an older or imported row) gets its own
   // pressed chip, so an edit shows what the row is and saves it unchanged.
-  const unknownCategory = categories.length > 0 && formData.category && !categories.some((c) => c.value === formData.category)
+  const unknownCategory = categories.length > 0 && formData.category
+    && (formData.type === 'expense' ? !groupOf(formData.category) : !categories.some((c) => c.value === formData.category))
     ? formData.category
     : null;
 
   // Picking Loan Payment with exactly one loan links it: a repayment that reduces
   // no balance is the mistake to avoid.
-  const pickCategory = (value: string) => {
-    // A detail belongs to its category: Beauty must not ride along to Dining.
-    if (value !== formData.category && formData.subcategory) onChange('subcategory', '');
-    onChange('category', value);
-    if (value === LOAN_CATEGORY && formData.type === 'expense' && !formData.loanId && activeLoans.length === 1) {
+  // A category and its detail are chosen together: a detail never rides along to
+  // another category (Beauty must not stay on Dining).
+  const choose = (category: string, subcategory = '') => {
+    if ((formData.subcategory ?? '') !== subcategory) onChange('subcategory', subcategory);
+    if (formData.category === category) return;
+    onChange('category', category);
+    if (category === LOAN_CATEGORY && formData.type === 'expense' && !formData.loanId && activeLoans.length === 1) {
       onChange('loanId', activeLoans[0].id);
     }
   };
 
-  // The chosen category's details. A detail this form does not list (an imported
-  // row) is shown, not offered, like an unlisted category: a tap cannot erase it,
-  // picking a listed one replaces it.
-  const subcategories = SUBCATEGORIES[formData.category] ?? [];
-  const unknownSubcategory = formData.subcategory && !subcategories.some((s) => s.value === formData.subcategory)
+  // Expenses pick a group, then optionally one of its finer choices; income keeps
+  // its short flat list.
+  const grouped = formData.type === 'expense';
+  const activeGroup = grouped ? groupOf(formData.category) : undefined;
+  const isChosen = (o: CategoryChoice) =>
+    o.category === formData.category && (o.subcategory ?? '') === (formData.subcategory ?? '');
+  // Tapping the chosen finer choice again goes back to the group's own category.
+  const pickChoice = (g: CategoryGroup, o: CategoryChoice) =>
+    isChosen(o) ? choose(g.category) : choose(o.category, o.subcategory ?? '');
+  // A detail this form does not list (an imported row) is shown, not offered, like
+  // an unlisted category: a tap cannot erase it, picking a listed one replaces it.
+  const unknownSubcategory = formData.subcategory && !activeGroup?.options.some((o) => o.subcategory === formData.subcategory)
     ? formData.subcategory
     : null;
 
@@ -556,7 +625,7 @@ export function CashFields({ idPrefix: p, formData, errors, onChange, onTagsChan
             role="group"
             aria-labelledby={`${p}-group-category`}
             aria-describedby={errors.category ? `${p}-category-error` : undefined}
-            className={cn(CATEGORY_GRID, categories.length <= 6 ? 'grid-cols-3' : 'grid-cols-3 min-[360px]:grid-cols-4')}
+            className={cn(CATEGORY_GRID, grouped || categories.length <= 6 ? 'grid-cols-3' : 'grid-cols-3 min-[360px]:grid-cols-4')}
           >
             {/* Not a button: there is nothing to toggle, it only shows what the row
                 holds. Picking a listed chip replaces it. */}
@@ -570,7 +639,32 @@ export function CashFields({ idPrefix: p, formData, errors, onChange, onTagsChan
                 <span className={CATEGORY_LABEL}>{t(`transactions:form.categories.${unknownCategory}`, unknownCategory)}</span>
               </span>
             )}
-            {categories.map((category) => {
+            {grouped && EXPENSE_GROUPS.map((g) => {
+              const isSelected = activeGroup?.key === g.key;
+              const tone = getCategoryColorGroup(g.category);
+              return (
+                <button
+                  aria-pressed={isSelected}
+                  key={g.key}
+                  type="button"
+                  // Already in this group: keep the finer choice made under it.
+                  onClick={() => { if (!isSelected) choose(g.category); }}
+                  className={cn(
+                    CHIP,
+                    CATEGORY_TILE,
+                    isSelected
+                      ? cn('font-semibold', tone.lightBg, tone.lightText, tone.borderOn)
+                      : cn(CHIP_OFF, errors.category && 'border-error-200 dark:border-error-800')
+                  )}
+                >
+                  {isSelected
+                    ? <span className={CATEGORY_ICON_SLOT}><ChipCheck /></span>
+                    : <span aria-hidden="true" className={CATEGORY_ICON_SLOT}>{g.icon}</span>}
+                  <span className={CATEGORY_LABEL}>{t(`transactions:form.groups.${g.key}`, g.label)}</span>
+                </button>
+              );
+            })}
+            {!grouped && categories.map((category) => {
               const isSelected = formData.category === category.value;
               const group = getCategoryColorGroup(category.value);
               return (
@@ -578,7 +672,7 @@ export function CashFields({ idPrefix: p, formData, errors, onChange, onTagsChan
                   aria-pressed={isSelected}
                   key={category.value}
                   type="button"
-                  onClick={() => pickCategory(category.value)}
+                  onClick={() => choose(category.value)}
                   className={cn(
                     CHIP,
                     CATEGORY_TILE,
@@ -600,7 +694,7 @@ export function CashFields({ idPrefix: p, formData, errors, onChange, onTagsChan
           {/* Optional detail, offered only once its category is chosen: one tap for
               most entries, a second for those who want the finer split. Tapping the
               chosen one again clears it. */}
-          {(subcategories.length > 0 || unknownSubcategory) && (
+          {activeGroup && (activeGroup.options.length > 0 || unknownSubcategory) && (
             <div className="mt-3">
               <div id={`${p}-group-subcategory`} className={FIELD_LABEL}>
                 {t('transactions:form.subcategoryLabel', 'Detail')}{' '}
@@ -614,18 +708,18 @@ export function CashFields({ idPrefix: p, formData, errors, onChange, onTagsChan
                     {unknownSubcategory}
                   </span>
                 )}
-                {subcategories.map((sub) => {
-                  const isSelected = formData.subcategory === sub.value;
+                {activeGroup.options.map((o) => {
+                  const isSelected = isChosen(o);
                   return (
                     <button
-                      key={sub.value}
+                      key={`${o.category}|${o.subcategory ?? ''}`}
                       type="button"
                       aria-pressed={isSelected}
-                      onClick={() => onChange('subcategory', isSelected ? '' : sub.value)}
+                      onClick={() => pickChoice(activeGroup, o)}
                       className={cn(CHIP, isSelected ? CHIP_ON : CHIP_OFF)}
                     >
-                      {isSelected ? <ChipCheck /> : <span aria-hidden="true">{sub.icon}</span>}
-                      {t(`transactions:form.subcategories.${sub.value}`, sub.label)}
+                      {isSelected ? <ChipCheck /> : <span aria-hidden="true">{o.icon}</span>}
+                      {t(`transactions:form.${o.labelKey}`, o.label)}
                     </button>
                   );
                 })}

@@ -38,6 +38,7 @@
     "date": "日期",
     "description": "描述",
     "paymentMethod": "付款方式",
+    "subcategory": "細項",
     "type": "類型"
   },
   "fields": {
@@ -263,6 +264,18 @@
     },
     "splitSaveFirst": "請先儲存變更，再分帳。",
     "currentSubcategory": "目前細項：",
+    "groups": {
+      "food": "飲食",
+      "housing": "居住",
+      "transport": "交通",
+      "shopping": "購物",
+      "fun": "娛樂",
+      "other": "其他"
+    },
+    "choices": {
+      "Dining": "外食",
+      "Housing": "房租"
+    },
     "subcategoryLabel": "細項",
     "subcategories": {
       "Beauty": "美容",

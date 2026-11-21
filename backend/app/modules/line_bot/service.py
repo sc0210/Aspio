@@ -38,7 +38,7 @@ from app.modules.line_bot.models import (
     LineUserLink,
     SharedExpense,
 )
-from app.modules.line_bot.quick_log import FALLBACK_CATEGORY, guess_category_name, parse_quick_entry
+from app.modules.line_bot.quick_log import FALLBACK_CATEGORY, guess_category_name, guess_subcategory, parse_quick_entry
 from app.modules.line_bot.repositories import (
     LineAccountRepository,
     LineGroupRepository,
@@ -1029,8 +1029,9 @@ def _flex_txn_confirm(
     amount: Decimal,
     currency: str,
     category: str,
+    detail: Optional[str] = None,
 ) -> dict:
-    """Flex bubble confirming a personal /txn entry."""
+    """Flex bubble confirming a personal /txn entry. `detail` is its subcategory, if any."""
     icon = _cat_icon(category)
     color = _cat_color(category)
     return {
@@ -1095,7 +1096,7 @@ def _flex_txn_confirm(
                             "contents": [
                                 {
                                     "type": "text",
-                                    "text": f"{icon} {category.title()}",
+                                    "text": f"{icon} {category.title()}" + (f" · {detail}" if detail else ""),
                                     "size": "sm",
                                     "weight": "bold",
                                     "align": "end",
@@ -2848,6 +2849,7 @@ async def handle_quick_log(
         return True
 
     currency = await _get_user_currency(db, link.user_id)
+    subcategory = guess_subcategory(entry.description, category.name)
     txn = Transaction(
         user_id=link.user_id,
         type=TransactionType.INCOME if entry.is_income else TransactionType.EXPENSE,
@@ -2856,6 +2858,7 @@ async def handle_quick_log(
         currency=currency,
         description=entry.description,
         category_id=category.id,
+        subcategory=subcategory,
         payment_method=PaymentMethod.OTHER,
         transaction_date=business_today(),
         notes=LINE_TXN_NOTE,
@@ -2870,10 +2873,11 @@ async def handle_quick_log(
     )
     favorites = [] if entry.is_income else await _quick_favorites(db, link.user_id)
     sign = "+" if entry.is_income else ""
+    filed_as = f"{category.name} · {subcategory}" if subcategory else category.name
     await _reply_flex(
         reply_token,
-        f"Recorded: {entry.description} {sign}{currency} {_money_text(entry.amount)} · {category.name}",
-        _flex_txn_confirm(entry.description, entry.amount, currency, category.name),
+        f"Recorded: {entry.description} {sign}{currency} {_money_text(entry.amount)} · {filed_as}",
+        _flex_txn_confirm(entry.description, entry.amount, currency, category.name, subcategory),
         _quick_log_replies(txn.id, favorites),
     )
     return True
@@ -2974,6 +2978,10 @@ async def handle_quick_set_category(
         return
     # Re-filing the row is also how the bot learns: the next "<same description>"
     # resolves from this user's history before any keyword guess.
+    if txn.category_id != category.id:
+        # A detail belongs to its category: re-filing drops it, or re-guesses
+        # one under the new category ("美甲" moved to Shopping is Beauty).
+        txn.subcategory = guess_subcategory(txn.description, category.name)
     txn.category_id = category.id
     await db.flush()
     await _reply(

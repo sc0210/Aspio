@@ -105,12 +105,15 @@ EXPENSE_KEYWORDS: dict[str, tuple[str, ...]] = {
         "捷運", "公車", "客運", "計程車", "小黃", "高鐵", "台鐵", "火車", "加油", "油錢", "停車",
         "悠遊卡", "一卡通", "etc", "uber", "taxi", "mrt", "bus", "train", "parking", "gas", "fuel",
     ),
-    "Shopping": ("蝦皮", "momo", "淘寶", "衣服", "褲子", "鞋", "包包", "日用品", "amazon", "shopee", "clothes", "shoes"),
+    "Shopping": (
+        "蝦皮", "momo", "淘寶", "衣服", "褲子", "鞋", "包包", "日用品", "amazon", "shopee", "clothes", "shoes",
+        # Beauty is a detail under Shopping (see SUBCATEGORY_KEYWORDS), as the web form files it.
+        "剪髮", "理髮", "美髮", "美甲", "美容", "保養", "化妝", "彩妝", "haircut", "salon", "nail", "makeup",
+    ),
     "Entertainment": ("電影", "唱歌", "ktv", "遊戲", "演唱會", "netflix", "spotify", "youtube", "disney", "steam", "movie", "game", "concert"),
     "Healthcare": ("看醫生", "掛號", "診所", "醫院", "藥局", "藥", "牙醫", "健保", "doctor", "clinic", "hospital", "pharmacy", "dentist"),
     "Utilities": ("電費", "水費", "瓦斯", "電話費", "手機費", "網路費", "第四台", "electricity", "water bill", "internet", "phone bill"),
     "Housing": ("房租", "租金", "管理費", "rent"),
-    "Personal Care": ("剪髮", "理髮", "美髮", "美甲", "保養", "haircut", "salon"),
     "Education": ("課程", "學費", "補習", "書", "udemy", "course", "tuition", "book"),
     "Gift": ("禮物", "紅包", "禮金", "gift"),
     "Travel": ("機票", "住宿", "飯店", "旅館", "民宿", "訂房", "flight", "hotel", "airbnb"),
@@ -124,6 +127,16 @@ INCOME_KEYWORDS: dict[str, tuple[str, ...]] = {
 
 FALLBACK_CATEGORY = "Others"
 
+# Category name → its details (transaction.subcategory) → words that suggest each.
+# Mirrors SUBCATEGORIES in the web form (TransactionFormFields.tsx).
+SUBCATEGORY_KEYWORDS: dict[str, dict[str, tuple[str, ...]]] = {
+    "Shopping": {
+        "Beauty": ("剪髮", "理髮", "美髮", "美甲", "美容", "保養", "化妝", "彩妝", "haircut", "salon", "nail", "makeup"),
+        "Clothing": ("衣服", "褲子", "鞋", "包包", "clothes", "shoes"),
+        "Household": ("日用品",),
+    },
+}
+
 
 def guess_category_name(description: str, is_income: bool) -> str:
     """The seeded category a description most likely belongs to, else "Others"."""
@@ -135,3 +148,14 @@ def guess_category_name(description: str, is_income: bool) -> str:
             if word in text and (best is None or len(word) > best[0]):
                 best = (len(word), category)
     return best[1] if best else FALLBACK_CATEGORY
+
+
+def guess_subcategory(description: str, category_name: str) -> Optional[str]:
+    """The detail under `category_name` a description suggests ("美甲" → Beauty), else None."""
+    text = description.lower()
+    best: tuple[int, str] | None = None
+    for detail, words in SUBCATEGORY_KEYWORDS.get(category_name, {}).items():
+        for word in words:
+            if word in text and (best is None or len(word) > best[0]):
+                best = (len(word), detail)
+    return best[1] if best else None

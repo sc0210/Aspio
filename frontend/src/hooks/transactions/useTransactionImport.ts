@@ -61,6 +61,7 @@ export function useTransactionImport(
           amount: txn.amount as number,
           currency: txn.currency as string,
           category: txn.category as string,
+          subcategory: (txn.subcategory as string | undefined) || undefined,
           description: txn.description as string,
           paymentMethod: txn.paymentMethod as string | undefined,
           tags: txn.tags as string[] | undefined,

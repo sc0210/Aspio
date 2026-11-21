@@ -92,6 +92,27 @@ class TestCsvImportRoundtrip:
         assert rows[0]["type"] == "expense"
         assert rows[0]["category_obj"]["name"] == "Shopping"
 
+    def test_the_subcategory_column_survives_export_then_import(self, client: TestClient):
+        """The app's own export carries the detail (Beauty under Shopping), and reads it back."""
+        csv_text = (
+            "Date,Type,Amount,Currency,Description,Category,Subcategory,Merchant,Payment Method,Tags,Notes\n"
+            "2026-07-09,expense,1200.00,TWD,Nails,Shopping,Beauty,,,,\n"
+        )
+        response = client.post(
+            "/api/v1/transactions/upload-import",
+            files={"file": ("export.csv", csv_text, "text/csv")},
+        )
+        assert response.status_code == 200, response.text
+        assert response.json()["imported"] == 1
+        row = client.get("/api/v1/transactions/").json()["transactions"][0]
+        assert (row["category_obj"]["name"], row["subcategory"]) == ("Shopping", "Beauty")
+
+        exported = client.get("/api/v1/transactions/export?format=csv")
+        assert exported.status_code == 200, exported.text[:200]
+        import csv as _csv, io as _io
+        out = list(_csv.DictReader(_io.StringIO(exported.text)))
+        assert (out[0]["Category"], out[0]["Subcategory"]) == ("Shopping", "Beauty")
+
     def test_reimporting_the_same_file_skips_the_duplicate(self, client: TestClient):
         client.post(
             "/api/v1/transactions/upload-import",
