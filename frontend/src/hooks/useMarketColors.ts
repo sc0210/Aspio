@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect, useMemo, useSyncExternalStore } from 'react';
+import { MARKET_COLORS_KEY, legacyRedUp } from '@/lib/marketColors';
 
 /**
  * Which colour a market rise wears. Western markets draw gains green; Taiwan and
@@ -13,12 +14,7 @@ import { useEffect, useMemo, useSyncExternalStore } from 'react';
  *
  * Kept per device in localStorage, like the theme.
  */
-const KEY = 'aspiro-market-colors';
-/** The two toggles this replaces, each read once so nobody's choice is lost. */
-const LEGACY = [
-  ['aspiro-heatmap-tw-colors', '1'],
-  ['cal-tw-mode', 'true'],
-] as const;
+const KEY = MARKET_COLORS_KEY;
 
 const listeners = new Set<() => void>();
 
@@ -31,7 +27,11 @@ function readRedUp(): boolean {
   try {
     const stored = localStorage.getItem(KEY);
     if (stored) return stored === 'red-up';
-    return LEGACY.some(([key, on]) => localStorage.getItem(key) === on);
+    const legacy = legacyRedUp((key) => localStorage.getItem(key));
+    if (legacy === null) return false;
+    // Saved once, so the choice stops being re-derived from the old keys.
+    localStorage.setItem(KEY, legacy ? 'red-up' : 'green-up');
+    return legacy;
   } catch {
     return false;
   }
@@ -41,7 +41,8 @@ function subscribe(listener: () => void) {
   listeners.add(listener);
   // Another tab changing it.
   const onStorage = (e: StorageEvent) => {
-    if (e.key === KEY) { current = null; listener(); }
+    // null: another tab cleared storage.
+    if (e.key === KEY || e.key === null) { current = null; listener(); }
   };
   window.addEventListener('storage', onStorage);
   return () => {

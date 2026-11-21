@@ -279,7 +279,7 @@ export function PortfolioStats({ portfolio, performance, isValueVisible, apiStat
             <div>
               <Tooltip content={t('portfolio:stats.totalValueTooltip')}>
                 <div className="w-full relative overflow-hidden bg-gradient-to-br from-primary-50 via-white to-primary-50/30 dark:from-primary-900/10 dark:via-gray-800/50 dark:to-primary-900/5 rounded-xl p-4 border border-primary-200/50 dark:border-primary-800/30 shadow-sm hover:shadow-md transition-all duration-300 group cursor-help min-h-[110px]">
-                  <div className="absolute top-0 right-0 w-20 h-20 bg-primary-500/8 dark:bg-primary-500/15 rounded-full -mr-10 -mt-10 group-hover:scale-150 transition-transform duration-500"></div>
+                  <div className="absolute top-0 right-0 w-20 h-20 bg-primary-500/10 dark:bg-primary-500/15 rounded-full -mr-10 -mt-10 group-hover:scale-150 transition-transform duration-500"></div>
                   <div className="relative flex items-center gap-2 sm:gap-2.5 md:gap-3">
                     <div className="flex-shrink-0 p-2.5 bg-primary-100 dark:bg-primary-900/30 rounded-lg shadow-sm group-hover:scale-110 transition-transform duration-300">
                       <BanknotesIcon className="w-6 h-6 text-primary-700 dark:text-primary-400" />
@@ -322,7 +322,7 @@ export function PortfolioStats({ portfolio, performance, isValueVisible, apiStat
                 )}>
                   <div className={cn(
                     "absolute top-0 right-0 w-20 h-20 rounded-full -mr-10 -mt-10 group-hover:scale-150 transition-transform duration-500",
-                    totalTone('bg-rise-500/8 dark:bg-rise-500/15', 'bg-fall-500/8 dark:bg-fall-500/15', 'bg-gray-500/8 dark:bg-gray-500/15')
+                    totalTone('bg-rise-500/10 dark:bg-rise-500/15', 'bg-fall-500/10 dark:bg-fall-500/15', 'bg-gray-500/10 dark:bg-gray-500/15')
                   )}></div>
                   <div className="relative flex items-center gap-2 sm:gap-2.5 md:gap-3">
                     <div className={cn(
@@ -404,7 +404,7 @@ export function PortfolioStats({ portfolio, performance, isValueVisible, apiStat
                   )}
                   <div className={cn(
                     "absolute top-0 right-0 w-20 h-20 rounded-full -mr-10 -mt-10 group-hover:scale-150 transition-transform duration-500",
-                    tone('bg-rise-500/8 dark:bg-rise-500/15', 'bg-fall-500/8 dark:bg-fall-500/15', 'bg-gray-500/8 dark:bg-gray-500/15')
+                    tone('bg-rise-500/10 dark:bg-rise-500/15', 'bg-fall-500/10 dark:bg-fall-500/15', 'bg-gray-500/10 dark:bg-gray-500/15')
                   )}></div>
                   <div className="relative flex items-center gap-2 sm:gap-2.5 md:gap-3">
                     <div className={cn(
@@ -477,7 +477,7 @@ export function PortfolioStats({ portfolio, performance, isValueVisible, apiStat
               <div>
                 <Tooltip content={t('portfolio:stats.riskTooltip')}>
                   <div className="w-full relative overflow-hidden bg-gradient-to-br from-violet-50 via-white to-violet-50/30 dark:from-violet-900/10 dark:via-gray-800/50 dark:to-violet-900/5 rounded-xl p-4 border border-violet-200/50 dark:border-violet-800/30 shadow-sm hover:shadow-md transition-all duration-300 group cursor-help min-h-[110px]">
-                    <div className="absolute top-0 right-0 w-20 h-20 bg-violet-500/8 dark:bg-violet-500/15 rounded-full -mr-10 -mt-10 group-hover:scale-150 transition-transform duration-500"></div>
+                    <div className="absolute top-0 right-0 w-20 h-20 bg-violet-500/10 dark:bg-violet-500/15 rounded-full -mr-10 -mt-10 group-hover:scale-150 transition-transform duration-500"></div>
                     <div className="relative flex items-center gap-2 sm:gap-2.5 md:gap-3">
                       <div className="flex-shrink-0 p-2.5 bg-violet-100 dark:bg-violet-900/30 rounded-lg shadow-sm group-hover:scale-110 transition-transform duration-300">
                         <ScaleIcon className="w-6 h-6 text-violet-600 dark:text-violet-400" />
@@ -549,7 +549,7 @@ export function PortfolioStats({ portfolio, performance, isValueVisible, apiStat
               <div>
                 <Tooltip content={t('portfolio:stats.drawdownTooltip')}>
                   <div className="w-full relative overflow-hidden bg-gradient-to-br from-rose-50 via-white to-rose-50/30 dark:from-rose-900/10 dark:via-gray-800/50 dark:to-rose-900/5 rounded-xl p-4 border border-rose-200/50 dark:border-rose-800/30 shadow-sm hover:shadow-md transition-all duration-300 group cursor-help min-h-[110px]">
-                    <div className="absolute top-0 right-0 w-20 h-20 bg-error-500/8 dark:bg-error-500/15 rounded-full -mr-10 -mt-10 group-hover:scale-150 transition-transform duration-500" />
+                    <div className="absolute top-0 right-0 w-20 h-20 bg-error-500/10 dark:bg-error-500/15 rounded-full -mr-10 -mt-10 group-hover:scale-150 transition-transform duration-500" />
                     <div className="relative flex items-center gap-2 sm:gap-2.5 md:gap-3">
                       <div className="flex-shrink-0 p-2.5 bg-error-100 dark:bg-error-900/30 rounded-lg shadow-sm group-hover:scale-110 transition-transform duration-300">
                         <ChartBarIcon className="w-6 h-6 text-error-700 dark:text-error-400" />
@@ -589,7 +589,7 @@ export function PortfolioStats({ portfolio, performance, isValueVisible, apiStat
               <div>
                 <Tooltip content={t('portfolio:stats.dividendTooltip')}>
                   <div className="w-full relative overflow-hidden bg-gradient-to-br from-indigo-50 via-white to-indigo-50/30 dark:from-indigo-900/10 dark:via-gray-800/50 dark:to-indigo-900/5 rounded-xl p-4 border border-indigo-200/50 dark:border-indigo-800/30 shadow-sm hover:shadow-md transition-all duration-300 group cursor-help min-h-[110px]">
-                    <div className="absolute top-0 right-0 w-20 h-20 bg-indigo-500/8 dark:bg-indigo-500/15 rounded-full -mr-10 -mt-10 group-hover:scale-150 transition-transform duration-500" />
+                    <div className="absolute top-0 right-0 w-20 h-20 bg-indigo-500/10 dark:bg-indigo-500/15 rounded-full -mr-10 -mt-10 group-hover:scale-150 transition-transform duration-500" />
                     <div className="relative flex items-center gap-2 sm:gap-2.5 md:gap-3">
                       <div className="flex-shrink-0 p-2.5 bg-indigo-100 dark:bg-indigo-900/30 rounded-lg shadow-sm group-hover:scale-110 transition-transform duration-300">
                         <BanknotesIcon className="w-6 h-6 text-indigo-600 dark:text-indigo-400" />
@@ -631,7 +631,7 @@ export function PortfolioStats({ portfolio, performance, isValueVisible, apiStat
                   )}>
                     <div className={cn(
                       "absolute top-0 right-0 w-20 h-20 rounded-full -mr-10 -mt-10 group-hover:scale-150 transition-transform duration-500",
-                      realizedTone('bg-rise-500/8 dark:bg-rise-500/15', 'bg-fall-500/8 dark:bg-fall-500/15', 'bg-gray-500/8 dark:bg-gray-500/15')
+                      realizedTone('bg-rise-500/10 dark:bg-rise-500/15', 'bg-fall-500/10 dark:bg-fall-500/15', 'bg-gray-500/10 dark:bg-gray-500/15')
                     )} />
                     <div className="relative flex items-center gap-2 sm:gap-2.5 md:gap-3">
                       <div className={cn(
@@ -672,7 +672,7 @@ export function PortfolioStats({ portfolio, performance, isValueVisible, apiStat
               <div>
                 <Tooltip content={t('portfolio:stats.alphaTooltip', { benchmark: riskMetrics?.benchmarkSymbol ?? 'SPY' })}>
                   <div className="w-full relative overflow-hidden bg-gradient-to-br from-sky-50 via-white to-sky-50/30 dark:from-sky-900/10 dark:via-gray-800/50 dark:to-sky-900/5 rounded-xl p-4 border border-sky-200/50 dark:border-sky-800/30 shadow-sm hover:shadow-md transition-all duration-300 group cursor-help min-h-[110px]">
-                    <div className="absolute top-0 right-0 w-20 h-20 bg-sky-500/8 dark:bg-sky-500/15 rounded-full -mr-10 -mt-10 group-hover:scale-150 transition-transform duration-500" />
+                    <div className="absolute top-0 right-0 w-20 h-20 bg-sky-500/10 dark:bg-sky-500/15 rounded-full -mr-10 -mt-10 group-hover:scale-150 transition-transform duration-500" />
                     <div className="relative flex items-center gap-2 sm:gap-2.5 md:gap-3">
                       <div className="flex-shrink-0 p-2.5 bg-sky-100 dark:bg-sky-900/30 rounded-lg shadow-sm group-hover:scale-110 transition-transform duration-300">
                         <ScaleIcon className="w-6 h-6 text-sky-700 dark:text-sky-400" />

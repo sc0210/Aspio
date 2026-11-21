@@ -399,7 +399,7 @@ export default function EditHoldingPage() {
               </div>
               <div>
                 <span className="text-gray-600 dark:text-gray-400">Gain/Loss:</span>
-                <div className={`font-medium ${holding.gainLoss >= 0 ? 'text-success-700 dark:text-success-400' : 'text-error-700 dark:text-error-400'}`}>
+                <div className={`font-medium ${holding.gainLoss >= 0 ? 'text-rise-700 dark:text-rise-400' : 'text-fall-700 dark:text-fall-400'}`}>
                   {holding.gainLoss >= 0 ? '+' : ''}{holding.currency} {holding.gainLoss?.toLocaleString()}
                   ({holding.gainLossPercentage?.toFixed(2)}%)
                 </div>

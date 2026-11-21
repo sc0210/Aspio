@@ -391,7 +391,7 @@ export const AssetTrendChart = memo(function AssetTrendChart({
                         </span>
                         <span className={cn(
                             'text-sm font-bold tabular-nums',
-                            isPositive ? 'text-success-700 dark:text-success-400' : 'text-error-700 dark:text-error-400'
+                            isPositive ? 'text-rise-700 dark:text-rise-400' : 'text-fall-700 dark:text-fall-400'
                         )}>
                             {isValueVisible ? (
                                 benchmark ? (
@@ -416,7 +416,7 @@ export const AssetTrendChart = memo(function AssetTrendChart({
                         </span>
                         <span className={cn(
                             'text-xs font-bold tabular-nums',
-                            d.change >= 0 ? 'text-success-700 dark:text-success-400' : 'text-error-700 dark:text-error-400'
+                            d.change >= 0 ? 'text-rise-700 dark:text-rise-400' : 'text-fall-700 dark:text-fall-400'
                         )}>
                             {isValueVisible ? (
                                 <>
@@ -496,7 +496,7 @@ export const AssetTrendChart = memo(function AssetTrendChart({
                                         </span>
                                         <span className={cn(
                                             'text-xs font-bold tabular-nums',
-                                            holding.change >= 0 ? 'text-success-700 dark:text-success-400' : 'text-error-700 dark:text-error-400'
+                                            holding.change >= 0 ? 'text-rise-700 dark:text-rise-400' : 'text-fall-700 dark:text-fall-400'
                                         )}>
                                             {isValueVisible ? `${holding.change >= 0 ? '+' : ''}${formatCurrency(holding.change, currency)}` : '•••'}
                                         </span>
@@ -590,17 +590,17 @@ export const AssetTrendChart = memo(function AssetTrendChart({
                     <div className={cn(
                         'rounded-xl p-3 border',
                         isPositivePeriod
-                            ? 'bg-success-50/80 dark:bg-success-900/20 border-success-200 dark:border-success-800/50'
-                            : 'bg-error-50/80 dark:bg-error-900/20 border-error-200 dark:border-error-800/50'
+                            ? 'bg-rise-50/80 dark:bg-rise-900/20 border-rise-200 dark:border-rise-800/50'
+                            : 'bg-fall-50/80 dark:bg-fall-900/20 border-fall-200 dark:border-fall-800/50'
                     )}>
                         <div className="flex items-center gap-1.5 mb-1">
                             {isPositivePeriod
-                                ? <ArrowTrendingUpIcon className="w-3.5 h-3.5 text-success-700 dark:text-success-400" />
-                                : <ArrowTrendingDownIcon className="w-3.5 h-3.5 text-error-700 dark:text-error-400" />
+                                ? <ArrowTrendingUpIcon className="w-3.5 h-3.5 text-rise-700 dark:text-rise-400" />
+                                : <ArrowTrendingDownIcon className="w-3.5 h-3.5 text-fall-700 dark:text-fall-400" />
                             }
                             <p className={cn(
                                 'flex items-center gap-1 text-xs sm:text-xs font-bold uppercase tracking-wider',
-                                isPositivePeriod ? 'text-success-700 dark:text-success-300' : 'text-error-700 dark:text-error-300'
+                                isPositivePeriod ? 'text-rise-700 dark:text-rise-300' : 'text-fall-700 dark:text-fall-300'
                             )}>
                                 {t('portfolio:trend.summaryPeriodReturn')}
                                 <InfoHint
@@ -611,7 +611,7 @@ export const AssetTrendChart = memo(function AssetTrendChart({
                         </div>
                         <p className={cn(
                             'text-lg sm:text-xl font-bold tabular-nums',
-                            isPositivePeriod ? 'text-success-900 dark:text-success-100' : 'text-error-900 dark:text-error-100'
+                            isPositivePeriod ? 'text-rise-900 dark:text-rise-100' : 'text-fall-900 dark:text-fall-100'
                         )}>
                             {isValueVisible ? (
                                 <>{isPositivePeriod ? '+' : ''}{stats.periodChangePercent.toFixed(2)}%</>
@@ -619,7 +619,7 @@ export const AssetTrendChart = memo(function AssetTrendChart({
                         </p>
                         <p className={cn(
                             'text-xs font-medium tabular-nums mt-0.5',
-                            isPositivePeriod ? 'text-success-700 dark:text-success-300' : 'text-error-700 dark:text-error-300'
+                            isPositivePeriod ? 'text-rise-700 dark:text-rise-300' : 'text-fall-700 dark:text-fall-300'
                         )}>
                             {isValueVisible ? `${isPositivePeriod ? '+' : ''}${formatCurrency(Math.round(stats.periodGain), currency)}` : '•••'}
                         </p>

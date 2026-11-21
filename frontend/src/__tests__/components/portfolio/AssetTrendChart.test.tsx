@@ -166,7 +166,7 @@ describe('AssetTrendChart — stats cards', () => {
     it('shows positive period return styling', () => {
         const { container } = renderChart({ data: GROWING_DATA });
         // Period change = 2,500,000 - 2,000,000 = +500,000 (positive)
-        expect(container.querySelector('.text-success-900, .bg-success-50\\/80')).toBeInTheDocument();
+        expect(container.querySelector('.text-rise-900, .bg-rise-50\\/80')).toBeInTheDocument();
     });
 
     it('shows capital added from buy events', () => {

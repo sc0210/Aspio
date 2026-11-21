@@ -213,9 +213,12 @@ function MetricPill({
   label: string;
   value: string;
   subLabel?: string;
-  color: 'emerald' | 'rose' | 'amber' | 'violet' | 'indigo' | 'sky' | 'gray';
+  /** `rise`/`fall` for a market move; they follow the gains-in-red setting. */
+  color: 'rise' | 'fall' | 'emerald' | 'rose' | 'amber' | 'violet' | 'indigo' | 'sky' | 'gray';
 }) {
   const colorMap = {
+    rise:    'text-rise-700 dark:text-rise-400',
+    fall:    'text-fall-700 dark:text-fall-400',
     emerald: 'text-emerald-700 dark:text-emerald-400',
     rose:    'text-rose-600 dark:text-rose-400',
     amber:   'text-amber-700 dark:text-amber-400',
@@ -382,7 +385,7 @@ export function PortfolioOverview({ portfolio, dateRange }: PortfolioOverviewPro
                   label={t('dashboard:portfolioOverview.cagr')}
                   value={`${cagrPct >= 0 ? '+' : ''}${cagrPct.toFixed(1)}%`}
                   subLabel={t('dashboard:portfolioOverview.annualisedReturn')}
-                  color={cagrPct >= 0 ? 'emerald' : 'rose'}
+                  color={cagrPct >= 0 ? 'rise' : 'fall'}
                 />
               )}
               {sharpe !== null && (

@@ -386,8 +386,9 @@ function SavingsGroups() {
           </div>
         </div>
 
-        {/* Shared spending says what it locks itself; two notices stacked there. */}
-        {isDemo && tab !== 'splits' && (
+        {/* Shared spending says what it locks itself, when it is on screen;
+            two notices stacked there. */}
+        {isDemo && !(hasPeers && activeTab === 'splits') && (
           <DemoNotice>{t('savings.demoBanner', 'Demo mode: showing sample data. Sign in to invite real partners and create goals.')}</DemoNotice>
         )}
 
