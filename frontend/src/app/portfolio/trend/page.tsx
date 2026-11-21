@@ -228,25 +228,30 @@ function HoldingsTable({ rows, currency, isValueVisible, isLoading }: HoldingsTa
         sortK,
         className,
         right,
+        sticky,
     }: {
         label: string;
         sortK: SortKey;
         className?: string;
         right?: boolean;
+        sticky?: boolean;
     }) => (
         <th
+            // A real button inside, and aria-sort here: the <th onClick> was mouse-only.
+            aria-sort={sortKey === sortK ? (sortDir === 'asc' ? 'ascending' : 'descending') : 'none'}
             className={cn(
-                'px-4 py-3.5 text-xs font-bold uppercase tracking-wide cursor-pointer select-none',
+                'px-4 py-3.5 text-xs font-bold uppercase tracking-wide select-none whitespace-nowrap',
                 'hover:bg-gray-100 dark:hover:bg-gray-700/50 transition-colors',
                 right ? 'text-right' : 'text-left',
+                sticky && 'sticky left-0 z-20 bg-gray-50 dark:bg-gray-800',
                 className,
             )}
-            onClick={() => handleSort(sortK)}
         >
-            <span className="inline-flex items-center gap-1.5">
+            <button type="button" onClick={() => handleSort(sortK)}
+                className="inline-flex items-center gap-1.5 uppercase font-bold rounded focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-500">
                 {label}
                 <SortIcon active={sortKey === sortK} dir={sortDir} />
-            </span>
+            </button>
         </th>
     );
 
@@ -329,11 +334,14 @@ function HoldingsTable({ rows, currency, isValueVisible, isLoading }: HoldingsTa
 
             {/* Scrollable table */}
             <div className="relative flex-shrink-0 pb-6">
+                {/* Right-edge fade: the table scrolls sideways and nothing said so
+                    (Weight read "WEIGH" at 1440px). Symbol stays pinned on the left. */}
+                <div className="pointer-events-none absolute top-0 right-0 bottom-6 w-8 z-30 bg-gradient-to-l from-white dark:from-gray-900 to-transparent" aria-hidden="true" />
                 <div className="overflow-x-auto">
-                <table className="w-full min-w-[720px] text-sm border-collapse">
+                <table className="w-full min-w-[720px] text-sm border-collapse [&_td]:whitespace-nowrap">
                     <thead className="sticky top-0 z-10 bg-gray-50 dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700 text-gray-600 dark:text-gray-400">
                         <tr>
-                            {col({ label: 'Symbol', sortK: 'symbol', className: 'min-w-[100px]' })}
+                            {col({ label: 'Symbol', sortK: 'symbol', className: 'min-w-[100px]', sticky: true })}
                             {col({ label: 'Name', sortK: 'name', className: 'min-w-[180px]' })}
                             {col({ label: 'Qty', sortK: 'quantity', right: true })}
                             {col({ label: 'Avg Cost', sortK: 'avgCost', right: true })}
@@ -360,8 +368,8 @@ function HoldingsTable({ rows, currency, isValueVisible, isLoading }: HoldingsTa
                                         'hover:bg-primary-50/40 dark:hover:bg-primary-900/10',
                                     )}
                                 >
-                                    {/* Symbol */}
-                                    <td className="px-4 py-3.5">
+                                    {/* Symbol (pinned while the row scrolls) */}
+                                    <td className="px-4 py-3.5 sticky left-0 z-10 bg-inherit">
                                         <div className="flex flex-col gap-1.5">
                                             <span className="text-sm font-mono font-bold text-gray-900 dark:text-gray-100">
                                                 {row.symbol}
@@ -525,8 +533,8 @@ function HoldingsTable({ rows, currency, isValueVisible, isLoading }: HoldingsTa
                                     key={`${row.symbol}__${row.name}`}
                                     className="bg-gray-50/30 dark:bg-gray-800/20 hover:bg-gray-100/50 dark:hover:bg-gray-800/40 transition-colors"
                                 >
-                                    {/* Symbol */}
-                                    <td className="px-4 py-3">
+                                    {/* Symbol (pinned while the row scrolls) */}
+                                    <td className="px-4 py-3 sticky left-0 z-10 bg-inherit">
                                         <div className="flex flex-col gap-1.5">
                                             <span className="text-sm font-mono font-bold text-gray-600 dark:text-gray-400">
                                                 {row.symbol}
