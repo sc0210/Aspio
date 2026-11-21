@@ -48,11 +48,13 @@ try {
         { version: LATEST_VERSION, lng },
       );
       const page = await context.newPage();
+      // The pathname, not the URL: a sign-in redirect carries callbackUrl=%2Fdashboard.
+      const onDashboard = () => new URL(page.url()).pathname === '/dashboard';
       // A cold dev compile can lose the demo cookie's race with the sign-in guard; retry once.
-      for (let attempt = 0; attempt < 2 && !page.url().includes('/dashboard'); attempt++) {
+      for (let attempt = 0; attempt < 2 && !onDashboard(); attempt++) {
         await page.goto(`${BASE_URL}/dashboard`, { waitUntil: 'networkidle' });
       }
-      if (!page.url().includes('/dashboard')) throw new Error(`/dashboard redirected to ${page.url()}`);
+      if (!onDashboard()) throw new Error(`/dashboard redirected to ${page.url()}`);
       await page.waitForFunction(() => (document.querySelector('main')?.textContent ?? '').trim().length > 80, null, {
         timeout: 60_000,
       });
