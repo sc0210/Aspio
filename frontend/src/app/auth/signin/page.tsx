@@ -3,7 +3,7 @@
 import { useGoogleSignIn } from '@/hooks/useGoogleSignIn';
 import { useDemo } from '@/contexts/DemoContext';
 import { useState, useMemo, Suspense } from 'react';
-import { signIn } from 'next-auth/react';
+import { signIn, signOut } from 'next-auth/react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import Link from 'next/link';
 import { useForm } from 'react-hook-form';
@@ -121,8 +121,15 @@ function SignInForm() {
   // The client-side demo, as the landing page uses: the 'demo' NextAuth provider
   // needs DEMO_EMAIL/DEMO_PASSWORD on the frontend, and without them this button
   // only ever said "Demo account unavailable".
-  const handleDemoSignIn = () => {
+  const handleDemoSignIn = async () => {
     setIsDemoLoading(true);
+    // A session outranks the demo cookie (AuthContext), so a lingering one (a pending
+    // Google sign-up) would land in that account, not the demo. Clear it first.
+    try {
+      await signOut({ redirect: false });
+    } catch {
+      // Still enter the demo: a failed sign-out must not leave the button dead.
+    }
     enableDemo();
     toast.success(t('auth:signIn.toast.demoWelcome'));
     window.location.assign('/dashboard');
