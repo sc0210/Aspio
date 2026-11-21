@@ -283,7 +283,8 @@ export function ComprehensiveDashboard() {
                       onClick={() => setDateRange(opt.value)}
                       aria-pressed={dateRange === opt.value}
                       className={cn(
-                        'px-2 py-1.5 text-xs font-semibold rounded-lg transition-all duration-200 whitespace-nowrap',
+                        // 44px on touch-sized desktop layouts (tablets get this view); compact on lg+.
+                        'px-2 py-1.5 min-h-[44px] lg:min-h-0 text-xs font-semibold rounded-lg transition-all duration-200 whitespace-nowrap',
                         dateRange === opt.value
                           ? 'bg-gray-900 text-white dark:bg-white dark:text-gray-900 shadow-sm'
                           : 'text-gray-600 dark:text-gray-400 hover:text-gray-800 dark:hover:text-gray-300'
@@ -400,9 +401,7 @@ export function ComprehensiveDashboard() {
             </section>
 
             <section aria-label="Recent Activity">
-              <MemoizedRecentTransactions
-                dateRange={dateRange}
-              />
+              <MemoizedRecentTransactions />
             </section>
           </div>
 

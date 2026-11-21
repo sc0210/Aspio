@@ -267,8 +267,10 @@ export function CreateGoalModal({ isOpen, onClose, defaults, returnToPortfolio }
                                         </p>
                                         ) : (
                                         <div>
+                                            {/* Whatever is entered here is reserved from Life cash, so say that:
+                                                "Current Amount" read like a balance to record. */}
                                             <label htmlFor="goal-current-amount" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                                                {t('goals:fields.currentAmount')}
+                                                {t('goals:fields.reserveNow')}
                                             </label>
                                             <input
                                                 id="goal-current-amount"

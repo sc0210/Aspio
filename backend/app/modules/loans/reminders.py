@@ -93,7 +93,7 @@ async def generate_payment_due_reminders(
 
         when = "today" if days_until == 0 else f"in {days_until} day{'s' if days_until != 1 else ''}"
         amount_str = _format_amount(loan.minimum_payment, loan.currency)
-        await create_notification(
+        if await create_notification(  # None when the user muted this type
             session,
             user_id=loan.user_id,
             type=NotificationType.PAYMENT_DUE,
@@ -113,8 +113,8 @@ async def generate_payment_due_reminders(
                 "currency": loan.currency,
                 "days_until": days_until,
             },
-        )
-        created += 1
+        ):
+            created += 1
 
     logger.info(
         "Payment-due reminders: scanned %d active loans, created %d notifications",

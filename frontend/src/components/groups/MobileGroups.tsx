@@ -133,10 +133,21 @@ export function MobileGroups() {
                     <div className="rounded-3xl bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 p-8 text-center space-y-3">
                         <p className="font-bold text-gray-900 dark:text-white">{t('notLinked.title')}</p>
                         <p className="text-sm text-gray-500 dark:text-gray-400">{t('notLinked.description')}</p>
-                        <Link href="/link-line"
-                            className="inline-flex items-center justify-center min-h-[44px] rounded-xl bg-[#06C755] hover:bg-[#05b34d] px-4 text-sm font-semibold text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-green-400">
-                            {t('notLinked.button')}
-                        </Link>
+                        {/* Linking starts in LINE; a bare /link-line link only showed "No linking token found". */}
+                        <ol className="inline-flex flex-col items-start gap-1.5 text-left text-sm text-gray-600 dark:text-gray-300">
+                            {(['step1', 'step2', 'step3'] as const).map((step, i) => (
+                                <li key={step} className="flex gap-2">
+                                    <span className="shrink-0 w-5 h-5 rounded-full bg-[#06C755]/10 text-[#05b34d] dark:text-[#06C755] text-xs font-semibold flex items-center justify-center">{i + 1}</span>
+                                    <span>{t(`common:settings.lineBot.connectSteps.${step}`)}</span>
+                                </li>
+                            ))}
+                        </ol>
+                        <div>
+                            <button type="button" onClick={() => setReloadKey((k) => k + 1)}
+                                className="min-h-[44px] rounded-xl border border-gray-300 dark:border-gray-600 px-4 text-sm font-semibold text-gray-700 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-gray-700 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-green-400">
+                                {t('common:settings.lineBot.checkAgain')}
+                            </button>
+                        </div>
                     </div>
                 ) : inputs.length === 0 ? (
                     <div className="rounded-3xl bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 p-8 text-center space-y-2">

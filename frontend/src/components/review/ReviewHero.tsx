@@ -36,11 +36,24 @@ const VERDICT_FALLBACK: Record<Verdict, string> = {
     strong: 'A strong month.',
 };
 
+// A month still running is judged "so far": salary lands early and spending
+// accrues, so a full-month verdict ("A strong month") on the 19th read as
+// final while the projected spend was well above last month.
+const VERDICT_SO_FAR_FALLBACK: Record<Verdict, string> = {
+    over: "So far this month you've spent more than you've earned.",
+    tight: 'So far, a tight month.',
+    steady: "So far, more came in than went out — the month isn't over yet.",
+    strong: "So far, more came in than went out — the month isn't over yet.",
+};
+
 export function ReviewHero({ review }: ReviewHeroProps) {
     const { t, i18n } = useTranslation('common');
     const { maskValue } = usePrivacy();
 
     const { income, expenses, net, savingsRate, verdict } = review;
+    const partial = review.range.partial;
+    // Not green for a month in progress: it is not a result yet.
+    const tone = partial && verdict !== 'over' ? 'text-gray-900 dark:text-white' : TONE[verdict];
     const saved = net >= 0;
     // Both bars share one scale, so their lengths are comparable to each other
     // rather than each filling its own row.
@@ -50,11 +63,13 @@ export function ReviewHero({ review }: ReviewHeroProps) {
         <Card accent="primary" padding="none">
             <div className="p-5 sm:p-6">
                 <p className="text-sm text-gray-500 dark:text-gray-400">
-                    {t(`review.verdict.${verdict}`, VERDICT_FALLBACK[verdict])}
+                    {partial
+                        ? t(`review.verdictSoFar.${verdict}`, VERDICT_SO_FAR_FALLBACK[verdict])
+                        : t(`review.verdict.${verdict}`, VERDICT_FALLBACK[verdict])}
                 </p>
 
                 <div className="mt-2 flex flex-wrap items-end gap-x-4 gap-y-2">
-                    <p className={cn('text-3xl sm:text-4xl font-bold tracking-tight', TONE[verdict])}>
+                    <p className={cn('text-3xl sm:text-4xl font-bold tracking-tight', tone)}>
                         {maskValue(formatTWD(Math.abs(net)))}
                     </p>
                     <div className="pb-1 flex items-center gap-2">

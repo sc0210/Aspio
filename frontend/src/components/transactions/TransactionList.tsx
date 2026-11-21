@@ -1,5 +1,6 @@
 'use client';
 
+import { categoryLabel } from '@/lib/transactions/categoryLabel';
 import React, { useState, useRef, useEffect, useCallback, useMemo } from 'react';
 import {
   ChevronDownIcon,
@@ -22,22 +23,22 @@ import { SortableDayGrid } from './SortableDayGrid';
 import { apiDate, applyDayOrder } from './dayOrder';
 
 const ALL_CATEGORIES = [
-  { value: 'Dining', label: '🍽️ Dining' },
-  { value: 'Groceries', label: '🛒 Groceries' },
-  { value: 'Transportation', label: '🚗 Transportation' },
-  { value: 'Shopping', label: '🛍️ Shopping' },
-  { value: 'Entertainment', label: '🎬 Entertainment' },
-  { value: 'Healthcare', label: '🏥 Healthcare' },
-  { value: 'Housing', label: '🏠 Housing' },
-  { value: 'Utilities', label: '💡 Utilities' },
-  { value: 'Travel', label: '✈️ Travel' },
-  { value: 'Gift', label: '🎁 Gift' },
-  { value: 'Salary', label: '💼 Salary' },
-  { value: 'Freelance', label: '💻 Freelance' },
-  { value: 'Investment Returns', label: '📈 Investment Returns' },
-  { value: 'Loan Payment', label: '💳 Loan Payment' },
-  { value: 'Loan Receipt', label: '💳 Loan Receipt' },
-  { value: 'Others', label: '📦 Others' },
+  { value: 'Dining', emoji: '🍽️' },
+  { value: 'Groceries', emoji: '🛒' },
+  { value: 'Transportation', emoji: '🚗' },
+  { value: 'Shopping', emoji: '🛍️' },
+  { value: 'Entertainment', emoji: '🎬' },
+  { value: 'Healthcare', emoji: '🏥' },
+  { value: 'Housing', emoji: '🏠' },
+  { value: 'Utilities', emoji: '💡' },
+  { value: 'Travel', emoji: '✈️' },
+  { value: 'Gift', emoji: '🎁' },
+  { value: 'Salary', emoji: '💼' },
+  { value: 'Freelance', emoji: '💻' },
+  { value: 'Investment Returns', emoji: '📈' },
+  { value: 'Loan Payment', emoji: '💳' },
+  { value: 'Loan Receipt', emoji: '💳' },
+  { value: 'Others', emoji: '📦' },
 ];
 
 interface TransactionListProps {
@@ -66,6 +67,8 @@ interface TransactionListProps {
 export function TransactionList({ transactions, isLoading, isFetching, isSearching = false, searchQuery, canReorder = false, isDemo = false, canSplit = false, dayTotals }: TransactionListProps) {
   const [selectedTransactions, setSelectedTransactions] = useState<string[]>([]);
   const [expandedDays, setExpandedDays] = useState<Set<string>>(new Set());
+  // Days the user closed by hand; auto-expansion leaves them closed.
+  const userCollapsed = useRef(new Set<string>());
   const [pendingDeleteId, setPendingDeleteId] = useState<string | null>(null);
   const deleteTransactionMutation = useDeleteTransaction();
   const updateTransactionMutation = useUpdateTransaction();
@@ -135,7 +138,7 @@ export function TransactionList({ transactions, isLoading, isFetching, isSearchi
   transactionsRef.current = transactions;
   const handleSplitTransaction = useCallback((id: string) => {
     setSplitTarget(transactionsRef.current.find((tx) => tx.id === id) ?? null);
-  }, []);
+  }, [setSplitTarget]); // a state setter is stable; listed for the compiler
 
   const confirmDelete = async () => {
     if (!pendingDeleteId) return;
@@ -243,6 +246,7 @@ export function TransactionList({ transactions, isLoading, isFetching, isSearchi
       t('transactions:export.date', '日期'),
       t('transactions:export.description', '描述'),
       t('transactions:export.category', '分類'),
+      t('transactions:export.subcategory', '細項'),
       t('transactions:export.type', '類型'),
       t('transactions:export.amount', '金額'),
       t('transactions:export.currency', '貨幣'),
@@ -253,6 +257,7 @@ export function TransactionList({ transactions, isLoading, isFetching, isSearchi
       new Date(tx.date).toLocaleDateString(),
       tx.description,
       tx.category,
+      tx.subcategory || '',
       tx.type,
       tx.amount.toString(),
       tx.currency,
@@ -300,13 +305,14 @@ export function TransactionList({ transactions, isLoading, isFetching, isSearchi
   };
 
   const toggleDayExpansion = (dateString: string) => {
+    // Record the user's choice outside the updater (updaters stay pure).
+    const closing = expandedDays.has(dateString);
+    if (closing) userCollapsed.current.add(dateString);
+    else userCollapsed.current.delete(dateString);
     setExpandedDays(prev => {
       const newSet = new Set(prev);
-      if (newSet.has(dateString)) {
-        newSet.delete(dateString);
-      } else {
-        newSet.add(dateString);
-      }
+      if (closing) newSet.delete(dateString);
+      else newSet.add(dateString);
       return newSet;
     });
   };
@@ -342,25 +348,21 @@ export function TransactionList({ transactions, isLoading, isFetching, isSearchi
     const wasSearching = wasSearchingRef.current;
     wasSearchingRef.current = isSearching;
 
-    const now = new Date();
-    const today = now.toDateString();
-    const yesterday = new Date(now.getTime() - 24 * 60 * 60 * 1000).toDateString();
-
+    // Every day on the page opens; only a day the user closed stays closed. Opening
+    // just today and yesterday left the rest of a page as headers with a total pill,
+    // one click each to read (19 of 21 days in the review screenshot). Cheap: a page
+    // holds at most MAX_PAGE_SIZE (30) rows (useTransactionData), so this mounts ≤ 30.
+    const days = Object.keys(groupedTransactions);
     if (isSearching) {
       // Expand all days when searching (including when new data arrives)
-      setExpandedDays(new Set(Object.keys(groupedTransactions)));
+      setExpandedDays(new Set(days));
     } else if (wasSearching) {
-      // Exiting search: reset to today/yesterday
-      const auto = new Set<string>();
-      if (groupedTransactions[today]) auto.add(today);
-      if (groupedTransactions[yesterday]) auto.add(yesterday);
-      setExpandedDays(auto);
+      setExpandedDays(new Set(days.filter(d => !userCollapsed.current.has(d))));
     } else {
-      // Not searching (initial load or background refetch): only add new days, preserve user state
+      // Initial load, a new page or a refetch: open new days, keep the user's closed ones
       setExpandedDays(prev => {
         const next = new Set(prev);
-        if (groupedTransactions[today]) next.add(today);
-        if (groupedTransactions[yesterday]) next.add(yesterday);
+        for (const d of days) if (!userCollapsed.current.has(d)) next.add(d);
         return next.size === prev.size ? prev : next;
       });
     }
@@ -460,7 +462,7 @@ export function TransactionList({ transactions, isLoading, isFetching, isSearchi
             >
               <option value="" disabled>{t('transactions:list.categoryPlaceholder', 'Category…')}</option>
               {ALL_CATEGORIES.map(cat => (
-                <option key={cat.value} value={cat.value}>{cat.label}</option>
+                <option key={cat.value} value={cat.value}>{cat.emoji} {categoryLabel(cat.value, t)}</option>
               ))}
             </select>
             <select

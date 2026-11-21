@@ -15,6 +15,7 @@ FROM (VALUES
   ('Shopping',          'EXPENSE', '#EC4899', 'shopping-bag'),
   ('Entertainment',     'EXPENSE', '#10B981', 'film'),
   ('Healthcare',        'EXPENSE', '#EF4444', 'heart'),
+  ('Insurance',         'EXPENSE', '#A29BFE', 'shield'),
   ('Others',            'EXPENSE', '#6B7280', 'receipt'),
   ('Salary',            'INCOME',  '#10B981', 'briefcase'),
   ('Investment Return', 'INCOME',  '#3B82F6', 'trending-up'),

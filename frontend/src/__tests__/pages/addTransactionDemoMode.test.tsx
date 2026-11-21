@@ -136,8 +136,8 @@ async function fillAndSubmitExpenseForm(user: ReturnType<typeof userEvent.setup>
   const descInput = screen.getByPlaceholderText("What's this for?");
   await user.clear(descInput);
   await user.type(descInput, 'Coffee');
-  // Category — click the button whose accessible name includes 'Dining'
-  await user.click(screen.getByRole('button', { name: /Dining/i }));
+  // Category — the Food group saves as Dining on its own
+  await user.click(screen.getByRole('button', { name: /^Food$/i }));
   // Submit: the label says what is saved, "Add expense · <amount>".
   await user.click(screen.getByRole('button', { name: /^Add expense/i }));
 }
@@ -281,7 +281,7 @@ describe('AddTransactionPage — demo mode', () => {
     setupDemoMode(true);
     render(<AddTransactionPage />);
     await user.type(screen.getAllByPlaceholderText('0')[0], '40');
-    await user.click(screen.getByRole('button', { name: /Dining/i }));
+    await user.click(screen.getByRole('button', { name: /^Food$/i }));
     await user.type(screen.getByPlaceholderText("What's this for?"), 'Tea{Enter}');
     await waitFor(() => expect(mockPush).toHaveBeenCalledWith('/transactions'));
   });

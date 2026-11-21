@@ -602,5 +602,6 @@
     "refreshFailed": "價格更新失敗，請稍後再試。",
     "noDayChange": "{{symbols}} 缺少前一日收盤價，未計入今日損益。",
     "unconverted": "{{currencies}} 沒有匯率，相關金額未換算成新台幣。"
-  }
+  },
+  "loading": "正在載入總覽"
 }

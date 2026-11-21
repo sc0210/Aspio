@@ -273,7 +273,14 @@
     "modeCandles": "Candles",
     "lotCount_one": "{{count}} lot",
     "lotCount_other": "{{count}} lots",
-    "col": {"date": "Date", "qty": "Qty", "costPerShare": "Cost / Share", "totalCost": "Total Cost", "currentValue": "Current Value", "gainLoss": "Gain / Loss"},
+    "col": {
+      "date": "Date",
+      "qty": "Qty",
+      "costPerShare": "Cost / Share",
+      "totalCost": "Total Cost",
+      "currentValue": "Current Value",
+      "gainLoss": "Gain / Loss"
+    },
     "avgCost": "Avg Cost",
     "backToPortfolio": "Portfolio",
     "chartViewMode": "Chart view mode",
@@ -415,13 +422,12 @@
       "quantity": "Shares held:",
       "avgCost": "Average cost:",
       "currentPrice": "Price:",
-      "cashBalance": "Cash balance:",
       "grossProceeds": "Gross proceeds:",
       "feesAndTax": "Fees & tax:",
       "netProceeds": "Net proceeds:",
-      "estimatedPnl": "Estimated P&L:",
-      "newCashBalance": "New cash balance:"
+      "estimatedPnl": "Estimated P&L:"
     },
+    "proceedsDestination": "Net proceeds go to your Life Wallet in TWD, or back to the goal this lot was reserved for.",
     "notesPlaceholder": "Why you are selling, or anything else worth noting…",
     "pickHolding": "Pick the holding to sell ({{count}})",
     "processing": "Working…",
@@ -438,7 +444,7 @@
   "stats": {
     "alphaLabel": "Alpha vs {{benchmark}}",
     "alphaTooltip": "Jensen's Alpha: excess return vs {{benchmark}} after adjusting for market risk (beta). Positive means outperforming the market.",
-    "analysisSubtitle": "Risk, growth rate, dividends and realised gains",
+    "analysisSubtitle": "Risk, dividends and realised gains",
     "analysisTitle": "Analysis",
     "cagrCaption": "Time-weighted, per year",
     "cagrLabel": "Annual return",
@@ -480,7 +486,8 @@
     "volatility": "Vol (ann.)",
     "yieldOnCost": "YoC",
     "yieldOnValue": "Yield",
-    "lastSessionChange": "Change · {{day}}"
+    "lastSessionChange": "Change · {{day}}",
+    "annualReturnInline": "Annual return {{value}} · time-weighted"
   },
   "subtitle": "Track your investment performance in real-time",
   "sync": {
@@ -753,5 +760,7 @@
     "closedSince": "Closed · last close {{day}}",
     "fxLive": "live",
     "fxEstimate": "estimate"
-  }
+  },
+  "openHolding": "Open {{symbol}}",
+  "sellHolding": "Sell {{symbol}}"
 }

@@ -14,7 +14,15 @@ import zhTW from '@/locales/zh-TW/transactions.json';
 jest.mock('react-i18next', () => ({
     initReactI18next: { type: '3rdParty', init: jest.fn() },
     useTranslation: () => ({
-        t: (_key: string, fallback?: unknown) => (typeof fallback === 'string' ? fallback : _key),
+        // A string fallback, or an options object with defaultValue (interpolated).
+        t: (_key: string, fallback?: unknown) => {
+            if (typeof fallback === 'string') return fallback;
+            const o = fallback as Record<string, unknown> | undefined;
+            if (o && typeof o.defaultValue === 'string') {
+                return o.defaultValue.replace(/\{\{(\w+)\}\}/g, (_, k) => String(o[k] ?? ''));
+            }
+            return _key;
+        },
     }),
 }));
 

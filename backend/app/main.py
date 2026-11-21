@@ -254,8 +254,16 @@ def create_app() -> FastAPI:
     # Public and unauthenticated: the landing page asks before anyone signs in.
     @app.get(f"{api_prefix}/features", tags=["Health"])
     async def features():
-        """Optional add-ons this instance has configured, so the UI can hide the rest."""
-        return ApiResponse.success_response(data={"line_bot": settings.line_bot_enabled})
+        """Optional add-ons this instance has configured, so the UI can hide the rest.
+
+        google_login and email: the sign-in page offered Google and forgot-password
+        promised an email on instances with neither configured.
+        """
+        return ApiResponse.success_response(data={
+            "line_bot": settings.line_bot_enabled,
+            "google_login": settings.google_oauth_enabled,
+            "email": settings.email_enabled,
+        })
 
     # Health check endpoints
     @app.get("/health", tags=["Health"])

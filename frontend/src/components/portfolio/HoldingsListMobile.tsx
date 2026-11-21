@@ -27,6 +27,8 @@ interface Holding {
   exchange: string;
   sector?: string;
   lastUpdated: Date;
+  marketState?: string;
+  priceStale?: boolean;
   purchaseDate?: string;
   sparklineData?: number[];
 }

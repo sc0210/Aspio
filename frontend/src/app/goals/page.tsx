@@ -3,6 +3,8 @@
 import React, { useState, useMemo, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
 import { useIsMobile } from '@/hooks/useMediaQuery';
+import { QueryErrorCard } from '@/components/ui/QueryErrorCard';
+import { EmptyState } from '@/components/ui/EmptyState';
 import { MobileGoals } from '@/components/goals/MobileGoals';
 import { useGoals, useDeleteGoal, Goal, CreateGoalData, goalProgressPercent } from '@/hooks/useGoals';
 import { usePortfolio } from '@/hooks/usePortfolio';
@@ -73,7 +75,20 @@ function DesktopGoalsPage() {
     const [filterStatus, setFilterStatus] = useState<string | undefined>(undefined);
     const [filterCategory, setFilterCategory] = useState<string | undefined>(undefined);
 
-    const { data: goals, isLoading } = useGoals(filterStatus, filterCategory);
+    // Fetch every goal and filter the grid here. Filtering on the server dropped the
+    // retirement goal from the data whenever a filter excluded it, so the tracker
+    // offered "No retirement goal set yet"; an empty filter read as "no goals yet".
+    const { data: allGoalsData, isLoading, isError, refetch: refetchGoals } = useGoals();
+    const allGoals = useMemo(() => allGoalsData ?? [], [allGoalsData]);
+    const matchesFilters = useCallback(
+        (g: Goal) => (!filterStatus || g.status === filterStatus) && (!filterCategory || g.category === filterCategory),
+        [filterStatus, filterCategory],
+    );
+    const goals = useMemo(() => allGoals.filter(matchesFilters), [allGoals, matchesFilters]);
+    // Only when nothing is on screen: a failed background refetch keeps the goals
+    // already loaded rather than hiding half the page behind an error.
+    const showError = isError && !allGoalsData;
+    const filtersActive = Boolean(filterStatus || filterCategory);
     const deleteGoal = useDeleteGoal();
     const { portfolio, refetch: refetchPortfolio } = usePortfolio();
     // getPortfolio returns ApiResponse<Portfolio> so data is nested under .data
@@ -148,9 +163,9 @@ function DesktopGoalsPage() {
     // The goal the portfolio is credited to — one, even if several match, or
     // the portfolio would count once per matching goal.
     const retirementGoal = useMemo(() => {
-        const credited = portfolioCreditedGoal(goals ?? []);
+        const credited = portfolioCreditedGoal(allGoals);
         return credited?.status === 'active' ? credited : null;
-    }, [goals]);
+    }, [allGoals]);
 
     // For retirement goals, the DB current_amount is always $0 — real progress is the portfolio total value
     const retirementEffectiveCurrent = useMemo(
@@ -168,22 +183,27 @@ function DesktopGoalsPage() {
     // Every active goal but the pinned one, so it never renders twice. A second
     // retirement-looking goal is listed here on its own saved amount.
     const activeGoals = useMemo(
-        () => goals?.filter((g) => g.status === 'active' && g.id !== retirementGoal?.id) || [],
+        () => goals.filter((g) => g.status === 'active' && g.id !== retirementGoal?.id),
         [goals, retirementGoal]
     );
+    // The health insights describe every goal, whatever the grid is filtered to.
+    const allActiveGoals = useMemo(
+        () => allGoals.filter((g) => g.status === 'active' && g.id !== retirementGoal?.id),
+        [allGoals, retirementGoal]
+    );
     const completedGoals = useMemo(
-        () => goals?.filter((g) => g.status === 'completed') || [],
+        () => goals.filter((g) => g.status === 'completed'),
         [goals]
     );
     const otherGoals = useMemo(
-        () => goals?.filter((g) => !['active', 'completed'].includes(g.status)) || [],
+        () => goals.filter((g) => !['active', 'completed'].includes(g.status)),
         [goals]
     );
 
     const atRiskGoals = useMemo(() => {
         const now = Date.now();
         const alertWindowMs = preferences.goalAlertDays * 24 * 60 * 60 * 1000;
-        return activeGoals.filter((goal) => {
+        return allActiveGoals.filter((goal) => {
             if (!goal.targetDate) {
                 return goalProgressPercent(goal) < 35;
             }
@@ -193,11 +213,11 @@ function DesktopGoalsPage() {
             const target = Number(goal.targetAmount);
             return inAlertWindow && (target > 0 ? (goalProgressAmount(goal) / target) * 100 : 0) < 70;
         });
-    }, [activeGoals, preferences.goalAlertDays]);
+    }, [allActiveGoals, preferences.goalAlertDays]);
 
     const monthlyRequiredContribution = useMemo(() => {
         const now = Date.now();
-        return activeGoals.reduce((sum, goal) => {
+        return allActiveGoals.reduce((sum, goal) => {
             const remaining = Math.max(0, Number(goal.targetAmount) - goalProgressAmount(goal));
             if (!goal.targetDate) {
                 return sum + remaining / 12;
@@ -206,7 +226,7 @@ function DesktopGoalsPage() {
             const monthsLeft = Math.max(1, Math.ceil((new Date(goal.targetDate).getTime() - now) / (30 * 24 * 60 * 60 * 1000)));
             return sum + remaining / monthsLeft;
         }, 0);
-    }, [activeGoals]);
+    }, [allActiveGoals]);
 
     const atRiskGoalIds = useMemo(() => new Set(atRiskGoals.map((g) => g.id)), [atRiskGoals]);
 
@@ -220,14 +240,17 @@ function DesktopGoalsPage() {
     }, []);
 
     const activeCoverageRatio = useMemo(() => {
-        const activeTargetTotal = activeGoals.reduce((sum, goal) => sum + Number(goal.targetAmount), 0);
+        const activeTargetTotal = allActiveGoals.reduce((sum, goal) => sum + Number(goal.targetAmount), 0);
         // As the cards read it: market value once invested, the Emergency Wallet for an emergency fund.
-        const activeCurrentTotal = activeGoals.reduce((sum, goal) => sum + goalProgressAmount(goal), 0);
+        // Each goal counts at most its target: summing uncapped amounts let one
+        // overfunded goal (an emergency fund at 1000%) hide the goals behind pace.
+        const activeCurrentTotal = allActiveGoals.reduce(
+            (sum, goal) => sum + Math.min(goalProgressAmount(goal), Number(goal.targetAmount)), 0);
         if (activeTargetTotal <= 0) {
             return 0;
         }
         return (activeCurrentTotal / activeTargetTotal) * 100;
-    }, [activeGoals]);
+    }, [allActiveGoals]);
 
     if (authLoading && !isDemoMode) {
         return (
@@ -273,7 +296,9 @@ function DesktopGoalsPage() {
                 />
 
                 {/* ── Portfolio-Linked Retirement Goal ─────────────────────────── */}
-                {!isLoading && (
+                {showError && <QueryErrorCard onRetry={() => refetchGoals()} />}
+
+                {!isLoading && !showError && (
                     <div data-tour="goals-retire" className="rounded-xl border border-primary-200 dark:border-primary-800/40 bg-gradient-to-br from-primary-50 via-white to-primary-50/40 dark:from-primary-900/20 dark:via-indigo-900/20 dark:to-primary-900/10 overflow-hidden shadow-sm">
                         {/* Header bar */}
                         <div className="flex items-center justify-between px-4 py-3 border-b border-primary-200 dark:border-primary-700/40 bg-primary-50 dark:bg-primary-900/20 gap-2">
@@ -436,7 +461,7 @@ function DesktopGoalsPage() {
                 </div>
 
                 {/* Goal Health Insights */}
-                {!isLoading && goals && goals.length > 0 && (
+                {!isLoading && !showError && allGoals.length > 0 && (
                     <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                         <Card padding="none" clip>
                             <div className="h-px bg-gradient-to-r from-indigo-400/60 via-purple-400/60 to-violet-400/60" />
@@ -461,7 +486,7 @@ function DesktopGoalsPage() {
                             <div className="p-4">
                                 <p className="text-sm text-gray-600 dark:text-gray-400 mb-1">{t('goals:insights.monthly.title')}</p>
                                 <p className="text-2xl font-bold text-gray-900 dark:text-white">
-                                    {formatCurrency(monthlyRequiredContribution, retirementGoal?.currency || activeGoals[0]?.currency || 'TWD', { precision: 0 })}
+                                    {formatCurrency(monthlyRequiredContribution, retirementGoal?.currency || allActiveGoals[0]?.currency || 'TWD', { precision: 0 })}
                                 </p>
                                 <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">{t('goals:insights.monthly.desc')}</p>
                             </div>
@@ -477,7 +502,7 @@ function DesktopGoalsPage() {
                 )}
 
                 {/* Empty State */}
-                {!isLoading && goals?.length === 0 && (
+                {!isLoading && !showError && allGoals.length === 0 && (
                     <div className="bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 p-6 sm:p-12 text-center">
                         <div className="max-w-md mx-auto">
                             <div className="w-12 h-12 sm:w-16 sm:h-16 mx-auto mb-3 sm:mb-4 rounded-full bg-primary-100 dark:bg-primary-900/20 flex items-center justify-center">
@@ -500,6 +525,22 @@ function DesktopGoalsPage() {
                             </button>
                         </div>
                     </div>
+                )}
+
+                {/* Filters matched nothing: say so, never "create your first goal" */}
+                {!isLoading && !showError && allGoals.length > 0 && filtersActive
+                    && activeGoals.length === 0 && completedGoals.length === 0 && otherGoals.length === 0
+                    // The pinned retirement panel ignores filters; if it is the match, it is on screen.
+                    && !(retirementGoal && matchesFilters(retirementGoal)) && (
+                    <EmptyState
+                        title={t('goals:noMatch.title')}
+                        description={t('goals:noMatch.subtitle')}
+                        action={
+                            <Button variant="outline" onClick={() => { setFilterStatus(undefined); setFilterCategory(undefined); }}>
+                                {t('goals:noMatch.clear')}
+                            </Button>
+                        }
+                    />
                 )}
 
                 {/* Active Goals */}

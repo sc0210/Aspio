@@ -287,25 +287,26 @@ describe('WalletNetWorthCard', () => {
   });
 
   describe('emergency runway', () => {
-    it('shows emergency runway in months', () => {
-      // 30000 / 60000 = 0.5 months
+    it('shows the normalised monthly runway, not emergency ÷ the period total', () => {
+      // On 1Y monthlyExpenses is a year of spending: 30000 / 60000 would read 0.5 mo.
+      // The backend already divided by the monthly rate and sent 6.
       render(
         <WalletNetWorthCard
-          stats={baseStats}
+          stats={{ ...baseStats, emergencyFundMonths: 6 }}
           walletTrendsData={[]}
-
         />,
       );
       expect(screen.getByText('Emergency Runway')).toBeInTheDocument();
+      expect(screen.getByText('6.0 mo')).toBeInTheDocument();
+      expect(screen.queryByText('0.5 mo')).toBeNull();
     });
 
-    it('shows — when monthlyExpenses is 0', () => {
-      const stats = { ...baseStats, monthlyExpenses: 0 };
+    it('shows — when there is no runway figure (no spending)', () => {
+      const stats = { ...baseStats, emergencyFundMonths: null };
       render(
         <WalletNetWorthCard
           stats={stats}
           walletTrendsData={[]}
-
         />,
       );
       expect(screen.getAllByText('—').length).toBeGreaterThanOrEqual(1);
@@ -345,15 +346,15 @@ describe('WalletNetWorthCard', () => {
   // wallet areas rendered on mount, which was the default before the toggles
   // existed.
   describe('chart — series visibility defaults', () => {
-    it('renders totalAsset and netWorth areas by default', () => {
+    it('renders only the netWorth area by default, so its movement is not flattened', () => {
       render(
         <WalletNetWorthCard
           stats={baseStats}
           walletTrendsData={twoPointTrend}
         />,
       );
-      expect(screen.getByTestId('area-totalAsset')).toBeInTheDocument();
       expect(screen.getByTestId('area-netWorth')).toBeInTheDocument();
+      expect(screen.queryByTestId('area-totalAsset')).toBeNull();
     });
 
     it('leaves the three per-wallet areas off until toggled on', () => {
@@ -624,8 +625,8 @@ describe('WalletNetWorthCard', () => {
           walletTrendsData={twoPointTrend}
         />,
       );
-      // totalAsset is on by default; lifeWallet is opt-in via the legend toggle.
-      expect(screen.getByTestId('area-totalAsset')).toBeInTheDocument();
+      // netWorth is the only series on by default; the others are opt-in via the legend.
+      expect(screen.getByTestId('area-netWorth')).toBeInTheDocument();
     });
   });
 });

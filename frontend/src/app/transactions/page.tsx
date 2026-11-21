@@ -17,6 +17,7 @@ import { MobileTransactions } from '@/components/transactions/MobileTransactions
 import { Button } from '@/components/ui/Button';
 import { EmptyState } from '@/components/ui/EmptyState';
 import { LoadingSpinner } from '@/components/ui/LoadingSpinner';
+import { QueryErrorCard } from '@/components/ui/QueryErrorCard';
 import { DashboardLayout } from '@/components/layout/DashboardLayout';
 import { TOP_BAR_BUTTON, TOP_BAR_PRIMARY } from '@/components/layout/topBarStyles';
 import { PageHeader } from '@/components/layout/PageHeader';
@@ -140,6 +141,8 @@ function DesktopTransactionsPage() {
     totalPages,
     isLoading,
     isFetching,
+    error: listError,
+    refetch: refetchList,
   } = useTransactionData(filters, searchQuery, dateRange, isDemo);
 
   // Stats, category breakdowns, and top transactions come from aggregate
@@ -419,7 +422,10 @@ function DesktopTransactionsPage() {
             )}
 
             {/* Transaction List */}
-            {transactions.length === 0 && !isLoading ? (
+            {listError && transactions.length === 0 ? (
+              // A failed fetch, not an empty ledger ("You haven't added any yet").
+              <QueryErrorCard onRetry={() => refetchList()} />
+            ) : transactions.length === 0 && !isLoading ? (
               <EmptyState
                 className="animate-fade-in"
                 icon="🔍"

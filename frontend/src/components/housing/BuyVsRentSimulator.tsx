@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import dynamic from 'next/dynamic';
 import {
@@ -80,8 +80,19 @@ export function BuyVsRentSimulator({ defaults, onDerivedChange }: Props) {
     // Folded by default — only the affordability headline opens unprompted.
     const [open, setOpen] = useState(false);
     const [showAdvanced, setShowAdvanced] = useState(false);
-    const set = <K extends keyof BuyVsRentInputs>(k: K, v: BuyVsRentInputs[K]) =>
+    // The seeded price follows the page's suggestion until the user sets their own:
+    // that suggestion can settle after mount (data arriving a render late), and a
+    // remount to pick it up would throw away every other input the user had set.
+    const priceTouched = useRef(false);
+    const set = <K extends keyof BuyVsRentInputs>(k: K, v: BuyVsRentInputs[K]) => {
+        if (k === 'housePrice') priceTouched.current = true;
         setInputs((prev) => ({ ...prev, [k]: v }));
+    };
+    const suggestedPrice = defaults?.housePrice;
+    useEffect(() => {
+        if (priceTouched.current || suggestedPrice == null) return;
+        setInputs((prev) => (prev.housePrice === suggestedPrice ? prev : { ...prev, housePrice: suggestedPrice }));
+    }, [suggestedPrice]);
 
     const result = useMemo(() => projectBuyVsRent(inputs), [inputs]);
 
@@ -107,7 +118,7 @@ export function BuyVsRentSimulator({ defaults, onDerivedChange }: Props) {
         onDerivedChange,
     ]);
 
-    const reset = () => setInputs({ ...BASE_DEFAULTS, ...defaults });
+    const reset = () => { priceTouched.current = false; setInputs({ ...BASE_DEFAULTS, ...defaults }); };
 
     const buyWins = result.finalAdvantage >= 0;
     const priceWan = Math.round(inputs.housePrice / WAN);
@@ -314,7 +325,7 @@ export function BuyVsRentSimulator({ defaults, onDerivedChange }: Props) {
             </div>
             )}
 
-            {open && <ScenarioCompare current={inputs} onLoad={(next) => setInputs({ ...next })} />}
+            {open && <ScenarioCompare current={inputs} onLoad={(next) => { priceTouched.current = true; setInputs({ ...next }); }} />}
 
             {/* Disclaimer */}
             {open && (

@@ -59,6 +59,7 @@ function AddTransactionForm() {
     amount: prefill?.amount ?? '',
     description: prefill?.description ?? '',
     category: prefill?.category ?? '',
+    subcategory: prefill?.subcategory ?? '',
     paymentMethod: prefill?.paymentMethod ?? '',
     walletType: prefill?.walletType ?? 'life',
     fromWallet: 'life',
@@ -108,6 +109,7 @@ function AddTransactionForm() {
       amount: '',
       description: '',
       category: '',
+      subcategory: '',
       tags: [],
       loanId: '',
       goalId: '',
@@ -268,6 +270,7 @@ function AddTransactionForm() {
           description: formData.description,
           date: formData.date,
           category: formData.category,
+          subcategory: formData.subcategory || undefined,
           paymentMethod: formData.paymentMethod || undefined,
           walletType: formData.walletType as 'life' | 'emergency' | undefined,
           tags: formData.tags,
@@ -376,6 +379,7 @@ function AddTransactionForm() {
           description: formData.description,
           date: formData.date,
           category: formData.category,
+          subcategory: formData.subcategory || undefined,
           paymentMethod: formData.paymentMethod || undefined,
           walletType: formData.walletType as 'life' | 'emergency' | undefined,
           tags: formData.tags,
@@ -453,6 +457,7 @@ function AddTransactionForm() {
               onPick={(type) => {
                 handleInputChange('type', type);
                 handleInputChange('category', '');
+                handleInputChange('subcategory', '');
                 // A loan link is an expense's; it must not ride along to another type.
                 if (type !== 'expense') handleInputChange('loanId', '');
               }}

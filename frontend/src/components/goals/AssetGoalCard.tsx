@@ -75,6 +75,11 @@ export function AssetGoalCard({
     const current = goalProgressAmount(money);
     const progress = target > 0 ? (current / target) * 100 : 0;
     const remaining = Math.max(0, target - current);
+    // Shown capped at 100%: an overfunded goal read "1000.0%". The surplus gets its own line.
+    const shownPct = Math.min(100, progress);
+    // On goalReached's basis (money put in; the wallet for an emergency fund), so
+    // market gains on an invested goal are not called money saved over target.
+    const over = Math.max(0, (tracksEmergency ? current : Number(currentAmount) || 0) - target);
     const isCompleted = goalReached(money);
     const monthsLeft = monthsUntil(targetDate);
     const horizonWarning = goalHorizonRisk(money);
@@ -87,12 +92,13 @@ export function AssetGoalCard({
         ? t(`goals:categories.${category}`, categoryMeta?.name ?? category.replace(/_/g, ' '))
         : '';
 
+    // The bar shows progress only, in one calm scale. It used to turn red when at
+    // risk or under 25% and amber under 60%, stacking a third alarm beside the
+    // amber border and the risk chip (and phones painted every bar green).
     const getProgressColor = () => {
         if (isCompleted) return 'bg-success-500';
-        if (isAtRisk || progress < 25) return 'bg-error-500';
-        if (progress < 60) return 'bg-warning-500';
-        if (progress < 90) return 'bg-prosperity-500';
-        return 'bg-prosperity-600';
+        if (progress < 50) return 'bg-primary-500';
+        return 'bg-prosperity-500';
     };
 
     const getDateUrgency = () => {
@@ -174,7 +180,7 @@ export function AssetGoalCard({
                 <div className="flex items-center justify-between gap-2 mt-2">
                     <div className="flex items-center gap-1.5 text-xs min-w-0">
                         <span className="font-medium text-gray-600 dark:text-gray-300">
-                            {isValueVisible ? `${progress.toFixed(0)}%` : '•••%'}
+                            {isValueVisible ? `${shownPct.toFixed(0)}%` : '•••%'}
                         </span>
                         {dateText && (
                             <span className={`truncate ${denseDateClass}`}>· {dateText}</span>
@@ -237,18 +243,18 @@ export function AssetGoalCard({
                 </div>
 
                 <div className="flex flex-col items-end gap-1 flex-shrink-0">
+                    {/* The one risk signal: icon plus words, not colour alone. */}
                     {isAtRisk && !isCompleted && (
-                        <span className="px-2 py-0.5 rounded-full text-xs font-semibold bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400">
-                            {t('goals:card.atRisk')}
+                        <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-semibold bg-amber-100 text-amber-800 dark:bg-amber-900/30 dark:text-amber-300">
+                            <span aria-hidden="true">⚠</span>{t('goals:card.atRisk')}
                         </span>
                     )}
+                    {/* Priority is a preference, not a status: neutral, so "HIGH" no longer reads as an alert. */}
                     <div
                         className={`
                             px-2.5 py-1 rounded-full text-xs font-medium
                             ${isCompleted ? 'bg-success-100 text-success-700 dark:bg-success-900/30 dark:text-success-400' : ''}
-                            ${!isCompleted && priority === 'high' ? 'bg-error-100 text-error-700 dark:bg-error-900/30 dark:text-error-400' : ''}
-                            ${!isCompleted && priority === 'medium' ? 'bg-warning-100 text-warning-700 dark:bg-warning-900/30 dark:text-warning-400' : ''}
-                            ${!isCompleted && priority === 'low' ? 'bg-gray-100 text-gray-700 dark:bg-gray-700 dark:text-gray-300' : ''}
+                            ${!isCompleted ? 'bg-gray-100 text-gray-700 dark:bg-gray-700 dark:text-gray-300' : ''}
                         `}
                     >
                         {isCompleted ? t('goals:card.complete') : t(`goals:priorities.${priority}`).toUpperCase()}
@@ -285,9 +291,16 @@ export function AssetGoalCard({
 
                 <div className="flex justify-between items-center mt-2 gap-2">
                     <span className="text-xs font-medium text-gray-700 dark:text-gray-300">
-                        {isValueVisible ? `${progress.toFixed(1)}%` : '•••%'}
+                        {isValueVisible ? `${shownPct.toFixed(1)}%` : '•••%'}
                     </span>
-                    {!isCompleted && (
+                    {/* Same reached rule as the rest of the card (goalReached), so an invested
+                        goal over target by market value alone is not called over target. */}
+                    {isCompleted && over > 0 && (
+                        <span className="text-xs font-medium text-success-700 dark:text-success-400 truncate text-right">
+                            {t('goals:card.over', { amount: isValueVisible ? formatCashAmount(over, currency) : '•••••' })}
+                        </span>
+                    )}
+                    {!isCompleted && remaining > 0 && (
                         <span className="text-xs text-gray-500 dark:text-gray-400 truncate text-right">
                             {t('goals:card.left', { amount: isValueVisible ? formatCashAmount(remaining, currency) : '•••••' })}
                         </span>

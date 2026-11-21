@@ -20,6 +20,8 @@ import { LoanCard } from '@/components/loans/LoanCard';
 import { AddLoanModal } from '@/components/loans/AddLoanModal';
 import { EditLoanModal } from '@/components/loans/EditLoanModal';
 import { RecordPaymentModal } from '@/components/loans/RecordPaymentModal';
+import { QueryErrorCard } from '@/components/ui/QueryErrorCard';
+import { ConfirmDialog } from '@/components/ui/ConfirmDialog';
 import { useLoans, useDeleteLoan } from '@/hooks/useLoans';
 import { DebtAccount } from '@/services/loanService';
 import { formatCurrency } from '@/utils/formatters';
@@ -47,7 +49,7 @@ function fmtDate(dateStr: string | null) {
 
 function DesktopLoansPage() {
   const { t } = useTranslation('loans');
-  const { loans, summary, isLoading } = useLoans();
+  const { loans, summary, isLoading, isError, refetch } = useLoans();
   const deleteLoan = useDeleteLoan();
 
   const [showAddModal, setShowAddModal] = useState(false);
@@ -104,6 +106,8 @@ function DesktopLoansPage() {
         <RelatedMoneyLinks current="loans" />
 
         {/* Stats grid */}
+        {isError && <QueryErrorCard onRetry={() => refetch()} />}
+
         {summary && summary.loan_count > 0 && (
           <div data-tour="loans-stats" className="grid grid-cols-1 md:grid-cols-3 gap-4 animate-fade-in">
             <Card padding="sm" accent="rose">
@@ -152,7 +156,7 @@ function DesktopLoansPage() {
         {activeLoans.length > 0 && <div data-tour="loans-plan"><PayoffPlanner loans={activeLoans} /></div>}
 
         {/* Empty state */}
-        {!isLoading && loans.length === 0 && (
+        {!isLoading && !isError && loans.length === 0 && (
           <div className="bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 p-6 sm:p-12 text-center">
             <div className="max-w-md mx-auto">
               <div className="w-12 h-12 sm:w-16 sm:h-16 mx-auto mb-3 sm:mb-4 rounded-full bg-primary-100 dark:bg-primary-900/20 flex items-center justify-center">
@@ -243,35 +247,16 @@ function DesktopLoansPage() {
         />
       )}
 
-      {/* Delete confirmation */}
-      {deleteConfirm && (
-        <div className="fixed inset-0 z-50 bg-black/60 flex items-center justify-center p-4">
-          <div className="bg-white dark:bg-gray-800 rounded-2xl w-full max-w-sm shadow-xl p-6 space-y-4">
-            <h3 className="text-base font-semibold text-gray-900 dark:text-white">{t('deleteModal.title')}</h3>
-            <p className="text-sm text-gray-500 dark:text-gray-400">
-              {t('deleteModal.confirmPrefix', 'This will remove')}{' '}
-              <strong className="text-gray-700 dark:text-gray-200">{deleteConfirm.name}</strong>
-              {'. '}{t('deleteModal.confirmSuffix', 'Payment history linked to this loan will be preserved in your transactions.')}
-            </p>
-            <div className="flex gap-3">
-              <button
-                onClick={() => setDeleteConfirm(null)}
-                disabled={deleteLoan.isPending}
-                className="flex-1 py-2.5 min-h-[44px] rounded-xl border border-gray-300 dark:border-gray-600 text-sm font-medium text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors disabled:opacity-50 touch-manipulation"
-              >
-                {t('deleteModal.cancel')}
-              </button>
-              <button
-                onClick={() => handleDelete(deleteConfirm)}
-                disabled={deleteLoan.isPending}
-                className="flex-1 py-2.5 min-h-[44px] rounded-xl bg-red-600 hover:bg-red-700 text-sm font-medium text-white transition-colors disabled:opacity-50 touch-manipulation"
-              >
-                {deleteLoan.isPending ? t('deleteModal.removing') : t('deleteModal.remove')}
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
+      {/* Delete confirmation: the shared dialog (role, focus trap, Escape). The
+          hand-rolled overlay had none of them. */}
+      <ConfirmDialog
+        isOpen={!!deleteConfirm}
+        title={t('deleteModal.title')}
+        message={deleteConfirm ? t('deleteModal.plainMessage', { name: deleteConfirm.name }) : ''}
+        confirmLabel={deleteLoan.isPending ? t('deleteModal.removing') : t('deleteModal.remove')}
+        onConfirm={() => { if (deleteConfirm && !deleteLoan.isPending) handleDelete(deleteConfirm); }}
+        onCancel={() => { if (!deleteLoan.isPending) setDeleteConfirm(null); }}
+      />
     </DashboardLayout>
   );
 }

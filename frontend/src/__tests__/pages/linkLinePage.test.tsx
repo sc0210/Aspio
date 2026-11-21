@@ -18,13 +18,14 @@ jest.mock('@/lib/api-client', () => ({
 jest.mock('@/components/line/LineBotGate', () => ({
   LineBotGate: ({ children }: { children: React.ReactNode }) => <>{children}</>,
 }));
-jest.mock('@/hooks/useAppMode', () => ({
-  useAppMode: () => ({ isAuthenticated: true, isLoading: false, user: { email: 'victim@example.com' } }),
-}));
+const mockMode = { isAuthenticated: true, isLoading: false, user: { email: 'victim@example.com' } as { email: string } | null };
+jest.mock('@/hooks/useAppMode', () => ({ useAppMode: () => mockMode }));
 jest.mock('next/navigation', () => ({
   useSearchParams: () => new URLSearchParams('token=11111111-1111-1111-1111-111111111111'),
 }));
 jest.mock('next-auth/react', () => ({ signIn: jest.fn() }));
+const mockGoogle = jest.fn(() => true);
+jest.mock('@/hooks/useGoogleSignIn', () => ({ useGoogleSignIn: () => mockGoogle() }));
 jest.mock('react-i18next', () => ({
   useTranslation: () => ({ t: (key: string) => key }),
 }));
@@ -62,5 +63,23 @@ describe('/link-line', () => {
 
     expect(screen.getByText('common:lineLink.cancelled')).toBeInTheDocument();
     expect(mockPost).not.toHaveBeenCalled();
+  });
+
+  describe('signed out', () => {
+    beforeEach(() => { mockMode.isAuthenticated = false; mockMode.user = null; });
+    afterEach(() => { mockMode.isAuthenticated = true; mockMode.user = { email: 'victim@example.com' }; mockGoogle.mockReturnValue(true); });
+
+    it('offers Google where it is configured, and email either way', async () => {
+      render(<LinkLinePage />);
+      expect(await screen.findByText('common:lineLink.continueGoogle')).toBeInTheDocument();
+      expect(screen.getByText('common:lineLink.signInEmail')).toBeInTheDocument();
+    });
+
+    it('offers only email where Google is not configured', async () => {
+      mockGoogle.mockReturnValue(false);
+      render(<LinkLinePage />);
+      expect(await screen.findByText('common:lineLink.signInEmail')).toBeInTheDocument();
+      expect(screen.queryByText('common:lineLink.continueGoogle')).not.toBeInTheDocument();
+    });
   });
 });

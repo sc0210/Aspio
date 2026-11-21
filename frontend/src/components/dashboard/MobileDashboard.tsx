@@ -14,6 +14,7 @@ import {
 import { DashboardLayout } from '@/components/layout/DashboardLayout';
 import { LoadingSpinner } from '@/components/ui/LoadingSpinner';
 import { BiggerScreenHint } from './BiggerScreenHint';
+import { QueryErrorCard } from '@/components/ui/QueryErrorCard';
 import { useDashboardSummary } from '@/hooks/useDashboardSummary';
 import { useAppMode } from '@/hooks/useAppMode';
 import { greetingName } from '@/lib/dashboard/greetingName';
@@ -43,6 +44,15 @@ export function MobileDashboard() {
         return (
             <DashboardLayout>
                 <div className="flex items-center justify-center py-24"><LoadingSpinner size="lg" /></div>
+            </DashboardLayout>
+        );
+    }
+
+    // A failed load must not read as a real NT$0 net worth.
+    if (model.isError) {
+        return (
+            <DashboardLayout>
+                <div className="px-4 py-6"><QueryErrorCard onRetry={model.refetch} /></div>
             </DashboardLayout>
         );
     }

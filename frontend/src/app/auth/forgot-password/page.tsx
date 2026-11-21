@@ -1,5 +1,6 @@
 'use client';
 
+import { useFeatures } from '@/hooks/useFeatures';
 import { useState, useMemo, ReactNode } from 'react';
 import Link from 'next/link';
 import { useForm } from 'react-hook-form';
@@ -30,6 +31,7 @@ export default function ForgotPasswordPage() {
     [t],
   );
   const [emailSent, setEmailSent] = useState(false);
+  const { email } = useFeatures();
 
   const {
     register,
@@ -155,6 +157,13 @@ export default function ForgotPasswordPage() {
           </p>
         </div>
 
+        {/* Without outgoing email the reset link cannot be sent; say so instead of
+            "check your email" for a message that never comes. */}
+        {email === false ? (
+          <p role="status" className="text-sm text-gray-700 dark:text-gray-300 rounded-lg bg-amber-50 dark:bg-amber-900/20 px-3 py-3">
+            {t('auth:forgotPassword.noEmail')}
+          </p>
+        ) : (
         <form className="space-y-4" onSubmit={handleSubmit(onSubmit)}>
           <Input
             {...register('email')}
@@ -179,6 +188,7 @@ export default function ForgotPasswordPage() {
             {t('auth:forgotPassword.sendResetLink')}
           </Button>
         </form>
+        )}
       </div>
     </PageShell>
   );

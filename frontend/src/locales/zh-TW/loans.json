@@ -40,7 +40,7 @@
     "goal": "目標：{{amount}}",
     "interestLeft": "剩餘利息：{{amount}}",
     "minPayment": "最低還款",
-    "monthsLeft": "剩餘月數",
+    "monthsLeft": "合約剩餘期數",
     "next": "下次：{{date}}",
     "paidOff": "已還清",
     "payoffEstimate": "以目前月付金試算 ≈{{count}} 期",
@@ -55,13 +55,10 @@
     "close": "關閉"
   },
   "deleteModal": {
-    "cancel": "取消",
-    "confirmPrefix": "這將移除",
-    "confirmSuffix": "與此貸款相關的還款紀錄將保留在您的交易中。",
-    "message": "此操作將刪除 <strong>{{name}}</strong>。與此貸款相關的還款記錄將保留在交易紀錄中。",
     "remove": "確認刪除",
     "removing": "刪除中…",
-    "title": "刪除貸款？"
+    "title": "刪除貸款？",
+    "plainMessage": "這將移除 {{name}}。與此貸款相關的還款紀錄將保留在您的交易中。"
   },
   "editModal": {
     "save": "儲存變更",
@@ -146,7 +143,8 @@
     "years_one": "{{count}} 年",
     "years_other": "{{count}} 年",
     "months_one": "{{count}} 個月",
-    "months_other": "{{count}} 個月"
+    "months_other": "{{count}} 個月",
+    "rolloverNote": "假設每筆貸款還清後，其月付金轉而償還下一筆，因此可能比單筆貸款自身的試算更早。"
   },
   "upcoming": {
     "mixedCurrencies": "多種幣別，不合計",

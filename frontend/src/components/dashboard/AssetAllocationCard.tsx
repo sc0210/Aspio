@@ -83,7 +83,7 @@ export function AssetAllocationCard({
   }, [allocations]);
 
   const formatCurrency = (value: number) =>
-    formatCurrencyUtil(value, 'TWD', value >= 100000 ? { compact: true } : { precision: 0 });
+    formatCurrencyUtil(value, 'TWD', Math.abs(value) >= 100000 ? { compact: true } : { precision: 0 });
 
   const formatPct = (value: number) => `${value.toFixed(1)}%`; // Value already in percentage format from backend
 
@@ -312,19 +312,10 @@ export function AssetAllocationCard({
                     paddingAngle={2}
                     dataKey="currentPct"
                     nameKey="asset"
+                    // No outside labels: in this 208px box they were clipped ("van 50) 60.0%").
+                    // The legend beside the chart lists every slice's name and share.
+                    label={false}
                     labelLine={false}
-                    label={({ cx, cy, midAngle, outerRadius: or, name, percent }) => {
-                      const RADIAN = Math.PI / 180;
-                      const r = or + 18;
-                      const x = cx + r * Math.cos(-midAngle * RADIAN);
-                      const y = cy + r * Math.sin(-midAngle * RADIAN);
-                      if ((percent || 0) < 0.06) return null;
-                      return (
-                        <text x={x} y={y} fill="#6b7280" fontSize={11} textAnchor={x > cx ? 'start' : 'end'} dominantBaseline="central">
-                          {name} {((percent || 0) * 100).toFixed(1)}%
-                        </text>
-                      );
-                    }}
                   >
                     {allocations.map((_, index) => (
                       <Cell key={`cell-${index}`} fill={ALLOCATION_COLORS[index % ALLOCATION_COLORS.length]} />

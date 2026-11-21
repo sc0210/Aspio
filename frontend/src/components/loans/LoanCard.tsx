@@ -136,13 +136,13 @@ export function LoanCard({ loan, onRecordPayment, onEdit, onDelete }: LoanCardPr
           {loan.payoff_months_estimate != null &&
             loan.months_remaining != null &&
             loan.payoff_months_estimate !== loan.months_remaining && (
-              <div className="flex items-center gap-1">
-                <span
-                  className="text-amber-700 dark:text-amber-400"
-                  title={t('card.payoffEstimateHint')}
-                >
+              // The explanation is visible text, not a hover title touch and
+              // keyboard users never saw: three horizons for one loan need words.
+              <div className="w-full">
+                <span className="text-amber-700 dark:text-amber-400">
                   {t('card.payoffEstimate', { count: loan.payoff_months_estimate })}
                 </span>
+                <p className="mt-0.5 text-gray-500 dark:text-gray-400">{t('card.payoffEstimateHint')}</p>
               </div>
             )}
           {loan.total_interest_remaining != null && (

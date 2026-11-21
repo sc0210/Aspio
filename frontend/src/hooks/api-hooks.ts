@@ -177,13 +177,9 @@ export function useMarkAllNotificationsRead() {
 export function useGamificationStats(options?: { enabled?: boolean }) {
   return useQuery<GamificationStats | null>({
     queryKey: [QUERY_KEYS.GAMIFICATION],
-    queryFn: async () => {
-      try {
-        return await apiClient.getGamificationStats();
-      } catch {
-        return null;
-      }
-    },
+    // Errors propagate: returning null here made /achievements read a failed
+    // fetch as Level 0 with a 0-day streak. The account menu copes with no data.
+    queryFn: () => apiClient.getGamificationStats(),
     staleTime: 10 * 60 * 1000,
     retry: false,
     enabled: options?.enabled ?? true,
@@ -193,13 +189,8 @@ export function useGamificationStats(options?: { enabled?: boolean }) {
 export function useAchievementProgress(options?: { enabled?: boolean }) {
   return useQuery<AchievementProgress[]>({
     queryKey: [QUERY_KEYS.ACHIEVEMENTS, 'progress'],
-    queryFn: async () => {
-      try {
-        return await apiClient.getAchievementProgress();
-      } catch {
-        return [];
-      }
-    },
+    // Errors propagate: [] read as "no achievements earned" (see above).
+    queryFn: () => apiClient.getAchievementProgress(),
     staleTime: 10 * 60 * 1000,
     retry: false,
     enabled: options?.enabled ?? true,

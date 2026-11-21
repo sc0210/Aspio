@@ -1,5 +1,6 @@
 'use client';
 
+import { categoryLabel } from '@/lib/transactions/categoryLabel';
 import { useId, useMemo, useState, type CSSProperties } from 'react';
 import { PieChart, Pie, Cell, Tooltip, ResponsiveContainer } from 'recharts';
 import { cn } from '@/utils/cn';
@@ -374,14 +375,14 @@ export function ExpenseGroupSummary({
                       ? `${colorGroup.lightBg} ${colorGroup.lightText} ring-2 ${colorGroup.lightRing} shadow-lg`
                       : 'bg-gray-200 dark:bg-gray-700 text-gray-700 dark:text-gray-300 hover:bg-gray-300 dark:hover:bg-gray-600 shadow-sm hover:shadow-md'
                   )}
-                  aria-label={`Filter by ${category} category`}
+                  aria-label={t('transactions:filters.filterByCategory', { category: categoryLabel(category, t) })}
                   aria-pressed={isSelected}
                 >
                   <div
                     className="w-2 h-2 rounded-full shadow-sm"
                     style={{ backgroundColor: colorGroup.color }}
                   />
-                  <span>{category}</span>
+                  <span>{categoryLabel(category, t)}</span>
                 </button>
               );
             })}
@@ -684,10 +685,10 @@ export function ExpenseGroupSummary({
                   </span>
                   <div className="min-w-0 flex-1">
                     <p className="text-xs font-medium text-gray-800 dark:text-gray-200 truncate">
-                      {tx.description || tx.category}
+                      {tx.description || categoryLabel(tx.category, t)}
                     </p>
                     <p className="text-xs text-gray-500 dark:text-gray-400 truncate">
-                      {tx.category} · {formatDate(tx.date, 'MM/dd')}
+                      {categoryLabel(tx.category, t)} · {formatDate(tx.date, 'MM/dd')}
                     </p>
                   </div>
                   <span className="flex-shrink-0 text-xs font-bold text-gray-900 dark:text-white tabular-nums">
@@ -738,10 +739,10 @@ export function ExpenseGroupSummary({
                   </span>
                   <div className="min-w-0 flex-1">
                     <p className="text-xs font-medium text-gray-800 dark:text-gray-200 truncate">
-                      {tx.description || tx.category}
+                      {tx.description || categoryLabel(tx.category, t)}
                     </p>
                     <p className="text-xs text-gray-500 dark:text-gray-400 truncate">
-                      {tx.category} · {formatDate(tx.date, 'MM/dd')}
+                      {categoryLabel(tx.category, t)} · {formatDate(tx.date, 'MM/dd')}
                     </p>
                   </div>
                   <span className="flex-shrink-0 text-xs font-bold text-prosperity-700 dark:text-prosperity-400 tabular-nums">
