@@ -103,6 +103,8 @@ def test_guesses_category(description, is_income, expected):
         ("買衣服", "Shopping", "Clothing"),
         ("捷運", "Transportation", "Public Transit"),
         ("機車保養", "Transportation", "Car Maintenance"),
+        ("保養", "Transportation", "Car Maintenance"),  # the same word reads by its category
+        ("保養", "Shopping", "Beauty"),
         ("停車費", "Transportation", "Parking"),
         ("租車", "Transportation", "Car Rental"),
         ("蝦皮", "Shopping", None),      # Shopping, but no detail suggested
