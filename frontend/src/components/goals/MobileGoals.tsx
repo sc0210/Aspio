@@ -284,9 +284,11 @@ export function MobileGoals() {
                 title={t('goals:delete', 'Delete Goal')}
                 message={deleteGoal ? t('goals:card.aria.confirmDelete', { title: deleteGoal.title }) : ''}
                 confirmLabel={t('goals:delete', 'Delete Goal')}
-                onConfirm={async () => {
+                onConfirm={() => {
                     const g = deleteGoal; setDeleteGoal(null);
-                    if (g) await deleteGoalMutation.mutateAsync(g.id);
+                    // mutate, not mutateAsync: useDeleteGoal toasts the error itself, and an
+                    // awaited rejection here went unhandled.
+                    if (g) deleteGoalMutation.mutate(g.id);
                 }}
                 onCancel={() => setDeleteGoal(null)}
             />
