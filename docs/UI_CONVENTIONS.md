@@ -10,13 +10,18 @@ by `ThemeContext`.
 
 | Scale | Role | 500 / 600 |
 |---|---|---|
-| `prosperity-*` | **Primary brand palette** | `#10b981` / `#059669` |
-| `primary-*` / `trust-*` | Blue accent | `#0ea5e9` / `#0284c7` |
+| `primary-*` / `trust-*` | **Brand**: the logo, buttons, links, focus rings, selected nav | `#0ea5e9` / `#0284c7` |
+| `prosperity-*` | Green accent: money growing, saved, achieved | `#10b981` / `#059669` |
 | `success-*` | Positive | `#22c55e` / `#16a34a` |
 | `error-*` | Negative | red scale |
 | `warning-*` / `gold-*` | Caution, highlights | `#f59e0b` / `#d97706` |
 | `secondary-*` | Neutral slate | `#64748b` / `#475569` |
 | `auspicious` | `red` `#dc2626` · `gold` `#f59e0b` · `jade` `#10b981` | market-convention accents |
+
+Reach for `primary` whenever something is the app speaking (an action, a link, what's selected).
+`prosperity` is for content that means progress, such as a goal funded or savings grown. It is
+close to `success` green, so a `prosperity` button reads as "gain" rather than "the main action";
+use the `primary` Button variant for that.
 
 `income` and `expense` are aliases of `success` and `error` — the config shares one `successScale`
 / `errorScale` object precisely so the semantic names cannot drift from the base palettes. Use
