@@ -24,6 +24,8 @@ jest.mock('@/contexts/DemoContext', () => ({
   useDemo: () => ({ isDemoMode: false, exitDemo: jest.fn() }),
 }));
 jest.mock('@/contexts/AuthContext', () => ({ useAuthContext: () => ({ session: null }) }));
+jest.mock('@/contexts/PrivacyContext', () => ({ usePrivacy: () => ({ isValueVisible: true, toggleValueVisibility: jest.fn() }) }));
+jest.mock('@/hooks/api-hooks', () => ({ useGamificationStats: () => ({ data: undefined }) }));
 jest.mock('@/lib/session-actions', () => ({ changeAppLanguage: jest.fn(), signOutCompletely: jest.fn() }));
 
 import { MobileBottomNav } from '@/components/layout/MobileBottomNav';

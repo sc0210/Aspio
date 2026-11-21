@@ -26,8 +26,6 @@ import { changeAppLanguage, signOutCompletely } from '@/lib/session-actions';
 
 interface AccountMenuProps {
   collapsed: boolean;
-  /** Closes the mobile drawer behind the menu when an item navigates. */
-  onNavigate: () => void;
 }
 
 /**
@@ -39,7 +37,7 @@ interface AccountMenuProps {
  * five of them cost more vertical space than a whole nav section. They belong
  * to the account, so they live behind it.
  */
-export function AccountMenu({ collapsed, onNavigate }: AccountMenuProps) {
+export function AccountMenu({ collapsed }: AccountMenuProps) {
   const { t, i18n } = useTranslation('common');
   // The account's real plan (was a hard-coded Premium/Basic by demo mode).
   const { tier } = useAccessTier();
@@ -63,7 +61,6 @@ export function AccountMenu({ collapsed, onNavigate }: AccountMenuProps) {
       : 0;
 
   const handleSignOut = async () => {
-    onNavigate();
     if (isDemoMode) {
       exitDemo();
       return;
@@ -170,7 +167,6 @@ export function AccountMenu({ collapsed, onNavigate }: AccountMenuProps) {
           {({ focus }) => (
             <Link
               href="/changelog"
-              onClick={onNavigate}
               aria-current={pathname.startsWith('/changelog') ? 'page' : undefined}
               className={itemClass(focus)}
             >
@@ -191,7 +187,6 @@ export function AccountMenu({ collapsed, onNavigate }: AccountMenuProps) {
           {({ focus }) => (
             <Link
               href="/settings"
-              onClick={onNavigate}
               aria-current={pathname.startsWith('/settings') ? 'page' : undefined}
               className={itemClass(focus)}
             >

@@ -2,13 +2,14 @@
 
 import { useState, useEffect, ReactNode } from 'react';
 import Link from 'next/link';
-import { MenuIcon } from '@/components/ui/OptimizedIcons';
+import { useTranslation } from 'react-i18next';
+import { MagnifyingGlassIcon } from '@heroicons/react/24/outline';
 import { NotificationBell } from '@/components/layout/NotificationBell';
 import { WhatsNewModal } from '@/components/whatsnew/WhatsNewModal';
 import { WhatsNewButton } from '@/components/whatsnew/WhatsNewButton';
 import { DashboardSidebar } from './DashboardSidebar';
 import { MobileBottomNav } from './MobileBottomNav';
-import { CommandPalette } from './CommandPalette';
+import { CommandPalette, openCommandPalette } from './CommandPalette';
 import { ProductTour } from '@/components/tour/ProductTour';
 import { TourButton } from '@/components/tour/TourButton';
 import { PageTitle } from './PageTitle';
@@ -23,21 +24,12 @@ interface DashboardLayoutProps {
 }
 
 export function DashboardLayout({ children, rightSidebar, topBarActions }: DashboardLayoutProps) {
-  const [sidebarOpen, setSidebarOpen] = useState(false);
   // Default collapsed state based on screen size
   // Tablet (md-lg): collapsed by default
   // Desktop (lg+): expanded by default
+  const { t } = useTranslation('common');
   const [sidebarCollapsed, setSidebarCollapsed] = useState(true);
   const [isMounted, setIsMounted] = useState(false);
-
-  // The phone drawer is a modal (focus trap, scroll lock) but md:hidden: left open
-  // across a widen to md+ it would trap Tab on an element that is not displayed.
-  useEffect(() => {
-    const mq = window.matchMedia('(min-width: 768px)');
-    const close = (e: MediaQueryListEvent) => { if (e.matches) setSidebarOpen(false); };
-    mq.addEventListener('change', close);
-    return () => mq.removeEventListener('change', close);
-  }, []);
 
   // Auto-collapse/expand sidebar based on screen size
   useEffect(() => {
@@ -84,10 +76,8 @@ export function DashboardLayout({ children, rightSidebar, topBarActions }: Dashb
       <div className="h-[100dvh] flex bg-gray-50 dark:bg-gray-900">
         {/* Left Sidebar */}
         <DashboardSidebar
-          open={sidebarOpen}
           collapsed={isMounted ? sidebarCollapsed : true}
           onToggleCollapsed={handleToggleCollapsed}
-          onClose={() => setSidebarOpen(false)}
         />
 
         {/* Main Content Area */}
@@ -102,17 +92,10 @@ export function DashboardLayout({ children, rightSidebar, topBarActions }: Dashb
               shell, making every page a banner's height taller than the screen. */}
           <DemoBanner />
 
-          {/* Mobile Header Bar */}
-          <div className="md:hidden bg-white dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700 flex items-center justify-between px-4 py-3">
-            <button
-              onClick={() => setSidebarOpen(true)}
-              aria-label="Open navigation menu"
-              className="p-2 rounded-lg text-gray-600 hover:text-gray-700 hover:bg-gray-100 dark:text-gray-400 dark:hover:text-gray-200 dark:hover:bg-gray-700 transition-colors min-w-[48px] min-h-[48px] flex items-center justify-center"
-            >
-              <MenuIcon className="w-6 h-6" />
-            </button>
-
-            <Link href="/dashboard" className="flex items-center space-x-2 min-h-[44px] sm:min-h-0 hover:opacity-80 transition-opacity">
+          {/* Mobile Header Bar — no hamburger: its drawer listed the same pages as
+              the tab bar's More sheet. Search, the drawer's one extra, sits here. */}
+          <div className="md:hidden bg-white dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700 flex items-center justify-between px-3 py-1">
+            <Link href="/dashboard" className="flex items-center space-x-2 min-h-[44px] hover:opacity-80 transition-opacity">
               <div className="w-8 h-8 bg-gradient-to-br from-primary-600 to-primary-500 rounded-lg flex items-center justify-center">
                 <span className="text-white font-bold text-lg">A</span>
               </div>
@@ -120,6 +103,14 @@ export function DashboardLayout({ children, rightSidebar, topBarActions }: Dashb
             </Link>
 
             <div className="flex items-center gap-1">
+              <button
+                type="button"
+                onClick={openCommandPalette}
+                aria-label={t('navigation.search', 'Search')}
+                className="flex h-11 w-11 items-center justify-center rounded-full text-gray-600 hover:bg-gray-100 dark:text-gray-400 dark:hover:bg-gray-700 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-500"
+              >
+                <MagnifyingGlassIcon className="w-5 h-5" />
+              </button>
               <TourButton />
               <div className="flex items-center gap-1" data-tour="updates">
                 <WhatsNewButton />
@@ -169,13 +160,6 @@ export function DashboardLayout({ children, rightSidebar, topBarActions }: Dashb
           </div>
         </div>
 
-        {/* Mobile Sidebar Overlay — dims the bottom tab bar (z-40) too */}
-        {sidebarOpen && (
-          <div
-            className="fixed inset-0 bg-gray-600 bg-opacity-50 z-[41] md:hidden"
-            onClick={() => setSidebarOpen(false)}
-          />
-        )}
       </div>
 
       {/* Mobile Bottom Navigation */}

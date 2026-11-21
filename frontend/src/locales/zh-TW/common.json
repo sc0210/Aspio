@@ -682,7 +682,8 @@
     "editTransaction": "編輯交易",
     "trend": "資產走勢",
     "holdings": "持股明細",
-    "groupDetail": "群組"
+    "groupDetail": "群組",
+    "xpProgress": "經驗值進度"
   },
   "notFoundPage": {
     "description": "您要找的頁面不存在或已被移動。",

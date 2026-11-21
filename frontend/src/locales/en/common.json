@@ -682,7 +682,8 @@
     "editTransaction": "Edit transaction",
     "trend": "Asset trend",
     "holdings": "Holdings",
-    "groupDetail": "Group"
+    "groupDetail": "Group",
+    "xpProgress": "XP progress"
   },
   "notFoundPage": {
     "description": "The page you're looking for doesn't exist or has been moved.",

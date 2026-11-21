@@ -10,6 +10,8 @@ import {
   Cog6ToothIcon,
   ArrowLeftOnRectangleIcon,
   GlobeAltIcon,
+  EyeIcon,
+  EyeSlashIcon,
 } from '@heroicons/react/24/outline';
 import { EllipsisHorizontalIcon as EllipsisHorizontalIconSolid } from '@heroicons/react/24/solid';
 
@@ -22,6 +24,8 @@ import { useFeatures } from '@/hooks/useFeatures';
 import { useAccessTier } from '@/hooks/useAccessTier';
 import { changeAppLanguage, signOutCompletely } from '@/lib/session-actions';
 import { useDialog } from '@/hooks/useDialog';
+import { usePrivacy } from '@/contexts/PrivacyContext';
+import { useGamificationStats } from '@/hooks/api-hooks';
 
 // ---------------------------------------------------------------------------
 // Tab configuration
@@ -83,6 +87,18 @@ function MoreSheet({ open, onClose, isDemoMode, onExitDemo }: MoreSheetProps) {
   const pathname = usePathname();
   const features = useFeatures();
   const { isPremium } = useAccessTier();
+  // Hide values and your level lived only in the sidebar's account menu, reached
+  // on a phone through a hamburger drawer that duplicated this sheet.
+  const { isValueVisible, toggleValueVisibility } = usePrivacy();
+  const { isAuthenticated } = useAuthContext();
+  const { data: stats } = useGamificationStats({ enabled: isAuthenticated });
+  const level = isDemoMode ? 5 : stats?.level;
+  const xp = isDemoMode ? 2340 : stats?.experience_points;
+  const xpPercent = isDemoMode
+    ? 78
+    : stats
+      ? Math.round(Math.min(100, (stats.experience_points / (stats.experience_points + stats.experience_to_next_level)) * 100))
+      : 0;
 
   const handleSignOut = async () => {
     onClose();
@@ -134,10 +150,29 @@ function MoreSheet({ open, onClose, isDemoMode, onExitDemo }: MoreSheetProps) {
         </div>
 
         {/* Sheet header */}
-        <div className="px-4 pt-1 pb-3 border-b border-gray-100 dark:border-gray-700">
+        <div className="px-4 pt-1 pb-3 border-b border-gray-100 dark:border-gray-700 flex items-center gap-3">
           <p className="text-sm font-semibold text-gray-900 dark:text-white">
             {t('navigation.more', 'More')}
           </p>
+          {level !== undefined && (
+            <Link
+              href="/achievements"
+              onClick={onClose}
+              className="ml-auto flex min-h-[44px] w-40 flex-col justify-center gap-1 rounded-lg px-2 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-500"
+            >
+              <span className="flex items-center justify-between text-xs">
+                <span className="rounded-full bg-primary-100 px-2 py-0.5 font-semibold text-primary-700 dark:bg-primary-900/40 dark:text-primary-300">Lv {level}</span>
+                <span className="text-gray-500 dark:text-gray-400">{xp} XP</span>
+              </span>
+              <span
+                role="progressbar" aria-valuemin={0} aria-valuemax={100} aria-valuenow={xpPercent}
+                aria-label={t('navigation.xpProgress', 'XP progress')}
+                className="h-1.5 w-full overflow-hidden rounded-full bg-gray-200 dark:bg-gray-600"
+              >
+                <span className="block h-1.5 rounded-full bg-gradient-to-r from-primary-500 to-prosperity-500" style={{ width: `${xpPercent}%` }} />
+              </span>
+            </Link>
+          )}
         </div>
 
         {/* Nav links */}
@@ -194,6 +229,21 @@ function MoreSheet({ open, onClose, isDemoMode, onExitDemo }: MoreSheetProps) {
               ))}
             </div>
           </div>
+        </div>
+
+        {/* Hide values — a toggle, so the sheet stays open to show it took. */}
+        <div className="px-2 mb-1">
+          <button
+            type="button"
+            onClick={toggleValueVisibility}
+            aria-pressed={!isValueVisible}
+            className="flex items-center w-full px-4 py-3 rounded-xl text-sm font-medium text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors min-h-[52px] touch-manipulation focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-500"
+          >
+            {isValueVisible
+              ? <EyeSlashIcon className="w-5 h-5 mr-3 flex-shrink-0 text-gray-500 dark:text-gray-400" />
+              : <EyeIcon className="w-5 h-5 mr-3 flex-shrink-0 text-warning-700 dark:text-warning-400" />}
+            {t('navigation.hideValues', 'Hide values')}
+          </button>
         </div>
 
         {/* Divider + sign-out */}
