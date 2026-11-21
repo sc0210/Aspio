@@ -523,7 +523,8 @@
     "saved": "Saved",
     "savingsRate": "{{rate}}% savings rate",
     "totalAssets": "Total Assets",
-    "noIncome": "No income this period"
+    "noIncome": "No income this period",
+    "portfolioChangeCaption": "Incl. buys & sells"
   },
   "view": {
     "compact": "Compact",
@@ -598,5 +599,6 @@
     "refreshFailed": "Prices couldn't be refreshed. Try again later.",
     "noDayChange": "No previous close for {{symbols}}, so they are left out of today's change.",
     "unconverted": "No exchange rate for {{currencies}}; those amounts are not converted to TWD."
-  }
+  },
+  "loading": "Loading dashboard"
 }

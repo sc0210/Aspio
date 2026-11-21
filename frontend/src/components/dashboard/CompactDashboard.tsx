@@ -15,6 +15,7 @@ import { DashboardLayout } from '@/components/layout/DashboardLayout';
 import { LoadingSpinner } from '@/components/ui/LoadingSpinner';
 import { DataRefreshButton } from '@/components/ui/DataRefreshButton';
 import { DashboardViewToggle } from './DashboardViewToggle';
+import { QueryErrorCard } from '@/components/ui/QueryErrorCard';
 import { useDashboardSummary } from '@/hooks/useDashboardSummary';
 import { useLifeCash } from '@/hooks/useGoals';
 import { useDashboardViewMode } from '@/hooks/useDashboardViewMode';
@@ -50,6 +51,15 @@ export function CompactDashboard() {
         return (
             <DashboardLayout topBarActions={<DashboardViewToggle />}>
                 <div className="flex items-center justify-center py-24"><LoadingSpinner size="lg" /></div>
+            </DashboardLayout>
+        );
+    }
+
+    // A failed load must not read as a real NT$0 net worth.
+    if (m.isError) {
+        return (
+            <DashboardLayout topBarActions={<DashboardViewToggle />}>
+                <div className="px-4 py-6"><QueryErrorCard onRetry={m.refetch} /></div>
             </DashboardLayout>
         );
     }

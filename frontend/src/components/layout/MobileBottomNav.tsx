@@ -1,5 +1,7 @@
 'use client';
 
+import { useIsAdmin } from '@/hooks/useAdmin';
+import { xpProgressPercent } from '@/lib/xpProgress';
 import { useState } from 'react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
@@ -10,6 +12,8 @@ import {
   Cog6ToothIcon,
   ArrowLeftOnRectangleIcon,
   GlobeAltIcon,
+  EyeIcon,
+  EyeSlashIcon,
 } from '@heroicons/react/24/outline';
 import { EllipsisHorizontalIcon as EllipsisHorizontalIconSolid } from '@heroicons/react/24/solid';
 
@@ -17,11 +21,13 @@ import { cn } from '@/utils/cn';
 import { useDemo } from '@/contexts/DemoContext';
 import { useAuthContext } from '@/contexts/AuthContext';
 import { languages } from '@/lib/i18n';
-import { getSecondaryNavItems, primaryNavItems } from '@/lib/navigation';
+import { getSecondaryNavItems, navPathFor, primaryNavItems } from '@/lib/navigation';
 import { useFeatures } from '@/hooks/useFeatures';
 import { useAccessTier } from '@/hooks/useAccessTier';
 import { changeAppLanguage, signOutCompletely } from '@/lib/session-actions';
 import { useDialog } from '@/hooks/useDialog';
+import { usePrivacy } from '@/contexts/PrivacyContext';
+import { useGamificationStats } from '@/hooks/api-hooks';
 
 // ---------------------------------------------------------------------------
 // Tab configuration
@@ -58,11 +64,12 @@ const NAV_TABS: NavTab[] = [
 // Helper — determine which tab is active from the current pathname
 // ---------------------------------------------------------------------------
 
-function useActiveTab(pathname: string): string {
+function useActiveTab(pathname: string): string | null {
   // Derived from the same `primary` flags the bar renders from — a hardcoded
   // list here would keep rendering a tab that highlighting had stopped knowing
-  // about, with nothing to catch it.
-  return primaryNavItems.find((item) => pathname.startsWith(item.href))?.href ?? pathname;
+  // about, with nothing to catch it. null: a page reached through More.
+  const path = navPathFor(pathname);
+  return primaryNavItems.find((item) => path === item.href || path.startsWith(item.href + '/'))?.href ?? null;
 }
 
 // ---------------------------------------------------------------------------
@@ -82,6 +89,19 @@ function MoreSheet({ open, onClose, isDemoMode, onExitDemo }: MoreSheetProps) {
   const pathname = usePathname();
   const features = useFeatures();
   const { isPremium } = useAccessTier();
+  const { isAdmin } = useIsAdmin();
+  // Hide values and your level lived only in the sidebar's account menu, reached
+  // on a phone through a hamburger drawer that duplicated this sheet.
+  const { isValueVisible, toggleValueVisibility } = usePrivacy();
+  const { isAuthenticated } = useAuthContext();
+  const { data: stats } = useGamificationStats({ enabled: isAuthenticated });
+  const level = isDemoMode ? 5 : stats?.level;
+  const xp = isDemoMode ? 2340 : stats?.experience_points;
+  const xpPercent = isDemoMode
+    ? 78
+    : stats
+      ? xpProgressPercent(stats)
+      : 0;
 
   const handleSignOut = async () => {
     onClose();
@@ -94,7 +114,7 @@ function MoreSheet({ open, onClose, isDemoMode, onExitDemo }: MoreSheetProps) {
   // hand-written list had five entries and silently omitted loans, groups,
   // housing, lifecycle and achievements.
   const sheetLinks = [
-    ...getSecondaryNavItems({ features, isPremium }).map((item) => ({
+    ...getSecondaryNavItems({ features, isPremium, isAdmin }).map((item) => ({
       href: item.href,
       icon: item.icon,
       labelKey: item.nameKey,
@@ -133,10 +153,29 @@ function MoreSheet({ open, onClose, isDemoMode, onExitDemo }: MoreSheetProps) {
         </div>
 
         {/* Sheet header */}
-        <div className="px-4 pt-1 pb-3 border-b border-gray-100 dark:border-gray-700">
+        <div className="px-4 pt-1 pb-3 border-b border-gray-100 dark:border-gray-700 flex items-center gap-3">
           <p className="text-sm font-semibold text-gray-900 dark:text-white">
             {t('navigation.more', 'More')}
           </p>
+          {level !== undefined && (
+            <Link
+              href="/achievements"
+              onClick={onClose}
+              className="ml-auto flex min-h-[44px] w-40 flex-col justify-center gap-1 rounded-lg px-2 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-500"
+            >
+              <span className="flex items-center justify-between text-xs">
+                <span className="rounded-full bg-primary-100 px-2 py-0.5 font-semibold text-primary-700 dark:bg-primary-900/40 dark:text-primary-300">Lv {level}</span>
+                <span className="text-gray-500 dark:text-gray-400">{xp} XP</span>
+              </span>
+              <span
+                role="progressbar" aria-valuemin={0} aria-valuemax={100} aria-valuenow={xpPercent}
+                aria-label={t('navigation.xpProgress', 'XP progress')}
+                className="h-1.5 w-full overflow-hidden rounded-full bg-gray-200 dark:bg-gray-600"
+              >
+                <span className="block h-1.5 rounded-full bg-gradient-to-r from-primary-500 to-prosperity-500" style={{ width: `${xpPercent}%` }} />
+              </span>
+            </Link>
+          )}
         </div>
 
         {/* Nav links */}
@@ -195,6 +234,21 @@ function MoreSheet({ open, onClose, isDemoMode, onExitDemo }: MoreSheetProps) {
           </div>
         </div>
 
+        {/* Hide values — a toggle, so the sheet stays open to show it took. */}
+        <div className="px-2 mb-1">
+          <button
+            type="button"
+            onClick={toggleValueVisibility}
+            aria-pressed={!isValueVisible}
+            className="flex items-center w-full px-4 py-3 rounded-xl text-sm font-medium text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors min-h-[52px] touch-manipulation focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-500"
+          >
+            {isValueVisible
+              ? <EyeSlashIcon className="w-5 h-5 mr-3 flex-shrink-0 text-gray-500 dark:text-gray-400" />
+              : <EyeIcon className="w-5 h-5 mr-3 flex-shrink-0 text-warning-700 dark:text-warning-400" />}
+            {t('navigation.hideValues', 'Hide values')}
+          </button>
+        </div>
+
         {/* Divider + sign-out */}
         <div className="px-2 pb-2">
           {isDemoMode ? (
@@ -246,14 +300,15 @@ export function MobileBottomNav() {
           'fixed bottom-0 left-0 right-0 z-40',
           'bg-white dark:bg-gray-800',
           'border-t border-gray-200 dark:border-gray-700',
-          // Was `pb-safe`, which no stylesheet defines. The mobile drawer
-          // (DashboardSidebar) stops at this bar's top: 3.5rem + 1px + this inset.
+          // Was `pb-safe`, which no stylesheet defines.
           'pb-[env(safe-area-inset-bottom,0px)]'
         )}
       >
         <div className="flex items-stretch h-14">
           {NAV_TABS.map((tab) => {
-            const isActive = tab.isMore ? sheetOpen : activeHref === tab.href;
+            // On a page reached through More (loans, review, settings…) More is the
+            // lit tab; before, all five were grey and the bar said "you are nowhere".
+            const isActive = tab.isMore ? sheetOpen || activeHref === null : activeHref === tab.href;
             const Icon = isActive ? tab.iconSolid : tab.icon;
 
             if (tab.isMore) {

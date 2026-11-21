@@ -74,6 +74,9 @@ function Slider({
  * has a good quarter.
  */
 export function GlidepathPanel({ seed, preferences, onPreferenceChange }: Props) {
+    // With no investment debt there is nothing to cross: "no longer a net borrower"
+    // celebrated a user who never borrowed, beside a header saying they were below target.
+    const noLoan = seed.debtBalance <= 0;
     const { t } = useTranslation('common');
     const { isValueVisible } = usePrivacy();
     const [showAssumptions, setShowAssumptions] = useState(false);
@@ -127,18 +130,20 @@ export function GlidepathPanel({ seed, preferences, onPreferenceChange }: Props)
             {/* The milestone. */}
             <div className={cn(
                 'mt-4 rounded-xl border p-3.5',
-                path.crossoverYear !== null
+                path.crossoverYear !== null && !noLoan
                     ? 'border-prosperity-200 dark:border-prosperity-700/50 bg-prosperity-50 dark:bg-prosperity-900/20'
                     : 'border-gray-200 dark:border-gray-700',
             )}>
                 <div className="flex items-start gap-2.5">
                     <FlagIcon className={cn(
                         'w-5 h-5 shrink-0 mt-0.5',
-                        path.crossoverYear !== null ? 'text-prosperity-700' : 'text-gray-500 dark:text-gray-400',
+                        path.crossoverYear !== null && !noLoan ? 'text-prosperity-700' : 'text-gray-500 dark:text-gray-400',
                     )} />
                     <div className="min-w-0">
                         <p className="text-xs font-bold text-gray-800 dark:text-gray-100">
-                            {path.crossoverYear === null
+                            {noLoan
+                                ? t('lifecycle.glide.noLoanYet', 'No investment loan yet')
+                                : path.crossoverYear === null
                                 ? t('lifecycle.glide.noCrossover', 'No crossover before retirement')
                                 : path.crossoverYear === 0
                                     ? t('lifecycle.glide.crossedAlready', 'You are no longer a net borrower')
@@ -224,7 +229,19 @@ export function GlidepathPanel({ seed, preferences, onPreferenceChange }: Props)
                 </div>
             )}
 
-            <div className="mt-4">
+            {/* The two lines had no key: their names were only in the tooltip. */}
+            <div className="mt-4 flex flex-wrap items-center gap-x-4 gap-y-1 text-xs text-gray-600 dark:text-gray-400" aria-hidden="true">
+                <span className="inline-flex items-center gap-1.5">
+                    <span className="inline-block w-5 h-0.5 rounded" style={{ background: COLORS.actual }} />
+                    {t('lifecycle.glide.actual', 'Your leverage')}
+                </span>
+                <span className="inline-flex items-center gap-1.5">
+                    <span className="inline-block w-5 border-t-2 border-dashed" style={{ borderColor: COLORS.target }} />
+                    {t('lifecycle.glide.targetLine', 'Target')}
+                </span>
+            </div>
+
+            <div className="mt-2">
                 <GlidepathChart
                     data={path.points}
                     colors={COLORS}

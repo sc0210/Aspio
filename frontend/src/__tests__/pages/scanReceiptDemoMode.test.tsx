@@ -15,8 +15,9 @@ import { transactionService } from '@/services/transactionService';
 import { ApiError } from '@/lib/api-client';
 import toast from 'react-hot-toast';
 
+const mockPush = jest.fn();
 jest.mock('next/navigation', () => ({
-  useRouter: () => ({ push: jest.fn(), replace: jest.fn() }),
+  useRouter: () => ({ push: mockPush, replace: jest.fn() }),
   usePathname: () => '/transactions/scan',
 }));
 
@@ -106,40 +107,35 @@ describe('ScanReceiptPage — demo mode', () => {
     await waitFor(() => expect(mockScan).toHaveBeenCalledTimes(1));
   });
 
-  it('saves a scanned receipt through the transaction service, in the shape it maps', async () => {
-    // The page used to post its own object straight to /transactions/ — a Date
-    // under `date`, camelCase paymentMethod — which the backend rejected.
+  it('hands the scanned fields to the add form, prefilled, instead of saving blind', async () => {
+    // It used to save every receipt as Others / Life / TWD with no category choice.
     mockUseModeAwareUI.mockReturnValue({ isDemo: false });
     mockScan.mockResolvedValue({ data: { amount: 120, merchant_name: 'Shop', date: '2026-09-13' } });
-    mockCreate.mockResolvedValue({ success: true, data: { id: 'tx-1' } });
     const user = userEvent.setup();
     render(<ScanReceiptPage />);
 
     await chooseReceiptAndProcess(user);
-    await user.click(await screen.findByRole('button', { name: 'transactions:scan.addTransaction' }));
+    await user.click(await screen.findByRole('button', { name: 'transactions:scan.reviewAndSave' }));
 
-    await waitFor(() => expect(mockCreate).toHaveBeenCalledTimes(1));
-    const sent = mockCreate.mock.calls[0][0];
-    expect(sent).toMatchObject({ type: 'expense', amount: 120, currency: 'TWD', walletType: 'life' });
-    expect(sent.date).toBeInstanceOf(Date);
-    expect(sent.paymentMethod).toBeUndefined();
+    expect(mockCreate).not.toHaveBeenCalled();
+    const url = new URL(mockPush.mock.calls.at(-1)[0], 'http://x');
+    expect(url.pathname).toBe('/transactions/add');
+    expect(Object.fromEntries(url.searchParams)).toMatchObject({ type: 'expense', amount: '120', walletType: 'life', date: '2026-09-13' });
+    expect(url.searchParams.get('category')).toBeNull(); // the user picks it
   });
 
-  it('sends a payment method typed into the form in the spelling the backend accepts', async () => {
-    // OCR never extracts one, but the form's Payment Method field is editable;
-    // this is the path the mapping exists for.
+  it('carries a payment method typed into the form, in the backend spelling', async () => {
     mockUseModeAwareUI.mockReturnValue({ isDemo: false });
     mockScan.mockResolvedValue({ data: { amount: 120, merchant_name: 'Shop', date: '2026-09-13' } });
-    mockCreate.mockResolvedValue({ success: true, data: { id: 'tx-1' } });
     const user = userEvent.setup();
     render(<ScanReceiptPage />);
 
     await chooseReceiptAndProcess(user);
-    await user.type(await screen.findByLabelText('transactions:fields.paymentMethod'), 'GCash');
-    await user.click(screen.getByRole('button', { name: 'transactions:scan.addTransaction' }));
+    await user.type(await screen.findByLabelText('transactions:fields.paymentMethod'), 'LINE Pay');
+    await user.click(screen.getByRole('button', { name: 'transactions:scan.reviewAndSave' }));
 
-    await waitFor(() => expect(mockCreate).toHaveBeenCalledTimes(1));
-    expect(mockCreate.mock.calls[0][0].paymentMethod).toBe('gcash');
+    const url = new URL(mockPush.mock.calls.at(-1)[0], 'http://x');
+    expect(url.searchParams.get('paymentMethod')).toBe('line_pay');
   });
 });
 

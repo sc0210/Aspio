@@ -1,5 +1,6 @@
 'use client';
 
+import { QueryErrorCard } from '@/components/ui/QueryErrorCard';
 import { useTranslation } from 'react-i18next';
 import { DashboardLayout } from '@/components/layout/DashboardLayout';
 import { PageHeader } from '@/components/layout/PageHeader';
@@ -63,6 +64,8 @@ function DesktopLifecyclePage() {
         selectedLoanIds,
         toggleLoan,
         showSpinner,
+        loadFailed,
+        retry,
     } = useLifecycleModel();
 
     return (
@@ -78,6 +81,8 @@ function DesktopLifecyclePage() {
                     <div className="flex items-center justify-center py-24">
                         <LoadingSpinner />
                     </div>
+                ) : loadFailed ? (
+                    <QueryErrorCard onRetry={retry} />
                 ) : (
                     <>
                         <PositionHeader

@@ -1,7 +1,9 @@
 'use client';
 
+import { useGoogleSignIn } from '@/hooks/useGoogleSignIn';
+import { useDemo } from '@/contexts/DemoContext';
 import { useState, useMemo, Suspense } from 'react';
-import { signIn } from 'next-auth/react';
+import { signIn, signOut } from 'next-auth/react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import Link from 'next/link';
 import { useForm } from 'react-hook-form';
@@ -62,6 +64,8 @@ export default function SignInPage() {
 function SignInForm() {
   const [isLoading, setIsLoading] = useState(false);
   const [isGoogleLoading, setIsGoogleLoading] = useState(false);
+  const { enableDemo } = useDemo();
+  const showGoogle = useGoogleSignIn();
   const [isDemoLoading, setIsDemoLoading] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
   const { t } = useTranslation(['auth']);
@@ -114,21 +118,21 @@ function SignInForm() {
     }
   };
 
+  // The client-side demo, as the landing page uses: the 'demo' NextAuth provider
+  // needs DEMO_EMAIL/DEMO_PASSWORD on the frontend, and without them this button
+  // only ever said "Demo account unavailable".
   const handleDemoSignIn = async () => {
     setIsDemoLoading(true);
+    // A session outranks the demo cookie (AuthContext), so a lingering one (a pending
+    // Google sign-up) would land in that account, not the demo. Clear it first.
     try {
-      const result = await signIn('demo', { redirect: false });
-      if (result?.error) {
-        toast.error(t('auth:signIn.toast.demoUnavailable'));
-      } else {
-        toast.success(t('auth:signIn.toast.demoWelcome'));
-        router.push('/');
-      }
+      await signOut({ redirect: false });
     } catch {
-      toast.error(t('auth:signIn.toast.genericError'));
-    } finally {
-      setIsDemoLoading(false);
+      // Still enter the demo: a failed sign-out must not leave the button dead.
     }
+    enableDemo();
+    toast.success(t('auth:signIn.toast.demoWelcome'));
+    window.location.assign('/dashboard');
   };
 
   const handleGoogleSignIn = async () => {
@@ -245,9 +249,8 @@ function SignInForm() {
                     rightIcon={
                       <button
                         type="button"
-                        tabIndex={-1}
                         onClick={() => setShowPassword(v => !v)}
-                        className="text-gray-500 dark:text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 transition-colors"
+                        className="grid place-items-center w-11 h-11 -mr-3 rounded-lg text-gray-500 dark:text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-500"
                         aria-label={showPassword ? t('auth:signIn.hidePassword') : t('auth:signIn.showPassword')}
                       >
                         {showPassword
@@ -273,6 +276,8 @@ function SignInForm() {
                 </Button>
               </form>
 
+              {/* Divider + Google: only where this instance has Google sign-in. */}
+              {showGoogle && (<>
               {/* Divider */}
               <div className="relative">
                 <div className="absolute inset-0 flex items-center">
@@ -293,6 +298,7 @@ function SignInForm() {
                 {isGoogleLoading ? <LoadingSpinner size="sm" /> : GoogleIcon}
                 {t('auth:signIn.signInWithGoogle')}
               </button>
+              </>)}
 
               {/* Demo */}
               <div>

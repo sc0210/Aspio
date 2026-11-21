@@ -1,6 +1,7 @@
 'use client';
 
 import { useMemo } from 'react';
+import { demoEmergencyRunway } from '@/lib/dashboard/demoRunway';
 import { demoLoans } from '@/data/demoData';
 import { keepPreviousData } from '@tanstack/react-query';
 import { dashboardService } from '@/services/dashboardService';
@@ -55,6 +56,12 @@ interface RawHolding {
   name?: string;
 }
 
+function runwayOf(months: number, emergency: number, periodExpenses: number): number | null {
+  if (months > 0) return months;
+  if (periodExpenses <= 0 || emergency > 0) return null;
+  return 0;
+}
+
 interface DashboardStatsData {
   life_wallet?: number;
   portfolio_wallet?: number;
@@ -74,6 +81,7 @@ interface DashboardStatsData {
   monthlyChange?: number;
   upcoming_bills?: number;
   upcomingBills?: number;
+  emergencyFundMonths?: number;
 }
 
 interface PortfolioOverviewData {
@@ -104,6 +112,8 @@ interface OptimizedDashboardData {
     monthlyChange: number;
     upcomingBills: number;
     totalAssets: number;
+    /** Months the emergency fund covers at the MONTHLY spending rate; null with no spending. */
+    emergencyFundMonths: number | null;
   };
   recentTransactions: unknown[];
   portfolio: {
@@ -184,6 +194,7 @@ export function useOptimizedDashboard(dateRange: '7d' | '14d' | 'month' | '30d' 
         monthlyChange: 0,
         upcomingBills: 2,
         totalAssets: demoStats.life_wallet + demoStats.emergency_wallet + demoStats.portfolio_wallet,
+        emergencyFundMonths: demoEmergencyRunway(demoStats.emergency_wallet, demoTransactions),
       },
       recentTransactions: demoTransactions.slice(0, 5),
       portfolio: {
@@ -376,6 +387,17 @@ export function useOptimizedDashboard(dateRange: '7d' | '14d' | 'month' | '30d' 
             monthlyChange: safeNumber(statsData?.monthly_change ?? statsData?.monthlyChange, 0),
             upcomingBills: safeNumber(statsData?.upcoming_bills ?? statsData?.upcomingBills, 0),
             totalAssets: total_asset,
+            // The backend divides by a monthly rate measured over the selected window
+            // (dashboard/services.py::_calc_emergency_fund_months). Dividing by the
+            // period's expenses here made runway move with the period selector.
+            // 0 is also what the backend sends when the window had no LIVING spend
+            // (only investment buys): with an emergency fund that is "—", not 0 mo.
+            // A real 0 (spending, no fund) still reads 0.
+            emergencyFundMonths: runwayOf(
+              safeNumber(statsData?.emergencyFundMonths, 0),
+              emergency_wallet,
+              safeNumber(statsData?.total_expenses ?? statsData?.totalExpenses, 0),
+            ),
           };
 
           const rawData = trendsData?.data as { dataPoints?: TrendDataPoint[] } | undefined;

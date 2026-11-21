@@ -155,11 +155,18 @@ export function groupOf(category: string): CategoryGroup | undefined {
   return EXPENSE_GROUPS.find((g) => g.category === category || g.options.some((o) => o.category === category));
 }
 
+// The common Taiwan methods the backend enum already accepts (PaymentMethod);
+// the list offered only four generic ones, so a LINE Pay purchase was "E-Wallet".
 export const PAYMENT_METHODS = [
   { value: 'cash',           label: 'Cash'          },
   { value: 'credit_card',    label: 'Credit Card'   },
+  { value: 'debit_card',     label: 'Debit Card'    },
+  { value: 'line_pay',       label: 'LINE Pay'      },
   { value: 'bank_transfer',  label: 'Bank Transfer' },
-  { value: 'digital_wallet', label: 'E-Wallet'      },
+  { value: 'shopee_pay',     label: 'ShopeePay'     },
+  { value: 'wechat_pay',     label: 'WeChat Pay'    },
+  { value: 'alipay',         label: 'Alipay'        },
+  { value: 'digital_wallet', label: 'Other e-wallet' },
 ];
 
 // Life and Emergency are the only cash wallets. The Portfolio wallet holds

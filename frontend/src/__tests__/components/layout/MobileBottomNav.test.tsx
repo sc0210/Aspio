@@ -24,6 +24,11 @@ jest.mock('@/contexts/DemoContext', () => ({
   useDemo: () => ({ isDemoMode: false, exitDemo: jest.fn() }),
 }));
 jest.mock('@/contexts/AuthContext', () => ({ useAuthContext: () => ({ session: null }) }));
+jest.mock('@/hooks/useAdmin', () => ({ useIsAdmin: () => ({ isAdmin: false }) }));
+const mockToggleValues = jest.fn();
+jest.mock('@/contexts/PrivacyContext', () => ({ usePrivacy: () => ({ isValueVisible: true, toggleValueVisibility: mockToggleValues }) }));
+const mockStats: { data: unknown } = { data: undefined };
+jest.mock('@/hooks/api-hooks', () => ({ useGamificationStats: () => mockStats }));
 jest.mock('@/lib/session-actions', () => ({ changeAppLanguage: jest.fn(), signOutCompletely: jest.fn() }));
 
 import { MobileBottomNav } from '@/components/layout/MobileBottomNav';
@@ -49,5 +54,32 @@ describe('MobileBottomNav More sheet', () => {
     const hrefs = openSheetHrefs();
     expect(hrefs).toContain('/loans');
     expect(hrefs).not.toContain('/groups');
+  });
+
+  afterEach(() => {
+    mockStats.data = undefined;
+    mockToggleValues.mockClear();
+  });
+
+  it('carries Hide values, which only the removed phone drawer had', () => {
+    render(<MobileBottomNav />);
+    fireEvent.click(screen.getByRole('button', { name: 'navigation.moreOptions' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Hide values' }));
+    expect(mockToggleValues).toHaveBeenCalledTimes(1);
+  });
+
+  it('shows your level, linking to achievements, once it is known', () => {
+    mockStats.data = { level: 3, experience_points: 0, experience_to_next_level: 0 };
+    render(<MobileBottomNav />);
+    fireEvent.click(screen.getByRole('button', { name: 'navigation.moreOptions' }));
+    expect(screen.getByRole('link', { name: /Lv 3/ })).toHaveAttribute('href', '/achievements');
+    // A new account's 0/0 is 0%, not NaN.
+    expect(screen.getByRole('progressbar')).toHaveAttribute('aria-valuenow', '0');
+  });
+
+  it('shows no level while it is unknown', () => {
+    openSheetHrefs();
+    expect(screen.queryByRole('link', { name: /Lv/ })).not.toBeInTheDocument();
+    expect(screen.queryByRole('progressbar')).not.toBeInTheDocument();
   });
 });

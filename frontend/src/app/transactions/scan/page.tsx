@@ -1,8 +1,8 @@
 'use client';
 
+import { PAYMENT_METHODS } from '@/components/transactions/TransactionFormFields';
 import { useState, useRef, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
-import { useMutation, useQueryClient } from '@tanstack/react-query';
 import Link from 'next/link';
 import Image from 'next/image';
 import toast from 'react-hot-toast';
@@ -19,7 +19,6 @@ import { Input } from '@/components/ui/Input';
 import { DashboardLayout } from '@/components/layout/DashboardLayout';
 import { PageHeader } from '@/components/layout/PageHeader';
 import { formatCurrency, localDateString } from '@/utils/formatters';
-import { QUERY_KEYS, invalidateDashboardData } from '@/hooks/useDataSynchronization';
 import { toBackendPaymentMethod } from '@/utils/paymentMethods';
 import { LoadingSpinner } from '@/components/ui/LoadingSpinner';
 import { transactionService } from '@/services/transactionService';
@@ -55,41 +54,24 @@ export default function ScanReceiptPage() {
   const [scanError, setScanError] = useState<string | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
-  const queryClient = useQueryClient();
-  const createTransactionMutation = useMutation({
-    // Through the service, which maps to the backend's TransactionCreate
-    // (transaction_date, category_name/category_id, snake_case payment_method).
-    // This page used to post its own shape — a Date under `date`, camelCase
-    // paymentMethod, a category the backend never reads — and every save 422'd.
-    mutationFn: async (data: ExtractedData) => {
-      const response = await transactionService.createTransaction({
-        type: 'expense',
-        amount: data.amount,
-        currency: 'TWD',
-        category: 'Others',
-        description: data.merchant
-          ? t('transactions:scan.purchaseAt', { merchant: data.merchant })
-          : t('transactions:scan.receiptPurchase'),
-        date: new Date(data.date),
-        walletType: 'life',
-        paymentMethod: toBackendPaymentMethod(data.paymentMethod),
-        tags: ['receipt-scanned'],
-      } as Parameters<typeof transactionService.createTransaction>[0]);
-      if (!response.success) throw new Error(response.message);
-      return response.data;
-    },
-    onSuccess: async () => {
-      // As /transactions/add does: otherwise the list the user lands on is the
-      // cached one, without the transaction just saved.
-      await queryClient.invalidateQueries({ queryKey: [QUERY_KEYS.TRANSACTIONS] });
-      invalidateDashboardData(queryClient);
-      toast.success(t('transactions:toast.created'));
-      router.push('/transactions');
-    },
-    onError: () => {
-      toast.error(t('transactions:toast.createFailed'));
-    },
-  });
+  // Scanned fields go to the add form, prefilled, instead of being saved here as
+  // Others / Life / TWD with no category choice: the user picks the category (and
+  // can correct anything) with the normal form, and its validation applies.
+  const reviewHref = (data: ExtractedData) => {
+    const q = new URLSearchParams({ type: 'expense', walletType: 'life', currency: 'TWD' });
+    if (data.amount > 0) q.set('amount', String(data.amount));
+    q.set('description', data.merchant
+      ? t('transactions:scan.purchaseAt', { merchant: data.merchant })
+      : t('transactions:scan.receiptPurchase'));
+    // A plain YYYY-MM-DD passes through: parsing it reads UTC midnight, a day early west of UTC.
+    const day = /^\d{4}-\d{2}-\d{2}/.test(data.date ?? '') ? data.date.slice(0, 10)
+      : data.date ? localDateString(new Date(data.date)) : '';
+    if (day && !day.includes('NaN')) q.set('date', day);
+    // Only a method the form offers: the prefill drops any other, silently.
+    const pm = toBackendPaymentMethod(data.paymentMethod);
+    if (pm && PAYMENT_METHODS.some((m) => m.value === pm)) q.set('paymentMethod', pm);
+    return `/transactions/add?${q.toString()}`;
+  };
 
   const handleFileSelect = useCallback((file: File) => {
     if (!file.type.startsWith('image/')) {
@@ -193,8 +175,7 @@ export default function ScanReceiptPage() {
 
   const handleConfirmTransaction = () => {
     if (!extractedData) return;
-
-    createTransactionMutation.mutate(extractedData);
+    router.push(reviewHref(extractedData));
   };
 
   return (
@@ -450,10 +431,9 @@ export default function ScanReceiptPage() {
               </Button>
               <Button
                 onClick={handleConfirmTransaction}
-                isLoading={createTransactionMutation.isPending}
                 className="sm:flex-1"
               >
-                {t('transactions:scan.addTransaction')}
+                {t('transactions:scan.reviewAndSave')}
               </Button>
             </div>
           </div>

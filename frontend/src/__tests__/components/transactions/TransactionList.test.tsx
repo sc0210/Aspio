@@ -146,6 +146,13 @@ beforeEach(() => {
   mockDeleteMutation.isPending = false;
 });
 
+// Days on the page start open now; open one only if it is closed (clicking an
+// open header would close it).
+function openDay() {
+  const header = screen.getByRole('button', { name: /Expand|Collapse/i });
+  if (header.getAttribute('aria-expanded') === 'false') fireEvent.click(header);
+}
+
 describe('TransactionList', () => {
   describe('empty and loading states', () => {
     it('shows i18n no-results text when transaction list is empty', () => {
@@ -170,8 +177,7 @@ describe('TransactionList', () => {
       render(<TransactionList transactions={[makeTransaction()]} />);
 
       // expand the date group first
-      const header = screen.getByRole('button', { name: /Expand|Collapse/i });
-      fireEvent.click(header);
+      openDay();
 
       fireEvent.click(screen.getByText('Delete'));
       expect(confirmSpy).not.toHaveBeenCalled();
@@ -181,8 +187,7 @@ describe('TransactionList', () => {
     it('shows confirmation modal when Delete is clicked', () => {
       render(<TransactionList transactions={[makeTransaction()]} />);
 
-      const header = screen.getByRole('button', { name: /Expand|Collapse/i });
-      fireEvent.click(header);
+      openDay();
 
       fireEvent.click(screen.getByText('Delete'));
       expect(screen.getByText('Delete transaction')).toBeInTheDocument();
@@ -192,8 +197,7 @@ describe('TransactionList', () => {
     it('closes the modal when Cancel is clicked', () => {
       render(<TransactionList transactions={[makeTransaction()]} />);
 
-      const header = screen.getByRole('button', { name: /Expand|Collapse/i });
-      fireEvent.click(header);
+      openDay();
 
       fireEvent.click(screen.getByText('Delete'));
       expect(screen.getByText('Delete transaction')).toBeInTheDocument();
@@ -206,8 +210,7 @@ describe('TransactionList', () => {
       mockMutateAsync.mockResolvedValue({});
       render(<TransactionList transactions={[makeTransaction({ id: 'abc' })]} />);
 
-      const header = screen.getByRole('button', { name: /Expand|Collapse/i });
-      fireEvent.click(header);
+      openDay();
 
       // Open the modal
       fireEvent.click(screen.getByText('Delete'));
@@ -226,8 +229,7 @@ describe('TransactionList', () => {
       mockMutateAsync.mockResolvedValue({});
       render(<TransactionList transactions={[makeTransaction()]} />);
 
-      const header = screen.getByRole('button', { name: /Expand|Collapse/i });
-      fireEvent.click(header);
+      openDay();
 
       fireEvent.click(screen.getByText('Delete'));
       const deleteButtons = screen.getAllByText('Delete');
@@ -248,8 +250,7 @@ describe('TransactionList', () => {
       ];
       render(<TransactionList transactions={txns} />);
 
-      const header = screen.getByRole('button', { name: /Expand|Collapse/i });
-      fireEvent.click(header);
+      openDay();
 
       // Select both transactions via checkboxes
       const checkboxes = screen.getAllByRole('checkbox');
@@ -276,8 +277,7 @@ describe('TransactionList', () => {
       const txns = [makeTransaction({ id: '1', date: new Date('2024-03-15T10:00:00Z') })];
       render(<TransactionList transactions={txns} />);
 
-      const header = screen.getByRole('button', { name: /Expand|Collapse/i });
-      fireEvent.click(header);
+      openDay();
 
       const checkboxes = screen.getAllByRole('checkbox');
       fireEvent.click(checkboxes[0]);
@@ -298,7 +298,7 @@ describe('TransactionList', () => {
         makeTransaction({ id: '2', description: 'Buy 0050', holdingId: 'h1', date: new Date('2024-03-15T11:00:00Z') }),
       ];
       render(<TransactionList transactions={txns} />);
-      fireEvent.click(screen.getByRole('button', { name: /Expand|Collapse/i }));
+      openDay();
       // One row menu has Delete, the holding's row has none.
       expect(screen.getAllByText('Delete')).toHaveLength(1);
     });
@@ -310,7 +310,7 @@ describe('TransactionList', () => {
         makeTransaction({ id: '2', description: 'Buy 0050', holdingId: 'h1', date: new Date('2024-03-15T11:00:00Z') }),
       ];
       render(<TransactionList transactions={txns} />);
-      fireEvent.click(screen.getByRole('button', { name: /Expand|Collapse/i }));
+      openDay();
       const checkboxes = screen.getAllByRole('checkbox');
       fireEvent.click(checkboxes[0]);
       fireEvent.click(checkboxes[1]);
@@ -326,8 +326,7 @@ describe('TransactionList', () => {
     it('renders checkboxes without hidden sm:block — visible on all screen sizes', () => {
       const { container } = render(<TransactionList transactions={[makeTransaction()]} />);
 
-      const header = screen.getByRole('button', { name: /Expand|Collapse/i });
-      fireEvent.click(header);
+      openDay();
 
       const checkboxes = container.querySelectorAll('input[type="checkbox"]');
       checkboxes.forEach(cb => {
@@ -340,8 +339,7 @@ describe('TransactionList', () => {
     it('renders Edit label from t() not hardcoded Chinese', () => {
       render(<TransactionList transactions={[makeTransaction()]} />);
 
-      const header = screen.getByRole('button', { name: /Expand|Collapse/i });
-      fireEvent.click(header);
+      openDay();
 
       expect(screen.getByText('Edit')).toBeInTheDocument();
       expect(screen.queryByText('編輯')).toBeNull();
@@ -350,8 +348,7 @@ describe('TransactionList', () => {
     it('renders Delete label from t() not hardcoded Chinese', () => {
       render(<TransactionList transactions={[makeTransaction()]} />);
 
-      const header = screen.getByRole('button', { name: /Expand|Collapse/i });
-      fireEvent.click(header);
+      openDay();
 
       expect(screen.getByText('Delete')).toBeInTheDocument();
       expect(screen.queryByText('刪除')).toBeNull();
@@ -360,8 +357,7 @@ describe('TransactionList', () => {
     it('shows selected count from t() after selecting a transaction', () => {
       render(<TransactionList transactions={[makeTransaction()]} />);
 
-      const header = screen.getByRole('button', { name: /Expand|Collapse/i });
-      fireEvent.click(header);
+      openDay();
 
       const checkboxes = screen.getAllByRole('checkbox');
       fireEvent.click(checkboxes[0]);
@@ -454,14 +450,28 @@ describe('TransactionList', () => {
     });
 
     it('uses formatCurrency for per-transaction amounts', () => {
-      // Use a past date so the group does not auto-expand (we expand it manually)
+      // Every day on the page starts open, past ones included.
       render(<TransactionList transactions={[makeTransaction({ date: new Date('2024-03-15T10:00:00Z'), amount: 250, currency: 'USD' })]} />);
-
-      const header = screen.getByRole('button', { name: /Expand/i });
-      fireEvent.click(header);
 
       // formatCurrency mock returns "${currency}${amount}" → component prepends "-" → "-USD250"
       expect(screen.getByText('-USD250')).toBeInTheDocument();
+    });
+  });
+  describe('days start open; a day the user closed stays closed', () => {
+    const day = (iso: string, id: string) => makeTransaction({ id, date: new Date(iso) });
+    const headers = () => screen.getAllByRole('button', { name: /^(Expand|Collapse) transactions for/ });
+
+    it('opens every day on first render, past ones included', () => {
+      render(<TransactionList transactions={[day('2024-03-15T10:00:00Z', 'a'), day('2024-03-10T10:00:00Z', 'b')]} />);
+      expect(headers().map((h) => h.getAttribute('aria-expanded'))).toEqual(['true', 'true']);
+    });
+
+    it('keeps a closed day closed when new data arrives, and opens the new day', () => {
+      const first = [day('2024-03-15T10:00:00Z', 'a'), day('2024-03-10T10:00:00Z', 'b')];
+      const { rerender } = render(<TransactionList transactions={first} />);
+      fireEvent.click(headers()[1]); // close Mar 10
+      rerender(<TransactionList transactions={[...first, day('2024-03-05T10:00:00Z', 'c')]} />);
+      expect(headers().map((h) => h.getAttribute('aria-expanded'))).toEqual(['true', 'false', 'true']);
     });
   });
 });

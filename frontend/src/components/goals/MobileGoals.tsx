@@ -11,7 +11,10 @@ import { PlusIcon } from '@heroicons/react/24/outline';
 import { DashboardLayout } from '@/components/layout/DashboardLayout';
 import { LoadingSpinner } from '@/components/ui/LoadingSpinner';
 import { BiggerScreenHint } from '@/components/dashboard/BiggerScreenHint';
-import { useGoals, type Goal } from '@/hooks/useGoals';
+import { useGoals, useDeleteGoal, type Goal } from '@/hooks/useGoals';
+import { ConfirmDialog } from '@/components/ui/ConfirmDialog';
+import { portfolioCreditedGoal } from '@/utils/goalMatchers';
+import Link from 'next/link';
 import { usePortfolio } from '@/hooks/usePortfolio';
 import { selectPrimaryGoal } from '@/hooks/useDashboardSummary';
 import { usePrivacy } from '@/contexts/PrivacyContext';
@@ -26,6 +29,10 @@ const CreateGoalModal = dynamic(
 );
 const ContributeModal = dynamic(
     () => import('@/components/goals/ContributeModal').then((m) => ({ default: m.ContributeModal })),
+    { ssr: false },
+);
+const EditGoalModal = dynamic(
+    () => import('@/components/goals/EditGoalModal').then((m) => ({ default: m.EditGoalModal })),
     { ssr: false },
 );
 
@@ -50,6 +57,8 @@ function pct(g: Goal) {
 export function MobileGoals() {
     const { t, i18n } = useTranslation(['goals', 'dashboard', 'common']);
     const { data: goals = [], isLoading } = useGoals();
+    // The goal the portfolio is credited to: edit-only, never deleted from here.
+    const retirementId = portfolioCreditedGoal(goals)?.id;
     // Retirement progress comes from the portfolio, so this view needs it too.
     const { portfolio } = usePortfolio();
     const portfolioTotalValue: number =
@@ -63,6 +72,9 @@ export function MobileGoals() {
     const [createOpen, setCreateOpen] = useState(false);
     const [createLink, setCreateLink] = useState<ReturnType<typeof createLinkDefaults> | null>(null);
     const [moneyGoal, setMoneyGoal] = useState<Goal | null>(null);
+    const [editGoal, setEditGoal] = useState<Goal | null>(null);
+    const [deleteGoal, setDeleteGoal] = useState<Goal | null>(null);
+    const deleteGoalMutation = useDeleteGoal();
     const goCreate = () => setCreateOpen(true);
     useEffect(() => {
         const params = new URLSearchParams(window.location.search);
@@ -77,6 +89,25 @@ export function MobileGoals() {
     }, [router]);
     // Same rule as the desktop card (goalMoney.ts): nothing to move on a
     // reached goal holding no cash, or an emergency fund holding none.
+    // Phones could see goals but never edit or delete them. The portfolio-credited
+    // retirement goal is edit-only, as on desktop.
+    const goalActions = (g: Goal) => (
+        <>
+            <button type="button" onClick={() => setEditGoal(g)}
+                aria-label={t('goals:card.aria.edit', { title: g.title })}
+                className="min-h-[44px] px-3 rounded-xl text-xs font-semibold text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-400">
+                {t('goals:edit', 'Edit Goal')}
+            </button>
+            {g.id !== retirementId && (
+                <button type="button" onClick={() => setDeleteGoal(g)}
+                    aria-label={t('goals:card.aria.delete', { title: g.title })}
+                    className="min-h-[44px] px-3 rounded-xl text-xs font-semibold text-error-700 dark:text-error-400 hover:bg-error-50 dark:hover:bg-error-900/20 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-error-400">
+                    {t('goals:delete', 'Delete Goal')}
+                </button>
+            )}
+            {moneyButton(g)}
+        </>
+    );
     const moneyButton = (g: Goal) => canMoveGoalCash(g) ? (
         <button
             type="button"
@@ -157,7 +188,9 @@ export function MobileGoals() {
                             const eta = etaText(g);
                             return (
                                 <section data-tour="goals-m-hero" className="rounded-3xl bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 shadow-sm p-5 flex items-center gap-5">
-                                    <svg viewBox="0 0 100 100" className="w-[112px] h-[112px] flex-shrink-0 -rotate-90" aria-hidden="true">
+                                    <svg viewBox="0 0 100 100" className="w-[112px] h-[112px] flex-shrink-0 -rotate-90"
+                                        role="progressbar" aria-valuenow={Math.round(p)} aria-valuemin={0} aria-valuemax={100}
+                                        aria-label={t('goals:card.aria.progress', { title: g.title })}>
                                         <circle cx="50" cy="50" r="42" fill="none" stroke="currentColor" strokeWidth="9" className="text-gray-100 dark:text-gray-700" />
                                         <circle cx="50" cy="50" r="42" fill="none" stroke={RING} strokeWidth="9" strokeLinecap="round"
                                             strokeDasharray={C} strokeDashoffset={C * (1 - p / 100)} />
@@ -177,7 +210,7 @@ export function MobileGoals() {
                                                 {t('goals:invest.horizonShort')}
                                             </p>
                                         )}
-                                        <div className="mt-3">{moneyButton(g)}</div>
+                                        <div className="mt-3 flex flex-wrap items-center gap-1">{goalActions(g)}</div>
                                     </div>
                                 </section>
                             );
@@ -202,7 +235,14 @@ export function MobileGoals() {
                                                 </div>
                                                 <span className="text-base font-extrabold tabular-nums text-prosperity-700 dark:text-prosperity-400 flex-shrink-0">{Math.round(p)}%</span>
                                             </div>
-                                            <div className="mt-3 h-2 rounded-full bg-gray-100 dark:bg-gray-700 overflow-hidden">
+                                            <div
+                                                role="progressbar"
+                                                aria-valuenow={Math.round(p)}
+                                                aria-valuemin={0}
+                                                aria-valuemax={100}
+                                                aria-label={t('goals:card.aria.progress', { title: g.title })}
+                                                className="mt-3 h-2 rounded-full bg-gray-100 dark:bg-gray-700 overflow-hidden"
+                                            >
                                                 <div className="h-full rounded-full transition-all" style={{ width: `${p}%`, background: RING }} />
                                             </div>
                                             {goalHorizonRisk(g) && (
@@ -210,7 +250,7 @@ export function MobileGoals() {
                                                     {t('goals:invest.horizonShort')}
                                                 </p>
                                             )}
-                                            <div className="mt-3 flex justify-end">{moneyButton(g)}</div>
+                                            <div className="mt-3 flex items-center justify-end gap-1">{goalActions(g)}</div>
                                         </Card>
                                     );
                                 })}
@@ -219,11 +259,13 @@ export function MobileGoals() {
                     </>
                 )}
 
-                <p className="text-center px-4 pt-1 text-xs font-semibold leading-relaxed text-gray-500 dark:text-gray-400">
+                {/* A real link: /achievements has a phone view; this read as one but wasn't. */}
+                <Card padding="none" radius="2xl" shadow="none">
+                    <Link href="/achievements" className="flex items-center justify-between px-4 min-h-[52px] text-sm font-bold text-gray-900 dark:text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-primary-400 rounded-2xl">
                     {t('goals:reserve.mobileMore', 'Milestones & achievements')}
-                    <br />
-                    <span className="text-primary-700 dark:text-primary-400">→ {t('dashboard:mobile.onLargerScreen', 'on tablet / desktop')}</span>
-                </p>
+                    <span aria-hidden="true" className="text-gray-400">›</span>
+                    </Link>
+                </Card>
             </div>
 
             {createOpen && (
@@ -234,6 +276,22 @@ export function MobileGoals() {
                     returnToPortfolio={createLink?.returnToPortfolio}
                 />
             )}
+            {editGoal && (
+                <EditGoalModal isOpen goal={editGoal} onClose={() => setEditGoal(null)} />
+            )}
+            <ConfirmDialog
+                isOpen={!!deleteGoal}
+                title={t('goals:delete', 'Delete Goal')}
+                message={deleteGoal ? t('goals:card.aria.confirmDelete', { title: deleteGoal.title }) : ''}
+                confirmLabel={t('goals:delete', 'Delete Goal')}
+                onConfirm={() => {
+                    const g = deleteGoal; setDeleteGoal(null);
+                    // mutate, not mutateAsync: useDeleteGoal toasts the error itself, and an
+                    // awaited rejection here went unhandled.
+                    if (g) deleteGoalMutation.mutate(g.id);
+                }}
+                onCancel={() => setDeleteGoal(null)}
+            />
             {moneyGoal && (
                 <ContributeModal
                     isOpen

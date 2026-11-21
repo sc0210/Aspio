@@ -1,5 +1,6 @@
 'use client';
 
+import { useGoogleSignIn } from '@/hooks/useGoogleSignIn';
 import { useState, useMemo, Suspense } from 'react';
 import { signIn } from 'next-auth/react';
 import { useRouter, useSearchParams } from 'next/navigation';
@@ -38,12 +39,14 @@ type FormData = {
 const MIN_PASSWORD_LENGTH = 8;
 
 
+// Real capabilities, shared with the landing page's "What Aspiro actually does".
+// The old list was hardcoded English and claimed "AI-powered insights" (the AI
+// chat page is gone) and "bank-grade security".
 const FEATURES = [
-  { emoji: '🚀', title: 'Start your FIRE journey', desc: 'Set your financial independence date and work backwards' },
-  { emoji: '📈', title: 'Track every investment', desc: 'Stocks, ETFs, crypto — all in one dashboard' },
-  { emoji: '🧠', title: 'AI-powered insights', desc: 'Get personalized recommendations from your own data' },
-  { emoji: '🔒', title: 'Bank-grade security', desc: 'Your data is encrypted and never sold' },
-];
+  { emoji: '👛', key: 'wallets' },
+  { emoji: '📈', key: 'markets' },
+  { emoji: '📄', key: 'csv' },
+] as const;
 
 const GoogleIcon = (
   <svg className="w-4 h-4 flex-shrink-0" viewBox="0 0 24 24">
@@ -54,20 +57,10 @@ const GoogleIcon = (
   </svg>
 );
 
-function getPasswordStrength(pwd: string): { score: number; label: string; color: string } {
-  if (!pwd) return { score: 0, label: '', color: '' };
-  let score = 0;
-  if (pwd.length >= 8)  score++;
-  if (pwd.length >= 12) score++;
-  if (/[A-Z]/.test(pwd) && /[a-z]/.test(pwd)) score++;
-  if (/\d/.test(pwd))   score++;
-  if (/[^A-Za-z0-9]/.test(pwd)) score++;
-  if (score <= 1) return { score: 1, label: 'Weak',   color: 'bg-red-500' };
-  if (score <= 2) return { score: 2, label: 'Fair',   color: 'bg-amber-500' };
-  if (score <= 3) return { score: 3, label: 'Good',   color: 'bg-yellow-500' };
-  if (score <= 4) return { score: 4, label: 'Strong', color: 'bg-emerald-500' };
-  return             { score: 5, label: 'Very strong', color: 'bg-emerald-600' };
-}
+// One set of rules for the validator and the checklist, so they cannot drift.
+const HAS_LOWER = /[a-z]/;
+const HAS_UPPER = /[A-Z]/;
+const HAS_DIGIT = /\d/;
 
 export default function SignUpPage() {
   return (
@@ -80,10 +73,11 @@ export default function SignUpPage() {
 function SignUpForm() {
   const [isLoading, setIsLoading] = useState(false);
   const [isGoogleLoading, setIsGoogleLoading] = useState(false);
+  const showGoogle = useGoogleSignIn();
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirm, setShowConfirm] = useState(false);
   const router = useRouter();
-  const { t } = useTranslation(['auth']);
+  const { t } = useTranslation(['auth', 'common']);
 
   const schema = useMemo(
     () =>
@@ -96,7 +90,8 @@ function SignUpForm() {
         password: yup
           .string()
           .min(MIN_PASSWORD_LENGTH, t('auth:errors.passwordMinChars', { count: MIN_PASSWORD_LENGTH }))
-          .matches(/^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)/, t('auth:errors.passwordComplexity'))
+          .test('case', t('auth:errors.passwordComplexity'), (v) => !v || (HAS_LOWER.test(v) && HAS_UPPER.test(v)))
+          .test('digit', t('auth:errors.passwordComplexity'), (v) => !v || HAS_DIGIT.test(v))
           .required(t('auth:errors.passwordRequired')),
         confirmPassword: yup
           .string()
@@ -117,7 +112,13 @@ function SignUpForm() {
   } = useForm<FormData>({ resolver: yupResolver(schema) });
 
   const passwordValue = watch('password') ?? '';
-  const strength = getPasswordStrength(passwordValue);
+  // The form's own rules, checked live: the old meter scored its own rules, so it
+  // could call a password "Good" that validation then rejected.
+  const rules = [
+    { key: 'length', ok: passwordValue.length >= MIN_PASSWORD_LENGTH, label: t('auth:signUp.ruleLength', { count: MIN_PASSWORD_LENGTH }) },
+    { key: 'case', ok: HAS_LOWER.test(passwordValue) && HAS_UPPER.test(passwordValue), label: t('auth:signUp.ruleCase') },
+    { key: 'digit', ok: HAS_DIGIT.test(passwordValue), label: t('auth:signUp.ruleDigit') },
+  ];
 
   const onSubmit = async (data: FormData) => {
     setIsLoading(true);
@@ -188,14 +189,14 @@ function SignUpForm() {
             </p>
           </div>
           <div className="space-y-4">
-            {FEATURES.map(({ emoji, title, desc }) => (
-              <div key={title} className="flex items-center gap-3.5">
-                <div className="w-10 h-10 bg-white/10 rounded-xl flex items-center justify-center text-xl flex-shrink-0">
+            {FEATURES.map(({ emoji, key }) => (
+              <div key={key} className="flex items-center gap-3.5">
+                <div className="w-10 h-10 bg-white/10 rounded-xl flex items-center justify-center text-xl flex-shrink-0" aria-hidden="true">
                   {emoji}
                 </div>
                 <div>
-                  <p className="text-white font-semibold text-sm leading-tight">{title}</p>
-                  <p className="text-indigo-300 text-xs mt-0.5">{desc}</p>
+                  <p className="text-white font-semibold text-sm leading-tight">{t(`common:landing.capabilities.${key}.title`)}</p>
+                  <p className="text-indigo-200 text-xs mt-0.5">{t(`common:landing.capabilities.${key}.description`)}</p>
                 </div>
               </div>
             ))}
@@ -233,6 +234,8 @@ function SignUpForm() {
             <div className="h-px bg-gradient-to-r from-indigo-400/60 via-primary-400/60 to-violet-400/60" />
             <div className="px-6 py-6 space-y-4">
 
+              {/* Google + divider: only where this instance has Google sign-in. */}
+              {showGoogle && (<>
               {/* Google — shown first on signup to encourage SSO */}
               <button
                 type="button"
@@ -252,6 +255,7 @@ function SignUpForm() {
                   <span className="px-3 bg-white dark:bg-gray-800 text-gray-500 dark:text-gray-400 font-medium">{t('auth:signUp.orSignUpWithEmail')}</span>
                 </div>
               </div>
+              </>)}
 
               <form className="space-y-3.5" onSubmit={handleSubmit(onSubmit)}>
                 <Input
@@ -277,6 +281,7 @@ function SignUpForm() {
                 <div>
                   <Input
                     {...register('password')}
+                    {...(errors.password ? {} : { 'aria-describedby': 'password-rules' })}
                     type={showPassword ? 'text' : 'password'}
                     label={t('auth:signUp.password')}
                     error={errors.password?.message}
@@ -286,39 +291,25 @@ function SignUpForm() {
                     rightIcon={
                       <button
                         type="button"
-                        tabIndex={-1}
                         onClick={() => setShowPassword(v => !v)}
-                        className="text-gray-500 dark:text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 transition-colors"
-                        aria-label={showPassword ? 'Hide password' : 'Show password'}
+                        className="grid place-items-center w-11 h-11 -mr-3 rounded-lg text-gray-500 dark:text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-500"
+                        aria-label={showPassword ? t('auth:signIn.hidePassword') : t('auth:signIn.showPassword')}
                       >
                         {showPassword ? <EyeSlashIcon className="w-4 h-4" /> : <EyeIcon className="w-4 h-4" />}
                       </button>
                     }
                   />
-                  {/* Strength bar */}
-                  {passwordValue.length > 0 && (
-                    <div className="mt-1.5 flex items-center gap-2">
-                      <div className="flex-1 flex gap-1">
-                        {[1, 2, 3, 4, 5].map(i => (
-                          <div
-                            key={i}
-                            className={cn(
-                              'h-1 flex-1 rounded-full transition-all duration-300',
-                              i <= strength.score ? strength.color : 'bg-gray-200 dark:bg-gray-600'
-                            )}
-                          />
-                        ))}
-                      </div>
-                      <span className={cn('text-xs font-semibold flex-shrink-0', {
-                        'text-red-700 dark:text-red-500':     strength.score <= 1,
-                        'text-amber-500':   strength.score === 2,
-                        'text-yellow-700 dark:text-yellow-500':  strength.score === 3,
-                        'text-emerald-500': strength.score >= 4,
-                      })}>
-                        {strength.label}
-                      </span>
-                    </div>
-                  )}
+                  {/* Shown before typing too: the rules were hidden until you failed them. */}
+                  {/* Described by, not aria-live: a live list re-announced on every keystroke. */}
+                  <ul id="password-rules" className="mt-1.5 space-y-0.5 text-xs">
+                    {rules.map(r => (
+                      <li key={r.key} className={cn('flex items-center gap-1.5', r.ok ? 'text-emerald-700 dark:text-emerald-400' : 'text-gray-500 dark:text-gray-400')}>
+                        <span aria-hidden="true">{r.ok ? '✓' : '○'}</span>
+                        <span>{r.label}</span>
+                        <span className="sr-only">{r.ok ? t('auth:signUp.ruleMet') : t('auth:signUp.ruleNotMet')}</span>
+                      </li>
+                    ))}
+                  </ul>
                 </div>
 
                 <Input
@@ -332,10 +323,9 @@ function SignUpForm() {
                   rightIcon={
                     <button
                       type="button"
-                      tabIndex={-1}
                       onClick={() => setShowConfirm(v => !v)}
-                      className="text-gray-500 dark:text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 transition-colors"
-                      aria-label={showConfirm ? 'Hide password' : 'Show password'}
+                      className="grid place-items-center w-11 h-11 -mr-3 rounded-lg text-gray-500 dark:text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-500"
+                      aria-label={showConfirm ? t('auth:signIn.hidePassword') : t('auth:signIn.showPassword')}
                     >
                       {showConfirm ? <EyeSlashIcon className="w-4 h-4" /> : <EyeIcon className="w-4 h-4" />}
                     </button>
@@ -364,6 +354,9 @@ function SignUpForm() {
                     <p className="text-xs text-red-700 dark:text-red-400 ml-6">{errors.terms.message}</p>
                   )}
                 </div>
+
+                {/* Every account starts pending: say so before the user commits, not after. */}
+                <p className="text-xs text-gray-600 dark:text-gray-400">{t('auth:signUp.approvalNote')}</p>
 
                 <Button
                   type="submit"

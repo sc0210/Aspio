@@ -94,10 +94,11 @@ function HoldingRowBase({
                 : "hover:border-l-error-500 dark:hover:border-l-error-400 hover:bg-error-50/30 dark:hover:bg-error-900/10"
             )
       )}
+      // In bulk edit a row click selects it (the checkbox cell stops propagation, so
+      // it never double-toggles); otherwise it opens the holding.
       onClick={() => {
-        if (!bulkEditMode) {
-          onOpen(holding);
-        }
+        if (bulkEditMode) onToggleSelect(holding);
+        else onOpen(holding);
       }}
     >
       {bulkEditMode && (
@@ -114,9 +115,20 @@ function HoldingRowBase({
       <td className="px-3 md:px-6 py-4 whitespace-nowrap">
         <div>
           <div className="flex items-center gap-2">
-            <div className="text-sm font-medium text-gray-900 dark:text-gray-100">
-              {holding.symbol}
-            </div>
+            {/* A button, so the row is reachable by keyboard: the <tr onClick> was mouse-only.
+                Plain text in bulk edit, where the checkbox is the row's one control. */}
+            {bulkEditMode ? (
+              <span className="text-sm font-medium text-gray-900 dark:text-gray-100">{holding.symbol}</span>
+            ) : (
+              <button
+                type="button"
+                onClick={(e) => { e.stopPropagation(); onOpen(holding); }}
+                className="text-sm font-medium text-gray-900 dark:text-gray-100 rounded hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-500"
+                aria-label={t('portfolio:openHolding', { symbol: holding.symbol, defaultValue: 'Open {{symbol}}' })}
+              >
+                {holding.symbol}
+              </button>
+            )}
             {/* Bought with a goal's money */}
             {holding.goalId && (
                 <span className="inline-flex items-center px-1.5 py-0.5 rounded text-xs font-medium bg-amber-100 dark:bg-amber-900/30 text-amber-800 dark:text-amber-300" title={t('goals:invest.goalLotHint')}>
@@ -153,8 +165,10 @@ function HoldingRowBase({
                   e.stopPropagation();
                   onSellHolding(holding);
                 }}
-                className="ml-1 p-1 hover:bg-green-100 dark:hover:bg-green-900/30 rounded transition-colors"
-                title="Sell this holding"
+                // A labelled control: the 24px "$" had only a title and said nothing about selling.
+                className="ml-1 p-1 grid place-items-center min-w-[44px] min-h-[44px] lg:min-w-0 lg:min-h-0 hover:bg-green-100 dark:hover:bg-green-900/30 rounded transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-500"
+                title={t('portfolio:sellHolding', { symbol: holding.symbol, defaultValue: 'Sell {{symbol}}' })}
+                aria-label={t('portfolio:sellHolding', { symbol: holding.symbol, defaultValue: 'Sell {{symbol}}' })}
               >
                 <CurrencyDollarIcon className="w-4 h-4 text-green-700 dark:text-green-400" />
               </button>
@@ -191,7 +205,7 @@ function HoldingRowBase({
         {isValueVisible ? (
           <div className="flex flex-col items-end">
             <div className="flex items-center gap-1.5">
-              {!isCash && isPriceStale(holding.lastUpdated) && (
+              {!isCash && isPriceStale(holding.lastUpdated, holding.marketState, undefined, holding.priceStale) && (
                 <span
                   className="flex items-center gap-1 px-1.5 py-0.5 rounded bg-warning-50 dark:bg-warning-900/30 cursor-help"
                   title={`Price updated ${formatTimeAgo(holding.lastUpdated, t)} - Click Refresh to update`}
@@ -201,7 +215,7 @@ function HoldingRowBase({
               )}
               <span className={cn(
                 "text-sm font-medium",
-                !isCash && isPriceStale(holding.lastUpdated)
+                !isCash && isPriceStale(holding.lastUpdated, holding.marketState, undefined, holding.priceStale)
                   ? "text-warning-700 dark:text-warning-300"
                   : "text-gray-900 dark:text-gray-100"
               )}>

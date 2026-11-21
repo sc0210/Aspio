@@ -33,7 +33,12 @@ function flatten(obj: Json, prefix = ''): string[] {
     return v && typeof v === 'object' && !Array.isArray(v) ? flatten(v as Json, key) : [key];
   });
 }
+// A key used with { count } resolves through its plural forms (key_one/key_other).
 function has(obj: Json, dotted: string): boolean {
+  return hasExact(obj, dotted) || hasExact(obj, `${dotted}_other`);
+}
+
+function hasExact(obj: Json, dotted: string): boolean {
   return (
     dotted.split('.').reduce<unknown>(
       (acc, part) => (acc && typeof acc === 'object' ? (acc as Json)[part] : undefined),

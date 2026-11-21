@@ -45,7 +45,6 @@
     "title": "No groups yet"
   },
   "notLinked": {
-    "button": "Connect LINE",
     "description": "Link your LINE account to view and manage shared expense groups here.",
     "title": "Connect your LINE account"
   },
@@ -91,5 +90,6 @@
     "position": "Your position",
     "youOwe": "You owe",
     "youOweName": "You owe {{name}}"
-  }
+  },
+  "balancesFailed": "Couldn't load this group's balances"
 }

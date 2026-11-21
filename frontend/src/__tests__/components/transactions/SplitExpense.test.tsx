@@ -117,7 +117,7 @@ describe('SplitExpenseModal', () => {
 describe('Split from the transaction list', () => {
   async function openMenu(isDemo: boolean, tx = expense(), canSplit = true) {
     withClient(<TransactionList transactions={[tx]} isDemo={isDemo} canSplit={canSplit} />);
-    fireEvent.click(screen.getAllByRole('button', { name: /Expand|Collapse/ })[0]);
+    { const h = screen.getAllByRole('button', { name: /Expand|Collapse/ })[0]; if (h.getAttribute('aria-expanded') === 'false') fireEvent.click(h); }
     fireEvent.click(await screen.findByRole('button', { name: `Actions for ${tx.description}` }));
   }
 

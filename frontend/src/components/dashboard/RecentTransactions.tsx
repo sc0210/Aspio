@@ -12,6 +12,7 @@ import { formatCashAmount } from '@/utils/formatters';
 import { Transaction } from '@/shared/types';
 import { useTransactions } from '@/hooks/useTransactions';
 import { getCategoryIcon } from '@/utils/categoryIcon';
+import { QueryErrorCard } from '@/components/ui/QueryErrorCard';
 import { Card } from '@/components/ui/Card';
 
 function RecentTransactionsSkeleton() {
@@ -33,59 +34,7 @@ function RecentTransactionsSkeleton() {
   );
 }
 
-interface RecentTransactionsProps {
-  dateRange?: string;
-}
-
-function getDateFilter(range?: string): { start: Date; end: Date } | undefined {
-  if (!range) return undefined;
-
-  const today = new Date();
-  const endDate = new Date(today);
-  const startDate = new Date();
-
-  switch (range) {
-    case '7d':
-      startDate.setDate(today.getDate() - 7);
-      startDate.setHours(0, 0, 0, 0);
-      break;
-    case '14d':
-      startDate.setDate(today.getDate() - 14);
-      startDate.setHours(0, 0, 0, 0);
-      break;
-    case 'month':
-      startDate.setDate(1);
-      startDate.setHours(0, 0, 0, 0);
-      break;
-    case '30d':
-      startDate.setDate(today.getDate() - 30);
-      startDate.setHours(0, 0, 0, 0);
-      break;
-    case '90d':
-      startDate.setDate(today.getDate() - 90);
-      startDate.setHours(0, 0, 0, 0);
-      break;
-    case '6m':
-      startDate.setMonth(today.getMonth() - 6);
-      startDate.setHours(0, 0, 0, 0);
-      break;
-    case 'ytd':
-      startDate.setMonth(0, 1);
-      startDate.setHours(0, 0, 0, 0);
-      break;
-    case '1y':
-      startDate.setFullYear(today.getFullYear() - 1);
-      startDate.setHours(0, 0, 0, 0);
-      break;
-    default:
-      return undefined;
-  }
-
-  endDate.setHours(23, 59, 59, 999);
-  return { start: startDate, end: endDate };
-}
-
-export function RecentTransactions({ dateRange }: RecentTransactionsProps) {
+export function RecentTransactions() {
   const { t, i18n } = useTranslation(['dashboard', 'common']);
 
   const formatDate = (date: Date) => {
@@ -103,16 +52,20 @@ export function RecentTransactions({ dateRange }: RecentTransactionsProps) {
     });
   };
 
-  const dateRangeFilter = getDateFilter(dateRange);
-
-  const { transactions: fetchedTransactions, isLoading } = useTransactions({
+  // The latest five, whatever period the dashboard shows: following the period
+  // selector told an established user "No transactions yet" on a quiet 7D.
+  const { transactions: fetchedTransactions, isLoading, error, refetch } = useTransactions({
     limit: 5,
     sortBy: 'date',
     sortOrder: 'desc',
-    dateRange: dateRangeFilter,
   });
 
-  const transactions: Transaction[] = fetchedTransactions || [];
+  // Demo returns the whole fixture set whatever the limit (the transactions page
+  // paginates it client-side), so cap here: demo listed 14+ rows.
+  // Demo also ignores the sort (and prepends new rows), so sort by date first.
+  const transactions: Transaction[] = [...(fetchedTransactions || [])]
+    .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime())
+    .slice(0, 5);
 
   return (
     <Card padding="none" clip className="h-full flex flex-col">
@@ -132,6 +85,9 @@ export function RecentTransactions({ dateRange }: RecentTransactionsProps) {
 
       {isLoading ? (
         <RecentTransactionsSkeleton />
+      ) : error && transactions.length === 0 ? (
+        // Not "No transactions yet": that told a failed fetch it had nothing.
+        <QueryErrorCard onRetry={() => refetch()} className="border-0 shadow-none p-0" />
       ) : transactions.length === 0 ? (
         <div className="text-center py-8">
           <div className="inline-flex items-center justify-center w-12 h-12 rounded-full bg-gray-100 dark:bg-gray-700 mb-3">

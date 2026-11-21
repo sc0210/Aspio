@@ -34,6 +34,8 @@ interface WalletNetWorthCardProps {
         emergency_wallet: number;
         monthlyIncome: number;
         monthlyExpenses: number;
+        /** Already normalised to a monthly spending rate; null when there was no spending. */
+        emergencyFundMonths?: number | null;
     };
     walletTrendsData: WalletTrendDataPoint[];
     netWorthChangePercent?: number;
@@ -180,12 +182,15 @@ export function WalletNetWorthCard({
         </span>
     );
 
+    // Net worth alone by default. With Total Asset (~2.5M) and debt on the same axis
+    // the net-worth line flattened (+7.8% drew as a level line on top of the debt
+    // line); the axis fits whatever is visible, so the legend adds the others back.
     const [lineVisibility, setLineVisibility] = useState({
         lifeWallet: false,
         portfolioWallet: false,
         emergencyWallet: false,
-        debtBalance: true,
-        totalAsset: true,
+        debtBalance: false,
+        totalAsset: false,
         netWorth: true,
     });
 
@@ -227,9 +232,9 @@ export function WalletNetWorthCard({
         };
     }, [stats]);
 
-    const emergencyRunway = stats.monthlyExpenses > 0
-        ? stats.emergency_wallet / stats.monthlyExpenses
-        : null;
+    // Not emergency / monthlyExpenses: that field is the selected PERIOD's total,
+    // so the runway read ~0.3 mo on 1Y and was inflated on 7D.
+    const emergencyRunway = stats.emergencyFundMonths ?? null;
 
     const chartData = useMemo(() => {
         if (!walletTrendsData) return [];
@@ -499,7 +504,7 @@ export function WalletNetWorthCard({
                                         onClick={() => toggleLine(lineKey)}
                                         aria-pressed={visible}
                                         aria-label={`${visible ? 'Hide' : 'Show'} ${t(labelKey, fallback)}`}
-                                        className="flex items-center gap-1.5 rounded-md px-1.5 py-1 min-h-[32px] transition-colors touch-manipulation hover:bg-gray-100 dark:hover:bg-gray-700"
+                                        className="flex items-center gap-1.5 rounded-md px-1.5 py-1 min-h-[44px] lg:min-h-[32px] transition-colors touch-manipulation hover:bg-gray-100 dark:hover:bg-gray-700"
                                     >
                                         <span className={cn(
                                             'w-2.5 h-2.5 rounded-full flex-shrink-0 transition-colors',
@@ -521,7 +526,7 @@ export function WalletNetWorthCard({
                                     onClick={() => toggleLine('debtBalance')}
                                     aria-pressed={lineVisibility.debtBalance}
                                     aria-label={`${lineVisibility.debtBalance ? 'Hide' : 'Show'} ${t('wallet.debtBalance', 'Debt Balance')}`}
-                                    className="flex items-center gap-1.5 rounded-md px-1.5 py-1 min-h-[32px] transition-colors touch-manipulation hover:bg-gray-100 dark:hover:bg-gray-700"
+                                    className="flex items-center gap-1.5 rounded-md px-1.5 py-1 min-h-[44px] lg:min-h-[32px] transition-colors touch-manipulation hover:bg-gray-100 dark:hover:bg-gray-700"
                                 >
                                     <svg width="14" height="6" viewBox="0 0 14 6" className={cn('flex-shrink-0 transition-opacity', !lineVisibility.debtBalance && 'opacity-40')}>
                                         <line x1="0" y1="3" x2="14" y2="3" stroke={CHART_COLORS.debt} strokeWidth="2" strokeDasharray="5 3" />

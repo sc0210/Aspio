@@ -163,12 +163,12 @@ describe('an unstable callback from above cannot reach the rows', () => {
         // The ref must not turn "no handler" into "a handler that does nothing",
         // which would draw a sell button on every row.
         const withHandler = render(<HoldingsList {...LIST_REQUIRED} holdings={HOLDINGS} onSellHolding={() => {}} />);
-        expect(withHandler.container.querySelectorAll('[title="Sell this holding"]').length)
+        expect(withHandler.container.querySelectorAll('[aria-label^="Sell "], [aria-label^="portfolio:sellHolding"]').length)
             .toBeGreaterThan(0);
         withHandler.unmount();
 
         const without = render(<HoldingsList {...LIST_REQUIRED} holdings={HOLDINGS} />);
-        expect(without.container.querySelectorAll('[title="Sell this holding"]')).toHaveLength(0);
+        expect(without.container.querySelectorAll('[aria-label^="Sell "], [aria-label^="portfolio:sellHolding"]')).toHaveLength(0);
     });
 });
 

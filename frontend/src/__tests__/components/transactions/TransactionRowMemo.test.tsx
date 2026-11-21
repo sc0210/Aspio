@@ -72,9 +72,9 @@ const rendersOf = (category: string) =>
 
 function renderExpanded() {
     const view = render(<TransactionList transactions={TRANSACTIONS} />);
-    // Day groups start collapsed; open the one group so the rows mount.
+    // Day groups start open; open the first only if it is closed.
     const header = screen.getAllByRole('button', { name: /Expand|Collapse/ })[0];
-    fireEvent.click(header);
+    if (header.getAttribute('aria-expanded') === 'false') fireEvent.click(header);
     return view;
 }
 

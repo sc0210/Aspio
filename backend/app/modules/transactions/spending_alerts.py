@@ -88,7 +88,7 @@ async def generate_spending_alerts(
 
         if mtd > avg * threshold:
             pct_over = int((mtd / avg - 1) * 100)
-            await create_notification(
+            if await create_notification(  # None when the user muted this type
                 session,
                 user_id=uid,
                 type=NotificationType.TRANSACTION_REMINDER,
@@ -106,8 +106,8 @@ async def generate_spending_alerts(
                     "avg": str(avg.quantize(Decimal("1"))),
                     "pct_over": pct_over,
                 },
-            )
-            created += 1
+            ):
+                created += 1
 
     logger.info(
         "Spending alerts: %d candidate users, %d notifications created",

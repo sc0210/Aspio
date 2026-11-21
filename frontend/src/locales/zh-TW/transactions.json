@@ -116,24 +116,34 @@
       "life": "生活錢包"
     },
     "walletType": "錢包類型",
-    "sharedOnly": "只看共同支出"
+    "sharedOnly": "只看共同支出",
+    "filterByCategory": "依「{{category}}」篩選"
   },
   "form": {
     "addTag": "新增",
     "categories": {
+      "Bonus": "獎金",
       "Dining": "餐飲",
+      "Education": "教育",
       "Entertainment": "娛樂",
+      "Food & Dining": "餐飲",
       "Freelance": "接案收入",
       "Gift": "禮物",
       "Groceries": "日用雜貨",
       "Healthcare": "醫療",
       "Housing": "住房",
       "Insurance": "保險",
+      "Investment": "投資",
+      "Investment Purchase": "投資買入",
       "Investment Returns": "投資收益",
+      "Investment Sale": "投資賣出",
       "Loan Payment": "貸款還款",
+      "Loan Receipt": "借款入帳",
       "Others": "其他",
+      "Personal Care": "個人護理",
       "Salary": "薪資",
       "Shopping": "購物",
+      "Transfer": "轉帳",
       "Transportation": "交通",
       "Travel": "旅遊",
       "Utilities": "水電瓦斯"
@@ -187,10 +197,15 @@
     "optional": "（選填）",
     "paymentMethodLabel": "付款方式",
     "paymentMethods": {
+      "alipay": "支付寶",
       "bank_transfer": "銀行轉帳",
       "cash": "現金",
       "credit_card": "信用卡",
-      "digital_wallet": "電子錢包"
+      "debit_card": "金融卡",
+      "digital_wallet": "其他電子錢包",
+      "line_pay": "LINE Pay",
+      "shopee_pay": "蝦皮支付",
+      "wechat_pay": "微信支付"
     },
     "tagPlaceholder": "新增標籤（按 Enter）",
     "toWallet": "轉入錢包",
@@ -334,7 +349,8 @@
     "walletPlaceholder": "重新分配錢包",
     "holdingLinkedSkipped": "有 {{count}} 筆選取的紀錄屬於投資組合持倉，已保持不變。請到投資組合修改。",
     "split": "與夥伴分攤",
-    "manageSplit": "管理分帳"
+    "manageSplit": "管理分帳",
+    "actionsFor": "「{{description}}」的操作"
   },
   "monthlySummary": "月度總結",
   "monthlySummaryPage": {
@@ -371,7 +387,8 @@
     "totalInvested": "{{year}} 年總投資",
     "transfer": "轉帳",
     "debt": "還債",
-    "movedBetweenWallets": "錢包間轉帳：{{amount}}（不計入支出）"
+    "movedBetweenWallets": "錢包間轉帳：{{amount}}（不計入支出）",
+    "totalIncludesInvest": "總支出包含投資金額與錢包之間的轉帳。"
   },
   "monthlySummaryShort": "摘要",
   "pagination": {
@@ -443,7 +460,8 @@
     "uploadImage": "上傳圖片",
     "uploadTitle": "拍攝或上傳收據",
     "verifyBody": "辨識信心度偏低，請檢查並視需要修正。",
-    "verifyTitle": "請確認明細"
+    "verifyTitle": "請確認明細",
+    "reviewAndSave": "確認並儲存"
   },
   "splitBadge": "分帳",
   "stats": {
@@ -504,5 +522,14 @@
   "wallet": {
     "emergency": "緊急錢包",
     "life": "生活錢包"
+  },
+  "mobile": {
+    "desktopOnly": "熱力圖與批次匯入請用平板／電腦",
+    "loadMore": "載入更多",
+    "loading": "載入中…",
+    "noMatch": "沒有符合的交易",
+    "searchLabel": "搜尋交易",
+    "searchPlaceholder": "搜尋交易…",
+    "typeFilter": "類型"
   }
 }

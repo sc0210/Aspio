@@ -72,10 +72,13 @@ interface MonthlySummaryChartsProps {
     categoryBreakdownSubtitle: string;
 }
 
+// Cyan, not emerald: emerald sat beside the Income line's green and read as one.
+const INVEST = '#0891b2';
+
 const PIE_CATEGORIES = [
     { name: 'Housing', key: 'housing' as const, color: '#3b82f6' },
     { name: 'Eat', key: 'eat' as const, color: '#f59e0b' },
-    { name: 'Invest', key: 'investment' as const, color: '#10b981' },
+    { name: 'Invest', key: 'investment' as const, color: INVEST },
     // Money that only changed pocket: its own slice, not spending hidden in Others.
     { name: 'Transfer', key: 'transfer' as const, color: '#64748b' },
     // Servicing debt is not discretionary, so it gets its own slice rather than
@@ -91,7 +94,7 @@ const STACK = [
     { key: 'Transfer', fill: '#64748b' },
     { key: 'Debt', fill: '#be123c' },
     { key: 'Others', fill: '#8b5cf6' },
-    { key: 'Investment', fill: '#10b981' },
+    { key: 'Investment', fill: INVEST },
 ] as const;
 
 const TOP_RADIUS = 4;
@@ -207,17 +210,23 @@ export function MonthlySummaryCharts({
                     </div>
                 </div>
                 <div className="p-4">
-                    {/* Legend */}
+                    {/* Legend: only what is drawn. Bar mode listed the Income and Total lines,
+                        which draw only in line mode. */}
+                    {(showBarChart || showLineChart) && (
                     <div className="flex flex-wrap items-center gap-x-4 gap-y-2 mb-3 text-xs">
                         {[
-                            { color: '#3b82f6', label: t('transactions:monthlySummaryPage.housing', 'Housing') },
-                            { color: '#f59e0b', label: t('transactions:monthlySummaryPage.eat', 'Eat') },
-                            { color: '#64748b', label: t('transactions:monthlySummaryPage.transfer', 'Transfer') },
-                            { color: '#be123c', label: t('transactions:monthlySummaryPage.debt', 'Debt') },
-                            { color: '#8b5cf6', label: t('transactions:monthlySummaryPage.others', 'Others') },
-                            { color: '#10b981', label: t('transactions:monthlySummaryPage.invest', 'Invest') },
-                            { color: '#22c55e', label: t('transactions:monthlySummaryPage.income', 'Income') },
-                            { color: '#ef4444', label: t('transactions:monthlySummaryPage.totalExpLabel', 'Total Exp') },
+                            ...(showBarChart ? [
+                                { color: '#3b82f6', label: t('transactions:monthlySummaryPage.housing', 'Housing') },
+                                { color: '#f59e0b', label: t('transactions:monthlySummaryPage.eat', 'Eat') },
+                                { color: '#64748b', label: t('transactions:monthlySummaryPage.transfer', 'Transfer') },
+                                { color: '#be123c', label: t('transactions:monthlySummaryPage.debt', 'Debt') },
+                                { color: '#8b5cf6', label: t('transactions:monthlySummaryPage.others', 'Others') },
+                                { color: INVEST, label: t('transactions:monthlySummaryPage.invest', 'Invest') },
+                            ] : []),
+                            ...(showLineChart ? [
+                                { color: '#22c55e', label: t('transactions:monthlySummaryPage.income', 'Income') },
+                                { color: '#ef4444', label: t('transactions:monthlySummaryPage.totalExpLabel', 'Total Exp') },
+                            ] : []),
                         ].map(({ color, label }) => (
                             <div key={label} className="flex items-center gap-1.5">
                                 <div className="w-2.5 h-2.5 rounded-full" style={{ backgroundColor: color }} />
@@ -225,6 +234,13 @@ export function MonthlySummaryCharts({
                             </div>
                         ))}
                     </div>
+                    )}
+                    {showLineChart && (
+                        // "Total Exp" counts money invested as an outflow; say so beside it.
+                        <p className="-mt-1 mb-3 text-xs text-gray-500 dark:text-gray-400">
+                            {t('transactions:monthlySummaryPage.totalIncludesInvest', 'Total Exp includes money invested and moved between your wallets.')}
+                        </p>
+                    )}
                     <div className="h-64" role="img" aria-label={`${chartTitle}. ${chartSubtitle}`}>
                         <ResponsiveContainer width="100%" height="100%">
                             <ComposedChart data={chartData} margin={{ top: 30, right: 10, left: 0, bottom: 0 }}>
@@ -232,7 +248,7 @@ export function MonthlySummaryCharts({
                                     {[
                                         { id: 'housingGradient', color: '#3b82f6' },
                                         { id: 'eatGradient', color: '#f59e0b' },
-                                        { id: 'investmentGradient', color: '#10b981' },
+                                        { id: 'investmentGradient', color: INVEST },
                                         { id: 'othersGradient', color: '#8b5cf6' },
                                     ].map(({ id, color }) => (
                                         <linearGradient key={id} id={id} x1="0" y1="0" x2="0" y2="1">
