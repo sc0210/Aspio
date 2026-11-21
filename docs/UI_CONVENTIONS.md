@@ -33,6 +33,10 @@ change, a return) with `rise-*` / `fall-*`, never `success`/`error`: those two s
 variables that swap when `<html data-market="red-up">` is set. For a colour that can't be a class
 (a chart's hex scale), read `useMarketColors()`; an SVG `fill` can use `rgb(var(--rise-500))`.
 Income and expense are not market moves and keep `income`/`expense`.
+Raw `red-*`/`green-*`/`emerald-*`/`rose-*` say none of this; `__tests__/guards/rawRedGreen.test.ts`
+keeps their count from growing. Chart colours come from `lib/charts/palette.ts` (`SERIES`,
+`chartChrome(isDark)`), and a TWD money amount goes through `formatCashAmount` or `formatTWD`,
+never `formatCurrency`'s two-decimal default, which is for prices.
 
 ## Typography
 
