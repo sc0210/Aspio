@@ -271,7 +271,9 @@ function HoldingsTable({ rows, currency, isValueVisible, isLoading }: HoldingsTa
             aria-sort={sortKey === sortK ? (sortDir === 'asc' ? 'ascending' : 'descending') : 'none'}
             className={cn(
                 'p-0 text-xs font-bold uppercase tracking-wide select-none whitespace-nowrap',
-                'hover:bg-gray-100 dark:hover:bg-gray-700/50 transition-colors',
+                'transition-colors',
+                // The pinned header's hover must stay opaque, or scrolled headers show through.
+                sticky ? 'hover:bg-gray-100 dark:hover:bg-gray-700' : 'hover:bg-gray-100 dark:hover:bg-gray-700/50',
                 right ? 'text-right' : 'text-left',
                 sticky && 'sticky left-0 z-20 bg-gray-50 dark:bg-gray-800',
                 className,
