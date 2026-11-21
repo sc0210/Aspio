@@ -1,7 +1,7 @@
 """Monthly Taiwan market inputs for the dashboard's CAPE
 
 Revision ID: 2026_11_21_tw_market_valuations
-Revises: 2026_11_16_shared_goal_sides
+Revises: 2026_11_21_insurance_category
 Create Date: 2026-11-21
 
 One row per month: the TAIEX and the listed market's P/E on a trading day of
@@ -17,7 +17,7 @@ reads it.
 from alembic import op
 
 revision = "2026_11_21_tw_market_valuations"
-down_revision = "2026_11_16_shared_goal_sides"
+down_revision = "2026_11_21_insurance_category"
 branch_labels = None
 depends_on = None
 

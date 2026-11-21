@@ -239,6 +239,9 @@ SELECT 'shared goals without two parts' AS what, count(*)::text AS value
 FROM shared_goals sg
 WHERE sg.status <> 'cancelled'
   AND (SELECT count(*) FROM goals g WHERE g.shared_goal_id = sg.id AND g.status <> 'cancelled') < 2;
+-- 2026_11_21_insurance_category: expect 1 (an active Insurance expense category).
+SELECT 'insurance expense category' AS what, count(*)::text AS value
+FROM transaction_categories WHERE name = 'Insurance' AND type = 'EXPENSE'::categorytype AND is_active;
 -- 2026_11_21_tw_market_valuations: months stored for the Taiwan CAPE. 0 right
 -- after the apply; ~250 once the first daily sync has backfilled from 2005.
 SELECT 'tw_market_valuations months' AS what, count(*)::text AS value

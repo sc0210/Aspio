@@ -104,8 +104,8 @@ async def test_a_formula_like_partner_name_is_exported_as_text(async_session, co
     ws = openpyxl.load_workbook(io.BytesIO(await svc.export_excel(str(c["alice"].id)))).active
     dinner = next(r for r in ws.iter_rows(min_row=2) if r[4].value == "Dinner")
     # Excel types the cell as text, so the name is stored exactly, never as a formula.
-    assert dinner[11].value == name and dinner[11].data_type == "s"
-    assert float(dinner[10].value) == 1000.0 and dinner[10].number_format == "0.00"
+    assert dinner[12].value == name and dinner[12].data_type == "s"
+    assert float(dinner[11].value) == 1000.0 and dinner[11].number_format == "0.00"
 
 
 async def test_formula_like_free_text_is_exported_as_text(async_session, couple):
@@ -127,4 +127,5 @@ async def test_formula_like_free_text_is_exported_as_text(async_session, couple)
     ws = openpyxl.load_workbook(io.BytesIO(await svc.export_excel(str(c["alice"].id)))).active
     cells = list(ws.iter_rows(min_row=2))[0]
     assert cells[4].value.startswith("=HYPERLINK") and cells[4].data_type == "s"
-    assert (cells[6].value, cells[9].value) == ("@cmd", "+1")
+    # Merchant and Notes sit after Category and Subcategory.
+    assert (cells[7].value, cells[10].value) == ("@cmd", "+1")

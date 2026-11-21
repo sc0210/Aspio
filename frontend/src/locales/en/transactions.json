@@ -38,6 +38,7 @@
     "date": "Date",
     "description": "Description",
     "paymentMethod": "Payment Method",
+    "subcategory": "Subcategory",
     "type": "Type"
   },
   "fields": {
@@ -131,6 +132,7 @@
       "Groceries": "Groceries",
       "Healthcare": "Health",
       "Housing": "Housing",
+      "Insurance": "Insurance",
       "Investment": "Investment",
       "Investment Purchase": "Investment buy",
       "Investment Returns": "Investment",
@@ -276,7 +278,31 @@
       "title": "Sale proceeds",
       "note": "The amount, date and wallet follow the sale. To change them, edit or reverse the sale on Portfolio."
     },
-    "splitSaveFirst": "Save your changes first, then split."
+    "splitSaveFirst": "Save your changes first, then split.",
+    "currentSubcategory": "Current detail:",
+    "groups": {
+      "food": "Food",
+      "housing": "Housing",
+      "transport": "Transport",
+      "shopping": "Shopping",
+      "fun": "Fun",
+      "other": "Others"
+    },
+    "choices": {
+      "Dining": "Eating out",
+      "Housing": "Rent"
+    },
+    "subcategoryLabel": "Detail",
+    "subcategories": {
+      "Beauty": "Beauty",
+      "Clothing": "Clothing",
+      "Electronics": "Electronics",
+      "Household": "Household",
+      "Public Transit": "Public transit",
+      "Car Maintenance": "Maintenance",
+      "Parking": "Parking",
+      "Car Rental": "Car rental"
+    }
   },
   "importExport": {
     "button": "Export / Import",

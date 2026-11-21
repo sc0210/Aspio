@@ -1,7 +1,7 @@
 -- Idempotent prod change: monthly Taiwan market inputs for the dashboard's CAPE.
 --
 -- Flow:
---   1. After 2026_11_16_shared_goal_sides.sql, run:
+--   1. After 2026_11_21_insurance_category.sql, run:
 --        docker exec -i aspiro-postgres psql -U aspiro_user -d aspiro_db -f - \
 --          < backend/scripts/prod_sql/2026_11_21_tw_market_valuations.sql
 --   2. On the backend: alembic stamp head

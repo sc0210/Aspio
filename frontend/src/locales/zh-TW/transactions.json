@@ -38,6 +38,7 @@
     "date": "日期",
     "description": "描述",
     "paymentMethod": "付款方式",
+    "subcategory": "細項",
     "type": "類型"
   },
   "fields": {
@@ -131,6 +132,7 @@
       "Groceries": "日用雜貨",
       "Healthcare": "醫療",
       "Housing": "住房",
+      "Insurance": "保險",
       "Investment": "投資",
       "Investment Purchase": "投資買入",
       "Investment Returns": "投資收益",
@@ -276,7 +278,31 @@
       "title": "賣出所得",
       "note": "金額、日期與錢包依這筆賣出而定。要修改，請在投資組合編輯或撤銷這筆賣出。"
     },
-    "splitSaveFirst": "請先儲存變更，再分帳。"
+    "splitSaveFirst": "請先儲存變更，再分帳。",
+    "currentSubcategory": "目前細項：",
+    "groups": {
+      "food": "飲食",
+      "housing": "居住",
+      "transport": "交通",
+      "shopping": "購物",
+      "fun": "娛樂",
+      "other": "其他"
+    },
+    "choices": {
+      "Dining": "外食",
+      "Housing": "房租"
+    },
+    "subcategoryLabel": "細項",
+    "subcategories": {
+      "Beauty": "美容",
+      "Clothing": "服飾",
+      "Electronics": "3C 電子",
+      "Household": "居家用品",
+      "Public Transit": "大眾運輸",
+      "Car Maintenance": "保養",
+      "Parking": "停車費",
+      "Car Rental": "租車"
+    }
   },
   "importExport": {
     "button": "匯出 / 匯入",

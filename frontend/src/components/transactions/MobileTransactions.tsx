@@ -1,7 +1,7 @@
 'use client';
 
 import { useDebounce } from '@/hooks/useDebounce';
-import { categoryLabel } from '@/lib/transactions/categoryLabel';
+import { categoryLabel, subcategoryLabel } from '@/lib/transactions/categoryLabel';
 import { useMemo, useState } from 'react';
 import Link from 'next/link';
 import { useTranslation } from 'react-i18next';
@@ -244,6 +244,7 @@ export function MobileTransactions() {
                                                         <p className="text-sm font-bold text-gray-900 dark:text-white truncate">{tx.description || categoryLabel(tx.category, t)}</p>
                                                         <p className="text-xs font-medium text-gray-500 dark:text-gray-400 truncate">
                                                             {isTransfer ? `${categoryLabel(tx.category, t)} · ${t(`transactions:wallet.${wallet}`)}` : categoryLabel(tx.category, t)}
+                                                            {!isTransfer && tx.subcategory && ` · ${subcategoryLabel(tx.subcategory, t)}`}
                                                         </p>
                                                     </div>
                                                     <p className={cn('text-[14.5px] font-extrabold tabular-nums flex-shrink-0',
