@@ -52,6 +52,23 @@ class TestSettledQuoteDay:
         lot = _lot("TW", datetime(2026, 11, 20, 14, 5, tzinfo=ZoneInfo("Asia/Taipei")))
         assert settled_quote_day(lot, now) == date(2026, 11, 20)
 
+    def test_a_quote_fetched_during_the_next_session_is_no_close(self):
+        # Monday 10:30 New York: later than Friday's settled close, but a
+        # partial Monday price. It must not stand in for Friday.
+        monday = datetime(2026, 11, 23, 15, 30, tzinfo=UTC)
+        lot = _lot("US", monday)
+        assert settled_quote_day(lot, monday + timedelta(minutes=5)) is None
+
+    def test_monday_after_its_close_is_mondays_close(self):
+        stamped = datetime(2026, 11, 23, 21, 40, tzinfo=UTC)  # 16:40 New York
+        lot = _lot("US", stamped)
+        assert settled_quote_day(lot, stamped) == date(2026, 11, 23)
+
+    @pytest.mark.parametrize("label", ["NASDAQ", "NYSE", "nasdaq"])
+    def test_exchange_labels_map_to_their_session(self, label):
+        lot = _lot(label, datetime(2026, 11, 21, 2, 54, tzinfo=UTC))
+        assert settled_quote_day(lot, SAT_MORNING) == date(2026, 11, 20)
+
     def test_a_naive_stamp_is_read_as_utc(self):
         lot = _lot("US", datetime(2026, 11, 21, 2, 54))
         assert settled_quote_day(lot, SAT_MORNING) == date(2026, 11, 20)
@@ -91,6 +108,19 @@ class TestDailyFx:
         # is missing, not resting over a weekend.
         assert await fx.rate("USD", date(2026, 11, 21)) == Decimal("33")
         assert await fx.rate("USD", date(2026, 11, 22)) == Decimal("30")
+
+    @pytest.mark.asyncio
+    async def test_a_failed_read_of_stored_closes_falls_back_to_the_live_rate(self):
+        class Broken:
+            async def get_batch_price_range(self, **kw):
+                raise RuntimeError("price store down")
+
+        class Live:
+            async def get_exchange_rate(self, from_currency, to_currency):
+                return Decimal("30")
+
+        fx = await DailyFx.load(Broken(), Live(), "TWD", date(2026, 11, 1), date(2026, 11, 21))
+        assert await fx.rate("USD", date(2026, 11, 13)) == Decimal("30")
 
     @pytest.mark.asyncio
     async def test_the_base_currency_is_one(self):

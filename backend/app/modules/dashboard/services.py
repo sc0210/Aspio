@@ -782,16 +782,6 @@ class DashboardService:
                             h.id: settled_quote_day(h) for h in tradable_holdings
                         }
 
-                        # Pre-fetch all unique exchange rates before the date loop
-                        _currencies_needed = {
-                            h.currency for h in tradable_holdings
-                            if h.currency and h.currency != base_currency
-                        }
-                        # Serial: shared session (see _calculate_all_wallets).
-                        for _currency in _currencies_needed:
-                            await exchange_service.get_exchange_rate(
-                                from_currency=_currency, to_currency=base_currency
-                            )
 
                         last_known_prices = {}
 
@@ -1211,17 +1201,6 @@ class DashboardService:
                         for hs in holdings_by_wallet.values() for h in hs
                     }
 
-                    # Pre-fetch all unique exchange rates across all wallet holdings
-                    _all_holdings = [h for hs in holdings_by_wallet.values() for h in hs]
-                    _currencies_needed = {
-                        h.currency for h in _all_holdings
-                        if h.currency and h.currency != base_currency
-                    }
-                    # Serial: shared session (see _calculate_all_wallets).
-                    for _currency in _currencies_needed:
-                        await exchange_service.get_exchange_rate(
-                            from_currency=_currency, to_currency=base_currency
-                        )
 
                     for wallet_type, holdings in holdings_by_wallet.items():
                         if not holdings:

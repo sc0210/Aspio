@@ -137,7 +137,7 @@ export function ComprehensiveDashboard() {
 
   // Fetch wallet trends independently so transaction mutations invalidate it immediately
   // (useWalletTrends listens to 'dashboard-data-updated' events and has staleTime: 0)
-  const { data: walletTrendsData = [] } = useWalletTrends(
+  const { data: walletTrendsData = [], isLoading: walletTrendsLoading } = useWalletTrends(
     dateRange as '7d' | 'month' | '30d' | '90d' | '6m' | '1y' | 'ytd'
   );
 
@@ -209,6 +209,8 @@ export function ComprehensiveDashboard() {
   // month with no trades). Leverage is what nothing else on the page shows: a
   // market fall raises it with no new borrowing.
   const leverage = useMemo(() => leverageChange(trendFromOpen), [trendFromOpen]);
+  const stripStats = memoizedDashboardData.stats;
+  const hasDebt = 'total_debt' in stripStats && (stripStats.total_debt ?? 0) > 0;
 
   const quickActions = useMemo(() => [
     { label: t('dashboard:quickActions.addTransaction.title', 'Add Transaction'), href: '/transactions/add', icon: PlusIcon },
@@ -343,14 +345,18 @@ export function ComprehensiveDashboard() {
             about. The hero keeps the balance; the strip keeps the flow.
 
             These figures do follow the period selector, unlike the balances
-            above them. The portfolio delta comes from walletTrendsData so it
-            shares the hero's time base — stats.portfolioGrowth is avoided
-            because the backend computes it over a different holding set. */}
+            above them. Saved is the period's income less spending. Leverage
+            (debt over the Portfolio wallet) is read off walletTrendsData at
+            both ends of the period, the hero's time base; whether the column
+            exists comes from stats.total_debt, which arrives with the strip,
+            so the layout does not jump when the trend lands. */}
         <section aria-label="This period" data-tour="dash-flow" className="animate-fade-in-up animation-delay-200">
           <DashboardTodayStrip
             income={memoizedDashboardData.stats.monthlyIncome}
             expenses={memoizedDashboardData.stats.monthlyExpenses}
             leverage={leverage}
+            hasDebt={hasDebt}
+            leverageLoading={walletTrendsLoading}
             isLoading={isLoading}
             periodLabel={periodLabel}
           />

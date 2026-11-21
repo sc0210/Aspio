@@ -22,6 +22,10 @@ interface DashboardTodayStripProps {
    * section directly below it.
    */
   leverage?: LeverageChange;
+  /** Whether the Leverage column exists; known before `leverage` has loaded. */
+  hasDebt?: boolean;
+  /** The series `leverage` comes from is still loading. */
+  leverageLoading?: boolean;
   currency?: string;
   isLoading?: boolean;
   periodLabel: string;
@@ -107,12 +111,13 @@ function StripSkeleton({ columns }: { columns: number }) {
 
 function StripGrid({
   totalAssets, totalAssetsChangePercent, totalAssetsChangeAmount,
-  income, expenses, leverage,
+  income, expenses, leverage, hasDebt, leverageLoading,
   periodLabel, fmt, fmtCompact, fmtDelta,
   t,
 }: {
   totalAssets?: number; totalAssetsChangePercent?: number; totalAssetsChangeAmount?: number;
   income: number; expenses: number; leverage?: LeverageChange;
+  hasDebt: boolean; leverageLoading: boolean;
   periodLabel: string; fmt: (v: number) => string; fmtCompact: (v: number) => string;
   fmtDelta: (v: number) => string;
   t: (key: string, opts?: Record<string, unknown>) => string;
@@ -121,7 +126,7 @@ function StripGrid({
   // A rate is only a rate when income covers spending. Mid-month, before pay
   // lands, NT$17,500 in against NT$153,046 out read "-774.5%".
   const showRate = income > 0 && income >= expenses;
-  const columns = 1 + (totalAssets !== undefined ? 1 : 0) + (leverage ? 1 : 0);
+  const columns = 1 + (totalAssets !== undefined ? 1 : 0) + (hasDebt ? 1 : 0);
 
   return (
     <div className={`grid ${GRID_COLS[columns]} divide-x divide-gray-100 dark:divide-gray-700`}>
@@ -169,7 +174,23 @@ function StripGrid({
       {/* Column 3 — Leverage: debt over the Portfolio wallet, where it opened
           and where it is now. Not on the net-worth card above (that one is debt
           over total assets) and not in the Portfolio section below. */}
-      {leverage && (
+      {hasDebt && !leverage && (
+      <div className="px-2.5 sm:px-5 py-3 sm:py-4 flex flex-col gap-1">
+        <p className="text-xs uppercase tracking-wide text-gray-500 dark:text-gray-400 font-medium truncate">
+          {t('dashboard:todayStrip.leverage', { defaultValue: 'Leverage' })} &middot; {periodLabel}
+        </p>
+        {leverageLoading ? (
+          <div className="space-y-2 animate-pulse" data-testid="leverage-loading">
+            <div className="h-6 bg-gray-200 dark:bg-gray-700 rounded w-1/2" />
+            <div className="h-4 bg-gray-200 dark:bg-gray-700 rounded w-2/3" />
+          </div>
+        ) : (
+          // Debt with nothing invested: there is no ratio to state.
+          <p className="text-sm sm:text-xl font-bold text-gray-400 dark:text-gray-500 leading-tight">—</p>
+        )}
+      </div>
+      )}
+      {hasDebt && leverage && (
       <div className="px-2.5 sm:px-5 py-3 sm:py-4 flex flex-col gap-1">
         <p
           className="text-xs uppercase tracking-wide text-gray-500 dark:text-gray-400 font-medium truncate"
@@ -219,6 +240,8 @@ export function DashboardTodayStrip({
   income,
   expenses,
   leverage,
+  hasDebt = leverage !== undefined,
+  leverageLoading = false,
   currency = 'TWD',
   isLoading = false,
   periodLabel,
@@ -235,7 +258,7 @@ export function DashboardTodayStrip({
   const fmtCompact = (v: number) =>
     isValueVisible ? formatCurrency(v, currency, { compact: true }) : '•••';
 
-  const columns = 1 + (totalAssets !== undefined ? 1 : 0) + (leverage ? 1 : 0);
+  const columns = 1 + (totalAssets !== undefined ? 1 : 0) + (hasDebt ? 1 : 0);
 
   if (bare) {
     return isLoading ? (
@@ -245,6 +268,7 @@ export function DashboardTodayStrip({
         totalAssets={totalAssets} totalAssetsChangePercent={totalAssetsChangePercent}
         totalAssetsChangeAmount={totalAssetsChangeAmount}
         income={income} expenses={expenses} leverage={leverage}
+        hasDebt={hasDebt} leverageLoading={leverageLoading}
         periodLabel={periodLabel} fmt={fmt} fmtCompact={fmtCompact} fmtDelta={fmtDelta} t={t}
       />
     );
@@ -260,6 +284,7 @@ export function DashboardTodayStrip({
           totalAssets={totalAssets} totalAssetsChangePercent={totalAssetsChangePercent}
           totalAssetsChangeAmount={totalAssetsChangeAmount}
           income={income} expenses={expenses} leverage={leverage}
+        hasDebt={hasDebt} leverageLoading={leverageLoading}
           periodLabel={periodLabel} fmt={fmt} fmtCompact={fmtCompact} fmtDelta={fmtDelta} t={t}
         />
       )}

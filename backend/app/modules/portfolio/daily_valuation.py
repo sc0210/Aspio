@@ -22,7 +22,12 @@ from datetime import date, datetime, timezone
 from decimal import Decimal
 from typing import Dict, Optional, Tuple
 
-from app.utils.market_sessions import last_settled_close, session_timezone
+from app.utils.market_sessions import (
+    last_settled_close,
+    price_session_date,
+    session_market,
+    session_timezone,
+)
 
 from .performance_tracker import FX_SERIES
 
@@ -32,12 +37,14 @@ logger = logging.getLogger(__name__)
 def settled_quote_day(holding, now: Optional[datetime] = None) -> Optional[date]:
     """The trading day whose close the holding's current_price is, or None.
 
-    A price written after the market's most recent final close (bell plus
-    grace) is that close. One written earlier, or during the session, is not a
-    close of any day. Markets with no modelled session (crypto, SG, ...) give
-    None, so those holdings keep their existing pricing.
+    Two conditions, both needed. The price was written after the market's most
+    recent final close (bell plus grace), and it belongs to that same session:
+    a price fetched during the next session is also later than the last close,
+    but it is a partial price of a newer day, not that close. Exchange labels
+    (NASDAQ, TWSE) map to their session; markets with no modelled session
+    (crypto, SG, ...) give None and keep their existing pricing.
     """
-    market = getattr(holding, "market", None)
+    market = session_market(getattr(holding, "market", None))
     tz = session_timezone(market)
     stamped = getattr(holding, "last_price_update_at", None)
     if tz is None or stamped is None or not holding.current_price:
@@ -47,9 +54,10 @@ def settled_quote_day(holding, now: Optional[datetime] = None) -> Optional[date]
         return None
     if stamped.tzinfo is None:
         stamped = stamped.replace(tzinfo=timezone.utc)
-    if stamped < settled:
+    close_day = settled.astimezone(tz).date()
+    if stamped < settled or price_session_date(market, stamped) != close_day:
         return None
-    return settled.astimezone(tz).date()
+    return close_day
 
 
 class DailyFx:
@@ -77,11 +85,18 @@ class DailyFx:
         for the close before it (a Monday asked about on its own needs Friday's)."""
         closes: Dict[str, Tuple[list, list]] = {}
         if base_currency.upper() in ("TWD", "USD"):
-            raw = await hist_price_service.get_batch_price_range(
-                symbols=sorted(set(FX_SERIES.values())),
-                start_date=from_date,
-                end_date=end_date,
-            )
+            try:
+                raw = await hist_price_service.get_batch_price_range(
+                    symbols=sorted(set(FX_SERIES.values())),
+                    start_date=from_date,
+                    end_date=end_date,
+                )
+            except Exception as e:
+                # Every day then converts at the live rate: a flatter FX line,
+                # not a missing series. One failed read used to take down the
+                # whole portfolio trend.
+                logger.error(f"Stored FX closes unavailable, using the live rate: {e}")
+                raw = {}
             for fx_symbol, by_day in (raw or {}).items():
                 points = sorted(
                     (date.fromisoformat(d), Decimal(str(v["close"])))

@@ -79,6 +79,25 @@ describe('DashboardTodayStrip — Leverage', () => {
     expect(container.querySelector('.grid-cols-1')).not.toBeNull();
   });
 
+  it('keeps the column while the trend loads, so the layout does not jump', () => {
+    const { container, rerender } = render(
+      <DashboardTodayStrip income={0} expenses={0} hasDebt leverageLoading periodLabel="This month" />,
+    );
+    expect(container.querySelector('.grid-cols-2')).not.toBeNull();
+    expect(screen.getByTestId('leverage-loading')).toBeInTheDocument();
+    rerender(
+      <DashboardTodayStrip income={0} expenses={0} hasDebt leverage={leverage} periodLabel="This month" />,
+    );
+    expect(container.querySelector('.grid-cols-2')).not.toBeNull();
+    expect(screen.getByText('61.5%')).toBeInTheDocument();
+  });
+
+  it('states no ratio for debt with nothing invested', () => {
+    render(<DashboardTodayStrip income={0} expenses={0} hasDebt periodLabel="This month" />);
+    expect(screen.getByText('—')).toBeInTheDocument();
+    expect(screen.queryByTestId('leverage-loading')).not.toBeInTheDocument();
+  });
+
   it('hides the amounts but keeps the ratio when values are hidden', () => {
     mockVisible = false;
     render(<DashboardTodayStrip income={17_500} expenses={153_046} leverage={leverage} periodLabel="This month" />);
