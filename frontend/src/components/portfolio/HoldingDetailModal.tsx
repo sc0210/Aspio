@@ -406,8 +406,8 @@ export function HoldingDetailModal({
                 <p className={cn(
                   'text-xl font-bold',
                   aggregatedMetrics.gainLoss >= 0
-                    ? 'text-success-700 dark:text-success-400'
-                    : 'text-error-700 dark:text-error-400'
+                    ? 'text-rise-700 dark:text-rise-400'
+                    : 'text-fall-700 dark:text-fall-400'
                 )}>
                   {isValueVisible
                     ? `${aggregatedMetrics.gainLoss >= 0 ? '+' : ''}${formatCurrency(aggregatedMetrics.gainLoss, aggregatedMetrics.currency)}`
@@ -417,8 +417,8 @@ export function HoldingDetailModal({
                 <p className={cn(
                   'text-xs font-semibold mt-1',
                   aggregatedMetrics.gainLoss >= 0
-                    ? 'text-success-700 dark:text-success-400'
-                    : 'text-error-700 dark:text-error-400'
+                    ? 'text-rise-700 dark:text-rise-400'
+                    : 'text-fall-700 dark:text-fall-400'
                 )}>
                   {isValueVisible
                     ? `${aggregatedMetrics.gainLossPercentage >= 0 ? '+' : ''}${aggregatedMetrics.gainLossPercentage.toFixed(2)}%`
@@ -623,8 +623,8 @@ export function HoldingDetailModal({
                             <span className={cn(
                               'text-sm font-semibold',
                               lotGainLoss >= 0
-                                ? 'text-success-700 dark:text-success-400'
-                                : 'text-error-700 dark:text-error-400'
+                                ? 'text-rise-700 dark:text-rise-400'
+                                : 'text-fall-700 dark:text-fall-400'
                             )}>
                               {isValueVisible
                                 ? `${lotGainLoss >= 0 ? '+' : ''}${formatCurrency(lotGainLoss, lot.currency)}`
@@ -634,8 +634,8 @@ export function HoldingDetailModal({
                             <span className={cn(
                               'text-xs font-medium',
                               lotGainLoss >= 0
-                                ? 'text-success-700 dark:text-success-400'
-                                : 'text-error-700 dark:text-error-400'
+                                ? 'text-rise-700 dark:text-rise-400'
+                                : 'text-fall-700 dark:text-fall-400'
                             )}>
                               {isValueVisible
                                 ? `${lotGainLossPercentage >= 0 ? '+' : ''}${lotGainLossPercentage.toFixed(2)}%`
@@ -804,8 +804,8 @@ export function HoldingDetailModal({
                         <span className={cn(
                           'text-sm font-bold',
                           aggregatedMetrics.gainLoss >= 0
-                            ? 'text-success-700 dark:text-success-400'
-                            : 'text-error-700 dark:text-error-400'
+                            ? 'text-rise-700 dark:text-rise-400'
+                            : 'text-fall-700 dark:text-fall-400'
                         )}>
                           {isValueVisible
                             ? `${aggregatedMetrics.gainLoss >= 0 ? '+' : ''}${formatCurrency(aggregatedMetrics.gainLoss, aggregatedMetrics.currency)}`
@@ -815,8 +815,8 @@ export function HoldingDetailModal({
                         <span className={cn(
                           'text-xs font-semibold',
                           aggregatedMetrics.gainLoss >= 0
-                            ? 'text-success-700 dark:text-success-400'
-                            : 'text-error-700 dark:text-error-400'
+                            ? 'text-rise-700 dark:text-rise-400'
+                            : 'text-fall-700 dark:text-fall-400'
                         )}>
                           {isValueVisible
                             ? `${aggregatedMetrics.gainLossPercentage >= 0 ? '+' : ''}${aggregatedMetrics.gainLossPercentage.toFixed(2)}%`

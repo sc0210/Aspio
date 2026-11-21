@@ -254,7 +254,7 @@ export function PortfolioStats({ portfolio, performance, isValueVisible, apiStat
                   <p
                     className={cn(
                       "text-base font-bold tabular-nums transition-all duration-200",
-                      toneOf(direction(asShown(period.dollarValue, 2)))('text-success-700 dark:text-success-400', 'text-error-700 dark:text-error-400', 'text-gray-500 dark:text-gray-400')
+                      toneOf(direction(asShown(period.dollarValue, 2)))('text-rise-700 dark:text-rise-400', 'text-fall-700 dark:text-fall-400', 'text-gray-500 dark:text-gray-400')
                     )}
                   >
                     {isValueVisible ? (
@@ -318,31 +318,31 @@ export function PortfolioStats({ portfolio, performance, isValueVisible, apiStat
               <Tooltip content={t('portfolio:stats.totalGainTooltip')}>
                 <div className={cn(
                   "w-full relative overflow-hidden rounded-xl p-4 border shadow-sm hover:shadow-md transition-all duration-300 group min-h-[110px]",
-                  totalTone('bg-gradient-to-br from-success-50 via-white to-success-50/30 dark:from-success-900/10 dark:via-gray-800/50 dark:to-success-900/5 border-success-200/50 dark:border-success-800/30', 'bg-gradient-to-br from-error-50 via-white to-error-50/30 dark:from-error-900/10 dark:via-gray-800/50 dark:to-error-900/5 border-error-200/50 dark:border-error-800/30', 'bg-gradient-to-br from-gray-50 via-white to-gray-50/30 dark:from-gray-800/40 dark:via-gray-800/50 dark:to-gray-800/20 border-gray-200 dark:border-gray-700')
+                  totalTone('bg-gradient-to-br from-rise-50 via-white to-rise-50/30 dark:from-rise-900/10 dark:via-gray-800/50 dark:to-rise-900/5 border-rise-200/50 dark:border-rise-800/30', 'bg-gradient-to-br from-fall-50 via-white to-fall-50/30 dark:from-fall-900/10 dark:via-gray-800/50 dark:to-fall-900/5 border-fall-200/50 dark:border-fall-800/30', 'bg-gradient-to-br from-gray-50 via-white to-gray-50/30 dark:from-gray-800/40 dark:via-gray-800/50 dark:to-gray-800/20 border-gray-200 dark:border-gray-700')
                 )}>
                   <div className={cn(
                     "absolute top-0 right-0 w-20 h-20 rounded-full -mr-10 -mt-10 group-hover:scale-150 transition-transform duration-500",
-                    totalTone('bg-success-500/8 dark:bg-success-500/15', 'bg-error-500/8 dark:bg-error-500/15', 'bg-gray-500/8 dark:bg-gray-500/15')
+                    totalTone('bg-rise-500/8 dark:bg-rise-500/15', 'bg-fall-500/8 dark:bg-fall-500/15', 'bg-gray-500/8 dark:bg-gray-500/15')
                   )}></div>
                   <div className="relative flex items-center gap-2 sm:gap-2.5 md:gap-3">
                     <div className={cn(
                       'flex-shrink-0 p-2.5 rounded-lg shadow-sm group-hover:scale-110 transition-transform duration-300',
-                      totalTone('bg-success-100 dark:bg-success-900/30', 'bg-error-100 dark:bg-error-900/30', 'bg-gray-100 dark:bg-gray-700/40')
+                      totalTone('bg-rise-100 dark:bg-rise-900/30', 'bg-fall-100 dark:bg-fall-900/30', 'bg-gray-100 dark:bg-gray-700/40')
                     )}>
                       <ChartBarIcon className={cn(
                         'w-6 h-6',
-                        totalTone('text-success-700 dark:text-success-400', 'text-error-700 dark:text-error-400', 'text-gray-500 dark:text-gray-400')
+                        totalTone('text-rise-700 dark:text-rise-400', 'text-fall-700 dark:text-fall-400', 'text-gray-500 dark:text-gray-400')
                       )} />
                     </div>
                     <div className="flex-1">
                       <p className={cn(
                         'text-xs md:text-sm font-semibold mb-1 uppercase tracking-wider',
-                        totalTone('text-success-700 dark:text-success-300', 'text-error-700 dark:text-error-300', 'text-gray-600 dark:text-gray-300')
+                        totalTone('text-rise-700 dark:text-rise-300', 'text-fall-700 dark:text-fall-300', 'text-gray-600 dark:text-gray-300')
                       )}>{ t('portfolio:stats.totalGain')}</p>
                       <div className="flex items-center gap-2">
                         <p className={cn(
                           'text-xl sm:text-2xl md:text-2xl font-bold',
-                          totalTone('text-success-700 dark:text-success-400', 'text-error-700 dark:text-error-400', 'text-gray-500 dark:text-gray-400')
+                          totalTone('text-rise-700 dark:text-rise-400', 'text-fall-700 dark:text-fall-400', 'text-gray-500 dark:text-gray-400')
                         )}>
                           {isValueVisible
                             ? `${totalDir === 'up' ? '+' : ''}${formatCurrency(totalShown, portfolio.currency, { precision: 0 })}`
@@ -352,7 +352,7 @@ export function PortfolioStats({ portfolio, performance, isValueVisible, apiStat
                       </div>
                       <p className={cn(
                         'text-xs mt-0.5 font-semibold',
-                        pctTone(portfolio.gainLossPercentage)('text-success-700 dark:text-success-400', 'text-error-700 dark:text-error-400', 'text-gray-500 dark:text-gray-400')
+                        pctTone(portfolio.gainLossPercentage)('text-rise-700 dark:text-rise-400', 'text-fall-700 dark:text-fall-400', 'text-gray-500 dark:text-gray-400')
                       )}>
                         {isValueVisible
                           ? `${formatPercentage(portfolio.gainLossPercentage)} ${t('portfolio:stats.roi')}`
@@ -383,7 +383,7 @@ export function PortfolioStats({ portfolio, performance, isValueVisible, apiStat
                   className={cn(
                     "w-full relative overflow-hidden rounded-xl p-4 border shadow-sm transition-all duration-300 group min-h-[110px]",
                     onTodayChangeClick ? "cursor-pointer hover:shadow-lg hover:scale-[1.02] active:scale-[0.98]" : "cursor-help hover:shadow-md",
-                    tone('bg-gradient-to-br from-success-50 via-white to-success-50/30 dark:from-success-900/10 dark:via-gray-800/50 dark:to-success-900/5 border-success-200/50 dark:border-success-800/30', 'bg-gradient-to-br from-error-50 via-white to-error-50/30 dark:from-error-900/10 dark:via-gray-800/50 dark:to-error-900/5 border-error-200/50 dark:border-error-800/30', 'bg-gradient-to-br from-gray-50 via-white to-gray-50/30 dark:from-gray-800/40 dark:via-gray-800/50 dark:to-gray-800/20 border-gray-200 dark:border-gray-700')
+                    tone('bg-gradient-to-br from-rise-50 via-white to-rise-50/30 dark:from-rise-900/10 dark:via-gray-800/50 dark:to-rise-900/5 border-rise-200/50 dark:border-rise-800/30', 'bg-gradient-to-br from-fall-50 via-white to-fall-50/30 dark:from-fall-900/10 dark:via-gray-800/50 dark:to-fall-900/5 border-fall-200/50 dark:border-fall-800/30', 'bg-gradient-to-br from-gray-50 via-white to-gray-50/30 dark:from-gray-800/40 dark:via-gray-800/50 dark:to-gray-800/20 border-gray-200 dark:border-gray-700')
                   )}>
                   {/* View Trend quick link */}
                   {onViewTrendClick && (
@@ -394,7 +394,7 @@ export function PortfolioStats({ portfolio, performance, isValueVisible, apiStat
                         // Always visible: hover-only, touch and keyboard users never found it.
                         'transition-all duration-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-500',
                         'backdrop-blur-sm shadow-sm border',
-                        tone('bg-success-100/80 dark:bg-success-900/40 text-success-700 dark:text-success-300 border-success-200/60 dark:border-success-700/40 hover:bg-success-200/80 dark:hover:bg-success-800/50', 'bg-rose-100/80 dark:bg-rose-900/40 text-error-700 dark:text-error-300 border-rose-200/60 dark:border-rose-700/40 hover:bg-rose-200/80 dark:hover:bg-rose-800/50', 'bg-gray-100/80 dark:bg-gray-800/60 text-gray-700 dark:text-gray-300 border-gray-200/60 dark:border-gray-700/40 hover:bg-gray-200/80 dark:hover:bg-gray-700/50')
+                        tone('bg-rise-100/80 dark:bg-rise-900/40 text-rise-700 dark:text-rise-300 border-rise-200/60 dark:border-rise-700/40 hover:bg-rise-200/80 dark:hover:bg-rise-800/50', 'bg-fall-100/80 dark:bg-fall-900/40 text-fall-700 dark:text-fall-300 border-fall-200/60 dark:border-fall-700/40 hover:bg-fall-200/80 dark:hover:bg-fall-800/50', 'bg-gray-100/80 dark:bg-gray-800/60 text-gray-700 dark:text-gray-300 border-gray-200/60 dark:border-gray-700/40 hover:bg-gray-200/80 dark:hover:bg-gray-700/50')
                       )}
                       title={t('portfolio:stats.viewTrendTooltip')}
                     >
@@ -404,16 +404,16 @@ export function PortfolioStats({ portfolio, performance, isValueVisible, apiStat
                   )}
                   <div className={cn(
                     "absolute top-0 right-0 w-20 h-20 rounded-full -mr-10 -mt-10 group-hover:scale-150 transition-transform duration-500",
-                    tone('bg-success-500/8 dark:bg-success-500/15', 'bg-error-500/8 dark:bg-error-500/15', 'bg-gray-500/8 dark:bg-gray-500/15')
+                    tone('bg-rise-500/8 dark:bg-rise-500/15', 'bg-fall-500/8 dark:bg-fall-500/15', 'bg-gray-500/8 dark:bg-gray-500/15')
                   )}></div>
                   <div className="relative flex items-center gap-2 sm:gap-2.5 md:gap-3">
                     <div className={cn(
                       'flex-shrink-0 p-2.5 rounded-lg shadow-sm group-hover:scale-110 transition-transform duration-300',
-                      tone('bg-success-100 dark:bg-success-900/30', 'bg-error-100 dark:bg-error-900/30', 'bg-gray-100 dark:bg-gray-700/40')
+                      tone('bg-rise-100 dark:bg-rise-900/30', 'bg-fall-100 dark:bg-fall-900/30', 'bg-gray-100 dark:bg-gray-700/40')
                     )}>
                       <CalendarIcon className={cn(
                         'w-6 h-6',
-                        tone('text-success-700 dark:text-success-400', 'text-error-700 dark:text-error-400', 'text-gray-500 dark:text-gray-400')
+                        tone('text-rise-700 dark:text-rise-400', 'text-fall-700 dark:text-fall-400', 'text-gray-500 dark:text-gray-400')
                       )} />
                     </div>
                     <div className="flex-1 min-w-0">
@@ -421,14 +421,14 @@ export function PortfolioStats({ portfolio, performance, isValueVisible, apiStat
                       <p className={cn(
                         "text-xs md:text-sm font-semibold mb-1 uppercase tracking-wider",
                         onViewTrendClick && 'pr-16',
-                        tone('text-success-700 dark:text-success-300', 'text-error-700 dark:text-error-300', 'text-gray-600 dark:text-gray-300')
+                        tone('text-rise-700 dark:text-rise-300', 'text-fall-700 dark:text-fall-300', 'text-gray-600 dark:text-gray-300')
                       )}>{lastSessionDay
                         ? t('portfolio:stats.lastSessionChange', { day: lastSessionDay, defaultValue: 'Change · {{day}}' })
                         : t('portfolio:stats.todayChange')}</p>
                       <div className="flex items-center gap-2 transition-all duration-200">
                         <p className={cn(
                           'text-xl sm:text-2xl md:text-2xl font-bold tabular-nums',
-                          tone('text-success-700 dark:text-success-400', 'text-error-700 dark:text-error-400', 'text-gray-500 dark:text-gray-400')
+                          tone('text-rise-700 dark:text-rise-400', 'text-fall-700 dark:text-fall-400', 'text-gray-500 dark:text-gray-400')
                         )}>
                           {isValueVisible
                             ? `${todayDir === 'up' ? '+' : ''}${formatCurrency(todayShown, portfolio.currency, { precision: 0 })}`
@@ -438,7 +438,7 @@ export function PortfolioStats({ portfolio, performance, isValueVisible, apiStat
                       </div>
                       <p className={cn(
                         'text-xs mt-0.5 font-semibold',
-                        pctTone(todayChangePercent)('text-success-700 dark:text-success-400', 'text-error-700 dark:text-error-400', 'text-gray-500 dark:text-gray-400')
+                        pctTone(todayChangePercent)('text-rise-700 dark:text-rise-400', 'text-fall-700 dark:text-fall-400', 'text-gray-500 dark:text-gray-400')
                       )}>
                         {isValueVisible
                           ? `${formatPercentage(todayChangePercent)}`
@@ -627,30 +627,30 @@ export function PortfolioStats({ portfolio, performance, isValueVisible, apiStat
                 <Tooltip content={t('portfolio:stats.realizedTooltip', { count: realizedPnl!.realizedCount })}>
                   <div className={cn(
                     "w-full relative overflow-hidden rounded-xl p-4 border shadow-sm hover:shadow-md transition-all duration-300 group cursor-help min-h-[110px]",
-                    realizedTone('bg-gradient-to-br from-success-50 via-white to-success-50/30 dark:from-success-900/10 dark:via-gray-800/50 dark:to-success-900/5 border-success-200/50 dark:border-success-800/30', 'bg-gradient-to-br from-error-50 via-white to-error-50/30 dark:from-error-900/10 dark:via-gray-800/50 dark:to-error-900/5 border-error-200/50 dark:border-error-800/30', 'bg-gradient-to-br from-gray-50 via-white to-gray-50/30 dark:from-gray-800/40 dark:via-gray-800/50 dark:to-gray-800/20 border-gray-200 dark:border-gray-700')
+                    realizedTone('bg-gradient-to-br from-rise-50 via-white to-rise-50/30 dark:from-rise-900/10 dark:via-gray-800/50 dark:to-rise-900/5 border-rise-200/50 dark:border-rise-800/30', 'bg-gradient-to-br from-fall-50 via-white to-fall-50/30 dark:from-fall-900/10 dark:via-gray-800/50 dark:to-fall-900/5 border-fall-200/50 dark:border-fall-800/30', 'bg-gradient-to-br from-gray-50 via-white to-gray-50/30 dark:from-gray-800/40 dark:via-gray-800/50 dark:to-gray-800/20 border-gray-200 dark:border-gray-700')
                   )}>
                     <div className={cn(
                       "absolute top-0 right-0 w-20 h-20 rounded-full -mr-10 -mt-10 group-hover:scale-150 transition-transform duration-500",
-                      realizedTone('bg-success-500/8 dark:bg-success-500/15', 'bg-error-500/8 dark:bg-error-500/15', 'bg-gray-500/8 dark:bg-gray-500/15')
+                      realizedTone('bg-rise-500/8 dark:bg-rise-500/15', 'bg-fall-500/8 dark:bg-fall-500/15', 'bg-gray-500/8 dark:bg-gray-500/15')
                     )} />
                     <div className="relative flex items-center gap-2 sm:gap-2.5 md:gap-3">
                       <div className={cn(
                         "flex-shrink-0 p-2.5 rounded-lg shadow-sm group-hover:scale-110 transition-transform duration-300",
-                        realizedTone('bg-success-100 dark:bg-success-900/30', 'bg-error-100 dark:bg-error-900/30', 'bg-gray-100 dark:bg-gray-700/40')
+                        realizedTone('bg-rise-100 dark:bg-rise-900/30', 'bg-fall-100 dark:bg-fall-900/30', 'bg-gray-100 dark:bg-gray-700/40')
                       )}>
                         <ArrowTrendingUpIcon className={cn(
                           "w-6 h-6",
-                          realizedTone('text-success-700 dark:text-success-400', 'text-error-700 dark:text-error-400', 'text-gray-500 dark:text-gray-400')
+                          realizedTone('text-rise-700 dark:text-rise-400', 'text-fall-700 dark:text-fall-400', 'text-gray-500 dark:text-gray-400')
                         )} />
                       </div>
                       <div className="flex-1">
                         <p className={cn(
                           "text-xs md:text-sm font-semibold mb-1 uppercase tracking-wider",
-                          realizedTone('text-success-700 dark:text-success-300', 'text-error-700 dark:text-error-300', 'text-gray-600 dark:text-gray-300')
+                          realizedTone('text-rise-700 dark:text-rise-300', 'text-fall-700 dark:text-fall-300', 'text-gray-600 dark:text-gray-300')
                         )}>{t('portfolio:stats.realizedLabel')}</p>
                         <p className={cn(
                           "text-xl sm:text-2xl font-bold tabular-nums",
-                          realizedTone('text-success-700 dark:text-success-400', 'text-error-700 dark:text-error-400', 'text-gray-500 dark:text-gray-400')
+                          realizedTone('text-rise-700 dark:text-rise-400', 'text-fall-700 dark:text-fall-400', 'text-gray-500 dark:text-gray-400')
                         )}>
                           {isValueVisible
                             ? `${realizedDir === 'up' ? '+' : ''}${formatCurrency(realizedShown, realizedPnl!.currency, { precision: 0 })}`
@@ -683,7 +683,7 @@ export function PortfolioStats({ portfolio, performance, isValueVisible, apiStat
                         </p>
                         <p className={cn(
                           'text-xl sm:text-2xl font-bold tabular-nums',
-                          toneOf(direction(asShown(riskMetrics!.alpha!, 2)))('text-success-700 dark:text-success-400', 'text-error-700 dark:text-error-400', 'text-gray-500 dark:text-gray-400')
+                          toneOf(direction(asShown(riskMetrics!.alpha!, 2)))('text-rise-700 dark:text-rise-400', 'text-fall-700 dark:text-fall-400', 'text-gray-500 dark:text-gray-400')
                         )}>
                           {isValueVisible
                             ? `${asShown(riskMetrics!.alpha!, 2) > 0 ? '+' : ''}${asShown(riskMetrics!.alpha!, 2).toFixed(2)}%`

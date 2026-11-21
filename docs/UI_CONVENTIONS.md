@@ -27,9 +27,12 @@ use the `primary` Button variant for that.
 / `errorScale` object precisely so the semantic names cannot drift from the base palettes. Use
 `income`/`expense` when the meaning is financial direction, `success`/`error` when it is UI state.
 
-Taiwan/Asia market convention inverts the Western red/green mapping for price movement. Where a
-chart or ticker shows market direction, honour the local convention rather than assuming
-green-up.
+Taiwan/Asia market convention inverts the Western red/green mapping for price movement, and the
+user picks which one in Settings ("Gains in red"). Colour a market move (a holding's gain, a day's
+change, a return) with `rise-*` / `fall-*`, never `success`/`error`: those two scales are CSS
+variables that swap when `<html data-market="red-up">` is set. For a colour that can't be a class
+(a chart's hex scale), read `useMarketColors()`; an SVG `fill` can use `rgb(var(--rise-500))`.
+Income and expense are not market moves and keep `income`/`expense`.
 
 ## Typography
 

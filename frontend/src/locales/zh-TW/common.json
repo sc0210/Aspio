@@ -1140,7 +1140,9 @@
     "notifLoadFailed": "無法載入通知設定。",
     "notifSaveFailed": "無法儲存這項變更，請再試一次。",
     "profileLoadFailed": "無法載入個人資料，下方欄位可能是空的。",
-    "saved": "已儲存"
+    "saved": "已儲存",
+    "marketRedUp": "漲紅跌綠",
+    "marketRedUpDesc": "台股配色：價格上漲顯示紅色、下跌顯示綠色。收入與支出的顏色不變。"
   },
   "status": {
     "active": "啟用",

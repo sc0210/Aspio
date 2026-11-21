@@ -35,6 +35,7 @@ import { Card } from '@/components/ui/Card';
 import { hasAnalyticsConsent, isAnalyticsAvailable, setAnalyticsConsent } from '@/lib/analytics/config';
 import { analyticsProvider } from '@/lib/analytics/provider';
 import { DemoNotice } from '@/components/ui/DemoNotice';
+import { useMarketColors } from '@/hooks/useMarketColors';
 
 // Currencies offered for the account default. Kept in sync with the backend
 // RegionalPreferencesUpdate pattern — trimmed to the two common ones for our
@@ -414,6 +415,7 @@ export default function SettingsPage() {
   const { user, isDemo: isDemoMode } = useAppMode();
   const { lineBot } = useFeatures();
   const { isValueVisible, setValueVisible } = usePrivacy();
+  const { redUp: marketRedUp, setRedUp: setMarketRedUp } = useMarketColors();
   const { preferences, updatePreference, resetPreferences } = useAssetTrackingPreferences();
   const { theme, setTheme } = useTheme();
   const notifPrefs = useNotifPrefs(isDemoMode);
@@ -735,6 +737,12 @@ export default function SettingsPage() {
             description={t('settings.showValuesDesc', 'Display balances and amounts across the app')}
           >
             <Toggle checked={isValueVisible} onChange={setValueVisible} label={t('settings.showValues', 'Show Financial Values')} />
+          </SettingRow>
+          <SettingRow
+            label={t('settings.marketRedUp', 'Gains in red')}
+            description={t('settings.marketRedUpDesc', 'Taiwan market colours: a price going up is red and going down is green. Income and spending keep their colours.')}
+          >
+            <Toggle checked={marketRedUp} onChange={setMarketRedUp} label={t('settings.marketRedUp', 'Gains in red')} />
           </SettingRow>
           {analyticsAvailable && (
             <SettingRow

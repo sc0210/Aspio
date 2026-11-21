@@ -204,6 +204,9 @@ module.exports = {
         // app-wide and can be re-themed in one place. Aliased to the exact
         // success/error scales (defined above via the shared consts) so the
         // pairs cannot drift apart.
+        // Market direction, swapped for the Taiwan convention (globals-hybrid.css).
+        rise: { 50: 'rgb(var(--rise-50) / <alpha-value>)', 100: 'rgb(var(--rise-100) / <alpha-value>)', 200: 'rgb(var(--rise-200) / <alpha-value>)', 300: 'rgb(var(--rise-300) / <alpha-value>)', 400: 'rgb(var(--rise-400) / <alpha-value>)', 500: 'rgb(var(--rise-500) / <alpha-value>)', 600: 'rgb(var(--rise-600) / <alpha-value>)', 700: 'rgb(var(--rise-700) / <alpha-value>)', 800: 'rgb(var(--rise-800) / <alpha-value>)', 900: 'rgb(var(--rise-900) / <alpha-value>)' },
+        fall: { 50: 'rgb(var(--fall-50) / <alpha-value>)', 100: 'rgb(var(--fall-100) / <alpha-value>)', 200: 'rgb(var(--fall-200) / <alpha-value>)', 300: 'rgb(var(--fall-300) / <alpha-value>)', 400: 'rgb(var(--fall-400) / <alpha-value>)', 500: 'rgb(var(--fall-500) / <alpha-value>)', 600: 'rgb(var(--fall-600) / <alpha-value>)', 700: 'rgb(var(--fall-700) / <alpha-value>)', 800: 'rgb(var(--fall-800) / <alpha-value>)', 900: 'rgb(var(--fall-900) / <alpha-value>)' },
         income: successScale,
         expense: errorScale,
       },

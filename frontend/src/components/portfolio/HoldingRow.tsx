@@ -90,8 +90,8 @@ function HoldingRowBase({
           : cn(
               "border-l-transparent",
               isGain
-                ? "hover:border-l-success-500 dark:hover:border-l-success-400 hover:bg-success-50/30 dark:hover:bg-success-900/10"
-                : "hover:border-l-error-500 dark:hover:border-l-error-400 hover:bg-error-50/30 dark:hover:bg-error-900/10"
+                ? "hover:border-l-rise-500 dark:hover:border-l-rise-400 hover:bg-rise-50/30 dark:hover:bg-rise-900/10"
+                : "hover:border-l-fall-500 dark:hover:border-l-fall-400 hover:bg-fall-50/30 dark:hover:bg-fall-900/10"
             )
       )}
       // In bulk edit a row click selects it (the checkbox cell stops propagation, so
@@ -230,7 +230,7 @@ function HoldingRowBase({
             {!isCash && holding.dayChange != null && (
               <div className={cn(
                 'text-xs mt-0.5 leading-tight',
-                holding.dayChange >= 0 ? 'text-success-700 dark:text-success-400' : 'text-error-700 dark:text-error-400'
+                holding.dayChange >= 0 ? 'text-rise-700 dark:text-rise-400' : 'text-fall-700 dark:text-fall-400'
               )}>
                 {holding.dayChange >= 0 ? '+' : ''}{formatCurrency(holding.dayChange, holding.currency)}
                 {holding.dayChangePercentage != null && (
@@ -291,15 +291,15 @@ function HoldingRowBase({
             {/* Gain/Loss Amount and ROI */}
             <div className="flex items-center justify-end space-x-2">
               {(holding.gainLoss || 0) >= 0 ? (
-                <ArrowTrendingUpIcon className="w-4 h-4 text-success-700 dark:text-success-500" />
+                <ArrowTrendingUpIcon className="w-4 h-4 text-rise-700 dark:text-rise-500" />
               ) : (
-                <ArrowTrendingDownIcon className="w-4 h-4 text-error-700 dark:text-error-500" />
+                <ArrowTrendingDownIcon className="w-4 h-4 text-fall-700 dark:text-fall-500" />
               )}
               <div className="flex flex-col items-end">
                 {/* Total Gain/Loss Amount */}
                 <div className={cn(
                   'text-sm font-semibold leading-tight',
-                  (holding.gainLoss || 0) >= 0 ? 'text-success-700 dark:text-success-400' : 'text-error-700 dark:text-error-400'
+                  (holding.gainLoss || 0) >= 0 ? 'text-rise-700 dark:text-rise-400' : 'text-fall-700 dark:text-fall-400'
                 )}>
                   {isValueVisible
                     ? `${(holding.gainLoss || 0) >= 0 ? '+' : ''}${formatCurrency(holding.gainLoss || 0, holding.currency)}`
@@ -309,7 +309,7 @@ function HoldingRowBase({
                 {/* ROI (Return on Investment) - Simple percentage gain */}
                 <div className={cn(
                   'text-xs leading-tight',
-                  (holding.gainLossPercentage || 0) >= 0 ? 'text-success-700 dark:text-success-400' : 'text-error-700 dark:text-error-400'
+                  (holding.gainLossPercentage || 0) >= 0 ? 'text-rise-700 dark:text-rise-400' : 'text-fall-700 dark:text-fall-400'
                 )}>
                   {isValueVisible
                     ? `${(holding.gainLossPercentage || 0) >= 0 ? '+' : ''}${(holding.gainLossPercentage || 0).toFixed(2)}% ROI`

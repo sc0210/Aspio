@@ -135,8 +135,8 @@ export function MobilePortfolio() {
     // Halves round away from zero, as the currency formatter does.
     const todayShown = Math.sign(model.todayGain) * Math.round(Math.abs(model.todayGain)) || 0;
     const todayTone = todayShown > 0
-        ? 'text-prosperity-700 dark:text-prosperity-400'
-        : todayShown < 0 ? 'text-error-700 dark:text-error-500' : 'text-gray-500 dark:text-gray-400';
+        ? 'text-rise-700 dark:text-rise-400'
+        : todayShown < 0 ? 'text-fall-700 dark:text-fall-500' : 'text-gray-500 dark:text-gray-400';
     const todayArrow = todayShown > 0 ? '▲ ' : todayShown < 0 ? '▼ ' : '';
     const todayPct = Math.abs(model.todayGainPct).toFixed(2);
     const todayPctSign = Number(todayPct) === 0 ? '' : model.todayGainPct > 0 ? '+' : '−';
@@ -190,7 +190,7 @@ export function MobilePortfolio() {
                             )}>
                                 {isValueVisible ? formatTWD(model.totalValue) : hidden}
                             </p>
-                            <p className={cn('mt-2 text-sm font-bold tabular-nums', totalUp ? 'text-prosperity-700 dark:text-prosperity-400' : 'text-error-700 dark:text-error-500')}>
+                            <p className={cn('mt-2 text-sm font-bold tabular-nums', totalUp ? 'text-rise-700 dark:text-rise-400' : 'text-fall-700 dark:text-fall-500')}>
                                 {totalUp ? '▲' : '▼'} {isValueVisible ? formatTWDCompact(Math.abs(model.totalGain)) : '•••'}
                                 <span className="text-gray-500 dark:text-gray-400 font-semibold ml-1">
                                     {totalUp ? '+' : '−'}{Math.abs(model.totalGainPct).toFixed(1)}%
@@ -227,7 +227,7 @@ export function MobilePortfolio() {
                                 {t('portfolio:stats.cagrLabel', 'Annual return')}
                                 <span className="ml-1 font-normal">· {t('portfolio:stats.cagrCaption', 'Time-weighted, per year')}</span>
                             </span>
-                            <span className={cn('text-sm font-bold tabular-nums', annualPct >= 0 ? 'text-prosperity-700 dark:text-prosperity-400' : 'text-error-700 dark:text-error-500')}>
+                            <span className={cn('text-sm font-bold tabular-nums', annualPct >= 0 ? 'text-rise-700 dark:text-rise-400' : 'text-fall-700 dark:text-fall-500')}>
                                 {annualPct >= 0 ? '+' : '−'}{Math.abs(annualPct).toFixed(1)}%
                             </span>
                         </div>
@@ -267,7 +267,7 @@ export function MobilePortfolio() {
                                         <p className="text-[13.5px] font-bold tabular-nums text-gray-900 dark:text-white">
                                             {isValueVisible ? formatTWDCompact(toTWD(h.totalValue || 0, h.currency || 'TWD')) : '•••'}
                                         </p>
-                                        <p className={cn('text-xs font-bold tabular-nums', up ? 'text-prosperity-700 dark:text-prosperity-400' : 'text-error-700 dark:text-error-500')}>
+                                        <p className={cn('text-xs font-bold tabular-nums', up ? 'text-rise-700 dark:text-rise-400' : 'text-fall-700 dark:text-fall-500')}>
                                             {up ? '+' : '−'}{Math.abs(h.gainLossPercentage || 0).toFixed(1)}%
                                         </p>
                                     </div>

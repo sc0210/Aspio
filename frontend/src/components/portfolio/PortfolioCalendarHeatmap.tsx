@@ -1,11 +1,12 @@
 'use client';
 
-import { useMemo, useState } from 'react';
+import { useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
 import { cn } from '@/utils/cn';
 import { formatCurrency, formatCompactChange } from '@/utils/formatters';
 import type { AssetTrendDataPoint } from './AssetTrendChart';
 import { buildMonthBlocks } from './calendarGrid';
+import { useMarketColors } from '@/hooks/useMarketColors';
 
 interface Props {
     data: AssetTrendDataPoint[];
@@ -13,26 +14,22 @@ interface Props {
     isValueVisible: boolean;
 }
 
-function cellColorClass(change: number | null, maxAbs: number, invertColors: boolean): string {
+function cellColorClass(change: number | null, maxAbs: number): string {
     // Same tiers as the dashboard mini calendar (PortfolioOverview), so both read alike.
     if (change === null) return 'bg-gray-100 dark:bg-gray-700/50';
     if (change === 0) return 'bg-gray-100 dark:bg-gray-700';
 
     const ratio = maxAbs > 0 ? Math.min(Math.abs(change) / maxAbs, 1) : 0;
-    const isGain = change > 0;
-    // Taiwan convention: green = loss, red = gain
-    const showGreen = invertColors ? !isGain : isGain;
-
+    // rise/fall follow the red-up preference on their own (globals-hybrid.css).
     // Strong days take the -700 shade: white on emerald-500 measured 2.54:1.
-    if (showGreen) {
-        if (ratio > 0.66) return 'bg-emerald-700 text-white';
-        if (ratio > 0.33) return 'bg-emerald-200 text-emerald-900 dark:bg-emerald-700/60 dark:text-emerald-100';
-        return 'bg-emerald-100 text-emerald-800 dark:bg-emerald-900/40 dark:text-emerald-300';
-    } else {
-        if (ratio > 0.66) return 'bg-red-700 text-white';
-        if (ratio > 0.33) return 'bg-red-200 text-red-900 dark:bg-red-700/60 dark:text-red-100';
-        return 'bg-red-100 text-red-800 dark:bg-red-900/40 dark:text-red-300';
+    if (change > 0) {
+        if (ratio > 0.66) return 'bg-rise-700 text-white';
+        if (ratio > 0.33) return 'bg-rise-200 text-rise-900 dark:bg-rise-700/60 dark:text-rise-100';
+        return 'bg-rise-100 text-rise-800 dark:bg-rise-900/40 dark:text-rise-300';
     }
+    if (ratio > 0.66) return 'bg-fall-700 text-white';
+    if (ratio > 0.33) return 'bg-fall-200 text-fall-900 dark:bg-fall-700/60 dark:text-fall-100';
+    return 'bg-fall-100 text-fall-800 dark:bg-fall-900/40 dark:text-fall-300';
 }
 
 
@@ -43,9 +40,8 @@ export function PortfolioCalendarHeatmap({ data, isValueVisible }: Props) {
     // Said in the cell's own tooltip: the US session ends after midnight in Taipei,
     // so the newest day keeps moving until its close is published.
     const provisionalNote = t('dashboard:portfolioOverview.provisionalNote');
-    const [invertColors, setInvertColors] = useState(() => {
-        try { return localStorage.getItem('cal-tw-mode') === 'true'; } catch { return false; }
-    });
+    // Taiwan convention (gains red) is the app-wide preference, also in Settings.
+    const { redUp: invertColors, setRedUp } = useMarketColors();
     const blocks = useMemo(() => buildMonthBlocks(data), [data]);
 
     const maxAbs = useMemo(() => {
@@ -70,37 +66,21 @@ export function PortfolioCalendarHeatmap({ data, isValueVisible }: Props) {
             <div className="flex flex-wrap items-center gap-3 text-xs text-gray-500 dark:text-gray-400">
                 <span className="font-semibold text-gray-700 dark:text-gray-300">Daily P&L</span>
                 <div className="flex items-center gap-1">
-                    {invertColors ? (
-                        <>
-                            <span className="w-4 h-4 rounded bg-red-700 inline-block" title="Strong gain" />
-                            <span className="w-4 h-4 rounded bg-red-200 inline-block" />
-                            <span className="w-4 h-4 rounded bg-red-100 inline-block" />
-                            <span className="w-3 h-3 rounded bg-gray-200 dark:bg-gray-700 inline-block mx-0.5" />
-                            <span className="w-4 h-4 rounded bg-emerald-100 inline-block" />
-                            <span className="w-4 h-4 rounded bg-emerald-200 inline-block" />
-                            <span className="w-4 h-4 rounded bg-emerald-700 inline-block" title="Strong loss" />
-                        </>
-                    ) : (
-                        <>
-                            <span className="w-4 h-4 rounded bg-red-700 inline-block" title="Strong loss" />
-                            <span className="w-4 h-4 rounded bg-red-200 inline-block" />
-                            <span className="w-4 h-4 rounded bg-red-100 inline-block" />
-                            <span className="w-3 h-3 rounded bg-gray-200 dark:bg-gray-700 inline-block mx-0.5" />
-                            <span className="w-4 h-4 rounded bg-emerald-100 inline-block" />
-                            <span className="w-4 h-4 rounded bg-emerald-200 inline-block" />
-                            <span className="w-4 h-4 rounded bg-emerald-700 inline-block" title="Strong gain" />
-                        </>
-                    )}
+                    <span className="w-4 h-4 rounded bg-fall-700 inline-block" title="Strong loss" />
+                    <span className="w-4 h-4 rounded bg-fall-200 inline-block" />
+                    <span className="w-4 h-4 rounded bg-fall-100 inline-block" />
+                    <span className="w-3 h-3 rounded bg-gray-200 dark:bg-gray-700 inline-block mx-0.5" />
+                    <span className="w-4 h-4 rounded bg-rise-100 inline-block" />
+                    <span className="w-4 h-4 rounded bg-rise-200 inline-block" />
+                    <span className="w-4 h-4 rounded bg-rise-700 inline-block" title="Strong gain" />
                 </div>
-                <span>{invertColors ? 'Gain → Loss' : 'Loss → Gain'}</span>
+                <span>Loss → Gain</span>
 
                 {/* Color convention toggle */}
                 <button
-                    onClick={() => setInvertColors((v) => {
-                        const next = !v;
-                        try { localStorage.setItem('cal-tw-mode', String(next)); } catch {}
-                        return next;
-                    })}
+                    type="button"
+                    aria-pressed={invertColors}
+                    onClick={() => setRedUp(!invertColors)}
                     className={cn(
                         'flex items-center gap-1.5 px-2 py-1 rounded-lg border text-[11px] font-semibold transition-colors',
                         invertColors
@@ -136,9 +116,9 @@ export function PortfolioCalendarHeatmap({ data, isValueVisible }: Props) {
                             {hasMonthData && (
                                 <span className={cn(
                                     'text-xs font-bold tabular-nums',
-                                    (invertColors ? !isMonthPositive : isMonthPositive)
-                                        ? 'text-emerald-700 dark:text-emerald-400'
-                                        : 'text-red-700 dark:text-red-400',
+                                    isMonthPositive
+                                        ? 'text-rise-700 dark:text-rise-400'
+                                        : 'text-fall-700 dark:text-fall-400',
                                 )}>
                                     {isValueVisible ? formatCompactChange(monthSum) : '•••'}
                                 </span>
@@ -159,7 +139,6 @@ export function PortfolioCalendarHeatmap({ data, isValueVisible }: Props) {
                             const weekSum = week.reduce((s, cell) => cell?.change != null ? s + cell.change : s, 0);
                             const hasWeekData = week.some((cell) => cell?.change != null);
                             const isWeekPositive = weekSum >= 0;
-                            const showGreen = invertColors ? !isWeekPositive : isWeekPositive;
                             return (
                                 <div key={wi} className="grid grid-cols-6 gap-0.5 mb-0.5">
                                     {/* Day cells (Mon–Fri) */}
@@ -178,7 +157,7 @@ export function PortfolioCalendarHeatmap({ data, isValueVisible }: Props) {
                                                 }
                                                 className={cn(
                                                     'h-10 rounded-sm flex flex-col items-center justify-center gap-0.5',
-                                                    cellColorClass(cell.change, maxAbs, invertColors),
+                                                    cellColorClass(cell.change, maxAbs),
                                                     isToday && 'ring-2 ring-primary-500 ring-offset-1',
                                                     cell.provisional && 'border border-dashed border-gray-400 dark:border-gray-500',
                                                 )}
@@ -202,7 +181,7 @@ export function PortfolioCalendarHeatmap({ data, isValueVisible }: Props) {
                                         {hasWeekData && (
                                             <span className={cn(
                                                 'text-xs leading-none font-bold tabular-nums text-center px-0.5',
-                                                showGreen ? 'text-emerald-700 dark:text-emerald-400' : 'text-red-700 dark:text-red-400',
+                                                isWeekPositive ? 'text-rise-700 dark:text-rise-400' : 'text-fall-700 dark:text-fall-400',
                                             )}>
                                                 {isValueVisible ? formatCompactChange(weekSum) : '•••'}
                                             </span>

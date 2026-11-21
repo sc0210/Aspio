@@ -34,13 +34,13 @@ function miniCellColor(change: number | null, maxAbs: number): string {
   const ratio = maxAbs > 0 ? Math.min(Math.abs(change) / maxAbs, 1) : 0;
   // Strong days take the -700 shade: white on emerald-500 measured 2.54:1.
   if (change > 0) {
-    if (ratio > 0.66) return 'bg-emerald-700 text-white';
-    if (ratio > 0.33) return 'bg-emerald-200 text-emerald-900 dark:bg-emerald-700/60 dark:text-emerald-100';
-    return 'bg-emerald-100 text-emerald-800 dark:bg-emerald-900/40 dark:text-emerald-300';
+    if (ratio > 0.66) return 'bg-rise-700 text-white';
+    if (ratio > 0.33) return 'bg-rise-200 text-rise-900 dark:bg-rise-700/60 dark:text-rise-100';
+    return 'bg-rise-100 text-rise-800 dark:bg-rise-900/40 dark:text-rise-300';
   }
-  if (ratio > 0.66) return 'bg-red-700 text-white';
-  if (ratio > 0.33) return 'bg-red-200 text-red-900 dark:bg-red-700/60 dark:text-red-100';
-  return 'bg-red-100 text-red-800 dark:bg-red-900/40 dark:text-red-300';
+  if (ratio > 0.66) return 'bg-fall-700 text-white';
+  if (ratio > 0.33) return 'bg-fall-200 text-fall-900 dark:bg-fall-700/60 dark:text-fall-100';
+  return 'bg-fall-100 text-fall-800 dark:bg-fall-900/40 dark:text-fall-300';
 }
 
 
@@ -96,7 +96,7 @@ function MiniCalendarSection({
           {hasData && (
             <span className={cn(
               'text-xs font-bold tabular-nums',
-              isPositive ? 'text-emerald-700 dark:text-emerald-400' : 'text-red-700 dark:text-red-400',
+              isPositive ? 'text-rise-700 dark:text-rise-400' : 'text-fall-700 dark:text-fall-400',
             )}>
               {isValueVisible
                 ? formatCompactChange(monthSum)
@@ -170,7 +170,7 @@ function MiniCalendarSection({
                 {hasWeekData && (
                   <span className={cn(
                     'text-xs leading-none font-bold tabular-nums text-center px-0.5',
-                    isWeekPositive ? 'text-emerald-700 dark:text-emerald-400' : 'text-red-700 dark:text-red-400',
+                    isWeekPositive ? 'text-rise-700 dark:text-rise-400' : 'text-fall-700 dark:text-fall-400',
                   )}>
                     {isValueVisible ? formatCompactChange(weekSum) : '•••'}
                   </span>
