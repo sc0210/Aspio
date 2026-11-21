@@ -102,6 +102,9 @@ function TransactionRowBase({
                     alone at the start of a wrapped line read as a stray mark. */}
                 <div className="flex flex-wrap items-center gap-1 text-xs text-gray-500 dark:text-gray-400 min-w-0">
                   <span className="flex-shrink-0">{searchQuery ? highlight(transaction.category, searchQuery) : transaction.category}</span>
+                  {transaction.subcategory && (
+                    <span className="flex-shrink-0">· {searchQuery ? highlight(transaction.subcategory, searchQuery) : transaction.subcategory}</span>
+                  )}
                   {transaction.peerSplitShareId && (
                     <Link
                       href={SPLITS_HREF}

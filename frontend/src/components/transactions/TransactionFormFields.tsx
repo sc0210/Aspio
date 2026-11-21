@@ -72,6 +72,19 @@ export const CATEGORIES = {
   ],
 };
 
+// Optional detail under a category, stored in `transaction.subcategory`. Every
+// total, chart and budget keys on the category, so a Beauty purchase still counts
+// as Shopping everywhere; the detail only says which kind. A category without an
+// entry here offers none.
+export const SUBCATEGORIES: Record<string, { value: string; label: string; icon: string }[]> = {
+  Shopping: [
+    { value: 'Clothing',    label: 'Clothing',    icon: '👗' },
+    { value: 'Beauty',      label: 'Beauty',      icon: '💅' },
+    { value: 'Electronics', label: 'Electronics', icon: '📱' },
+    { value: 'Household',   label: 'Household',   icon: '🧴' },
+  ],
+};
+
 export const PAYMENT_METHODS = [
   { value: 'cash',           label: 'Cash'          },
   { value: 'credit_card',    label: 'Credit Card'   },
@@ -99,6 +112,8 @@ export interface CashFormData {
   currency: string;
   description: string;
   category: string;
+  /** Optional detail under the category ('' or absent: none). See SUBCATEGORIES. */
+  subcategory?: string;
   paymentMethod: string;
   walletType: string;
   fromWallet: string;
@@ -350,11 +365,21 @@ export function CashFields({ idPrefix: p, formData, errors, onChange, onTagsChan
   // Picking Loan Payment with exactly one loan links it: a repayment that reduces
   // no balance is the mistake to avoid.
   const pickCategory = (value: string) => {
+    // A detail belongs to its category: Beauty must not ride along to Dining.
+    if (value !== formData.category && formData.subcategory) onChange('subcategory', '');
     onChange('category', value);
     if (value === LOAN_CATEGORY && formData.type === 'expense' && !formData.loanId && activeLoans.length === 1) {
       onChange('loanId', activeLoans[0].id);
     }
   };
+
+  // The chosen category's details. A detail this form does not list (an imported
+  // row) is shown, not offered, like an unlisted category: a tap cannot erase it,
+  // picking a listed one replaces it.
+  const subcategories = SUBCATEGORIES[formData.category] ?? [];
+  const unknownSubcategory = formData.subcategory && !subcategories.some((s) => s.value === formData.subcategory)
+    ? formData.subcategory
+    : null;
 
   // Each side of a transfer: picking one wallet puts the other on the far side,
   // so the two can never match.
@@ -572,6 +597,41 @@ export function CashFields({ idPrefix: p, formData, errors, onChange, onTagsChan
             })}
           </div>
           {errors.category && <p id={`${p}-category-error`} className={ERROR_TEXT} role="alert">{errors.category}</p>}
+          {/* Optional detail, offered only once its category is chosen: one tap for
+              most entries, a second for those who want the finer split. Tapping the
+              chosen one again clears it. */}
+          {(subcategories.length > 0 || unknownSubcategory) && (
+            <div className="mt-3">
+              <div id={`${p}-group-subcategory`} className={FIELD_LABEL}>
+                {t('transactions:form.subcategoryLabel', 'Detail')}{' '}
+                <span className="font-normal text-gray-500 dark:text-gray-400">{t('transactions:form.optional', '(optional)')}</span>
+              </div>
+              <div role="group" aria-labelledby={`${p}-group-subcategory`} className={CHIP_ROW}>
+                {unknownSubcategory && (
+                  <span data-current-subcategory className={cn(CHIP, CHIP_ON)}>
+                    <ChipCheck />
+                    <span className="sr-only">{t('transactions:form.currentSubcategory', 'Current detail:')} </span>
+                    {unknownSubcategory}
+                  </span>
+                )}
+                {subcategories.map((sub) => {
+                  const isSelected = formData.subcategory === sub.value;
+                  return (
+                    <button
+                      key={sub.value}
+                      type="button"
+                      aria-pressed={isSelected}
+                      onClick={() => onChange('subcategory', isSelected ? '' : sub.value)}
+                      className={cn(CHIP, isSelected ? CHIP_ON : CHIP_OFF)}
+                    >
+                      {isSelected ? <ChipCheck /> : <span aria-hidden="true">{sub.icon}</span>}
+                      {t(`transactions:form.subcategories.${sub.value}`, sub.label)}
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
+          )}
           {/* Loan Payment with no loan to link: say where loans come from. */}
           {formData.type === 'expense' && formData.category === LOAN_CATEGORY && activeLoans.length === 0 && (
             <p className="mt-1.5 text-xs text-gray-500 dark:text-gray-400">

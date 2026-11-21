@@ -261,7 +261,15 @@
       "title": "Sale proceeds",
       "note": "The amount, date and wallet follow the sale. To change them, edit or reverse the sale on Portfolio."
     },
-    "splitSaveFirst": "Save your changes first, then split."
+    "splitSaveFirst": "Save your changes first, then split.",
+    "currentSubcategory": "Current detail:",
+    "subcategoryLabel": "Detail",
+    "subcategories": {
+      "Beauty": "Beauty",
+      "Clothing": "Clothing",
+      "Electronics": "Electronics",
+      "Household": "Household"
+    }
   },
   "importExport": {
     "button": "Export / Import",

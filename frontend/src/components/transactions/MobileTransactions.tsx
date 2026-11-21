@@ -166,7 +166,7 @@ export function MobileTransactions() {
                                                     </span>
                                                     <div className="min-w-0 flex-1">
                                                         <p className="text-sm font-bold text-gray-900 dark:text-white truncate">{tx.description || tx.category}</p>
-                                                        <p className="text-xs font-medium text-gray-500 dark:text-gray-400 truncate">{tx.category}</p>
+                                                        <p className="text-xs font-medium text-gray-500 dark:text-gray-400 truncate">{tx.category}{tx.subcategory && ` · ${tx.subcategory}`}</p>
                                                     </div>
                                                     <p className={cn('text-[14.5px] font-extrabold tabular-nums flex-shrink-0',
                                                         isTransfer ? 'text-gray-500 dark:text-gray-400' : isIncome ? 'text-prosperity-700 dark:text-prosperity-400' : 'text-gray-900 dark:text-white')}>

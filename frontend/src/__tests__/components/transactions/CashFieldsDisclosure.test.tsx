@@ -143,3 +143,44 @@ describe('CashFields — guarding against easy mistakes', () => {
     expect(onChange).toHaveBeenCalledWith('paymentMethod', '');
   });
 });
+
+describe('CashFields — the optional detail under a category', () => {
+  const details = () => screen.queryByRole('group', { name: /Detail/ });
+
+  it('offers no detail until a category that has some is chosen', () => {
+    renderFields(form());
+    expect(details()).not.toBeInTheDocument();
+    renderFields(form({ category: 'Dining' }));
+    expect(details()).not.toBeInTheDocument();
+  });
+
+  it('offers Shopping details, Beauty among them, and picks one', async () => {
+    const onChange = jest.fn();
+    renderFields(form({ category: 'Shopping' }), { onChange });
+    await userEvent.click(within(details()!).getByRole('button', { name: /Beauty/ }));
+    expect(onChange).toHaveBeenCalledWith('subcategory', 'Beauty');
+  });
+
+  it('clears the chosen detail when it is tapped again', async () => {
+    const onChange = jest.fn();
+    renderFields(form({ category: 'Shopping', subcategory: 'Beauty' }), { onChange });
+    const beauty = within(details()!).getByRole('button', { name: /Beauty/ });
+    expect(beauty).toHaveAttribute('aria-pressed', 'true');
+    await userEvent.click(beauty);
+    expect(onChange).toHaveBeenCalledWith('subcategory', '');
+  });
+
+  it('drops the detail when the category changes, so Beauty never rides along to Dining', async () => {
+    const onChange = jest.fn();
+    renderFields(form({ category: 'Shopping', subcategory: 'Beauty' }), { onChange });
+    await userEvent.click(screen.getByRole('button', { name: /Dining/ }));
+    expect(onChange).toHaveBeenCalledWith('subcategory', '');
+    expect(onChange).toHaveBeenCalledWith('category', 'Dining');
+  });
+
+  it('shows a detail this form does not list, but not as a chip a tap could erase', () => {
+    renderFields(form({ category: 'Shopping', subcategory: 'Books' }));
+    expect(details()).toHaveTextContent('Books');
+    expect(within(details()!).queryByRole('button', { name: /Books/ })).not.toBeInTheDocument();
+  });
+});

@@ -1,4 +1,4 @@
-import { CATEGORIES, CURRENCIES, PAYMENT_METHODS } from '@/components/transactions/TransactionFormFields';
+import { CATEGORIES, CURRENCIES, PAYMENT_METHODS, SUBCATEGORIES } from '@/components/transactions/TransactionFormFields';
 
 type CashType = 'expense' | 'income';
 
@@ -14,7 +14,7 @@ type CashType = 'expense' | 'income';
 export function readPrefill(params: Pick<URLSearchParams, 'get'>) {
   const type = params.get('type');
   if (type !== 'expense' && type !== 'income') return null;
-  const out: { type: CashType; amount?: string; currency?: string; description?: string; category?: string; walletType?: string; paymentMethod?: string; date?: string } = { type };
+  const out: { type: CashType; amount?: string; currency?: string; description?: string; category?: string; subcategory?: string; walletType?: string; paymentMethod?: string; date?: string } = { type };
   const amount = Number(params.get('amount'));
   if (params.get('amount') && Number.isFinite(amount) && amount > 0) out.amount = String(amount);
   const currency = params.get('currency');
@@ -23,6 +23,9 @@ export function readPrefill(params: Pick<URLSearchParams, 'get'>) {
   if (description) out.description = description.slice(0, 200);
   const category = params.get('category');
   if (category && CATEGORIES[type].some((c) => c.value === category)) out.category = category;
+  // A detail only under the category it belongs to.
+  const subcategory = params.get('subcategory');
+  if (subcategory && out.category && SUBCATEGORIES[out.category]?.some((s) => s.value === subcategory)) out.subcategory = subcategory;
   const wallet = params.get('walletType');
   if (wallet === 'life' || wallet === 'emergency') out.walletType = wallet;
   const payment = params.get('paymentMethod');

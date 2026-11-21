@@ -261,7 +261,15 @@
       "title": "賣出所得",
       "note": "金額、日期與錢包依這筆賣出而定。要修改，請在投資組合編輯或撤銷這筆賣出。"
     },
-    "splitSaveFirst": "請先儲存變更，再分帳。"
+    "splitSaveFirst": "請先儲存變更，再分帳。",
+    "currentSubcategory": "目前細項：",
+    "subcategoryLabel": "細項",
+    "subcategories": {
+      "Beauty": "美容",
+      "Clothing": "服飾",
+      "Electronics": "3C 電子",
+      "Household": "居家用品"
+    }
   },
   "importExport": {
     "button": "匯出 / 匯入",

@@ -30,6 +30,12 @@ describe('readPrefill — what a link may start the add form with', () => {
     expect(read('type=expense&category=Loan%20Payment&loanId=L1')).toEqual({ type: 'expense', category: 'Loan Payment' });
   });
 
+  it('keeps a detail only under the category it belongs to', () => {
+    expect(read('type=expense&category=Shopping&subcategory=Beauty')).toEqual({ type: 'expense', category: 'Shopping', subcategory: 'Beauty' });
+    expect(read('type=expense&category=Dining&subcategory=Beauty')).toEqual({ type: 'expense', category: 'Dining' });
+    expect(read('type=expense&subcategory=Beauty')).toEqual({ type: 'expense' });
+  });
+
   it('caps a long description', () => {
     expect(read(`type=expense&description=${'x'.repeat(500)}`)?.description).toHaveLength(200);
   });
