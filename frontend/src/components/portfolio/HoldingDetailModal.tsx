@@ -291,8 +291,7 @@ export function HoldingDetailModal({
             {onSellLot && holdings.length > 0 && (
               <button
                 onClick={() => {
-                  // Use the first holding's data for the sell modal
-                  // (or aggregate if needed)
+                  // The parent sells the whole holding; the lot only names it.
                   onSellLot(holdings[0]);
                   onClose(); // Close detail modal before sell modal opens
                 }}
