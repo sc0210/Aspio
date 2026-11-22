@@ -4,7 +4,7 @@ import { Card } from '@/components/ui/Card';
 import { groupsPosition } from '@/lib/groups/position';
 import { RelatedMoneyLinks } from '@/components/layout/RelatedMoneyLinks';
 import { LineBotGate } from '@/components/line/LineBotGate';
-import { useState, useEffect, useMemo } from 'react';
+import { useState, useEffect, useMemo, useRef } from 'react';
 import Link from 'next/link';
 import {
   UserGroupIcon,
@@ -64,7 +64,7 @@ function short(uuid: string) {
   return uuid.slice(0, 8);
 }
 
-function GroupCard({ group, selfId, balances, net, onRetry }: {
+function GroupCard({ group, selfId, balances, net, onRetry, retrying = false }: {
   group: Group; selfId: string;
   /**
    * Held by the page, not the card: a card that kept its own copy could retry
@@ -75,10 +75,12 @@ function GroupCard({ group, selfId, balances, net, onRetry }: {
   /** Your net in this group (+ owed to you), shown in the header like the phone list. */
   net?: number | null;
   onRetry: () => void;
+  /** A retry is in flight; the last answer stays until it lands. */
+  retrying?: boolean;
 }) {
   const { t } = useTranslation('groups');
   const [expanded, setExpanded] = useState(false);
-  const loading = balances === undefined;
+  const loading = balances === undefined || retrying;
   const balancesFailed = balances === null;
 
   const hasBalance = balances && balances.balances.length > 0;
@@ -192,6 +194,21 @@ function DesktopGroupsPage() {
   })), selfId), [groups, balancesById, selfId]);
   const netById = useMemo(() => Object.fromEntries(position.groups.map((g) => [g.id, g.failed ? null : g.net])), [position]);
   const [attempt, setAttempt] = useState(0);
+  const [retrying, setRetrying] = useState<Record<string, boolean>>({});
+  // The latest request per group. An answer lands only if it is still the latest,
+  // so a slow retry cannot overwrite a newer load (or a second retry).
+  const latest = useRef<Record<string, number>>({});
+  const loadBalances = (id: string, onDone?: () => void) => {
+    const token = (latest.current[id] ?? 0) + 1;
+    latest.current[id] = token;
+    apiClient.get<GroupBalances>(`/line-bot/groups/${id}/balances`)
+      .then((r) => r.data ?? null, () => null)
+      .then((b) => {
+        if (latest.current[id] !== token) return;
+        setBalancesById((prev) => ({ ...prev, [id]: b }));
+        onDone?.();
+      });
+  };
 
   useEffect(() => {
     // Demo mode: render from fixtures, never call the backend.
@@ -221,11 +238,8 @@ function DesktopGroupsPage() {
           // for every group (Promise.all) held the whole list on the slowest one.
           setBalancesById({});
           setGroups(list);
-          list.forEach((g) => {
-            apiClient.get<GroupBalances>(`/line-bot/groups/${g.id}/balances`)
-              .then((r) => r.data ?? null, () => null)
-              .then((b) => { if (!cancelled) setBalancesById((prev) => ({ ...prev, [g.id]: b })); });
-          });
+          setRetrying({});
+          list.forEach((g) => loadBalances(g.id));
         }
       } catch {
         // Not "ignore": a null link status rendered the Connect LINE prompt to a
@@ -241,12 +255,12 @@ function DesktopGroupsPage() {
 
   const retryLoad = () => { setLoadFailed(false); setLoading(true); setAttempt(a => a + 1); };
 
-  // One group's balances again, into the page's state, so the summary updates too.
+  // One group's balances again, into the page's state, so the summary updates
+  // too. The failed answer stays meanwhile, so the summary does not blink out.
   const retryGroup = (id: string) => {
-    setBalancesById((prev) => ({ ...prev, [id]: undefined }));
-    apiClient.get<GroupBalances>(`/line-bot/groups/${id}/balances`)
-      .then((r) => r.data ?? null, () => null)
-      .then((b) => setBalancesById((prev) => ({ ...prev, [id]: b })));
+    if (isDemo) return; // demo balances are fixtures, and never fail
+    setRetrying((prev) => ({ ...prev, [id]: true }));
+    loadBalances(id, () => setRetrying((prev) => ({ ...prev, [id]: false })));
   };
 
   return (
@@ -359,7 +373,7 @@ function DesktopGroupsPage() {
             )}
             {groups.map(g => (
               <GroupCard key={g.id} group={g} selfId={selfId}
-                balances={balancesById[g.id]} net={netById[g.id]} onRetry={() => retryGroup(g.id)} />
+                balances={balancesById[g.id]} net={netById[g.id]} onRetry={() => retryGroup(g.id)} retrying={!!retrying[g.id]} />
             ))}
           </div>
         )}
