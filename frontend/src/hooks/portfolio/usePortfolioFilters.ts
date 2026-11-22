@@ -6,8 +6,6 @@ import { useState, useCallback, useMemo, useEffect } from 'react';
 export interface PortfolioFilters {
   /** Asset type filter (e.g., 'all', 'stock', 'crypto', 'etf') */
   type: string;
-  /** Wallet type filter (e.g., 'all', 'portfolio', 'emergency') */
-  walletType: string;
   /** Sort field */
   sortBy: 'symbol' | 'name' | 'value' | 'gainLoss' | 'gainLossPercentage';
   /** Sort direction */
@@ -19,7 +17,6 @@ export interface PortfolioFilters {
  */
 const DEFAULT_FILTERS: PortfolioFilters = {
   type: 'all',
-  walletType: 'all',
   sortBy: 'value',
   sortOrder: 'desc',
 };
@@ -30,7 +27,11 @@ function readSessionFilters(): Partial<PortfolioFilters> {
   if (typeof window === 'undefined') return {};
   try {
     const raw = sessionStorage.getItem(SESSION_KEY);
-    return raw ? JSON.parse(raw) : {};
+    if (!raw) return {};
+    // walletType is gone (the page is the Portfolio wallet only); a tab
+    // remembered from before must not linger in the query key.
+    const { walletType: _walletType, ...rest } = JSON.parse(raw);
+    return rest;
   } catch {
     return {};
   }
@@ -44,7 +45,6 @@ function readSessionFilters(): Partial<PortfolioFilters> {
  *
  * Features:
  * - Type filtering (stocks, crypto, ETFs, etc.)
- * - Wallet type filtering (portfolio, emergency)
  * - Sorting by various fields
  * - Sort order (ascending/descending)
  * - Memoized filter object for React Query
@@ -121,13 +121,6 @@ export function usePortfolioFilters(initialFilters: Partial<PortfolioFilters> = 
   }, [updateFilter]);
 
   /**
-   * Set wallet type filter
-   */
-  const setWalletType = useCallback((walletType: string) => {
-    updateFilter('walletType', walletType);
-  }, [updateFilter]);
-
-  /**
    * Set sort field
    */
   const setSortBy = useCallback((sortBy: PortfolioFilters['sortBy']) => {
@@ -173,9 +166,8 @@ export function usePortfolioFilters(initialFilters: Partial<PortfolioFilters> = 
    * Check if any filters are active (not default)
    */
   const hasActiveFilters = useMemo(() => {
-    return filters.type !== DEFAULT_FILTERS.type ||
-           filters.walletType !== DEFAULT_FILTERS.walletType;
-  }, [filters.type, filters.walletType]);
+    return filters.type !== DEFAULT_FILTERS.type;
+  }, [filters.type]);
 
   /**
    * Check if sorting is different from default
@@ -199,7 +191,6 @@ export function usePortfolioFilters(initialFilters: Partial<PortfolioFilters> = 
 
     // Convenience setters
     setType,
-    setWalletType,
     setSortBy,
     setSortOrder,
     toggleSortOrder,
