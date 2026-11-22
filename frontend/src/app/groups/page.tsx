@@ -4,7 +4,7 @@ import { Card } from '@/components/ui/Card';
 import { groupsPosition } from '@/lib/groups/position';
 import { RelatedMoneyLinks } from '@/components/layout/RelatedMoneyLinks';
 import { LineBotGate } from '@/components/line/LineBotGate';
-import { useState, useEffect, useMemo } from 'react';
+import { useState, useEffect, useMemo, useRef } from 'react';
 import Link from 'next/link';
 import {
   UserGroupIcon,
@@ -64,53 +64,24 @@ function short(uuid: string) {
   return uuid.slice(0, 8);
 }
 
-function GroupCard({ group, isDemo, selfId, preloaded, net }: {
-  group: Group; isDemo: boolean; selfId: string;
-  /** Balances the page already fetched for the summary, so expanding needs no request. */
-  preloaded?: GroupBalances | null;
+function GroupCard({ group, selfId, balances, net, onRetry, retrying = false }: {
+  group: Group; selfId: string;
+  /**
+   * Held by the page, not the card: a card that kept its own copy could retry
+   * its way to good balances while the page's "Your position" still counted the
+   * group as failed. undefined while loading, null when the fetch failed.
+   */
+  balances: GroupBalances | null | undefined;
   /** Your net in this group (+ owed to you), shown in the header like the phone list. */
   net?: number | null;
+  onRetry: () => void;
+  /** A retry is in flight; the last answer stays until it lands. */
+  retrying?: boolean;
 }) {
   const { t } = useTranslation('groups');
   const [expanded, setExpanded] = useState(false);
-  const [balances, setBalances] = useState<GroupBalances | null>(preloaded ?? null);
-  const [loading, setLoading] = useState(false);
-  const [balancesFailed, setBalancesFailed] = useState(false);
-
-  const fetchBalances = async () => {
-    setLoading(true);
-    setBalancesFailed(false);
-    try {
-      const res = await apiClient.get<GroupBalances>(`/line-bot/groups/${group.id}/balances`);
-      setBalances(res.data ?? null);
-    } catch {
-      // Not an empty balance list: that rendered "All settled up" on any failure.
-      setBalances(null);
-      setBalancesFailed(true);
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const toggle = async () => {
-    if (!expanded && !balances) {
-      // Demo mode: serve fixtures, never hit the backend.
-      if (isDemo) {
-        setBalances(
-          demoGroupBalances[group.id] ?? {
-            group_id: group.id,
-            currency: group.currency,
-            balances: [],
-            member_names: {},
-          },
-        );
-        setExpanded(true);
-        return;
-      }
-      await fetchBalances();
-    }
-    setExpanded(v => !v);
-  };
+  const loading = balances === undefined || retrying;
+  const balancesFailed = balances === null;
 
   const hasBalance = balances && balances.balances.length > 0;
 
@@ -136,11 +107,11 @@ function GroupCard({ group, isDemo, selfId, preloaded, net }: {
           </div>
         </Link>
         <button
-          onClick={toggle}
+          onClick={() => setExpanded((v) => !v)}
           aria-expanded={expanded}
           className="flex items-center gap-1.5 text-xs px-3 py-1.5 min-h-[44px] rounded-lg border border-gray-200 dark:border-gray-600 text-gray-600 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors shrink-0"
         >
-          {loading ? (
+          {expanded && loading ? (
             <LoadingSpinner size="sm" />
           ) : (
             <>
@@ -153,7 +124,7 @@ function GroupCard({ group, isDemo, selfId, preloaded, net }: {
 
       {expanded && balancesFailed && (
         <div className="border-t border-gray-100 dark:border-gray-800 px-4 sm:px-5 py-4">
-          <QueryErrorCard onRetry={fetchBalances} title={t('balancesFailed')} />
+          <QueryErrorCard onRetry={onRetry} title={t('balancesFailed')} />
         </div>
       )}
 
@@ -212,15 +183,32 @@ function DesktopGroupsPage() {
   const [groups, setGroups] = useState<Group[]>([]);
   const [loading, setLoading] = useState(true);
   const [loadFailed, setLoadFailed] = useState(false);
-  const [balancesById, setBalancesById] = useState<Record<string, GroupBalances | null>>({});
+  // Per group: undefined while loading, null when its fetch failed.
+  const [balancesById, setBalancesById] = useState<Record<string, GroupBalances | null | undefined>>({});
+  const pendingCount = groups.filter((g) => balancesById[g.id] === undefined).length;
   const position = useMemo(() => groupsPosition(groups.map((g) => ({
     id: g.id, name: g.name, currency: g.currency,
     balances: balancesById[g.id]?.balances ?? [],
     member_names: balancesById[g.id]?.member_names ?? {},
-    failed: g.id in balancesById && balancesById[g.id] === null,
+    failed: balancesById[g.id] === null,
   })), selfId), [groups, balancesById, selfId]);
   const netById = useMemo(() => Object.fromEntries(position.groups.map((g) => [g.id, g.failed ? null : g.net])), [position]);
   const [attempt, setAttempt] = useState(0);
+  const [retrying, setRetrying] = useState<Record<string, boolean>>({});
+  // The latest request per group. An answer lands only if it is still the latest,
+  // so a slow retry cannot overwrite a newer load (or a second retry).
+  const latest = useRef<Record<string, number>>({});
+  const loadBalances = (id: string, onDone?: () => void) => {
+    const token = (latest.current[id] ?? 0) + 1;
+    latest.current[id] = token;
+    apiClient.get<GroupBalances>(`/line-bot/groups/${id}/balances`)
+      .then((r) => r.data ?? null, () => null)
+      .then((b) => {
+        if (latest.current[id] !== token) return;
+        setBalancesById((prev) => ({ ...prev, [id]: b }));
+        onDone?.();
+      });
+  };
 
   useEffect(() => {
     // Demo mode: render from fixtures, never call the backend.
@@ -236,6 +224,7 @@ function DesktopGroupsPage() {
 
     // A retry can start while an older load is in flight; only the latest may land.
     let cancelled = false;
+    const tokens = latest.current; // one map, mutated in place, never replaced
     async function load() {
       try {
         const statusRes = await apiClient.get<LinkStatus>('/line-bot/link-status');
@@ -246,14 +235,12 @@ function DesktopGroupsPage() {
           const groupsRes = await apiClient.get<Group[]>('/line-bot/groups');
           if (cancelled) return;
           const list = groupsRes.data ?? [];
-          // Every group's balances up front, as the phone view does, so desktop can
-          // show where you stand instead of only names behind a "Balances" button.
-          const all = await Promise.all(list.map((g) =>
-            apiClient.get<GroupBalances>(`/line-bot/groups/${g.id}/balances`).then((r) => r.data ?? null).catch(() => null)));
-          if (cancelled) return;
-          // Together, so each card mounts with its balances (its state is seeded once).
-          setBalancesById(Object.fromEntries(list.map((g, i) => [g.id, all[i]])));
+          // The groups show now; each one's balances land as they arrive. Waiting
+          // for every group (Promise.all) held the whole list on the slowest one.
+          setBalancesById({});
           setGroups(list);
+          setRetrying({});
+          list.forEach((g) => loadBalances(g.id));
         }
       } catch {
         // Not "ignore": a null link status rendered the Connect LINE prompt to a
@@ -264,10 +251,23 @@ function DesktopGroupsPage() {
       }
     }
     load();
-    return () => { cancelled = true; };
+    return () => {
+      cancelled = true;
+      // Also drop any balances still in flight: switching to demo, or leaving
+      // the page, must not let a late live answer land.
+      for (const id of Object.keys(tokens)) tokens[id] += 1;
+    };
   }, [isDemo, attempt]);
 
   const retryLoad = () => { setLoadFailed(false); setLoading(true); setAttempt(a => a + 1); };
+
+  // One group's balances again, into the page's state, so the summary updates
+  // too. The failed answer stays meanwhile, so the summary does not blink out.
+  const retryGroup = (id: string) => {
+    if (isDemo) return; // demo balances are fixtures, and never fail
+    setRetrying((prev) => ({ ...prev, [id]: true }));
+    loadBalances(id, () => setRetrying((prev) => ({ ...prev, [id]: false })));
+  };
 
   return (
     <DashboardLayout>
@@ -350,7 +350,8 @@ function DesktopGroupsPage() {
           /* Group list */
           <div className="space-y-3">
             {/* Where you stand across every group, per currency (the phone's hero). */}
-            {(position.totals.length > 0 || position.failedCount > 0) && (
+            {/* Once every group has answered: a total over half the groups would be wrong, not partial. */}
+            {pendingCount === 0 && (position.totals.length > 0 || position.failedCount > 0) && (
               <Card padding="md" radius="2xl" shadow="sm">
                 <p className="text-sm font-semibold text-gray-500 dark:text-gray-400">{t('groups:mobile.position')}</p>
                 {/* Partial, and saying so: a group whose balances failed is missing from the total. */}
@@ -377,8 +378,8 @@ function DesktopGroupsPage() {
               </Card>
             )}
             {groups.map(g => (
-              <GroupCard key={g.id} group={g} isDemo={isDemo} selfId={selfId}
-                preloaded={balancesById[g.id]} net={netById[g.id]} />
+              <GroupCard key={g.id} group={g} selfId={selfId}
+                balances={balancesById[g.id]} net={netById[g.id]} onRetry={() => retryGroup(g.id)} retrying={!!retrying[g.id]} />
             ))}
           </div>
         )}

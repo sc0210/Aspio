@@ -9,7 +9,7 @@
  *    NOT fetch groups.
  */
 import React from 'react';
-import { render, screen, fireEvent } from '@testing-library/react';
+import { render, screen, fireEvent, waitFor, within } from '@testing-library/react';
 import enGroups from '@/locales/en/groups.json';
 
 function lookup(ns: Record<string, unknown>, key: string): unknown {
@@ -126,6 +126,81 @@ describe('GroupsPage — live mode', () => {
     const urls = mockGet.mock.calls.map((c) => c[0]);
     expect(urls).toContain('/line-bot/link-status');
     expect(urls).toContain('/line-bot/groups');
+  });
+
+  const liveGroup = {
+    id: 'g-live-1', line_group_id: 'C1', name: 'Live Roommates',
+    currency: 'TWD', member_count: 2, created_at: '2026-01-01T00:00:00Z',
+  };
+
+  it('shows the groups before their balances answer', async () => {
+    mockIsDemo = false;
+    mockGet.mockImplementation((url: string) => {
+      if (url === '/line-bot/link-status') return Promise.resolve({ data: { linked: true } });
+      if (url === '/line-bot/groups') return Promise.resolve({ data: [liveGroup] });
+      return new Promise(() => {}); // balances never answer
+    });
+
+    render(<GroupsPage />);
+
+    // It used to wait for every group's balances (Promise.all) before showing any.
+    expect(await screen.findByText('Live Roommates')).toBeInTheDocument();
+    // No total until every group has answered.
+    expect(screen.queryByText('Your position')).toBeNull();
+  });
+
+  it("a card's retry updates the page's summary too", async () => {
+    mockIsDemo = false;
+    let balanceCalls = 0;
+    mockGet.mockImplementation((url: string) => {
+      if (url === '/line-bot/link-status') return Promise.resolve({ data: { linked: true } });
+      if (url === '/line-bot/groups') return Promise.resolve({ data: [liveGroup] });
+      balanceCalls += 1;
+      return balanceCalls === 1
+        ? Promise.reject(new Error('blip'))
+        : Promise.resolve({ data: { group_id: 'g-live-1', currency: 'TWD', balances: [], member_names: {} } });
+    });
+
+    render(<GroupsPage />);
+
+    expect(await screen.findByText(/Leaves out 1 group that didn't load/)).toBeInTheDocument();
+    fireEvent.click(screen.getByRole('button', { name: /Balances/ }));
+    const failed = screen.getByText("Couldn't load this group's balances").closest('div')!.parentElement!;
+    fireEvent.click(within(failed).getByRole('button'));
+
+    // The card kept its own copy before, so this caveat outlived a successful retry.
+    await waitFor(() => expect(screen.queryByText(/Leaves out 1 group that didn't load/)).toBeNull());
+    expect(await screen.findByText(/All settled up/)).toBeInTheDocument();
+  });
+
+  it('a slow retry cannot overwrite a newer load', async () => {
+    mockIsDemo = false;
+    let balanceCalls = 0;
+    let failSlowRetry: (e: Error) => void = () => {};
+    const settled = { group_id: 'g-live-1', currency: 'TWD', balances: [], member_names: {} };
+    mockGet.mockImplementation((url: string) => {
+      if (url === '/line-bot/link-status') return Promise.resolve({ data: { linked: true } });
+      if (url === '/line-bot/groups') return Promise.resolve({ data: [liveGroup] });
+      balanceCalls += 1;
+      if (balanceCalls === 1) return Promise.reject(new Error('blip'));
+      if (balanceCalls === 2) return new Promise((_, reject) => { failSlowRetry = reject; });
+      return Promise.resolve({ data: settled });
+    });
+
+    render(<GroupsPage />);
+    expect(await screen.findByText(/Leaves out 1 group/)).toBeInTheDocument();
+
+    // The card's retry hangs…
+    fireEvent.click(screen.getByRole('button', { name: /Balances/ }));
+    const failed = screen.getByText("Couldn't load this group's balances").closest('div')!.parentElement!;
+    fireEvent.click(within(failed).getByRole('button'));
+    // …the whole page is reloaded meanwhile, and that load succeeds…
+    fireEvent.click(screen.getByRole('button', { name: 'common:errorState.tryAgain' }));
+    await waitFor(() => expect(screen.queryByText(/Leaves out 1 group/)).toBeNull());
+    // …then the old retry finally fails. It must not bring the failure back.
+    failSlowRetry(new Error('late'));
+    await new Promise((r) => setTimeout(r, 0));
+    expect(screen.queryByText(/Leaves out 1 group/)).toBeNull();
   });
 
   it('shows the connect prompt and skips the groups fetch when not linked', async () => {
