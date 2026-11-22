@@ -1,5 +1,6 @@
 import { getServerApiUrl } from '@/lib/api-url';
 import { NextRequest, NextResponse } from 'next/server';
+import { backendError } from '@/lib/backendError';
 
 const API_BASE = getServerApiUrl();
 
@@ -16,12 +17,9 @@ export async function POST(req: NextRequest) {
     const data = await backendRes.json().catch(() => ({}));
 
     if (!backendRes.ok) {
-      const errData = data as { detail?: string; code?: string; message?: string };
+      const { message, code } = backendError(data);
       return NextResponse.json(
-        {
-          message: errData.detail || errData.message || 'Verification failed',
-          code: errData.code,
-        },
+        { message: message || 'Verification failed', code },
         { status: backendRes.status }
       );
     }

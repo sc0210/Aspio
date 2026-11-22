@@ -1,5 +1,6 @@
 import { getServerApiUrl } from '@/lib/api-url';
 import { NextRequest, NextResponse } from 'next/server';
+import { backendError } from '@/lib/backendError';
 
 const API_BASE = getServerApiUrl();
 
@@ -17,7 +18,7 @@ export async function POST(req: NextRequest) {
 
     if (!backendRes.ok) {
       return NextResponse.json(
-        { message: (data as { message?: string }).message || 'Request failed' },
+        { message: backendError(data).message || 'Request failed' },
         { status: backendRes.status }
       );
     }

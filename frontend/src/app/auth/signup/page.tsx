@@ -1,9 +1,9 @@
 'use client';
 
 import { useGoogleSignIn } from '@/hooks/useGoogleSignIn';
-import { useState, useMemo, Suspense } from 'react';
+import { useState, useMemo } from 'react';
 import { signIn } from 'next-auth/react';
-import { useRouter, useSearchParams } from 'next/navigation';
+import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { useForm } from 'react-hook-form';
 import { yupResolver } from '@hookform/resolvers/yup';
@@ -63,11 +63,7 @@ const HAS_UPPER = /[A-Z]/;
 const HAS_DIGIT = /\d/;
 
 export default function SignUpPage() {
-  return (
-    <Suspense fallback={<div className="min-h-screen flex items-center justify-center"><LoadingSpinner size="lg" /></div>}>
-      <SignUpForm />
-    </Suspense>
-  );
+  return <SignUpForm />;
 }
 
 function SignUpForm() {
@@ -101,8 +97,6 @@ function SignUpForm() {
       }),
     [t],
   );
-  const searchParams = useSearchParams();
-  const callbackUrl = safeCallbackPath(searchParams?.get('callbackUrl'));
 
   const {
     register,
@@ -157,6 +151,10 @@ function SignUpForm() {
   const handleGoogleSignUp = async () => {
     setIsGoogleLoading(true);
     try {
+      // Read at click time rather than with useSearchParams, which needs a
+      // Suspense boundary: its fallback was a blank screen with a spinner
+      // where the form should have rendered.
+      const callbackUrl = safeCallbackPath(new URLSearchParams(window.location.search).get('callbackUrl'));
       await signIn('google', { redirect: true, callbackUrl });
     } catch {
       toast.error(t('auth:signUp.toast.googleFailed'));
@@ -181,10 +179,11 @@ function SignUpForm() {
 
         <div className="relative z-10 space-y-8">
           <div>
-            <h1 className="text-4xl font-bold text-white leading-tight mb-3">
+            {/* Not the <h1>: hidden below lg. The form title is the <h1>. */}
+            <p className="text-4xl font-bold text-white leading-tight mb-3">
               {t('auth:signUp.heroTitle')}
-            </h1>
-            <p className="text-indigo-200 text-base leading-relaxed">
+            </p>
+            <p className="text-indigo-100 text-base leading-relaxed">
               {t('auth:signUp.heroSubtitle')}
             </p>
           </div>
@@ -196,14 +195,14 @@ function SignUpForm() {
                 </div>
                 <div>
                   <p className="text-white font-semibold text-sm leading-tight">{t(`common:landing.capabilities.${key}.title`)}</p>
-                  <p className="text-indigo-200 text-xs mt-0.5">{t(`common:landing.capabilities.${key}.description`)}</p>
+                  <p className="text-indigo-100 text-xs mt-0.5">{t(`common:landing.capabilities.${key}.description`)}</p>
                 </div>
               </div>
             ))}
           </div>
         </div>
 
-        <p className="text-indigo-400 text-xs relative z-10">{t('auth:signIn.copyright', { year: new Date().getFullYear() })}</p>
+        <p className="text-indigo-200 text-xs relative z-10">{t('auth:signIn.copyright', { year: new Date().getFullYear() })}</p>
       </div>
 
       {/* ── Right panel (form) ── */}
@@ -220,7 +219,7 @@ function SignUpForm() {
 
         <div className="w-full max-w-sm mx-auto">
           <div className="mb-6">
-            <h2 className="text-2xl font-bold text-gray-900 dark:text-white">{t('auth:signUp.createTitle')}</h2>
+            <h1 className="text-2xl font-bold text-gray-900 dark:text-white">{t('auth:signUp.createTitle')}</h1>
             <p className="mt-1 text-sm text-gray-500 dark:text-gray-400">
               {t('auth:signUp.haveAccount')}{' '}
               <Link href="/auth/signin" className="font-semibold text-primary-700 dark:text-primary-400 hover:text-primary-800">

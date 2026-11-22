@@ -1,5 +1,6 @@
 import { getServerApiUrl } from '@/lib/api-url';
 import { NextRequest, NextResponse } from 'next/server';
+import { backendError } from '@/lib/backendError';
 
 const API_BASE = getServerApiUrl();
 
@@ -20,9 +21,8 @@ export async function POST(req: NextRequest) {
     const data = await backendRes.json().catch(() => ({}));
 
     if (!backendRes.ok) {
-      const errData = data as { detail?: string; message?: string };
       return NextResponse.json(
-        { message: errData.detail || errData.message || 'Password reset failed' },
+        { message: backendError(data).message || 'Password reset failed' },
         { status: backendRes.status }
       );
     }

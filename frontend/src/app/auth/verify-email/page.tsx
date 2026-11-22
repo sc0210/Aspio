@@ -48,13 +48,18 @@ function VerifyEmailContent() {
           router.push('/auth/signin');
         }, 3000);
       } else {
+        // The backend answers a bad or used-up token with a plain 400 and no
+        // code, so a 400 is the link, not the server. The message is always
+        // our own: the backend's is English on a zh-TW page.
         const errorStatus: VerificationStatus =
           data.code === 'TOKEN_EXPIRED' ? 'expired' :
-          data.code === 'TOKEN_INVALID' ? 'invalid' : 'error';
+          data.code === 'TOKEN_INVALID' || response.status === 400 ? 'invalid' : 'error';
 
         setVerificationState({
           status: errorStatus,
-          message: data.message || t('auth:verification.status.failedMessage'),
+          message: errorStatus === 'error'
+            ? t('auth:verification.status.failedMessage')
+            : t('auth:verification.status.invalidOrExpiredMessage'),
           userEmail: email || undefined,
         });
       }
@@ -251,19 +256,6 @@ function VerifyEmailContent() {
 
             {getActionButtons()}
 
-            {(verificationState.status === 'expired' || verificationState.status === 'invalid' || verificationState.status === 'error') && (
-              <div className="mt-5 pt-5 border-t border-gray-100 dark:border-gray-700">
-                <p className="text-xs text-gray-500 dark:text-gray-400">
-                  Still having trouble?{' '}
-                  <a
-                    href="mailto:support@aspiro.app"
-                    className="text-primary-700 dark:text-primary-400 hover:text-primary-800 font-medium"
-                  >
-                    {t('auth:verification.contactSupport')}
-                  </a>
-                </p>
-              </div>
-            )}
           </div>
         </div>
 

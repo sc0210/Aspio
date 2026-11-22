@@ -167,10 +167,12 @@ function SignInForm() {
           <div>
             {/* whitespace-pre-line so the translation controls its own line
                 break instead of a hard-coded <br /> that only suits English. */}
-            <h1 className="text-4xl font-bold text-white leading-tight mb-3 whitespace-pre-line">
+            {/* Not the <h1>: this panel is hidden below lg, which left a phone
+                with no page heading. The form's title is the <h1> at every width. */}
+            <p className="text-4xl font-bold text-white leading-tight mb-3 whitespace-pre-line">
               {t('auth:signIn.heroTitle')}
-            </h1>
-            <p className="text-primary-200 text-base leading-relaxed">
+            </p>
+            <p className="text-primary-100 text-base leading-relaxed">
               {t('auth:signIn.heroSubtitle')}
             </p>
           </div>
@@ -184,7 +186,7 @@ function SignInForm() {
                   <p className="text-white font-semibold text-sm leading-tight">
                     {t(`auth:signIn.features.${key}.title`)}
                   </p>
-                  <p className="text-primary-300 text-xs mt-0.5">
+                  <p className="text-primary-100 text-xs mt-0.5">
                     {t(`auth:signIn.features.${key}.desc`)}
                   </p>
                 </div>
@@ -193,7 +195,7 @@ function SignInForm() {
           </div>
         </div>
 
-        <p className="text-primary-400 text-xs relative z-10">
+        <p className="text-primary-200 text-xs relative z-10">
           {t('auth:signIn.copyright', { year: new Date().getFullYear() })}
         </p>
       </div>
@@ -212,7 +214,7 @@ function SignInForm() {
 
         <div className="w-full max-w-sm mx-auto">
           <div className="mb-7">
-            <h2 className="text-2xl font-bold text-gray-900 dark:text-white">{t('auth:signIn.welcomeBack')}</h2>
+            <h1 className="text-2xl font-bold text-gray-900 dark:text-white">{t('auth:signIn.welcomeBack')}</h1>
             <p className="mt-1 text-sm text-gray-500 dark:text-gray-400">
               {t('auth:signIn.noAccount')}{' '}
               <Link href="/auth/signup" className="font-semibold text-primary-700 dark:text-primary-400 hover:text-primary-800">
