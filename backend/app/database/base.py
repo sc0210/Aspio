@@ -57,6 +57,7 @@ def import_all_models() -> None:
     from app.modules.goals.models import Goal  # noqa: F401
     from app.modules.line_bot.models import LineGroup  # noqa: F401
     from app.modules.loans.models import DebtAccount  # noqa: F401
+    from app.modules.market.models import TwMarketMonth  # noqa: F401
     from app.modules.notifications.models import Notification  # noqa: F401
     from app.modules.peers.models import PeerConnection  # noqa: F401
     from app.modules.portfolio.models import Portfolio  # noqa: F401

@@ -603,5 +603,20 @@
     "noDayChange": "No previous close for {{symbols}}, so they are left out of today's change.",
     "unconverted": "No exchange rate for {{currencies}}; those amounts are not converted to TWD."
   },
-  "loading": "Loading dashboard"
+  "loading": "Loading dashboard",
+  "twCape": {
+    "title": "Taiwan market valuation",
+    "subtitle": "Shiller CAPE · TAIEX",
+    "asOf": "Shiller CAPE · TAIEX · as of {{date}}",
+    "hint": "Shiller CAPE: the TAIEX over ten years of inflation-adjusted earnings. Judged against Taiwan's own history — fast-growing earnings keep it above US-style thresholds.",
+    "band": {
+      "cheap": "Cheap",
+      "fair": "Fair",
+      "expensive": "Expensive"
+    },
+    "percentile": "Higher than {{pct}}% of months since {{since}}",
+    "range": "Range {{low}}–{{high}} · market P/E {{pe}}",
+    "source": "TWSE · DGBAS",
+    "collecting": "Collecting market history — the first daily update backfills it from 2005."
+  }
 }

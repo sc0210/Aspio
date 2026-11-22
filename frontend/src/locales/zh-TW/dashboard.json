@@ -603,5 +603,20 @@
     "noDayChange": "{{symbols}} 缺少前一日收盤價，未計入今日損益。",
     "unconverted": "{{currencies}} 沒有匯率，相關金額未換算成新台幣。"
   },
-  "loading": "正在載入總覽"
+  "loading": "正在載入總覽",
+  "twCape": {
+    "title": "台股估值",
+    "subtitle": "席勒本益比 (CAPE) · 加權指數",
+    "asOf": "席勒本益比 (CAPE) · 加權指數 · {{date}}",
+    "hint": "席勒本益比：加權指數 ÷ 過去十年經通膨調整的平均盈餘。以台股自身歷史比較——台股盈餘成長快，用美股的固定門檻會長期顯示偏貴。",
+    "band": {
+      "cheap": "偏便宜",
+      "fair": "合理",
+      "expensive": "偏貴"
+    },
+    "percentile": "高於 {{since}} 以來 {{pct}}% 的月份",
+    "range": "區間 {{low}}–{{high}} · 市場本益比 {{pe}}",
+    "source": "證交所 · 主計總處",
+    "collecting": "正在蒐集市場歷史資料——每日更新會在首次執行時回補 2005 年以來的資料。"
+  }
 }
