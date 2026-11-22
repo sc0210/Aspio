@@ -1,6 +1,6 @@
 'use client';
 
-import { categoryLabel } from '@/lib/transactions/categoryLabel';
+import { categoryLabel, subcategoryLabel } from '@/lib/transactions/categoryLabel';
 import { Fragment, memo } from 'react';
 import Link from 'next/link';
 import {
@@ -109,6 +109,9 @@ function TransactionRowBase({
                     alone at the start of a wrapped line read as a stray mark. */}
                 <div className="flex flex-wrap items-center gap-1 text-xs text-gray-500 dark:text-gray-400 min-w-0">
                   <span className="flex-shrink-0">{searchQuery ? highlight(categoryLabel(transaction.category, t), searchQuery) : categoryLabel(transaction.category, t)}</span>
+                  {transaction.subcategory && (
+                    <span className="flex-shrink-0">· {searchQuery ? highlight(subcategoryLabel(transaction.subcategory, t), searchQuery) : subcategoryLabel(transaction.subcategory, t)}</span>
+                  )}
                   {transaction.peerSplitShareId && (
                     <Link
                       href={SPLITS_HREF}

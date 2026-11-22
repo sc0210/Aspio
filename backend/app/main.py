@@ -41,6 +41,7 @@ from app.modules.transactions.router import router as transactions_router
 from app.modules.users.router_simple import router as users_router
 from app.modules.users.enhanced_router import router as enhanced_users_router
 from app.modules.loans.router import router as loans_router
+from app.modules.market.router import router as market_router
 from app.modules.users.dependencies import require_premium
 from app.modules.peers.router import router as peers_router
 from app.modules.line_bot.router import router as line_bot_router
@@ -92,10 +93,12 @@ async def lifespan(app: FastAPI):
         logger.warning(f"Database initialization skipped: {e}")
 
     # Start background scheduler for price updates.
-    # Gated by ENABLE_SCHEDULER: ON for local Docker dev, OFF in production
-    # The routine price-refresh jobs load pandas/finlab/yfinance in-process and
-    # spike RAM, so on a memory-tight host they run only
-    # locally. See app/core/scheduler.py and config.ENABLE_SCHEDULER.
+    # Gated by ENABLE_SCHEDULER, on by default: the dev stack and the self-hosted
+    # stack (docker-compose.pi.yml) both run it. docker-compose.prodlocal.yml turns
+    # it off because it shares the dev stack's database, whose backend already
+    # runs the jobs. The price-refresh jobs load pandas/finlab/yfinance in-process
+    # and spike RAM; on a memory-tight host, set it off and run the
+    # scripts/run_*_job.py runners from cron instead. See app/core/scheduler.py.
     # Under `uvicorn --workers N` every worker runs this startup, so the
     # scheduler is elected rather than simply started: exactly one process
     # takes a Postgres advisory lock and owns the cron jobs. Without it, N
@@ -232,6 +235,7 @@ def create_app() -> FastAPI:
         portfolio_router, prefix=f"{api_prefix}/portfolio", tags=["Portfolio"]
     )
     app.include_router(reports_router, prefix=f"{api_prefix}/reports", tags=["Reports"])
+    app.include_router(market_router, prefix=f"{api_prefix}/market", tags=["Market"])
     app.include_router(
         transactions_router, prefix=f"{api_prefix}/transactions", tags=["Transactions"]
     )

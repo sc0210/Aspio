@@ -49,7 +49,6 @@ const useQueryClient = useQueryClientFn as jest.Mock;
 describe('usePortfolioData', () => {
   const defaultFilters = {
     type: 'all',
-    walletType: 'all',
     sortBy: 'value' as const,
     sortOrder: 'desc' as const,
   };
@@ -63,6 +62,32 @@ describe('usePortfolioData', () => {
     });
     useMutation.mockReturnValue({ mutate: jest.fn(), isPending: false });
     useQuery.mockReturnValue({ data: null, isLoading: false, error: null, refetch: jest.fn() });
+  });
+
+  // ── Portfolio wallet only ───────────────────────────────────────────────────
+
+  it('leaves Emergency-wallet holdings out of what the page reads', () => {
+    renderHook(() => usePortfolioData(defaultFilters));
+    const portfolioQuery = useQuery.mock.calls
+      .map((args: unknown[]) => args[0] as { queryKey?: unknown[]; select?: (d: unknown) => unknown })
+      .find((o) => Array.isArray(o.queryKey) && o.queryKey[0] === 'portfolio');
+    expect(portfolioQuery?.select).toBeInstanceOf(Function);
+
+    const raw = {
+      currency: 'TWD',
+      holdings: [
+        { symbol: '0050', walletType: 'portfolio' },
+        { symbol: 'USDT-LEND', walletType: 'portfolio' },
+        { symbol: 'CASH-TWD', walletType: 'emergency' },
+        { symbol: 'OLD', walletType: undefined }, // predates the field: Portfolio
+      ],
+    };
+    const selected = portfolioQuery!.select!(raw) as typeof raw;
+    expect(selected.holdings.map((h) => h.symbol)).toEqual(['0050', 'USDT-LEND', 'OLD']);
+    expect(selected.currency).toBe('TWD');
+    // The cached response is not mutated.
+    expect(raw.holdings).toHaveLength(4);
+    expect(portfolioQuery!.select!(null)).toBeNull();
   });
 
   // ── Fix #4: exchange rates query removed ─────────────────────────────────────

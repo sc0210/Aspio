@@ -25,6 +25,7 @@ interface Transaction {
   amount: number;
   currency: string;
   category: string;
+  subcategory?: string;
   description?: string;
   paymentMethod?: string;
   tags?: string[];
@@ -44,6 +45,7 @@ interface ParsedRow {
   amount?: number;
   currency?: string;
   category?: string;
+  subcategory?: string;
   description?: string;
   paymentMethod?: string;
   tags?: string[];
@@ -112,15 +114,17 @@ export function TransactionImportExportModal({ transactions, onClose, onImport }
       'Amount',
       'Currency',
       'Category',
+      'Subcategory',
       'Description',
       'Payment Method',
       'Tags'
     ];
 
     const templateRows = [
-      ['2024-01-15', 'expense', '1500', 'TWD', '飲食', '午餐', '信用卡', '商務;餐飲'],
-      ['2024-01-20', 'income', '50000', 'TWD', '薪資', '月薪', '銀行轉帳', ''],
-      ['2024-02-05', 'expense', '2500', 'TWD', '交通', '計程車', '現金', '商務;交通']
+      ['2024-01-15', 'expense', '1500', 'TWD', '飲食', '', '午餐', '信用卡', '商務;餐飲'],
+      ['2024-01-20', 'income', '50000', 'TWD', '薪資', '', '月薪', '銀行轉帳', ''],
+      ['2024-02-05', 'expense', '2500', 'TWD', '交通', '', '計程車', '現金', '商務;交通'],
+      ['2024-02-10', 'expense', '1200', 'TWD', 'Shopping', 'Beauty', '美甲', '信用卡', '']
     ];
 
     const csvContent = [
@@ -214,6 +218,9 @@ export function TransactionImportExportModal({ transactions, onClose, onImport }
             break;
           case 'category':
             row.category = value;
+            break;
+          case 'subcategory':
+            row.subcategory = value || undefined;
             break;
           case 'description':
             row.description = value || undefined;

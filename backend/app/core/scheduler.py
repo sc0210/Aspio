@@ -307,6 +307,23 @@ async def process_recurring_transactions():
         return result
 
 
+async def sync_tw_market():
+    """Refresh the Taiwan CAPE inputs (app/modules/market).
+
+    Three paced TWSE requests a day once backfilled; the first run backfills
+    from 2005 (about an hour of paced requests, committed month by month).
+    Network-bound and light on memory, so it is safe in-process.
+    """
+    import httpx
+
+    from app.modules.market.services import TwMarketSync
+    from app.modules.market.sources import MarketDataClient
+    from app.utils.datetime_helpers import business_today
+
+    async with httpx.AsyncClient() as client:
+        return await TwMarketSync(async_session, MarketDataClient(client)).run(business_today())
+
+
 def init_scheduler():
     """Initialize the APScheduler with scheduled jobs"""
     global scheduler
@@ -427,6 +444,19 @@ def init_scheduler():
         name="Daily Recurring Transactions",
     )
     logger.info("Scheduled: Daily recurring transactions at 00:10 TST (16:10 UTC)")
+
+    # ==========================================
+    # Taiwan CAPE inputs
+    # Run at 08:30 UTC (16:30 TST): TWSE has published the day's P/E and
+    # shareholding reports by then.
+    # ==========================================
+    add_job(
+        sync_tw_market,
+        CronTrigger(hour=8, minute=30, timezone=ZoneInfo("UTC")),
+        id="daily_tw_market_sync",
+        name="Taiwan CAPE Inputs",
+    )
+    logger.info("Scheduled: Taiwan CAPE inputs at 16:30 TST (08:30 UTC)")
 
     return scheduler
 

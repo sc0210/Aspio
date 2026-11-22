@@ -79,6 +79,8 @@ export const QUERY_KEYS = {
   ADMIN: 'admin',
   // Which optional add-ons (the LINE bot) this instance has configured.
   FEATURES: 'features',
+  // The Taiwan CAPE: market data, refreshed by a daily server job.
+  TW_CAPE: 'tw-cape',
 
   // User
   USER_PROFILE: 'user-profile',
@@ -102,6 +104,7 @@ export const UNGROUPED_KEYS: readonly QueryKeyValue[] = [
   QUERY_KEYS.USER_PROFILE,
   QUERY_KEYS.NOTIFICATIONS,
   QUERY_KEYS.FEATURES,
+  QUERY_KEYS.TW_CAPE,
 ] as const;
 
 /**

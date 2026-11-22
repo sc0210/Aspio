@@ -517,13 +517,16 @@
   "title": "Dashboard",
   "todayStrip": {
     "details": "Details",
-    "portfolio": "Portfolio",
-    "portfolioChangeHint": "Change in portfolio value over this period. Includes money you put in or took out, not just market movement — see the portfolio page for return on cost.",
     "saved": "Saved",
     "savingsRate": "{{rate}}% savings rate",
     "totalAssets": "Total Assets",
-    "noIncome": "No income this period",
-    "portfolioChangeCaption": "Incl. buys & sells"
+    "incomeAndSpent": "Income {{income}} · Spent {{spent}}",
+    "leverage": "Leverage",
+    "leverageHint": "Debt as a share of your invested portfolio. It rises when markets fall or you borrow more, and falls as you repay or the portfolio grows.",
+    "leverageFrom": "from {{pct}}%",
+    "leveragePts": "{{pts}} pts",
+    "leverageBasis": "{{debt}} debt / {{invested}} invested",
+    "leverageUnavailable": "Couldn't load — refresh to try again"
   },
   "view": {
     "compact": "Compact",
@@ -599,5 +602,21 @@
     "noDayChange": "No previous close for {{symbols}}, so they are left out of today's change.",
     "unconverted": "No exchange rate for {{currencies}}; those amounts are not converted to TWD."
   },
-  "loading": "Loading dashboard"
+  "loading": "Loading dashboard",
+  "twCape": {
+    "title": "Taiwan market valuation",
+    "subtitle": "Shiller CAPE · TAIEX",
+    "asOf": "Shiller CAPE · TAIEX · as of {{date}}",
+    "hint": "Shiller CAPE: the TAIEX over ten years of inflation-adjusted earnings. Judged against Taiwan's own history — fast-growing earnings keep it above US-style thresholds.",
+    "band": {
+      "cheap": "Cheap",
+      "fair": "Fair",
+      "expensive": "Expensive"
+    },
+    "percentile": "Higher than {{pct}}% of months since {{since}}",
+    "range": "Range {{low}}–{{high}} · market P/E {{pe}}",
+    "source": "TWSE · DGBAS",
+    "collecting": "Collecting market history — the first daily update backfills it from 2005.",
+    "shortTitle": "Taiwan market · CAPE"
+  }
 }

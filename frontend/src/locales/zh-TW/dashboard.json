@@ -517,13 +517,16 @@
   "title": "儀表板",
   "todayStrip": {
     "details": "詳情",
-    "portfolio": "投資組合",
-    "portfolioChangeHint": "本期投資組合價值的變化。包含你期間內的買進與賣出，不只是市場漲跌 — 想看成本報酬率請到投資組合頁。",
     "saved": "已儲蓄",
     "savingsRate": "儲蓄率 {{rate}}%",
     "totalAssets": "總資產",
-    "noIncome": "本期沒有收入",
-    "portfolioChangeCaption": "含買進與賣出"
+    "incomeAndSpent": "收入 {{income}} · 支出 {{spent}}",
+    "leverage": "槓桿",
+    "leverageHint": "負債佔投資組合的比例。市場下跌或增加借款時上升，還款或投資組合成長時下降。",
+    "leverageFrom": "原為 {{pct}}%",
+    "leveragePts": "{{pts}} 個百分點",
+    "leverageBasis": "負債 {{debt}} / 投資 {{invested}}",
+    "leverageUnavailable": "無法載入，請重新整理再試"
   },
   "view": {
     "compact": "精簡",
@@ -599,5 +602,21 @@
     "noDayChange": "{{symbols}} 缺少前一日收盤價，未計入今日損益。",
     "unconverted": "{{currencies}} 沒有匯率，相關金額未換算成新台幣。"
   },
-  "loading": "正在載入總覽"
+  "loading": "正在載入總覽",
+  "twCape": {
+    "title": "台股估值",
+    "subtitle": "席勒本益比 (CAPE) · 加權指數",
+    "asOf": "席勒本益比 (CAPE) · 加權指數 · {{date}}",
+    "hint": "席勒本益比：加權指數 ÷ 過去十年經通膨調整的平均盈餘。以台股自身歷史比較——台股盈餘成長快，用美股的固定門檻會長期顯示偏貴。",
+    "band": {
+      "cheap": "偏便宜",
+      "fair": "合理",
+      "expensive": "偏貴"
+    },
+    "percentile": "高於 {{since}} 以來 {{pct}}% 的月份",
+    "range": "區間 {{low}}–{{high}} · 市場本益比 {{pe}}",
+    "source": "證交所 · 主計總處",
+    "collecting": "正在蒐集市場歷史資料——每日更新會在首次執行時回補 2005 年以來的資料。",
+    "shortTitle": "台股估值 · CAPE"
+  }
 }

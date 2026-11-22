@@ -25,6 +25,7 @@ import { cn } from '@/utils/cn';
 import { ARROW, DIRECTION_TEXT, SIGN, direction } from './direction';
 import { Card } from '@/components/ui/Card';
 import { PageHeader } from '@/components/layout/PageHeader';
+import { TwCapeHighlight } from './TwCapeHighlight';
 
 const NW_COLOR = '#10b981'; // emerald — matches the desktop net-worth chart
 
@@ -238,6 +239,9 @@ export function MobileDashboard() {
                                 </p>
                             )}
                         </article>
+
+                        {/* Taiwan market valuation (CAPE): text only on a phone */}
+                        <TwCapeHighlight />
                     </div>
                 </section>
 
