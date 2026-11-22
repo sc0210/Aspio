@@ -1011,7 +1011,6 @@
     "userNotFound": "找不到該用戶名稱。請對方於「設定→個人資料」中設定用戶名稱。",
     "history": {
       "title": "紀錄",
-      "dialogAria": "「{{title}}」的紀錄",
       "close": "關閉",
       "emptyTitle": "還沒有預留任何資金",
       "emptyHint": "兩人各自用「預留資金」充實自己負責的部分。",

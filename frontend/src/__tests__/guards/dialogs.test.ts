@@ -1,43 +1,24 @@
 /**
- * New dialogs use `components/ui/Modal`.
+ * Dialogs use `components/ui/Modal` (or `ConfirmDialog`).
  *
- * Dialogs were built three ways: Headless UI's Dialog directly, the `useDialog`
- * hook over hand-written markup, and `<Modal>`. They already share one dialog
- * stack (Escape and Tab go to the innermost), so they behave alike; they do not
- * look alike, and each new one picked a pattern at random. The files below are
- * the ones that predate this rule. Move one to `<Modal>` (or `ConfirmDialog`)
- * and delete its line; never add a line.
+ * They were built three ways: Headless UI's Dialog directly, the `useDialog`
+ * hook over hand-written markup, and `<Modal>`. All three already shared one
+ * dialog stack, so they behaved alike, but they did not look alike: four header
+ * sizes, three backdrops, close buttons from 24px to 44px. All 24 now use
+ * <Modal>. Only the two overlays below keep their own shape.
  */
 import fs from 'fs';
 import path from 'path';
 
-const LEGACY = new Set([
-  'components/compare/AddPeerModal.tsx',
-  'components/dashboard/FinancialTermsHelp.tsx',
-  'components/goals/AchievementDetailModal.tsx',
-  'components/goals/ContributeModal.tsx',
-  'components/goals/CreateGoalModal.tsx',
-  'components/goals/EditGoalModal.tsx',
-  'components/layout/CommandPalette.tsx',
-  'components/layout/MobileBottomNav.tsx',
-  'components/loans/AddLoanModal.tsx',
-  'components/loans/EditLoanModal.tsx',
-  'components/loans/EditPaymentModal.tsx',
-  'components/loans/RecordPaymentModal.tsx',
-  'components/portfolio/BuyHoldingModal.tsx',
-  'components/portfolio/HoldingDetailModal.tsx',
-  'components/portfolio/ImportExportModal.tsx',
-  'components/portfolio/LotSelectionModal.tsx',
-  'components/portfolio/SellHoldingModal.tsx',
-  'components/portfolio/WalletManagementModal.tsx',
-  'components/savings/AmendSplitModal.tsx',
-  'components/savings/CreateGoalModal.tsx',
-  'components/savings/GoalHistoryModal.tsx',
-  'components/savings/NewSplitModal.tsx',
-  'components/savings/SettleUpModal.tsx',
-  'components/transactions/SplitExpenseModal.tsx',
-  'components/transactions/TransactionImportExportModal.tsx',
-  'components/transactions/TransactionList.tsx',
+/**
+ * Overlays that are not dialog-shaped, so <Modal> does not fit them. Each keeps
+ * the shared behaviour through useDialog or Headless UI.
+ */
+const OWN_SHAPE = new Map([
+  // A search box pinned near the top, results under it: no title bar, no body.
+  ['components/layout/CommandPalette.tsx', 'command palette'],
+  // The phone tab bar's More sheet: slides up from the tab bar it belongs to.
+  ['components/layout/MobileBottomNav.tsx', 'bottom sheet'],
 ]);
 
 const SRC = path.join(__dirname, '../..');
@@ -68,7 +49,7 @@ it('builds no new dialog outside <Modal>', () => {
     .map((f) => path.relative(SRC, f).split(path.sep).join('/'))
     .filter((f) => f !== 'components/ui/Modal.tsx' && f !== 'components/ui/ConfirmDialog.tsx' && !NOT_MODALS.has(f))
     .filter((f) => buildsItsOwnDialog(fs.readFileSync(path.join(SRC, f), 'utf8')));
-  expect(own.filter((f) => !LEGACY.has(f))).toEqual([]);
-  // A file moved to <Modal> must leave the list, so the backlog only shrinks.
-  expect([...LEGACY].filter((f) => !own.includes(f))).toEqual([]);
+  expect(own.filter((f) => !OWN_SHAPE.has(f))).toEqual([]);
+  // An exception that no longer builds its own overlay leaves the list.
+  expect([...OWN_SHAPE.keys()].filter((f) => !own.includes(f))).toEqual([]);
 });

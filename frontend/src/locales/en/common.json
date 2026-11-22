@@ -1013,7 +1013,6 @@
     "userNotFound": "No user found with that username. Ask them to set a username in Settings → Profile.",
     "history": {
       "title": "History",
-      "dialogAria": "History of {{title}}",
       "close": "Close",
       "emptyTitle": "Nothing set aside yet",
       "emptyHint": "Each of you adds to your part with “Set aside money”.",

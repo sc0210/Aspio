@@ -10,10 +10,14 @@ interface ConfirmDialogProps {
   message: string;
   /** Defaults to "Delete": every caller so far confirms something destructive. */
   confirmLabel?: string;
+  cancelLabel?: string;
+  /** While the action runs: the confirm button is disabled and shows this label instead. */
+  busyLabel?: string;
+  busy?: boolean;
 }
 
 /** A destructive-action confirm; the confirm button is styled as a danger action. */
-export function ConfirmDialog({ isOpen, onConfirm, onCancel, title, message, confirmLabel }: ConfirmDialogProps) {
+export function ConfirmDialog({ isOpen, onConfirm, onCancel, title, message, confirmLabel, cancelLabel, busy = false, busyLabel }: ConfirmDialogProps) {
   const { t } = useTranslation('common');
   const { panelRef, dialogProps } = useDialog({ isOpen: isOpen, onClose: onCancel });
 
@@ -42,14 +46,15 @@ export function ConfirmDialog({ isOpen, onConfirm, onCancel, title, message, con
             onClick={onCancel}
             className="px-4 py-2 text-sm font-medium text-gray-700 dark:text-gray-300 bg-gray-100 dark:bg-gray-700 rounded-lg hover:bg-gray-200 dark:hover:bg-gray-600 transition-colors"
           >
-            {t('common.cancel', 'Cancel')}
+            {cancelLabel ?? t('common.cancel', 'Cancel')}
           </button>
           <button
             type="button"
             onClick={onConfirm}
-            className="px-4 py-2 text-sm font-medium text-white bg-error-600 rounded-lg hover:bg-error-700 transition-colors"
+            disabled={busy}
+            className="px-4 py-2 text-sm font-medium text-white bg-error-600 rounded-lg hover:bg-error-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
           >
-            {confirmLabel ?? t('common.delete', 'Delete')}
+            {busy && busyLabel ? busyLabel : (confirmLabel ?? t('common.delete', 'Delete'))}
           </button>
         </div>
       </div>

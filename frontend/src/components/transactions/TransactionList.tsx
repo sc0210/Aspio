@@ -7,7 +7,7 @@ import {
   ChevronUpIcon,
   TagIcon,
 } from '@heroicons/react/24/outline';
-import { Dialog, DialogPanel, DialogTitle } from '@headlessui/react';
+import { ConfirmDialog } from '@/components/ui/ConfirmDialog';
 import { cn } from '@/utils/cn';
 import { formatTWD } from '@/utils/formatters';
 import { sumDayNet } from './dayTotals';
@@ -481,44 +481,17 @@ export function TransactionList({ transactions, isLoading, isFetching, isSearchi
         </div>
       )}
 
-      {/* Single delete confirmation modal — Headless UI Dialog gives a focus
-          trap, Escape-to-close, and focus return for free. */}
-      <Dialog
-        open={!!pendingDeleteId}
-        onClose={() => setPendingDeleteId(null)}
-        className="relative z-50"
-      >
-        <div className="fixed inset-0 bg-black/40 backdrop-blur-sm" aria-hidden="true" />
-        <div className="fixed inset-0 flex items-center justify-center px-4">
-          <DialogPanel className="bg-white dark:bg-gray-800 rounded-xl shadow-xl border border-gray-200 dark:border-gray-700 w-full max-w-sm p-6 space-y-4">
-            <DialogTitle className="text-base font-semibold text-gray-900 dark:text-white">
-              {t('transactions:list.confirmDeleteTitle')}
-            </DialogTitle>
-            <p className="text-sm text-gray-600 dark:text-gray-400">
-              {t('transactions:deleteConfirmation')}
-            </p>
-            <div className="flex justify-end gap-3">
-              <button
-                type="button"
-                onClick={() => setPendingDeleteId(null)}
-                className="px-4 py-2 text-sm font-medium rounded-lg bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-600 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-gray-400 transition-colors"
-              >
-                {t('transactions:list.confirmDeleteCancel')}
-              </button>
-              <button
-                type="button"
-                onClick={confirmDelete}
-                disabled={deleteTransactionMutation.isPending}
-                className="px-4 py-2 text-sm font-medium rounded-lg bg-error-600 text-white hover:bg-error-700 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-error-500 focus-visible:ring-offset-1 dark:focus-visible:ring-offset-gray-800 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
-              >
-                {deleteTransactionMutation.isPending
-                  ? t('transactions:list.deleting')
-                  : t('transactions:list.confirmDeleteAction')}
-              </button>
-            </div>
-          </DialogPanel>
-        </div>
-      </Dialog>
+      <ConfirmDialog
+        isOpen={!!pendingDeleteId}
+        onCancel={() => setPendingDeleteId(null)}
+        onConfirm={confirmDelete}
+        title={t('transactions:list.confirmDeleteTitle')}
+        message={t('transactions:deleteConfirmation')}
+        confirmLabel={t('transactions:list.confirmDeleteAction')}
+        cancelLabel={t('transactions:list.confirmDeleteCancel')}
+        busy={deleteTransactionMutation.isPending}
+        busyLabel={t('transactions:list.deleting')}
+      />
 
       {/* Grouped Transactions */}
       {Object.entries(groupedTransactions)

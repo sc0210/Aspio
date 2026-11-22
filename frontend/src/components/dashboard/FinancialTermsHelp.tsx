@@ -2,8 +2,8 @@
 
 import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { QuestionMarkCircleIcon, XMarkIcon } from '@heroicons/react/24/outline';
-import { useDialog } from '@/hooks/useDialog';
+import { QuestionMarkCircleIcon } from '@heroicons/react/24/outline';
+import { Modal } from '@/components/ui/Modal';
 
 /**
  * Financial Terms Help Component
@@ -22,7 +22,6 @@ interface FinancialTermsHelpProps {
 export function FinancialTermsHelp({ variant = 'modal', className = '' }: FinancialTermsHelpProps) {
     const { t } = useTranslation('dashboard');
     const [isOpen, setIsOpen] = useState(false);
-    const { panelRef, dialogProps } = useDialog({ isOpen, onClose: () => setIsOpen(false) });
 
     const terms = [
         {
@@ -97,106 +96,86 @@ export function FinancialTermsHelp({ variant = 'modal', className = '' }: Financ
 
             {/* Modal */}
             {isOpen && (
-                <div className="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-center justify-center p-4">
-                    <div
-                        ref={panelRef}
-                        {...dialogProps}
-                        className="bg-white dark:bg-gray-900 rounded-2xl shadow-2xl max-w-4xl w-full max-h-[90vh] overflow-hidden"
-                    >
-                        {/* Header */}
-                        <div className="flex items-center justify-between p-6 border-b border-gray-200 dark:border-gray-700">
-                            <div className="flex items-center gap-3">
-                                <div className="p-2 bg-primary-100 dark:bg-primary-900/30 rounded-lg">
-                                    <QuestionMarkCircleIcon className="w-6 h-6 text-primary-600 dark:text-primary-400" />
-                                </div>
-                                <div>
-                                    <h2 className="text-2xl font-bold text-gray-900 dark:text-white">Financial Terms Guide</h2>
-                                    <p className="text-sm text-gray-600 dark:text-gray-400">Understanding key metrics in Aspiro</p>
-                                </div>
-                            </div>
-                            <button
-                                onClick={() => setIsOpen(false)}
-                                className="p-2 hover:bg-gray-100 dark:hover:bg-gray-800 rounded-lg transition-colors"
-                                aria-label="Close help dialog"
-                            >
-                                <XMarkIcon className="w-6 h-6 text-gray-500 dark:text-gray-400" />
-                            </button>
-                        </div>
+                <Modal
+                  isOpen={isOpen}
+                  onClose={() => setIsOpen(false)}
+                  size="xl"
+                  title={<>Financial Terms Guide</>}
+                  description={<>Understanding key metrics in Aspiro</>}
+                >
+                  {/* Content */}
+                  <div>
+                      <div className="space-y-6">
+                          {/* Visual Diagram */}
+                          <div className="bg-gradient-to-br from-primary-50 via-white to-blue-50 dark:from-gray-800 dark:via-gray-900 dark:to-gray-800 rounded-xl p-6 border border-primary-200 dark:border-gray-700">
+                              <h3 className="font-semibold text-lg text-gray-900 dark:text-white mb-4">💎 Total Asset = All 3 Wallets Combined</h3>
+                              <div className="grid grid-cols-3 gap-3 mb-4">
+                                  <div className="text-center p-3 bg-sky-50 dark:bg-sky-900/30 rounded-lg border border-sky-200 dark:border-sky-800">
+                                      <div className="text-2xl mb-1">💰</div>
+                                      <div className="text-xs font-medium text-sky-600 dark:text-sky-400">Life Wallet</div>
+                                      <div className="text-sm font-bold text-gray-900 dark:text-white">Daily Cash</div>
+                                  </div>
+                                  <div className="text-center p-3 bg-violet-100 dark:bg-violet-900/30 rounded-lg border-2 border-violet-500 dark:border-violet-600">
+                                      <div className="text-2xl mb-1">📈</div>
+                                      <div className="text-xs font-medium text-violet-700 dark:text-violet-300">Portfolio Wallet</div>
+                                      <div className="text-sm font-bold text-violet-900 dark:text-violet-100">Investments</div>
+                                  </div>
+                                  <div className="text-center p-3 bg-amber-50 dark:bg-amber-900/30 rounded-lg border border-amber-200 dark:border-amber-800">
+                                      <div className="text-2xl mb-1">🛡️</div>
+                                      <div className="text-xs font-medium text-amber-600 dark:text-amber-400">Emergency Fund</div>
+                                      <div className="text-sm font-bold text-gray-900 dark:text-white">Safety Net</div>
+                                  </div>
+                              </div>
+                              <div className="flex items-center justify-center gap-3 text-sm text-gray-600 dark:text-gray-400">
+                                  <span className="font-semibold text-violet-600 dark:text-violet-400">Portfolio Wallet 📈</span>
+                                  <span>=</span>
+                                  <span>Live market value of your holdings (fluctuates daily)</span>
+                              </div>
+                          </div>
 
-                        {/* Content */}
-                        <div className="p-6 overflow-y-auto max-h-[calc(90vh-140px)]">
-                            <div className="space-y-6">
-                                {/* Visual Diagram */}
-                                <div className="bg-gradient-to-br from-primary-50 via-white to-blue-50 dark:from-gray-800 dark:via-gray-900 dark:to-gray-800 rounded-xl p-6 border border-primary-200 dark:border-gray-700">
-                                    <h3 className="font-semibold text-lg text-gray-900 dark:text-white mb-4">💎 Total Asset = All 3 Wallets Combined</h3>
-                                    <div className="grid grid-cols-3 gap-3 mb-4">
-                                        <div className="text-center p-3 bg-sky-50 dark:bg-sky-900/30 rounded-lg border border-sky-200 dark:border-sky-800">
-                                            <div className="text-2xl mb-1">💰</div>
-                                            <div className="text-xs font-medium text-sky-600 dark:text-sky-400">Life Wallet</div>
-                                            <div className="text-sm font-bold text-gray-900 dark:text-white">Daily Cash</div>
-                                        </div>
-                                        <div className="text-center p-3 bg-violet-100 dark:bg-violet-900/30 rounded-lg border-2 border-violet-500 dark:border-violet-600">
-                                            <div className="text-2xl mb-1">📈</div>
-                                            <div className="text-xs font-medium text-violet-700 dark:text-violet-300">Portfolio Wallet</div>
-                                            <div className="text-sm font-bold text-violet-900 dark:text-violet-100">Investments</div>
-                                        </div>
-                                        <div className="text-center p-3 bg-amber-50 dark:bg-amber-900/30 rounded-lg border border-amber-200 dark:border-amber-800">
-                                            <div className="text-2xl mb-1">🛡️</div>
-                                            <div className="text-xs font-medium text-amber-600 dark:text-amber-400">Emergency Fund</div>
-                                            <div className="text-sm font-bold text-gray-900 dark:text-white">Safety Net</div>
-                                        </div>
-                                    </div>
-                                    <div className="flex items-center justify-center gap-3 text-sm text-gray-600 dark:text-gray-400">
-                                        <span className="font-semibold text-violet-600 dark:text-violet-400">Portfolio Wallet 📈</span>
-                                        <span>=</span>
-                                        <span>Live market value of your holdings (fluctuates daily)</span>
-                                    </div>
-                                </div>
+                          {/* Terms Explanation */}
+                          <div className="space-y-4">
+                              {terms.map((term) => (
+                                  <div
+                                      key={term.term}
+                                      className="bg-gray-50 dark:bg-gray-800 rounded-xl p-4 border border-gray-200 dark:border-gray-700"
+                                  >
+                                      <div className="flex items-start gap-3">
+                                          <span className="text-3xl flex-shrink-0">{term.icon}</span>
+                                          <div className="flex-1 min-w-0">
+                                              <h4 className="font-bold text-lg text-gray-900 dark:text-white mb-1">{term.term}</h4>
+                                              <p className="text-sm text-gray-700 dark:text-gray-300 mb-2">{term.longDesc}</p>
 
-                                {/* Terms Explanation */}
-                                <div className="space-y-4">
-                                    {terms.map((term) => (
-                                        <div
-                                            key={term.term}
-                                            className="bg-gray-50 dark:bg-gray-800 rounded-xl p-4 border border-gray-200 dark:border-gray-700"
-                                        >
-                                            <div className="flex items-start gap-3">
-                                                <span className="text-3xl flex-shrink-0">{term.icon}</span>
-                                                <div className="flex-1 min-w-0">
-                                                    <h4 className="font-bold text-lg text-gray-900 dark:text-white mb-1">{term.term}</h4>
-                                                    <p className="text-sm text-gray-700 dark:text-gray-300 mb-2">{term.longDesc}</p>
+                                              <div className="bg-white dark:bg-gray-900 rounded-lg p-3 mb-2 border border-gray-200 dark:border-gray-700">
+                                                  <p className="text-xs font-semibold text-gray-500 dark:text-gray-400 mb-1">Example:</p>
+                                                  <p className="text-sm text-gray-800 dark:text-gray-200">{term.example}</p>
+                                              </div>
 
-                                                    <div className="bg-white dark:bg-gray-900 rounded-lg p-3 mb-2 border border-gray-200 dark:border-gray-700">
-                                                        <p className="text-xs font-semibold text-gray-500 dark:text-gray-400 mb-1">Example:</p>
-                                                        <p className="text-sm text-gray-800 dark:text-gray-200">{term.example}</p>
-                                                    </div>
+                                              <div className="flex items-center gap-2 text-xs text-gray-600 dark:text-gray-400">
+                                                  <span className="font-semibold">Where you see it:</span>
+                                                  <span>{term.usage}</span>
+                                              </div>
+                                          </div>
+                                      </div>
+                                  </div>
+                              ))}
+                          </div>
 
-                                                    <div className="flex items-center gap-2 text-xs text-gray-600 dark:text-gray-400">
-                                                        <span className="font-semibold">Where you see it:</span>
-                                                        <span>{term.usage}</span>
-                                                    </div>
-                                                </div>
-                                            </div>
-                                        </div>
-                                    ))}
-                                </div>
+                          {/* Quick Tips */}
+                          <div className="bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800 rounded-xl p-4">
+                              <h4 className="font-semibold text-amber-900 dark:text-amber-100 mb-2">💡 Quick Tips</h4>
+                              <ul className="space-y-1 text-sm text-amber-800 dark:text-amber-200">
+                                  <li>• <strong>Total Asset</strong> is your full net worth — all 3 wallets combined</li>
+                                  <li>• <strong>Portfolio Wallet</strong> moves daily with market prices — don&apos;t be alarmed by short-term swings</li>
+                                  <li>• <strong>Life Wallet</strong> health is tracked by Cash Flow — aim for a positive savings rate each month</li>
+                                  <li>• <strong>Emergency Fund</strong> runway is shown in months — target 3–6 months of living expenses</li>
+                                  <li>• The allocation donut on the dashboard shows how your wealth is split across all 3 wallets</li>
+                              </ul>
+                          </div>
 
-                                {/* Quick Tips */}
-                                <div className="bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800 rounded-xl p-4">
-                                    <h4 className="font-semibold text-amber-900 dark:text-amber-100 mb-2">💡 Quick Tips</h4>
-                                    <ul className="space-y-1 text-sm text-amber-800 dark:text-amber-200">
-                                        <li>• <strong>Total Asset</strong> is your full net worth — all 3 wallets combined</li>
-                                        <li>• <strong>Portfolio Wallet</strong> moves daily with market prices — don&apos;t be alarmed by short-term swings</li>
-                                        <li>• <strong>Life Wallet</strong> health is tracked by Cash Flow — aim for a positive savings rate each month</li>
-                                        <li>• <strong>Emergency Fund</strong> runway is shown in months — target 3–6 months of living expenses</li>
-                                        <li>• The allocation donut on the dashboard shows how your wealth is split across all 3 wallets</li>
-                                    </ul>
-                                </div>
-
-                            </div>
-                        </div>
-                    </div>
-                </div>
+                      </div>
+                  </div>
+                </Modal>
             )}
         </>
     );

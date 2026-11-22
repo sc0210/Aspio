@@ -2,13 +2,13 @@
 
 import { useTranslation } from 'react-i18next';
 import { useState, useEffect } from 'react';
-import { Dialog, DialogPanel, DialogTitle } from '@headlessui/react';
-import { XMarkIcon, CurrencyDollarIcon, BanknotesIcon, MagnifyingGlassIcon, ArrowPathIcon } from '@heroicons/react/24/outline';
+import { CurrencyDollarIcon, BanknotesIcon, MagnifyingGlassIcon, ArrowPathIcon } from '@heroicons/react/24/outline';
 import { Button } from '@/components/ui/Button';
 import type { PortfolioHolding } from '@/shared/types';
 import { formatCurrency, formatMoney } from '@/utils/formatters';
 import { cn } from '@/utils/cn';
 import { useScrollLock } from '@/hooks/useScrollLock';
+import { Modal } from '@/components/ui/Modal';
 
 interface SellHoldingModalProps {
     isOpen: boolean;
@@ -163,365 +163,348 @@ export function SellHoldingModal({
     };
 
     return (
-        <Dialog open={isOpen} onClose={handleClose} className="relative z-50">
-            <div className="fixed inset-0 bg-black/30 backdrop-blur-sm" aria-hidden="true" />
+        <Modal
+          isOpen={isOpen}
+          onClose={handleClose}
+          size="lg"
+          title={<>{step === 'select' ? t('sell.title') : t('sell.titleFor', { symbol: holding?.symbol || '' })}</>}
+        >
+          <div>{step === 'select' ? (
+              <div className="space-y-6">
+                  {/* Search Bar */}
+                  <div>
+                      <label htmlFor="sellholdin-field" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                          {t('sell.searchLabel')}
+                      </label>
+                      <div className="relative">
+                          <MagnifyingGlassIcon className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-500 dark:text-gray-400" />
+                          <input
+                              id="sellholdin-field"
+                              type="text"
+                              value={searchQuery}
+                              onChange={(e) => setSearchQuery(e.target.value)}
+                              placeholder={t('sell.searchPlaceholder')}
+                              className="w-full pl-10 pr-4 py-3 border border-gray-300 dark:border-gray-600 rounded-lg focus-visible:ring-2 focus-visible:ring-primary-500 focus-visible:border-transparent bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
+                              autoFocus
+                          />
+                      </div>
+                  </div>
 
-            <div className="fixed inset-0 flex items-center justify-center p-4">
-                <DialogPanel className="mx-auto max-w-2xl w-full bg-white dark:bg-gray-800 rounded-2xl shadow-2xl">
-                    {/* Header */}
-                    <div className="flex items-center justify-between p-6 border-b border-gray-200 dark:border-gray-700">
-                        <DialogTitle className="text-2xl font-bold text-gray-900 dark:text-white">
-                            {step === 'select' ? t('sell.title') : t('sell.titleFor', { symbol: holding?.symbol || '' })}
-                        </DialogTitle>
-                        <button
-                            type="button"
-                            onClick={handleClose}
-                            aria-label="Close dialog"
-                            className="text-gray-500 dark:text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 transition-colors"
-                        >
-                            <XMarkIcon className="w-6 h-6" aria-hidden="true" />
-                        </button>
-                    </div>
+                  {/* Holdings List */}
+                  {filteredHoldings.length > 0 ? (
+                      <div className="space-y-2">
+                          <h3 className="text-sm font-medium text-gray-700 dark:text-gray-300">
+                              {t('sell.pickHolding', { count: filteredHoldings.length })}
+                          </h3>
+                          <div className="space-y-2 max-h-96 overflow-y-auto">
+                              {filteredHoldings.map((h) => {
+                                  const gainLoss = h.totalValue - h.totalCost;
+                                  const gainLossPct = h.totalCost > 0 ? (gainLoss / h.totalCost) * 100 : 0;
+                                  const isProfit = gainLoss >= 0;
 
-                    {/* Content */}
-                    <div className="p-6 max-h-[calc(100vh-12rem)] overflow-y-auto">{step === 'select' ? (
-                        <div className="space-y-6">
-                            {/* Search Bar */}
-                            <div>
-                                <label htmlFor="sellholdin-field" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                                    {t('sell.searchLabel')}
-                                </label>
-                                <div className="relative">
-                                    <MagnifyingGlassIcon className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-500 dark:text-gray-400" />
-                                    <input
-                                        id="sellholdin-field"
-                                        type="text"
-                                        value={searchQuery}
-                                        onChange={(e) => setSearchQuery(e.target.value)}
-                                        placeholder={t('sell.searchPlaceholder')}
-                                        className="w-full pl-10 pr-4 py-3 border border-gray-300 dark:border-gray-600 rounded-lg focus-visible:ring-2 focus-visible:ring-primary-500 focus-visible:border-transparent bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
-                                        autoFocus
-                                    />
-                                </div>
-                            </div>
+                                  return (
+                                      <button
+                                          key={h.id}
+                                          onClick={() => handleSelectHolding(h as unknown as PortfolioHolding)}
+                                          className="w-full p-4 bg-white dark:bg-gray-700 hover:bg-gray-50 dark:hover:bg-gray-600 border border-gray-200 dark:border-gray-600 rounded-lg transition-colors text-left"
+                                      >
+                                          <div className="flex items-start justify-between">
+                                              <div className="flex-1">
+                                                  <div className="flex items-center gap-2 mb-1">
+                                                      <span className="font-bold text-gray-900 dark:text-white text-lg">
+                                                          {h.symbol}
+                                                      </span>
+                                                      <span className="text-xs px-2 py-0.5 rounded-full bg-gray-100 dark:bg-gray-600 text-gray-600 dark:text-gray-300">
+                                                          {h.type || 'Stock'}
+                                                      </span>
+                                                  </div>
+                                                  <div className="text-sm text-gray-500 dark:text-gray-400 mb-2">
+                                                      {h.name}
+                                                  </div>
+                                                  <div className="grid grid-cols-3 gap-3 text-sm">
+                                                      <div>
+                                                          <div className="text-xs text-gray-500 dark:text-gray-400">{t('sell.field.quantity')}</div>
+                                                          <div className="font-semibold text-gray-900 dark:text-white">
+                                                              {h.quantity}
+                                                          </div>
+                                                      </div>
+                                                      <div>
+                                                          <div className="text-xs text-gray-500 dark:text-gray-400">{t('sell.field.currentPrice')}</div>
+                                                          <div className="font-semibold text-gray-900 dark:text-white">
+                                                              {formatCurrency(h.currentPrice, h.currency)}
+                                                          </div>
+                                                      </div>
+                                                      <div>
+                                                          <div className="text-xs text-gray-500 dark:text-gray-400">{t('sell.field.marketValue')}</div>
+                                                          <div className="font-semibold text-gray-900 dark:text-white">
+                                                              {formatMoney(h.totalValue, h.currency)}
+                                                          </div>
+                                                      </div>
+                                                  </div>
+                                              </div>
+                                              <div className="text-right ml-4">
+                                                  <div className={cn(
+                                                      'text-sm font-bold mb-1',
+                                                      isProfit ? 'text-prosperity-700 dark:text-prosperity-400' : 'text-error-700 dark:text-error-400'
+                                                  )}>
+                                                      {isProfit ? '+' : ''}{formatMoney(gainLoss, h.currency)}
+                                                  </div>
+                                                  <div className={cn(
+                                                      'text-xs font-semibold',
+                                                      isProfit ? 'text-prosperity-700 dark:text-prosperity-400' : 'text-error-700 dark:text-error-400'
+                                                  )}>
+                                                      {gainLossPct >= 0 ? '+' : ''}{gainLossPct.toFixed(2)}%
+                                                  </div>
+                                              </div>
+                                          </div>
+                                      </button>
+                                  );
+                              })}
+                          </div>
+                      </div>
+                  ) : (
+                      <div className="text-center py-12">
+                          <p className="text-gray-500 dark:text-gray-400">
+                              {existingHoldings.length === 0 ? t('sell.emptyNoHoldings') : t('sell.emptyNoMatch')}
+                          </p>
+                      </div>
+                  )}
+              </div>
+          ) : (
 
-                            {/* Holdings List */}
-                            {filteredHoldings.length > 0 ? (
-                                <div className="space-y-2">
-                                    <h3 className="text-sm font-medium text-gray-700 dark:text-gray-300">
-                                        {t('sell.pickHolding', { count: filteredHoldings.length })}
-                                    </h3>
-                                    <div className="space-y-2 max-h-96 overflow-y-auto">
-                                        {filteredHoldings.map((h) => {
-                                            const gainLoss = h.totalValue - h.totalCost;
-                                            const gainLossPct = h.totalCost > 0 ? (gainLoss / h.totalCost) * 100 : 0;
-                                            const isProfit = gainLoss >= 0;
+              <form onSubmit={handleSubmit} className="space-y-6">
+                  {/* Current Position */}
+                  {holding && (
+                      <div className="bg-gradient-to-br from-gray-50 to-gray-100 dark:from-gray-900/50 dark:to-gray-800/50 rounded-xl p-4 space-y-2 border border-gray-200 dark:border-gray-700">
+                          <h4 className="text-sm font-semibold text-gray-900 dark:text-white mb-3 flex items-center gap-2">
+                              <span className="w-1 h-4 bg-gradient-to-b from-primary-500 to-primary-600 rounded-full"></span>
+                              {t('sell.holdingInfo')}
+                          </h4>
+                          <div className="grid grid-cols-2 gap-3">
+                              <div className="flex justify-between text-sm">
+                                  <span className="text-gray-600 dark:text-gray-400">{t('sell.label.quantity')}</span>
+                                  <span className="font-semibold text-gray-900 dark:text-white">
+                                      {holding.quantity}
+                                  </span>
+                              </div>
+                              <div className="flex justify-between text-sm">
+                                  <span className="text-gray-600 dark:text-gray-400">{t('sell.label.avgCost')}</span>
+                                  <span className="font-semibold text-gray-900 dark:text-white">
+                                      {formatCurrency(holding.averageCost, holding.currency)}
+                                  </span>
+                              </div>
+                              <div className="flex justify-between text-sm">
+                                  <span className="text-gray-600 dark:text-gray-400">{t('sell.label.currentPrice')}</span>
+                                  <span className="font-semibold text-gray-900 dark:text-white">
+                                      {formatCurrency(holding.currentPrice, holding.currency)}
+                                  </span>
+                              </div>
+                          </div>
+                      </div>
+                  )}
 
-                                            return (
-                                                <button
-                                                    key={h.id}
-                                                    onClick={() => handleSelectHolding(h as unknown as PortfolioHolding)}
-                                                    className="w-full p-4 bg-white dark:bg-gray-700 hover:bg-gray-50 dark:hover:bg-gray-600 border border-gray-200 dark:border-gray-600 rounded-lg transition-colors text-left"
-                                                >
-                                                    <div className="flex items-start justify-between">
-                                                        <div className="flex-1">
-                                                            <div className="flex items-center gap-2 mb-1">
-                                                                <span className="font-bold text-gray-900 dark:text-white text-lg">
-                                                                    {h.symbol}
-                                                                </span>
-                                                                <span className="text-xs px-2 py-0.5 rounded-full bg-gray-100 dark:bg-gray-600 text-gray-600 dark:text-gray-300">
-                                                                    {h.type || 'Stock'}
-                                                                </span>
-                                                            </div>
-                                                            <div className="text-sm text-gray-500 dark:text-gray-400 mb-2">
-                                                                {h.name}
-                                                            </div>
-                                                            <div className="grid grid-cols-3 gap-3 text-sm">
-                                                                <div>
-                                                                    <div className="text-xs text-gray-500 dark:text-gray-400">{t('sell.field.quantity')}</div>
-                                                                    <div className="font-semibold text-gray-900 dark:text-white">
-                                                                        {h.quantity}
-                                                                    </div>
-                                                                </div>
-                                                                <div>
-                                                                    <div className="text-xs text-gray-500 dark:text-gray-400">{t('sell.field.currentPrice')}</div>
-                                                                    <div className="font-semibold text-gray-900 dark:text-white">
-                                                                        {formatCurrency(h.currentPrice, h.currency)}
-                                                                    </div>
-                                                                </div>
-                                                                <div>
-                                                                    <div className="text-xs text-gray-500 dark:text-gray-400">{t('sell.field.marketValue')}</div>
-                                                                    <div className="font-semibold text-gray-900 dark:text-white">
-                                                                        {formatMoney(h.totalValue, h.currency)}
-                                                                    </div>
-                                                                </div>
-                                                            </div>
-                                                        </div>
-                                                        <div className="text-right ml-4">
-                                                            <div className={cn(
-                                                                'text-sm font-bold mb-1',
-                                                                isProfit ? 'text-prosperity-700 dark:text-prosperity-400' : 'text-error-700 dark:text-error-400'
-                                                            )}>
-                                                                {isProfit ? '+' : ''}{formatMoney(gainLoss, h.currency)}
-                                                            </div>
-                                                            <div className={cn(
-                                                                'text-xs font-semibold',
-                                                                isProfit ? 'text-prosperity-700 dark:text-prosperity-400' : 'text-error-700 dark:text-error-400'
-                                                            )}>
-                                                                {gainLossPct >= 0 ? '+' : ''}{gainLossPct.toFixed(2)}%
-                                                            </div>
-                                                        </div>
-                                                    </div>
-                                                </button>
-                                            );
-                                        })}
-                                    </div>
-                                </div>
-                            ) : (
-                                <div className="text-center py-12">
-                                    <p className="text-gray-500 dark:text-gray-400">
-                                        {existingHoldings.length === 0 ? t('sell.emptyNoHoldings') : t('sell.emptyNoMatch')}
-                                    </p>
-                                </div>
-                            )}
-                        </div>
-                    ) : (
+                  {/* Quantity Input */}
+                  <div>
+                      <label htmlFor="quantity" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                          {t('sell.field.sellQuantity')}
+                      </label>
+                      <div className="flex gap-2">
+                          <input
+                              type="number"
+                              inputMode="decimal"
+                              onWheel={(e) => e.currentTarget.blur()}
+                              id="quantity"
+                              value={quantity}
+                              onChange={(e) => setQuantity(e.target.value)}
+                              min="0"
+                              max={holding?.quantity || 0}
+                              step="0.01"
+                              placeholder="0"
+                              required
+                              className={cn(
+                                  "flex-1 px-4 py-2.5 border rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white text-lg font-semibold",
+                                  "focus-visible:ring-2 focus-visible:ring-primary-500 focus-visible:border-transparent",
+                                  !isValidQuantity && quantity !== '' ? "border-red-500" : "border-gray-300 dark:border-gray-600"
+                              )}
+                              autoFocus
+                          />
+                          <Button
+                              type="button"
+                              variant="outline"
+                              onClick={handleSetMaxQuantity}
+                              className="whitespace-nowrap"
+                          >
+                              {t('sell.all', { count: holding?.quantity || 0 })}
+                          </Button>
+                      </div>
+                      {!isValidQuantity && quantity !== '' && holding && (
+                          <p className="mt-1 text-sm text-error-700 dark:text-error-400">
+                              {t('sell.quantityRange', { max: holding.quantity })}
+                          </p>
+                      )}
+                  </div>
 
-                        <form onSubmit={handleSubmit} className="space-y-6">
-                            {/* Current Position */}
-                            {holding && (
-                                <div className="bg-gradient-to-br from-gray-50 to-gray-100 dark:from-gray-900/50 dark:to-gray-800/50 rounded-xl p-4 space-y-2 border border-gray-200 dark:border-gray-700">
-                                    <h4 className="text-sm font-semibold text-gray-900 dark:text-white mb-3 flex items-center gap-2">
-                                        <span className="w-1 h-4 bg-gradient-to-b from-primary-500 to-primary-600 rounded-full"></span>
-                                        {t('sell.holdingInfo')}
-                                    </h4>
-                                    <div className="grid grid-cols-2 gap-3">
-                                        <div className="flex justify-between text-sm">
-                                            <span className="text-gray-600 dark:text-gray-400">{t('sell.label.quantity')}</span>
-                                            <span className="font-semibold text-gray-900 dark:text-white">
-                                                {holding.quantity}
-                                            </span>
-                                        </div>
-                                        <div className="flex justify-between text-sm">
-                                            <span className="text-gray-600 dark:text-gray-400">{t('sell.label.avgCost')}</span>
-                                            <span className="font-semibold text-gray-900 dark:text-white">
-                                                {formatCurrency(holding.averageCost, holding.currency)}
-                                            </span>
-                                        </div>
-                                        <div className="flex justify-between text-sm">
-                                            <span className="text-gray-600 dark:text-gray-400">{t('sell.label.currentPrice')}</span>
-                                            <span className="font-semibold text-gray-900 dark:text-white">
-                                                {formatCurrency(holding.currentPrice, holding.currency)}
-                                            </span>
-                                        </div>
-                                    </div>
-                                </div>
-                            )}
+                  {/* Price Input */}
+                  <div>
+                      <label htmlFor="price" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                          {t('sell.field.price')}
+                      </label>
+                      <input
+                          type="number"
+                          inputMode="decimal"
+                          onWheel={(e) => e.currentTarget.blur()}
+                          id="price"
+                          value={price}
+                          onChange={(e) => setPrice(e.target.value)}
+                          min="0"
+                          step="0.01"
+                          placeholder={holding?.currentPrice.toString() || '0'}
+                          className="w-full px-4 py-2.5 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus-visible:ring-2 focus-visible:ring-primary-500 focus-visible:border-transparent"
+                      />
+                      <p className="mt-1 text-xs text-gray-500 dark:text-gray-400">
+                          {t('sell.useCurrentPrice', { price: holding ? formatCurrency(holding.currentPrice, holding.currency) : '' })}
+                      </p>
+                  </div>
 
-                            {/* Quantity Input */}
-                            <div>
-                                <label htmlFor="quantity" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                                    {t('sell.field.sellQuantity')}
-                                </label>
-                                <div className="flex gap-2">
-                                    <input
-                                        type="number"
-                                        inputMode="decimal"
-                                        onWheel={(e) => e.currentTarget.blur()}
-                                        id="quantity"
-                                        value={quantity}
-                                        onChange={(e) => setQuantity(e.target.value)}
-                                        min="0"
-                                        max={holding?.quantity || 0}
-                                        step="0.01"
-                                        placeholder="0"
-                                        required
-                                        className={cn(
-                                            "flex-1 px-4 py-2.5 border rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white text-lg font-semibold",
-                                            "focus-visible:ring-2 focus-visible:ring-primary-500 focus-visible:border-transparent",
-                                            !isValidQuantity && quantity !== '' ? "border-red-500" : "border-gray-300 dark:border-gray-600"
-                                        )}
-                                        autoFocus
-                                    />
-                                    <Button
-                                        type="button"
-                                        variant="outline"
-                                        onClick={handleSetMaxQuantity}
-                                        className="whitespace-nowrap"
-                                    >
-                                        {t('sell.all', { count: holding?.quantity || 0 })}
-                                    </Button>
-                                </div>
-                                {!isValidQuantity && quantity !== '' && holding && (
-                                    <p className="mt-1 text-sm text-error-700 dark:text-error-400">
-                                        {t('sell.quantityRange', { max: holding.quantity })}
-                                    </p>
-                                )}
-                            </div>
+                  {/* Fees and Taxes */}
+                  <div className="grid grid-cols-2 gap-4">
+                      <div>
+                          <label htmlFor="fees" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                              {t('sell.field.brokerage')}
+                          </label>
+                          <input
+                              type="number"
+                              inputMode="decimal"
+                              onWheel={(e) => e.currentTarget.blur()}
+                              id="fees"
+                              value={fees}
+                              onChange={(e) => setFees(e.target.value)}
+                              min="0"
+                              step="0.01"
+                              placeholder="0.00"
+                              className="w-full px-4 py-2.5 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus-visible:ring-2 focus-visible:ring-primary-500 focus-visible:border-transparent"
+                          />
+                      </div>
+                      <div>
+                          <label htmlFor="taxes" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                              {t('sell.field.tax')}
+                          </label>
+                          <input
+                              type="number"
+                              inputMode="decimal"
+                              onWheel={(e) => e.currentTarget.blur()}
+                              id="taxes"
+                              value={taxes}
+                              onChange={(e) => setTaxes(e.target.value)}
+                              min="0"
+                              step="0.01"
+                              placeholder="0.00"
+                              className="w-full px-4 py-2.5 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus-visible:ring-2 focus-visible:ring-primary-500 focus-visible:border-transparent"
+                          />
+                      </div>
+                  </div>
 
-                            {/* Price Input */}
-                            <div>
-                                <label htmlFor="price" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                                    {t('sell.field.price')}
-                                </label>
-                                <input
-                                    type="number"
-                                    inputMode="decimal"
-                                    onWheel={(e) => e.currentTarget.blur()}
-                                    id="price"
-                                    value={price}
-                                    onChange={(e) => setPrice(e.target.value)}
-                                    min="0"
-                                    step="0.01"
-                                    placeholder={holding?.currentPrice.toString() || '0'}
-                                    className="w-full px-4 py-2.5 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus-visible:ring-2 focus-visible:ring-primary-500 focus-visible:border-transparent"
-                                />
-                                <p className="mt-1 text-xs text-gray-500 dark:text-gray-400">
-                                    {t('sell.useCurrentPrice', { price: holding ? formatCurrency(holding.currentPrice, holding.currency) : '' })}
-                                </p>
-                            </div>
+                  {/* Notes */}
+                  <div>
+                      <label htmlFor="notes" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                          {t('sell.field.notes')}
+                      </label>
+                      <textarea
+                          id="notes"
+                          value={notes}
+                          onChange={(e) => setNotes(e.target.value)}
+                          rows={2}
+                          maxLength={500}
+                          placeholder={t('sell.notesPlaceholder')}
+                          className="w-full px-4 py-2.5 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus-visible:ring-2 focus-visible:ring-primary-500 focus-visible:border-transparent resize-none"
+                      />
+                  </div>
 
-                            {/* Fees and Taxes */}
-                            <div className="grid grid-cols-2 gap-4">
-                                <div>
-                                    <label htmlFor="fees" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                                        {t('sell.field.brokerage')}
-                                    </label>
-                                    <input
-                                        type="number"
-                                        inputMode="decimal"
-                                        onWheel={(e) => e.currentTarget.blur()}
-                                        id="fees"
-                                        value={fees}
-                                        onChange={(e) => setFees(e.target.value)}
-                                        min="0"
-                                        step="0.01"
-                                        placeholder="0.00"
-                                        className="w-full px-4 py-2.5 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus-visible:ring-2 focus-visible:ring-primary-500 focus-visible:border-transparent"
-                                    />
-                                </div>
-                                <div>
-                                    <label htmlFor="taxes" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                                        {t('sell.field.tax')}
-                                    </label>
-                                    <input
-                                        type="number"
-                                        inputMode="decimal"
-                                        onWheel={(e) => e.currentTarget.blur()}
-                                        id="taxes"
-                                        value={taxes}
-                                        onChange={(e) => setTaxes(e.target.value)}
-                                        min="0"
-                                        step="0.01"
-                                        placeholder="0.00"
-                                        className="w-full px-4 py-2.5 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus-visible:ring-2 focus-visible:ring-primary-500 focus-visible:border-transparent"
-                                    />
-                                </div>
-                            </div>
+                  {/* Transaction Summary */}
+                  {quantityNum > 0 && holding && (
+                      <div className="bg-gradient-to-br from-prosperity-50 to-prosperity-50/80 dark:from-prosperity-900/20 dark:to-prosperity-900/20 rounded-xl p-4 space-y-2 border-2 border-prosperity-200 dark:border-prosperity-800">
+                          <h4 className="text-sm font-semibold text-gray-900 dark:text-white mb-3 flex items-center gap-2">
+                              <CurrencyDollarIcon className="h-5 w-5 text-prosperity-700 dark:text-prosperity-400" />
+                              {t('sell.summary')}
+                          </h4>
+                          <div className="space-y-2 text-sm">
+                              <div className="flex justify-between">
+                                  <span className="text-gray-600 dark:text-gray-400">{t('sell.label.grossProceeds')}</span>
+                                  <span className="font-semibold text-gray-900 dark:text-white">
+                                      {formatMoney(totalProceeds, holding.currency)}
+                                  </span>
+                              </div>
+                              <div className="flex justify-between">
+                                  <span className="text-gray-600 dark:text-gray-400">{t('sell.label.feesAndTax')}</span>
+                                  <span className="font-semibold text-gray-900 dark:text-white">
+                                      -{formatMoney(feesNum + taxesNum, holding.currency)}
+                                  </span>
+                              </div>
+                              <div className="flex justify-between pt-2 border-t border-prosperity-200 dark:border-prosperity-800">
+                                  <span className="font-bold text-gray-900 dark:text-white">{t('sell.label.netProceeds')}</span>
+                                  <span className="font-bold text-xl text-prosperity-700 dark:text-prosperity-400">
+                                      {formatMoney(netProceeds, holding.currency)}
+                                  </span>
+                              </div>
+                              <div className="flex justify-between pt-2 border-t border-prosperity-200 dark:border-prosperity-800">
+                                  <span className="text-gray-600 dark:text-gray-400">{t('sell.label.estimatedPnl')}</span>
+                                  <span className={cn(
+                                      "font-bold text-base",
+                                      estimatedGainLoss >= 0 ? "text-prosperity-700 dark:text-prosperity-400" : "text-error-700 dark:text-error-400"
+                                  )}>
+                                      {estimatedGainLoss >= 0 ? '+' : ''}{formatMoney(estimatedGainLoss, holding.currency)}
+                                      {' '}({estimatedGainLossPct >= 0 ? '+' : ''}{estimatedGainLossPct.toFixed(2)}%)
+                                  </span>
+                              </div>
+                              {/* Where the money goes, not a "new cash balance": the modal
+                                  never knew the Life balance (it read 0), and proceeds are
+                                  credited in TWD at the valuation rate, or back to the goal
+                                  the lot was reserved for — the server decides which. */}
+                              <p className="flex items-start gap-1.5 pt-2 border-t border-prosperity-200 dark:border-prosperity-800 text-xs text-gray-600 dark:text-gray-400">
+                                  <BanknotesIcon className="h-4 w-4 flex-shrink-0" aria-hidden="true" />
+                                  {t('sell.proceedsDestination')}
+                              </p>
+                          </div>
+                      </div>
+                  )}
 
-                            {/* Notes */}
-                            <div>
-                                <label htmlFor="notes" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                                    {t('sell.field.notes')}
-                                </label>
-                                <textarea
-                                    id="notes"
-                                    value={notes}
-                                    onChange={(e) => setNotes(e.target.value)}
-                                    rows={2}
-                                    maxLength={500}
-                                    placeholder={t('sell.notesPlaceholder')}
-                                    className="w-full px-4 py-2.5 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus-visible:ring-2 focus-visible:ring-primary-500 focus-visible:border-transparent resize-none"
-                                />
-                            </div>
+                  {/* Error Message */}
+                  {error && (
+                      <div className="bg-error-50 dark:bg-error-900/20 border border-error-200 dark:border-error-800 rounded-lg p-3">
+                          <p className="text-sm text-error-700 dark:text-error-400">{error}</p>
+                      </div>
+                  )}
 
-                            {/* Transaction Summary */}
-                            {quantityNum > 0 && holding && (
-                                <div className="bg-gradient-to-br from-prosperity-50 to-prosperity-50/80 dark:from-prosperity-900/20 dark:to-prosperity-900/20 rounded-xl p-4 space-y-2 border-2 border-prosperity-200 dark:border-prosperity-800">
-                                    <h4 className="text-sm font-semibold text-gray-900 dark:text-white mb-3 flex items-center gap-2">
-                                        <CurrencyDollarIcon className="h-5 w-5 text-prosperity-700 dark:text-prosperity-400" />
-                                        {t('sell.summary')}
-                                    </h4>
-                                    <div className="space-y-2 text-sm">
-                                        <div className="flex justify-between">
-                                            <span className="text-gray-600 dark:text-gray-400">{t('sell.label.grossProceeds')}</span>
-                                            <span className="font-semibold text-gray-900 dark:text-white">
-                                                {formatMoney(totalProceeds, holding.currency)}
-                                            </span>
-                                        </div>
-                                        <div className="flex justify-between">
-                                            <span className="text-gray-600 dark:text-gray-400">{t('sell.label.feesAndTax')}</span>
-                                            <span className="font-semibold text-gray-900 dark:text-white">
-                                                -{formatMoney(feesNum + taxesNum, holding.currency)}
-                                            </span>
-                                        </div>
-                                        <div className="flex justify-between pt-2 border-t border-prosperity-200 dark:border-prosperity-800">
-                                            <span className="font-bold text-gray-900 dark:text-white">{t('sell.label.netProceeds')}</span>
-                                            <span className="font-bold text-xl text-prosperity-700 dark:text-prosperity-400">
-                                                {formatMoney(netProceeds, holding.currency)}
-                                            </span>
-                                        </div>
-                                        <div className="flex justify-between pt-2 border-t border-prosperity-200 dark:border-prosperity-800">
-                                            <span className="text-gray-600 dark:text-gray-400">{t('sell.label.estimatedPnl')}</span>
-                                            <span className={cn(
-                                                "font-bold text-base",
-                                                estimatedGainLoss >= 0 ? "text-prosperity-700 dark:text-prosperity-400" : "text-error-700 dark:text-error-400"
-                                            )}>
-                                                {estimatedGainLoss >= 0 ? '+' : ''}{formatMoney(estimatedGainLoss, holding.currency)}
-                                                {' '}({estimatedGainLossPct >= 0 ? '+' : ''}{estimatedGainLossPct.toFixed(2)}%)
-                                            </span>
-                                        </div>
-                                        {/* Where the money goes, not a "new cash balance": the modal
-                                            never knew the Life balance (it read 0), and proceeds are
-                                            credited in TWD at the valuation rate, or back to the goal
-                                            the lot was reserved for — the server decides which. */}
-                                        <p className="flex items-start gap-1.5 pt-2 border-t border-prosperity-200 dark:border-prosperity-800 text-xs text-gray-600 dark:text-gray-400">
-                                            <BanknotesIcon className="h-4 w-4 flex-shrink-0" aria-hidden="true" />
-                                            {t('sell.proceedsDestination')}
-                                        </p>
-                                    </div>
-                                </div>
-                            )}
-
-                            {/* Error Message */}
-                            {error && (
-                                <div className="bg-error-50 dark:bg-error-900/20 border border-error-200 dark:border-error-800 rounded-lg p-3">
-                                    <p className="text-sm text-error-700 dark:text-error-400">{error}</p>
-                                </div>
-                            )}
-
-                            {/* Actions */}
-                            <div className="flex gap-3 pt-4 border-t border-gray-200 dark:border-gray-700">
-                                <Button
-                                    type="button"
-                                    variant="outline"
-                                    onClick={() => setStep('select')}
-                                    disabled={isSubmitting}
-                                    className="flex-1"
-                                >
-                                    {t('sell.back')}
-                                </Button>
-                                <Button
-                                    type="submit"
-                                    variant="primary"
-                                    disabled={!canSubmit}
-                                    className="flex-1 flex items-center justify-center gap-2"
-                                >
-                                    {isSubmitting ? (
-                                        <>
-                                            <ArrowPathIcon className="w-4 h-4 animate-spin" />
-                                            {t('sell.processing')}
-                                        </>
-                                    ) : (
-                                        quantityNum > 0 ? t('sell.confirmWithQuantity', { count: quantityNum }) : t('sell.confirm')
-                                    )}
-                                </Button>
-                            </div>
-                        </form>
-                    )}
-                    </div>
-                </DialogPanel>
-            </div>
-        </Dialog>
+                  {/* Actions */}
+                  <div className="flex gap-3 pt-4 border-t border-gray-200 dark:border-gray-700">
+                      <Button
+                          type="button"
+                          variant="outline"
+                          onClick={() => setStep('select')}
+                          disabled={isSubmitting}
+                          className="flex-1"
+                      >
+                          {t('sell.back')}
+                      </Button>
+                      <Button
+                          type="submit"
+                          variant="primary"
+                          disabled={!canSubmit}
+                          className="flex-1 flex items-center justify-center gap-2"
+                      >
+                          {isSubmitting ? (
+                              <>
+                                  <ArrowPathIcon className="w-4 h-4 animate-spin" />
+                                  {t('sell.processing')}
+                              </>
+                          ) : (
+                              quantityNum > 0 ? t('sell.confirmWithQuantity', { count: quantityNum }) : t('sell.confirm')
+                          )}
+                      </Button>
+                  </div>
+              </form>
+          )}
+          </div>
+        </Modal>
     );
 }
