@@ -21,7 +21,7 @@ jest.mock('react-i18next', () => ({
 }));
 
 const mockUseTwCape = useTwCape as jest.Mock;
-const state = (over: Record<string, unknown>) => ({ data: undefined, isLoading: false, isError: false, refetch: jest.fn(), ...over });
+const state = (over: Record<string, unknown>) => ({ data: undefined, isLoading: false, isError: false, isFetching: false, refetch: jest.fn(), ...over });
 
 const reading = {
   available: true as const,
@@ -47,6 +47,7 @@ describe('TwCapeHighlight (phone dashboard)', () => {
   it('states the CAPE, its band and its percentile, with no chart', () => {
     mockUseTwCape.mockReturnValue(state({ data: reading }));
     const { container } = render(<TwCapeHighlight />);
+    expect(screen.getByText('Taiwan market · CAPE')).toBeInTheDocument();
     expect(screen.getByText('32.4')).toBeInTheDocument();
     expect(screen.getByText('Expensive')).toBeInTheDocument();
     expect(screen.getByText('Higher than 94% of months since Mar 2015')).toBeInTheDocument();
@@ -54,10 +55,16 @@ describe('TwCapeHighlight (phone dashboard)', () => {
     expect(container.querySelector('svg')).toBeNull();
   });
 
-  it('holds its slot while loading', () => {
+  it('takes no slot while loading, so the swipe row never shows a card that then goes', () => {
     mockUseTwCape.mockReturnValue(state({ isLoading: true }));
+    const { container } = render(<TwCapeHighlight />);
+    expect(container).toBeEmptyDOMElement();
+  });
+
+  it('disables Try again while the retry is in flight', () => {
+    mockUseTwCape.mockReturnValue(state({ isError: true, isFetching: true }));
     render(<TwCapeHighlight />);
-    expect(screen.getByTestId('tw-cape-highlight-loading')).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Try again' })).toBeDisabled();
   });
 
   it('says a failed load failed, with a retry', () => {

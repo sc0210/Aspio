@@ -11,7 +11,9 @@ export const BAND_STYLE: Record<CapeBand, string> = {
 };
 
 /** "2015-03" as a short month and year in the UI language ("Mar 2015", "2015年3月"). */
-export function monthLabel(isoMonth: string, language: string): string {
-  const [y, m] = isoMonth.split('-').map(Number);
+export function monthLabel(isoMonth: string | null | undefined, language: string): string {
+  const [y, m] = (isoMonth ?? '').split('-').map(Number);
+  // A malformed month would make Intl throw while rendering the dashboard.
+  if (!Number.isFinite(y) || !Number.isFinite(m) || m < 1 || m > 12) return '';
   return new Intl.DateTimeFormat(language, { year: 'numeric', month: 'short' }).format(new Date(y, m - 1, 1));
 }

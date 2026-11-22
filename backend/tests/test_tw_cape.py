@@ -107,10 +107,16 @@ class TestParsing:
         assert cpi_url_from_catalogue(entry) == "https://x/pr0101a1m.xml"
         assert cpi_url_from_catalogue({"result": {"distribution": []}}) is None
 
-    def test_a_cpi_payload_declaring_entities_is_refused(self):
-        xml = b'<?xml version="1.0"?><!DOCTYPE r [<!ENTITY a "aaaa">]><Root><Obs>&a;</Obs></Root>'
-        with pytest.raises(ValueError):
-            parse_cpi_xml(xml)
+    @pytest.mark.parametrize("payload", [
+        b'<?xml version="1.0"?><!DOCTYPE r [<!ENTITY a "aaaa">]><Root><Obs>&a;</Obs></Root>',
+        # Past a 4 KB prefix check: a long comment before the DTD.
+        b'<?xml version="1.0"?><!--' + b"x" * 8000 + b'--><!DOCTYPE r [<!ENTITY a "a">]><Root/>',
+        # Past a byte search: UTF-16 with a BOM.
+        '<?xml version="1.0" encoding="UTF-16"?><!DOCTYPE r [<!ENTITY a "a">]><Root/>'.encode("utf-16"),
+    ], ids=["plain", "long-comment", "utf-16"])
+    def test_a_cpi_payload_declaring_a_dtd_is_refused(self, payload):
+        with pytest.raises(ValueError, match="DTD or entities"):
+            parse_cpi_xml(payload)
 
     def test_cpi_takes_the_monthly_general_index_only(self):
         xml = """<?xml version="1.0" encoding="utf-8"?><Root>

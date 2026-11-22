@@ -112,7 +112,7 @@ describe('TwCapeCard', () => {
 describe('TwCapeCard copy', () => {
   // The t() stub above renders the English fallbacks, so a missing key would
   // pass every test there. Check the locale files themselves.
-  const keys = ['title', 'subtitle', 'asOf', 'hint', 'percentile', 'range', 'source', 'collecting',
+  const keys = ['title', 'shortTitle', 'subtitle', 'asOf', 'hint', 'percentile', 'range', 'source', 'collecting',
     'band.cheap', 'band.fair', 'band.expensive'];
   it.each(['en', 'zh-TW'])('%s has every key the card reads', (lang) => {
     // eslint-disable-next-line @typescript-eslint/no-require-imports

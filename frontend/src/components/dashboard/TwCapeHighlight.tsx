@@ -14,27 +14,19 @@ const ARTICLE =
  * (TwCapeCard) adds the sparkline; this one stays text-only, so the phone
  * dashboard does not load recharts.
  *
- * Not part of demo mode (no backend there). Nothing to show yet — before the
- * first backfill — leaves the slot out rather than adding an empty card to a
- * row of glanceable numbers.
+ * Not part of demo mode (no backend there). Loading, or nothing to show yet
+ * (before the first backfill), leaves the slot out rather than adding a card
+ * that appears and goes in a row of glanceable numbers.
  */
 export function TwCapeHighlight() {
   const { t, i18n } = useTranslation(['dashboard', 'common']);
   const { isDemo } = useAppMode();
-  const { data, isLoading, isError, refetch } = useTwCape();
-  const title = t('dashboard:twCape.title', { defaultValue: 'Taiwan market valuation' });
+  const { data, isLoading, isError, isFetching, refetch } = useTwCape();
+  const title = t('dashboard:twCape.shortTitle', { defaultValue: 'Taiwan market · CAPE' });
 
-  if (isDemo) return null;
-
-  if (isLoading) {
-    return (
-      <article className={ARTICLE} aria-busy="true" data-testid="tw-cape-highlight-loading">
-        <p className="text-[12.5px] font-bold text-gray-500 dark:text-gray-400">{title}</p>
-        <div className="mt-3 h-6 w-1/3 rounded bg-gray-100 dark:bg-gray-700 animate-pulse" />
-        <div className="mt-2 h-3 w-2/3 rounded bg-gray-100 dark:bg-gray-700 animate-pulse" />
-      </article>
-    );
-  }
+  // Nothing while loading: a placeholder that then disappears (before the
+  // first backfill there is nothing to show) made the swipe row jump.
+  if (isDemo || isLoading) return null;
 
   if (isError && !data) {
     // Failed is not "nothing to show": say so, with a way to try again.
@@ -47,7 +39,9 @@ export function TwCapeHighlight() {
         <button
           type="button"
           onClick={() => refetch()}
-          className="mt-1 min-h-[44px] text-xs font-bold text-primary-700 dark:text-primary-400 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-400 rounded touch-manipulation"
+          disabled={isFetching}
+          aria-busy={isFetching}
+          className="mt-1 disabled:opacity-50 min-h-[44px] text-xs font-bold text-primary-700 dark:text-primary-400 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-400 rounded touch-manipulation"
         >
           {t('common:errorState.tryAgain', { defaultValue: 'Try again' })}
         </button>
@@ -60,9 +54,7 @@ export function TwCapeHighlight() {
   const since = monthLabel(data.since.slice(0, 7), i18n.language || 'en');
   return (
     <article className={ARTICLE}>
-      <p className="text-[12.5px] font-bold text-gray-500 dark:text-gray-400 truncate">
-        {title} · CAPE
-      </p>
+      <p className="text-[12.5px] font-bold text-gray-500 dark:text-gray-400 truncate">{title}</p>
       <div className="mt-2 flex items-center gap-2">
         <span className="text-[22px] font-extrabold tracking-tight tabular-nums text-gray-900 dark:text-white">
           {data.cape.toFixed(1)}

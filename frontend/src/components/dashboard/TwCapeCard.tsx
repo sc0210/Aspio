@@ -14,7 +14,7 @@ function CapeBody({ cape }: { cape: TwCape }) {
   const language = i18n.language || 'en';
   // The band's edges exactly as the server applied them, so the dashed lines
   // and the badge cannot disagree.
-  const since = monthLabel(cape.since.slice(0, 7), language);
+  const since = monthLabel(cape.since?.slice(0, 7), language);
 
   return (
     <div className="grid grid-cols-1 md:grid-cols-[minmax(0,1fr)_minmax(0,2fr)] gap-4 md:gap-6 items-center">
