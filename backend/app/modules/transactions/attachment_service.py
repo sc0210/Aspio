@@ -509,15 +509,25 @@ def _safe_cell(text: str) -> str:
     """Free text made inert for a CSV opened in a spreadsheet: one starting with
     = + - @ or a tab/CR is a formula to Excel and would run when the export is
     opened. Text in an export can come from someone else (a partner's name, an
-    imported description, the LINE bot). A leading apostrophe makes it text."""
-    return f"'{text}" if text and text[0] in "=+-@\t\r" else text
+    imported description, the LINE bot). A leading apostrophe makes it text.
+    Text already starting with an apostrophe before one of those is prefixed
+    too, so _unsafe_cell on import gives back exactly what was written."""
+    return f"'{text}" if _needs_guard(text) else text
+
+
+def _needs_guard(text: Optional[str]) -> bool:
+    """Whether _safe_cell prefixes `text`: a formula start, or an apostrophe
+    before one (else that apostrophe would be stripped on import)."""
+    if not text:
+        return False
+    return text[0] in "=+-@\t\r" or (text[0] == "'" and _needs_guard(text[1:]))
 
 
 def _unsafe_cell(text: Optional[str]) -> Optional[str]:
     """Undo _safe_cell on import, so an export read back is what was written:
     "'-50% sale" becomes "-50% sale" again. Only an apostrophe _safe_cell could
     have added is removed; "'quoted'" stays as it is."""
-    return text[1:] if text and len(text) > 1 and text[0] == "'" and text[1] in "=+-@\t\r" else text
+    return text[1:] if text and text[0] == "'" and _needs_guard(text[1:]) else text
 
 
 def _text_cell(cell, text: str) -> None:
