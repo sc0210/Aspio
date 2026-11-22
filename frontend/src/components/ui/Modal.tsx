@@ -1,6 +1,6 @@
 'use client';
 
-import React from 'react';
+import React, { useRef } from 'react';
 import { Description, Dialog, DialogPanel, DialogTitle } from '@headlessui/react';
 import { XMarkIcon } from '@heroicons/react/24/outline';
 import { useTranslation } from 'react-i18next';
@@ -43,13 +43,11 @@ const SIZES = {
  * restored to the trigger on close, Escape and the overlay dismiss it, and the
  * page behind it does not scroll. A bottom sheet on a phone, centred above that.
  *
- * Focus lands on the first focusable element; put `data-autofocus` on the field
- * a dialog exists for so it is announced before the close button.
+ * Focus goes to the dialog itself, so a screen reader announces its title. Put
+ * `data-autofocus` on a field to start there instead.
  *
- * NOTE: Headless UI reports Escape and overlay clicks through one onClose
- * callback, so closeOnEscape/closeOnOverlay can only disable dismissal
- * jointly (both false), not independently. No current caller sets them
- * separately; revisit if one ever needs to.
+ * `closeOnOverlay={false}` for a form: a stray tap beside a bottom sheet should
+ * not throw away what was typed. Escape and the close button still work.
  */
 export function Modal({
   isOpen,
@@ -72,16 +70,23 @@ export function Modal({
   useDialogStackEntry(isOpen);
   const { t } = useTranslation('common');
 
-  // Headless UI fires onClose for both Escape and overlay clicks; only wire it
-  // through when dismissal is allowed. The explicit close button always works.
+  // Headless UI reports Escape and an outside click through one onClose. React's
+  // keydown runs before Headless UI's window listener, so an Escape is marked
+  // here and the two can be told apart.
+  const escapePressed = useRef(false);
   const handleDialogClose = () => {
-    if (closeOnOverlay || closeOnEscape) {
-      onClose();
-    }
+    const byEscape = escapePressed.current;
+    escapePressed.current = false;
+    if (byEscape ? closeOnEscape : closeOnOverlay) onClose();
   };
 
   return (
-    <Dialog open={isOpen} onClose={handleDialogClose} className="relative z-50">
+    <Dialog
+      open={isOpen}
+      onClose={handleDialogClose}
+      onKeyDown={(e) => { escapePressed.current = e.key === 'Escape'; }}
+      className="relative z-50"
+    >
       <div className="fixed inset-0 bg-black/50" aria-hidden="true" />
       <div className="fixed inset-0 flex items-end sm:items-center justify-center p-0 sm:p-4">
         <DialogPanel

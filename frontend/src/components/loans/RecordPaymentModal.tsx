@@ -52,6 +52,7 @@ export function RecordPaymentModal({ loan, onClose }: Props) {
       isOpen
       onClose={onClose}
       size="sm"
+      closeOnOverlay={false}
       title={t('paymentModal.title')}
       description={loan.name}
     >

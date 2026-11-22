@@ -3,7 +3,6 @@
 import { DialogTitle } from '@headlessui/react';
 import { cn } from '@/utils/cn';
 import type { AchievementProgress } from '@/lib/api-client';
-import { useScrollLock } from '@/hooks/useScrollLock';
 import { Modal } from '@/components/ui/Modal';
 
 type Rarity = 'common' | 'rare' | 'epic' | 'legendary';
@@ -56,9 +55,6 @@ interface AchievementDetailModalProps {
 }
 
 export function AchievementDetailModal({ achievement, onClose }: AchievementDetailModalProps) {
-  // Headless UI locks the document element, but <main> is this app's scroll
-  // container — lock that too or the page slides behind the dialog.
-  useScrollLock(Boolean(achievement));
   const a = achievement;
   const rarity: Rarity = a && (a.rarity as Rarity) in RARITY_CONFIG ? (a.rarity as Rarity) : 'common';
   const cfg = RARITY_CONFIG[rarity];

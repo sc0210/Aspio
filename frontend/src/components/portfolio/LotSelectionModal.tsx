@@ -102,6 +102,7 @@ export function LotSelectionModal({
       isOpen
       onClose={onCancel}
       size="xl"
+      closeOnOverlay={false}
       title={<>Select Tax Lots - {symbol}</>}
       description={<>Selling {quantityToSell.toLocaleString()} shares at {formatCurrency(currentPrice, currency)}</>}
       footer={<>

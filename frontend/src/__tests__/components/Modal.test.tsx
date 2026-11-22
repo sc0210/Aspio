@@ -59,3 +59,44 @@ describe('Modal — mobile UX fixes', () => {
     expect(screen.queryByRole('button', { name: /close modal/i })).not.toBeInTheDocument();
   });
 });
+
+describe('Modal — dismissal', () => {
+  // Headless UI reports Escape and an outside click through one onClose; Modal
+  // tells them apart so a form can refuse the stray tap but keep Escape.
+  const outsideClick = () => {
+    // Headless UI closes on a pointer down + click outside the panel.
+    fireEvent.pointerDown(document.body);
+    fireEvent.mouseDown(document.body);
+    fireEvent.pointerUp(document.body);
+    fireEvent.mouseUp(document.body);
+    fireEvent.click(document.body);
+  };
+
+  it('closes on Escape even when outside clicks are off', async () => {
+    const onClose = jest.fn();
+    render(<Modal isOpen onClose={onClose} title="Form" closeOnOverlay={false}><input aria-label="Name" /></Modal>);
+    fireEvent.keyDown(screen.getByLabelText('Name'), { key: 'Escape' });
+    expect(onClose).toHaveBeenCalledTimes(1);
+  });
+
+  it('closes on an outside click by default (so the test below is not vacuous)', () => {
+    const onClose = jest.fn();
+    render(<Modal isOpen onClose={onClose} title="Info"><p>Body</p></Modal>);
+    outsideClick();
+    expect(onClose).toHaveBeenCalledTimes(1);
+  });
+
+  it('ignores an outside click when closeOnOverlay is false', () => {
+    const onClose = jest.fn();
+    render(<Modal isOpen onClose={onClose} title="Form" closeOnOverlay={false}><input aria-label="Name" /></Modal>);
+    outsideClick();
+    expect(onClose).not.toHaveBeenCalled();
+  });
+
+  it('ignores Escape when closeOnEscape is false', () => {
+    const onClose = jest.fn();
+    render(<Modal isOpen onClose={onClose} title="Form" closeOnEscape={false}><input aria-label="Name" /></Modal>);
+    fireEvent.keyDown(screen.getByLabelText('Name'), { key: 'Escape' });
+    expect(onClose).not.toHaveBeenCalled();
+  });
+});

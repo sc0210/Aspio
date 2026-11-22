@@ -28,7 +28,7 @@ export default function AddPeerModal({ isOpen, onClose, onSuccess }: AddPeerModa
       setQuery('');
       setResult(undefined);
       setError('');
-      // focus is useDialog's job now (initialFocus), so it happens once
+      // Focus: data-autofocus on the input, which Modal's Headless UI dialog honours on open.
     }
   }, [isOpen]);
 

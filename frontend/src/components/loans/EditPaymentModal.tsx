@@ -51,6 +51,7 @@ export function EditPaymentModal({ loanId, payment, onClose }: Props) {
       isOpen
       onClose={onClose}
       size="sm"
+      closeOnOverlay={false}
       title={<>Edit Payment</>}
       description={payment.payment_date}
     >

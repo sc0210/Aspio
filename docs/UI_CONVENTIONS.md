@@ -133,8 +133,12 @@ Every dialog is `Modal` from `components/ui/Modal.tsx`, or `ConfirmDialog` for a
   the title (an inline edit form) that should not be announced as the description.
 - No `title`: the dialog draws its own header and must render Headless UI's `DialogTitle`
   inside it (the achievement card).
-- Focus goes to the first focusable element; put `data-autofocus` on the field the dialog
-  exists for.
+- Focus goes to the dialog itself, so its title is announced; put `data-autofocus` on a
+  field to start there instead.
+- A form passes `closeOnOverlay={false}`: a stray tap beside a bottom sheet must not throw
+  away what was typed. Escape and the close button still close it.
+- A submit button in `footer` sits outside the `<form>`: give the form an `id` and the
+  button `form="<id>"`.
 - **A dialog opened from inside another is rendered inside it.** Headless UI makes
   everything outside the open dialog inert, so a `ConfirmDialog` placed beside the
   `<Modal>` instead of inside it cannot be clicked.

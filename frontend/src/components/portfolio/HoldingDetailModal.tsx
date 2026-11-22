@@ -222,18 +222,15 @@ export function HoldingDetailModal({
         onClose={onClose}
         size="full"
         bodyClassName="p-0 sm:p-0"
-        title={
-          <span className="flex flex-wrap items-center gap-3">
-            {symbol}{' '}
-            <span className="px-3 py-1 bg-primary-100 dark:bg-primary-900/30 text-primary-700 dark:text-primary-300 text-sm font-semibold rounded-full">
-              {t('portfolio:holdingDetail.lotCount', { count: holdings.length })}
-            </span>
-          </span>
-        }
+        title={symbol}
         headerContent={
           // The pencil sits after the name it edits.
           <div className="flex items-start gap-2">
             <div className="min-w-0 flex-1">
+              {/* Beside the name, not in the title: the dialog is named by its symbol. */}
+              <span className="inline-block mb-1.5 px-3 py-0.5 bg-primary-100 dark:bg-primary-900/30 text-primary-700 dark:text-primary-300 text-sm font-semibold rounded-full">
+                {t('portfolio:holdingDetail.lotCount', { count: holdings.length })}
+              </span>
               {editingAggregate ? (
                 <div className="space-y-2 mt-2">
                   <div className="flex items-center gap-2">
@@ -361,7 +358,7 @@ export function HoldingDetailModal({
         }
       >
         {/* A focus target for when the row that had focus is deleted. */}
-        <div ref={bodyRef} tabIndex={-1} className="focus:outline-none">
+        <div ref={bodyRef} tabIndex={-1} className="outline-none">
           {/* Summary Cards */}
           <div className="p-6 bg-gradient-to-br from-primary-50 to-blue-50 dark:from-primary-900/20 dark:to-blue-900/20 border-b border-gray-200 dark:border-gray-700">
             <h3 className="text-sm font-semibold text-gray-700 dark:text-gray-300 mb-4 uppercase tracking-wide">

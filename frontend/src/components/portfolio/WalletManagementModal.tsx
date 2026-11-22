@@ -145,10 +145,12 @@ export function WalletManagementModal({
                 </Button>
                 <Button
                     type="submit"
+                    // In the footer, outside the form: form= submits it, so the
+                    // fields' required/min checks run first.
+                    form="wallet-management-form"
                     disabled={!canSubmit}
                     variant={action === 'deposit' ? 'primary' : 'error'}
                     className="flex-1"
-                    onClick={handleSubmit}
                 >
                     {isSubmitting ? t('walletManagement.processing') : action === 'deposit' ? t('walletManagement.confirmDeposit') : t('walletManagement.confirmWithdraw')}
                 </Button>
@@ -156,7 +158,7 @@ export function WalletManagementModal({
           }
           title={t('walletManagement.title')}
         >
-          <form onSubmit={handleSubmit} className="space-y-6">
+          <form id="wallet-management-form" onSubmit={handleSubmit} className="space-y-6">
               {/* Action Selector */}
               <div>
                   <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-3">

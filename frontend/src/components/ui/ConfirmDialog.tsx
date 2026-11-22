@@ -29,6 +29,8 @@ export function ConfirmDialog({ isOpen, onConfirm, onCancel, title, message, con
       {...dialogProps}
       aria-labelledby="confirm-delete-title"
       className="fixed inset-0 z-50 flex items-center justify-center bg-black/50"
+      // A tap on the backdrop cancels, as it does on every other dialog.
+      onClick={(e) => { if (e.target === e.currentTarget) onCancel(); }}
     >
       <div className="bg-white dark:bg-gray-800 rounded-xl p-6 shadow-xl max-w-sm w-full mx-4">
         <h3
@@ -44,7 +46,7 @@ export function ConfirmDialog({ isOpen, onConfirm, onCancel, title, message, con
           <button
             type="button"
             onClick={onCancel}
-            className="px-4 py-2 text-sm font-medium text-gray-700 dark:text-gray-300 bg-gray-100 dark:bg-gray-700 rounded-lg hover:bg-gray-200 dark:hover:bg-gray-600 transition-colors"
+            className="px-4 py-2 text-sm font-medium text-gray-700 dark:text-gray-300 bg-gray-100 dark:bg-gray-700 rounded-lg hover:bg-gray-200 dark:hover:bg-gray-600 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-gray-400"
           >
             {cancelLabel ?? t('common.cancel', 'Cancel')}
           </button>
@@ -52,7 +54,7 @@ export function ConfirmDialog({ isOpen, onConfirm, onCancel, title, message, con
             type="button"
             onClick={onConfirm}
             disabled={busy}
-            className="px-4 py-2 text-sm font-medium text-white bg-error-600 rounded-lg hover:bg-error-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+            className="px-4 py-2 text-sm font-medium text-white bg-error-600 rounded-lg hover:bg-error-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-error-500 focus-visible:ring-offset-1 dark:focus-visible:ring-offset-gray-800"
           >
             {busy && busyLabel ? busyLabel : (confirmLabel ?? t('common.delete', 'Delete'))}
           </button>

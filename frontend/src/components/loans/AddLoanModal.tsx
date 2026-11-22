@@ -63,6 +63,7 @@ export function AddLoanModal({ onClose }: Props) {
       isOpen
       onClose={onClose}
       size="md"
+      closeOnOverlay={false}
       title={t('addModal.title')}
     >
       <form onSubmit={handleSubmit} className="space-y-4">

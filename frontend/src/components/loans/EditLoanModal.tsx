@@ -52,6 +52,7 @@ export function EditLoanModal({ loan, onClose }: Props) {
       isOpen
       onClose={onClose}
       size="md"
+      closeOnOverlay={false}
       title={t('editModal.title')}
       description={loan.name}
     >
