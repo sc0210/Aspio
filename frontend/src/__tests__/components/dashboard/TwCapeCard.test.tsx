@@ -4,6 +4,7 @@ import { TwCapeCard } from '@/components/dashboard/TwCapeCard';
 import { useTwCape } from '@/hooks/useTwCape';
 
 jest.mock('@/hooks/useTwCape', () => ({ useTwCape: jest.fn() }));
+jest.mock('@/contexts/ThemeContext', () => ({ useTheme: () => ({ resolvedTheme: 'dark' }) }));
 
 let mockIsDemo = false;
 jest.mock('@/hooks/useAppMode', () => ({ useAppMode: () => ({ isDemo: mockIsDemo }) }));
