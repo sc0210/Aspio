@@ -117,11 +117,11 @@ export function RecentTransactions() {
                   {getCategoryIcon(transaction.category)}
                 </div>
                 <div className="flex-1 min-w-0">
-                  <p className="text-sm font-medium text-gray-900 dark:text-white truncate">
+                  <p className="text-sm font-medium text-gray-900 dark:text-white truncate" title={transaction.description}>
                     {transaction.description}
                   </p>
                   <div className="flex items-center space-x-2 text-xs text-gray-500 dark:text-gray-400 mt-0.5">
-                    <span className="truncate">{transaction.category}</span>
+                    <span className="truncate" title={transaction.category}>{transaction.category}</span>
                     <span className="flex-shrink-0">•</span>
                     <span className="flex-shrink-0">{formatDate(new Date(transaction.date))}</span>
                   </div>

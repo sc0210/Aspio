@@ -179,7 +179,7 @@ function MoreSheet({ open, onClose, isDemoMode, onExitDemo }: MoreSheetProps) {
         </div>
 
         {/* Nav links */}
-        <nav className="px-2 pt-2 pb-1 space-y-0.5 max-h-[50vh] overflow-y-auto">
+        <nav aria-label={t('navigation.more')} className="px-2 pt-2 pb-1 space-y-0.5 max-h-[50vh] overflow-y-auto">
           {sheetLinks.map(({ href, icon: Icon, labelKey }) => {
             const isActive = pathname === href || pathname.startsWith(href + '/');
             return (
@@ -294,7 +294,7 @@ export function MobileBottomNav() {
       {/* Bottom tab bar — mobile only */}
       <nav
         data-tour="nav-mobile"
-        aria-label="Mobile navigation"
+        aria-label={t('navigation.tabBarLandmark')}
         className={cn(
           'md:hidden',
           'fixed bottom-0 left-0 right-0 z-40',

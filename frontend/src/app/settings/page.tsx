@@ -63,19 +63,22 @@ function SectionCard({ title, icon: Icon, children }: {
   );
 }
 
-function SettingRow({ label, description, children }: {
+function SettingRow({ label, description, children, forSwitch = false }: {
   label: string;
   description?: string;
   children: React.ReactNode;
+  /** The row is a <label> for its one switch, so a tap anywhere on it flips it, not only on the 48px track. */
+  forSwitch?: boolean;
 }) {
+  const Row = forSwitch ? 'label' : 'div';
   return (
-    <div className="flex items-center justify-between gap-4 py-0.5 min-h-[44px]">
-      <div className="min-w-0 flex-1 pr-2">
-        <p className="text-sm font-medium text-gray-900 dark:text-white">{label}</p>
-        {description && <p className="text-xs text-gray-500 dark:text-gray-400 mt-0.5 leading-relaxed">{description}</p>}
-      </div>
-      <div className="flex-shrink-0">{children}</div>
-    </div>
+    <Row className={cn('flex items-center justify-between gap-4 py-0.5 min-h-[44px]', forSwitch && 'cursor-pointer')}>
+      <span className="block min-w-0 flex-1 pr-2">
+        <span className="block text-sm font-medium text-gray-900 dark:text-white">{label}</span>
+        {description && <span className="block text-xs text-gray-500 dark:text-gray-400 mt-0.5 leading-relaxed">{description}</span>}
+      </span>
+      <span className="block flex-shrink-0">{children}</span>
+    </Row>
   );
 }
 
@@ -651,7 +654,7 @@ export default function SettingsPage() {
             <button
               onClick={handleProfileSave}
               disabled={isDemoMode || profileSaving || !profileDirty}
-              className="w-full py-2.5 min-h-[44px] text-sm font-medium rounded-lg bg-primary-700 text-white hover:bg-primary-800 disabled:opacity-40 disabled:cursor-not-allowed transition-colors touch-manipulation"
+              className="w-full py-2.5 min-h-[44px] text-sm font-medium rounded-lg bg-primary-700 text-white hover:bg-primary-800 disabled:bg-gray-100 disabled:text-gray-400 dark:disabled:bg-gray-700 dark:disabled:text-gray-500 disabled:cursor-not-allowed transition-colors touch-manipulation"
             >
               {profileSaving ? t('settings.saving', 'Saving…') : t('settings.saveProfile', 'Save Profile')}
             </button>
@@ -732,20 +735,20 @@ export default function SettingsPage() {
 
         {/* ── Privacy & Display ────────────────────────────────────────── */}
         <SectionCard title={t('settings.privacy', 'Privacy & Display')} icon={EyeIcon}>
-          <SettingRow
+          <SettingRow forSwitch
             label={t('settings.showValues', 'Show Financial Values')}
             description={t('settings.showValuesDesc', 'Display balances and amounts across the app')}
           >
             <Toggle checked={isValueVisible} onChange={setValueVisible} label={t('settings.showValues', 'Show Financial Values')} />
           </SettingRow>
-          <SettingRow
+          <SettingRow forSwitch
             label={t('settings.marketRedUp', 'Gains in red')}
             description={t('settings.marketRedUpDesc', 'Taiwan market colours: a price going up is red and going down is green. Income and spending keep their colours.')}
           >
             <Toggle checked={marketRedUp} onChange={setMarketRedUp} label={t('settings.marketRedUp', 'Gains in red')} />
           </SettingRow>
           {analyticsAvailable && (
-            <SettingRow
+            <SettingRow forSwitch
               label={t('settings.analytics', 'Usage analytics')}
               description={t('settings.analyticsDesc', 'Count page views and load speed to improve Aspiro. Never includes your financial data.')}
             >
@@ -805,7 +808,7 @@ export default function SettingsPage() {
               </button>
             </div>
           )}
-          <SettingRow
+          <SettingRow forSwitch
             label={t('settings.notifGoalsAchievements')}
             description={t('settings.notifGoalsAchievementsDesc')}
           >
@@ -817,7 +820,7 @@ export default function SettingsPage() {
             />
           </SettingRow>
           <div className="border-t border-gray-100 dark:border-gray-700 pt-4">
-            <SettingRow
+            <SettingRow forSwitch
               label={t('settings.notifSpendingBills')}
               description={t('settings.notifSpendingBillsDesc')}
             >
@@ -853,36 +856,9 @@ export default function SettingsPage() {
             </span>
           </div>
 
-          <div className="border-t border-gray-100 dark:border-gray-700 pt-4 flex items-center justify-between">
-            <div>
-              <p className="text-sm font-medium text-gray-900 dark:text-white">{t('settings.password', 'Password')}</p>
-              <p className="text-xs text-gray-500 dark:text-gray-400">{t('settings.passwordDesc', 'Change your login password')}</p>
-            </div>
-            <button
-              disabled
-              className="text-xs px-3 py-1.5 rounded-lg border border-gray-300 dark:border-gray-600 text-gray-500 dark:text-gray-400 cursor-not-allowed"
-            >
-              {t('settings.comingSoon.title', 'Soon')}
-            </button>
-          </div>
-
-          <div className="border-t border-red-100 dark:border-red-900/30 pt-4">
-            <p className="text-xs font-semibold text-error-700 dark:text-error-400 uppercase tracking-wide mb-2">
-              {t('settings.dangerZone', 'Danger Zone')}
-            </p>
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm font-medium text-gray-900 dark:text-white">{t('settings.deleteAccount', 'Delete Account')}</p>
-                <p className="text-xs text-gray-500 dark:text-gray-400">{t('settings.deleteAccountDesc', 'Permanently delete all your data')}</p>
-              </div>
-              <button
-                disabled
-                className="text-xs px-3 py-1.5 rounded-lg border border-error-200 dark:border-error-800 text-error-400 cursor-not-allowed"
-              >
-                {t('settings.delete', 'Delete')}
-              </button>
-            </div>
-          </div>
+          {/* Change password and Delete account were greyed-out buttons ("Soon",
+              a disabled Delete) with nothing behind them. They come back when
+              they work. A forgotten password resets from the sign-in page. */}
         </SectionCard>
       </div>
     </DashboardLayout>

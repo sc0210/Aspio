@@ -542,6 +542,27 @@ describe('MonthContextCard', () => {
         expect(series?.textContent).toContain('NT$60,000');
     });
 
+    it('labels the bars, and hangs an overspent month below a baseline', () => {
+        const overspent = year.map((m) => (m.month === '2025-12' ? trend('2025-12', 120_000) : m));
+        const { container } = show(
+            <MonthContextCard context={buildMonthContext(overspent, monthRange('2026-07', NOW_CONTEXT), NOW_CONTEXT)} />,
+        );
+
+        expect(screen.getByText(/Saved each month\. Below the line/)).toBeInTheDocument();
+        const bars = container.querySelectorAll('ol[aria-hidden] > li');
+        const december = bars[2];
+        // Its bar sits in the lower half (below the line), not the upper.
+        expect(december.children[0].children).toHaveLength(0);
+        expect(december.children[1].children).toHaveLength(1);
+        expect(container.querySelector('ol[aria-hidden] > span')).not.toBeNull();
+    });
+
+    it('draws no baseline when every month saved', () => {
+        const { container } = show(<MonthContextCard context={contextFor('2026-07')} />);
+        expect(screen.getByText('Saved each month')).toBeInTheDocument();
+        expect(container.querySelector('ol[aria-hidden] > span')).toBeNull();
+    });
+
     it('says a month is out of range rather than placing it against a window it is not in', () => {
         show(<MonthContextCard context={contextFor('2024-03')} />);
 

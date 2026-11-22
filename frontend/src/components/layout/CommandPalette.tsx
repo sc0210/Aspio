@@ -25,7 +25,7 @@ import { cn } from '@/utils/cn';
 import { useDemo } from '@/contexts/DemoContext';
 import { usePrivacy } from '@/contexts/PrivacyContext';
 import { useIsAdmin } from '@/hooks/useAdmin';
-import { getNavigationItems, type NavIcon } from '@/lib/navigation';
+import { getPaletteItems, type NavIcon } from '@/lib/navigation';
 import { useFeatures } from '@/hooks/useFeatures';
 import { useAccessTier } from '@/hooks/useAccessTier';
 import { languages } from '@/lib/i18n';
@@ -93,7 +93,7 @@ export function CommandPalette() {
 
   const pages: Command[] = useMemo(
     () =>
-      getNavigationItems({ isAdmin, isPremium, features: { lineBot } }).map((item) => ({
+      getPaletteItems({ isAdmin, isPremium, features: { lineBot } }).map((item) => ({
         id: item.href,
         label: t(item.nameKey),
         icon: item.icon,

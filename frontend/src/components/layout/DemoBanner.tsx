@@ -13,8 +13,8 @@ export function DemoBanner() {
   if (!isDemoMode || demoBannerHidden) return null;
 
   return (
+    // Not role="banner": that is the page header's landmark, and a page has one.
     <div
-      role="banner"
       className="bg-primary-50 border-b border-primary-200 dark:bg-primary-900/20 dark:border-primary-800 px-4 md:px-6 py-1 sm:py-2"
     >
       <div className="flex items-center justify-between gap-2 sm:gap-3">

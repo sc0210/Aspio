@@ -19,7 +19,6 @@ import { formatCurrency } from '@/utils/formatters';
 import { monthsFrom, payoffPlan, planInputs } from '@/lib/finance/payoffPlan';
 import { PageHeader } from '@/components/layout/PageHeader';
 
-const BAR = '#f43f5e'; // rose — the loans page's accent
 
 function fmt(value: number, currency = 'TWD') {
     return formatCurrency(value, currency, { precision: 0 });
@@ -150,7 +149,9 @@ export function MobileLoans() {
                                         <div className="mt-3 h-2 rounded-full bg-gray-100 dark:bg-gray-700 overflow-hidden"
                                             role="progressbar" aria-valuenow={Math.round(p)} aria-valuemin={0} aria-valuemax={100}
                                             aria-label={t('loans:card.repaid', { progress: Math.round(p) })}>
-                                            <div className="h-full rounded-full" style={{ width: `${p}%`, background: BAR }} />
+                                            {/* Primary, as on desktop (LoanCard). Rose said "debt" on one layout and
+                                                repaid progress meant the opposite on the other. */}
+                                            <div className="h-full rounded-full bg-primary-500" style={{ width: `${p}%` }} />
                                         </div>
                                     </Card>
                                 );

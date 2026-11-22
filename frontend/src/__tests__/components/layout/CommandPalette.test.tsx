@@ -8,7 +8,7 @@
 import React from 'react';
 import { render, screen, fireEvent, act } from '@testing-library/react';
 import '@testing-library/jest-dom';
-import { getNavigationItems } from '@/lib/navigation';
+import { getPaletteItems } from '@/lib/navigation';
 import { ALL_FEATURES } from '@/lib/features';
 
 const mockPush = jest.fn();
@@ -61,7 +61,11 @@ describe('CommandPalette', () => {
     // navigation itself: the literal 19 here fell out of date the first time a
     // page was added, and a palette missing a page is invisible until someone
     // searches for one.
-    expect(screen.getAllByRole('option')).toHaveLength(getNavigationItems({ isAdmin: false, isPremium: true, features: ALL_FEATURES }).length + 6);
+    expect(screen.getAllByRole('option')).toHaveLength(getPaletteItems({ isAdmin: false, isPremium: true, features: ALL_FEATURES }).length + 6);
+    // Pages without a sidebar row are still one search away.
+    for (const sub of ['navigation.rebalancing', 'navigation.trend', 'navigation.monthlySummary']) {
+      expect(screen.getByRole('option', { name: sub })).toBeInTheDocument();
+    }
   });
 
   it('opens for anyone who never tries the shortcut', () => {

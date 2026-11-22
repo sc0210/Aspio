@@ -9,6 +9,7 @@ import {
   CurrencyDollarIcon,
 } from '@heroicons/react/24/outline';
 import { useTranslation } from 'react-i18next';
+import { formatAssetTypeLabel } from '@/utils/holdingLabels';
 import { cn } from '@/utils/cn';
 import { formatCurrency, formatMoney } from '@/utils/formatters';
 import { Sparkline } from './Sparkline';
@@ -195,7 +196,7 @@ function HoldingRowBase({
           'inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium',
           getTypeColor(holding.type)
         )}>
-          {holding.type.toLowerCase() === 'etf' ? 'ETF' : holding.type.charAt(0).toUpperCase() + holding.type.slice(1).toLowerCase()}
+          {formatAssetTypeLabel(holding.type, t)}
         </span>
       </td>
       <td className="px-3 md:px-6 py-4 whitespace-nowrap text-right text-sm text-gray-900 dark:text-gray-100">

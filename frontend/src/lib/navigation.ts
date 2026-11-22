@@ -34,6 +34,9 @@ import {
   HomeModernIcon,
   ArrowTrendingUpIcon,
   CalendarDaysIcon,
+  ScaleIcon,
+  PresentationChartLineIcon,
+  TableCellsIcon,
 } from '@heroicons/react/24/outline';
 import {
   HomeIcon as HomeIconSolid,
@@ -209,9 +212,39 @@ export function isNavItemAvailable(item: NavItem, features: Features): boolean {
   return !item.feature || features[item.feature] === true;
 }
 
-/** Flat list, in sidebar order — what the ⌘K palette searches. */
+/** Flat list, in sidebar order. */
 export function getNavigationItems(access: NavAccess): NavItem[] {
   return getNavigationSections(access).flatMap((section) => section.items);
+}
+
+/**
+ * Pages with no sidebar row of their own, reached from inside their parent. The
+ * palette lists them so they are one search away, not two clicks.
+ */
+const SUBPAGES: Array<NavItem & { parentHref: string }> = [
+  {
+    nameKey: 'navigation.rebalancing', href: '/rebalancing', parentHref: '/portfolio',
+    icon: ScaleIcon, iconSolid: ScaleIcon,
+    keywords: ['rebalance', 'allocation', 'target', '再平衡', '配置'],
+  },
+  {
+    nameKey: 'navigation.trend', href: '/portfolio/trend', parentHref: '/portfolio',
+    icon: PresentationChartLineIcon, iconSolid: PresentationChartLineIcon,
+    keywords: ['history', 'growth', '趨勢', '資產走勢'],
+  },
+  {
+    nameKey: 'navigation.monthlySummary', href: '/transactions/monthly-summary', parentHref: '/transactions',
+    icon: TableCellsIcon, iconSolid: TableCellsIcon,
+    keywords: ['month', 'budget', 'summary', '月結', '每月摘要'],
+  },
+];
+
+/** What the ⌘K palette searches: the sidebar's pages, each followed by its sub-pages. */
+export function getPaletteItems(access: NavAccess): NavItem[] {
+  return getNavigationItems(access).flatMap((item) => [
+    item,
+    ...SUBPAGES.filter((sub) => sub.parentHref === item.href),
+  ]);
 }
 
 /**

@@ -22,7 +22,7 @@ import {
 } from '@/lib/housing/affordability';
 import { WAN } from '@/lib/housing/readiness';
 import { Card } from '@/components/ui/Card';
-
+import { WanField, RawField } from '@/components/housing/MoneyFields';
 
 /** Assumed annual raise when the user opts into the career-progression view. */
 const RAISE_PCT = 4;
@@ -77,54 +77,6 @@ function useBindingCopy(binding: BindingConstraint) {
                 ),
             };
     }
-}
-
-function WanField({
-    label, value, onChange, isValueVisible,
-}: { label: string; value: number; onChange: (n: number) => void; isValueVisible: boolean }) {
-    const { t } = useTranslation('common');
-    return (
-        <div>
-            <label className="text-sm font-medium text-gray-500 dark:text-gray-400 block mb-0.5">{label}</label>
-            <div className="flex items-center gap-1">
-                {isValueVisible ? (
-                    <input
-                        type="number" min={0} step={10} value={Math.round(value / WAN)}
-                        inputMode="decimal"
-                        onWheel={(e) => e.currentTarget.blur()}
-                        onChange={(e) => onChange(Math.max(0, Math.round(Number(e.target.value) || 0)) * WAN)}
-                        className="w-full text-right tabular-nums bg-transparent border-b border-gray-200 dark:border-gray-600 focus-visible:border-emerald-500 focus-visible:outline-none px-1 py-0.5 text-sm"
-                        aria-label={label}
-                    />
-                ) : (
-                    <span className="w-full text-right tabular-nums text-gray-500 dark:text-gray-400 text-sm">•••</span>
-                )}
-                <span className="text-xs text-gray-500 dark:text-gray-400">{t('housing.unitWan')}</span>
-            </div>
-        </div>
-    );
-}
-
-function RawField({
-    label, value, onChange, isValueVisible,
-}: { label: string; value: number; onChange: (n: number) => void; isValueVisible: boolean }) {
-    return (
-        <div>
-            <label className="text-sm font-medium text-gray-500 dark:text-gray-400 block mb-0.5">{label}</label>
-            {isValueVisible ? (
-                <input
-                    type="number" min={0} step={1000} value={Math.round(value)}
-                    inputMode="decimal"
-                    onWheel={(e) => e.currentTarget.blur()}
-                    onChange={(e) => onChange(Math.max(0, Math.round(Number(e.target.value) || 0)))}
-                    className="w-full text-right tabular-nums bg-transparent border-b border-gray-200 dark:border-gray-600 focus-visible:border-emerald-500 focus-visible:outline-none px-1 py-0.5 text-sm"
-                    aria-label={label}
-                />
-            ) : (
-                <span className="w-full block text-right tabular-nums text-gray-500 dark:text-gray-400 text-sm">•••</span>
-            )}
-        </div>
-    );
 }
 
 function Slider({

@@ -6,6 +6,7 @@ import { useTranslation } from 'react-i18next';
 import { SparklesIcon } from '@heroicons/react/24/outline';
 import { Modal } from '@/components/ui/Modal';
 import { useWhatsNew } from '@/hooks/useWhatsNew';
+import { ReleaseStamp } from '@/components/whatsnew/ReleaseStamp';
 
 /**
  * Auto-opening "What's New" dialog — mounted once app-wide. It pops up the first
@@ -44,7 +45,7 @@ export function WhatsNewModal() {
                             <h4 className="text-sm font-bold text-gray-900 dark:text-white">
                                 {zh ? entry.title.zh : entry.title.en}
                             </h4>
-                            <span className="text-xs text-gray-500 dark:text-gray-400 tabular-nums">{entry.date}</span>
+                            <ReleaseStamp version={entry.version} date={entry.date} />
                         </div>
                         <ul className="space-y-2">
                             {entry.highlights.map((h, i) => (

@@ -169,7 +169,8 @@ export function LeverageHistoryPanel({
                             label={t('lifecycle.history.change', 'Change')}
                             value={summary.change === null
                                 ? '—'
-                                : `${summary.change >= 0 ? '+' : '−'}${Math.abs(summary.change).toFixed(2)}`}
+                                // Rounded before the sign is chosen: −0.004 printed as "−0.00".
+                                : formatSignedChange(summary.change)}
                             // A flat window is neither good nor bad; only a real
                             // rise earns the warning colour.
                             tone={summary.change === null || Math.abs(summary.change) < FLAT
@@ -252,10 +253,16 @@ function Stat({
 
     return (
         <div className="rounded-xl bg-gray-50 dark:bg-gray-700/40 px-3 py-2">
-            <p className="text-[11px] text-gray-500 dark:text-gray-400">{label}</p>
+            <p className="text-xs text-gray-500 dark:text-gray-400">{label}</p>
             <p className={cn('font-bold tabular-nums', emphasise ? 'text-lg' : 'text-base', toneClass)}>
                 {value}
             </p>
         </div>
     );
+}
+
+function formatSignedChange(change: number): string {
+    const rounded = Number(change.toFixed(2));
+    if (rounded === 0) return '0.00';
+    return `${rounded > 0 ? '+' : '−'}${Math.abs(rounded).toFixed(2)}`;
 }

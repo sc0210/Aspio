@@ -6,6 +6,7 @@ import { XMarkIcon } from '@heroicons/react/24/outline';
 import { usePrivacy } from '@/contexts/PrivacyContext';
 import { formatTWDCompact } from '@/utils/formatters';
 import { cn } from '@/utils/cn';
+import { useWanAmount } from '@/components/housing/MoneyFields';
 import { projectBuyVsRent, type BuyVsRentInputs } from '@/lib/housing/buyVsRent';
 import {
     addScenario,
@@ -15,8 +16,6 @@ import {
     MAX_SCENARIOS,
     type SavedScenario,
 } from '@/lib/housing/scenarios';
-
-const WAN = 10_000;
 
 interface Props {
     /** What the simulator shows right now. */
@@ -32,6 +31,7 @@ interface Props {
  */
 export function ScenarioCompare({ current, onLoad }: Props) {
     const { t } = useTranslation('common');
+    const wanAmount = useWanAmount();
     const { isValueVisible } = usePrivacy();
     const [saved, setSaved] = useState<SavedScenario[]>([]);
     const [naming, setNaming] = useState(false);
@@ -138,7 +138,7 @@ export function ScenarioCompare({ current, onLoad }: Props) {
                                                 </button>
                                             )}
                                         </td>
-                                        <td className="py-2 text-right tabular-nums text-gray-700 dark:text-gray-300">{Math.round(r.inputs.housePrice / WAN).toLocaleString()} {t('housing.unitWan')}</td>
+                                        <td className="py-2 text-right tabular-nums text-gray-700 dark:text-gray-300">{wanAmount(r.inputs.housePrice)}</td>
                                         <td className="py-2 text-right tabular-nums text-gray-700 dark:text-gray-300">{r.inputs.downPaymentPct}%</td>
                                         <td className="py-2 text-right tabular-nums text-gray-700 dark:text-gray-300">{r.inputs.mortgageRatePct}%</td>
                                         <td className="py-2 text-right tabular-nums text-gray-700 dark:text-gray-300">{money(r.result.monthlyPayment)}</td>

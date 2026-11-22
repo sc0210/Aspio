@@ -6,6 +6,7 @@ import { DashboardLayout } from '@/components/layout/DashboardLayout';
 import { PageHeader } from '@/components/layout/PageHeader';
 import { useWhatsNew } from '@/hooks/useWhatsNew';
 import { Card } from '@/components/ui/Card';
+import { ReleaseStamp } from '@/components/whatsnew/ReleaseStamp';
 
 /**
  * Full version history ("更新內容"). Visiting the page acknowledges the latest
@@ -38,7 +39,7 @@ export default function ChangelogPage() {
                                     <h2 className="text-base font-bold text-gray-900 dark:text-white">
                                         {zh ? entry.title.zh : entry.title.en}
                                     </h2>
-                                    <span className="text-xs text-gray-500 dark:text-gray-400 tabular-nums flex-shrink-0">{entry.date}</span>
+                                    <ReleaseStamp version={entry.version} date={entry.date} />
                                 </div>
                                 <ul className="space-y-2.5">
                                     {entry.highlights.map((h, i) => (

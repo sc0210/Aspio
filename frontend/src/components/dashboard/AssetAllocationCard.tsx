@@ -333,7 +333,7 @@ export function AssetAllocationCard({
               {allocations.map((a, index) => (
                 <div key={a.asset} className="flex items-center gap-2 min-w-[120px]">
                   <div className="w-2.5 h-2.5 rounded-full shrink-0" style={{ backgroundColor: ALLOCATION_COLORS[index % ALLOCATION_COLORS.length] }} />
-                  <span className="text-xs text-gray-600 dark:text-gray-400 truncate">{a.asset}</span>
+                  <span className="text-xs text-gray-600 dark:text-gray-400 truncate" title={a.asset}>{a.asset}</span>
                   <span className="text-xs font-semibold text-gray-900 dark:text-white ml-auto">{a.currentPct.toFixed(1)}%</span>
                 </div>
               ))}

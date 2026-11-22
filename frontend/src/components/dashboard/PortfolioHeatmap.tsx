@@ -291,7 +291,7 @@ export function PortfolioHeatmap() {
                       <p className="text-xs font-bold text-gray-900 dark:text-white">
                         {info.symbol} <span className="font-normal text-gray-500 dark:text-gray-400">· {info.sector}</span>
                       </p>
-                      <p className="text-sm text-gray-500 dark:text-gray-400 truncate max-w-[200px]">{info.name}</p>
+                      <p className="text-sm text-gray-500 dark:text-gray-400 truncate max-w-[200px]" title={info.name}>{info.name}</p>
                       <div className="mt-1.5 space-y-0.5 text-xs">
                         <div className="flex items-center justify-between gap-4">
                           <span className="text-gray-500 dark:text-gray-400">{t('portfolio.heatmapValue', 'Value')}</span>

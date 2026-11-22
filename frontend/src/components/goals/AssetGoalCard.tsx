@@ -7,6 +7,10 @@ import { usePrivacy } from '@/contexts/PrivacyContext';
 import { GOAL_CATEGORIES } from '@/utils/constants';
 import { Card } from '@/components/ui/Card';
 import { canMoveGoalCash, goalHorizonRisk, goalProgressAmount, goalReached, monthsUntil } from '@/lib/goals/goalMoney';
+import { cn } from '@/utils/cn';
+
+/** Quarter marks on the progress bar, as on a shared goal (SharedGoalCard). */
+const MILESTONES = [25, 50, 75];
 
 interface AssetGoalCardProps {
     title: string;
@@ -284,8 +288,19 @@ export function AssetGoalCard({
                         className={`h-full ${getProgressColor()} transition-all duration-500 ease-out rounded-full relative overflow-hidden`}
                         style={{ width: `${Math.min(100, progress)}%` }}
                     >
-                        <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/20 to-transparent animate-shimmer" />
+                        <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/20 to-transparent motion-safe:animate-shimmer" />
                     </div>
+                    {/* The same quarter marks a shared goal's bar has. */}
+                    {MILESTONES.map((m) => (
+                        <span
+                            key={m}
+                            style={{ left: `${m}%` }}
+                            className={cn(
+                                'absolute top-0 h-full w-px -translate-x-1/2',
+                                progress >= m ? 'bg-white/50' : 'bg-gray-300 dark:bg-gray-500',
+                            )}
+                        />
+                    ))}
                 </div>
 
                 <div className="flex justify-between items-center mt-2 gap-2">

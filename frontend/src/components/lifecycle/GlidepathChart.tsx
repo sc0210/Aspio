@@ -90,7 +90,8 @@ export function GlidepathChart({ data, colors, crossoverAge, maxLeverage, labels
     return (
         <div className="h-56 sm:h-64">
             <ResponsiveContainer width="100%" height="100%">
-                <LineChart data={rows} margin={{ top: 8, right: 8, left: 0, bottom: 0 }}>
+                {/* right: room for the last age, centred on the plot's edge. */}
+                <LineChart data={rows} margin={{ top: 8, right: 16, left: 0, bottom: 0 }}>
                     <CartesianGrid strokeDasharray="3 3" stroke="currentColor" className="text-gray-200 dark:text-gray-700 opacity-50" vertical={false} />
                     <XAxis
                         dataKey="age"

@@ -16,6 +16,7 @@ import { formatTWD, formatTWDCompact } from '@/utils/formatters';
 import { cn } from '@/utils/cn';
 import { projectBuyVsRent, loanTermsOf, DEFAULT_BUY_VS_RENT, WAN, type BuyVsRentInputs, type LoanTerms } from '@/lib/housing';
 import { Card } from '@/components/ui/Card';
+import { useWanAmount } from '@/components/housing/MoneyFields';
 import { ScenarioCompare } from './ScenarioCompare';
 
 // Recharts loads with the chart, not with the page.
@@ -122,6 +123,7 @@ export function BuyVsRentSimulator({ defaults, onDerivedChange }: Props) {
 
     const buyWins = result.finalAdvantage >= 0;
     const priceWan = Math.round(inputs.housePrice / WAN);
+    const wanAmount = useWanAmount();
 
     // First-year rent vs buyer monthly cost for the outflow row.
     const rentY1 = result.points[0]?.rentMonthlyCost ?? inputs.monthlyRent;
@@ -244,7 +246,7 @@ export function BuyVsRentSimulator({ defaults, onDerivedChange }: Props) {
                                     <BuildingOffice2Icon className="w-3.5 h-3.5" />
                                     {t('housing.sim.housePrice', 'House price')}
                                 </label>
-                                <span className="text-xs font-bold text-gray-900 dark:text-white tabular-nums">{priceWan.toLocaleString()} {t('housing.unitWan')}</span>
+                                <span className="text-xs font-bold text-gray-900 dark:text-white tabular-nums">{wanAmount(inputs.housePrice)}</span>
                             </div>
                             <input
                                 type="number" min={0} step={50} value={priceWan}
