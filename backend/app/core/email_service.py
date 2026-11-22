@@ -7,12 +7,14 @@ credentials work without errors.
 """
 
 import asyncio
+import html
 import logging
 import smtplib
 import ssl
 from email.mime.multipart import MIMEMultipart
 from email.mime.text import MIMEText
 from typing import Optional
+from urllib.parse import urlencode
 
 from .config import get_settings
 
@@ -66,7 +68,10 @@ class EmailService:
             return False
 
     async def send_verification_email(self, to_email: str, token: str) -> bool:
-        verify_url = f"{self._frontend_url}/auth/verify-email?token={token}&email={to_email}"
+        # Encoded: a "+" in user+tag@example.com otherwise arrives as a space,
+        # and the page then offers to resend to an address that does not exist.
+        verify_url = f"{self._frontend_url}/auth/verify-email?{urlencode({'token': token, 'email': to_email})}"
+        verify_href = html.escape(verify_url)
         subject = "Verify your Aspiro account"
         text_body = (
             f"Welcome to Aspiro!\n\n"
@@ -81,7 +86,7 @@ class EmailService:
   <h2 style="color:#1a56db;">Verify your Aspiro account</h2>
   <p>Welcome to Aspiro! Click the button below to verify your email address.</p>
   <p style="margin:32px 0;">
-    <a href="{verify_url}"
+    <a href="{verify_href}"
        style="background:#1a56db;color:#fff;padding:12px 24px;border-radius:6px;
               text-decoration:none;font-weight:600;">
       Verify Email
@@ -91,7 +96,7 @@ class EmailService:
     This link expires in 24 hours. If you did not create an account, you can safely ignore this email.
   </p>
   <p style="color:#6b7280;font-size:12px;">
-    Or copy this URL into your browser:<br>{verify_url}
+    Or copy this URL into your browser:<br>{verify_href}
   </p>
 </body>
 </html>"""

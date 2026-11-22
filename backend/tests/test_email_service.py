@@ -59,6 +59,21 @@ class TestSendVerificationEmail:
         mock_smtp.assert_not_called()
 
     @pytest.mark.asyncio
+    async def test_plus_address_survives_the_link(self):
+        # Unencoded, "+" decodes to a space on the verify page, and its resend
+        # button then targets an address that does not exist.
+        svc, settings_mock = make_service(smtp_configured=True, frontend_url="https://app.example.com")
+        with patch("app.core.email_service.settings", settings_mock), \
+             patch.object(svc, "_send_smtp") as mock_smtp:
+            await svc.send_verification_email("user+tag@example.com", "tok/1=")
+
+        _, msg = mock_smtp.call_args[0]
+        text = msg.get_payload()[0].get_payload(decode=True).decode()
+        assert "verify-email?token=tok%2F1%3D&email=user%2Btag%40example.com" in text
+        html_part = msg.get_payload()[1].get_payload(decode=True).decode()
+        assert 'href="https://app.example.com/auth/verify-email?token=tok%2F1%3D&amp;email=user%2Btag%40example.com"' in html_part
+
+    @pytest.mark.asyncio
     async def test_includes_token_in_url(self):
         svc, settings_mock = make_service(frontend_url="https://app.example.com")
         with patch("app.core.email_service.settings", settings_mock), \
