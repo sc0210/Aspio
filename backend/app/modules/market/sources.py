@@ -163,7 +163,14 @@ def market_day(
 
 
 def parse_cpi_xml(content: bytes) -> Dict[date, float]:
-    """{first of month: general CPI} from the DGBAS dataset (2021 = 100)."""
+    """{first of month: general CPI} from the DGBAS dataset (2021 = 100).
+
+    The URL comes from a remote catalogue, so a payload that declares a DTD or
+    entities is refused before parsing: the stdlib parser would expand them.
+    """
+    head = content[:4096]
+    if b"<!DOCTYPE" in head or b"<!ENTITY" in head:
+        raise ValueError("CPI XML declares a DTD or entities; refusing to parse it")
     root = ET.fromstring(content)
     out: Dict[date, float] = {}
     for record in root:

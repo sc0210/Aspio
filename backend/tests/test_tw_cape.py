@@ -107,6 +107,11 @@ class TestParsing:
         assert cpi_url_from_catalogue(entry) == "https://x/pr0101a1m.xml"
         assert cpi_url_from_catalogue({"result": {"distribution": []}}) is None
 
+    def test_a_cpi_payload_declaring_entities_is_refused(self):
+        xml = b'<?xml version="1.0"?><!DOCTYPE r [<!ENTITY a "aaaa">]><Root><Obs>&a;</Obs></Root>'
+        with pytest.raises(ValueError):
+            parse_cpi_xml(xml)
+
     def test_cpi_takes_the_monthly_general_index_only(self):
         xml = """<?xml version="1.0" encoding="utf-8"?><Root>
         <Obs><Item>總指數(指數基期：民國110年=100)</Item><TIME_PERIOD>2026M10</TIME_PERIOD><FREQ>M</FREQ><TYPE>原始值</TYPE><Item_VALUE>112.9</Item_VALUE></Obs>

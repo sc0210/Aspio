@@ -382,10 +382,13 @@ export function ComprehensiveDashboard() {
           </section>
 
           {/* The market your portfolio sits in: Taiwan's CAPE against its own
-              history, beside the portfolio rather than in Explore. */}
-          <section aria-label="Taiwan market valuation" className="animate-fade-in-up animation-delay-300">
-            <TwCapeCard />
-          </section>
+              history, beside the portfolio rather than in Explore. Not in demo
+              mode (no backend): gated here so the lazy placeholder never shows. */}
+          {!isDemo && (
+            <section aria-label="Taiwan market valuation" className="animate-fade-in-up animation-delay-300">
+              <TwCapeCard />
+            </section>
+          )}
 
           {/* Goals · Cash Flow · Recent Activity — compact horizontal row.
               items-start: each card is as tall as its own content. Stretching
