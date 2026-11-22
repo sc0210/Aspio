@@ -637,6 +637,7 @@ class ImportExportService:
             'description': ['description', 'Description', 'memo', 'Memo'],
             'type': ['type', 'Type'],
             'category': ['category', 'Category'],
+            'subcategory': ['subcategory', 'Subcategory'],
             'merchant': ['merchant', 'Merchant', 'payee', 'Payee'],
             'currency': ['currency', 'Currency'],
         }
@@ -727,6 +728,9 @@ class ImportExportService:
             'transaction_date': transaction_date,
             'category_id': None if category_str else settings.get('default_category_id'),
             'category_name': category_str or None,
+            # The detail under the category (Beauty under Shopping); written by
+            # this app's own export, so a round trip keeps it.
+            'subcategory': (find_value('subcategory') or '').strip() or None,
             'merchant_name': find_value('merchant'),
             'import_source': 'csv'
         }
@@ -782,7 +786,7 @@ class ImportExportService:
         # Write headers
         headers = [
             'Date', 'Type', 'Amount', 'Currency', 'Description',
-            'Category', 'Merchant', 'Payment Method', 'Tags', 'Notes',
+            'Category', 'Subcategory', 'Merchant', 'Payment Method', 'Tags', 'Notes',
             # A shared bill's row holds only your share: the whole bill, and who with.
             'Shared Bill Total', 'Shared With',
         ]
@@ -797,6 +801,7 @@ class ImportExportService:
                 transaction.currency,
                 _safe_cell(transaction.description or ''),
                 _safe_cell(transaction.category_obj.name if transaction.category_obj else ''),
+                _safe_cell(transaction.subcategory or ''),
                 _safe_cell(transaction.merchant_name or ''),
                 transaction.payment_method.value if transaction.payment_method else '',
                 _safe_cell(','.join(transaction.tags) if transaction.tags else ''),
@@ -836,7 +841,7 @@ class ImportExportService:
 
         headers = [
             "Date", "Type", "Amount", "Currency", "Description",
-            "Category", "Merchant", "Payment Method", "Tags", "Notes",
+            "Category", "Subcategory", "Merchant", "Payment Method", "Tags", "Notes",
             "Shared Bill Total", "Shared With",
         ]
 
@@ -856,16 +861,17 @@ class ImportExportService:
             # Free text (a description can come from an import, a receipt scan or
             # the LINE bot): typed as text, so a leading "=" is never a formula.
             for col, text in ((5, txn.description), (6, txn.category_obj.name if txn.category_obj else ""),
-                              (7, txn.merchant_name or ""), (9, ",".join(txn.tags) if txn.tags else ""),
-                              (10, txn.notes or "")):
+                              (7, txn.subcategory or ""),
+                              (8, txn.merchant_name or ""), (10, ",".join(txn.tags) if txn.tags else ""),
+                              (11, txn.notes or "")):
                 _text_cell(ws.cell(row=row_idx, column=col), text or "")
-            ws.cell(row=row_idx, column=8, value=txn.payment_method.value if txn.payment_method else "")
+            ws.cell(row=row_idx, column=9, value=txn.payment_method.value if txn.payment_method else "")
             bill_total, partner = self._shared_cells(shared, txn)
             if bill_total:  # the exact amount, not a float of it
-                ws.cell(row=row_idx, column=11, value=Decimal(bill_total)).number_format = "0.00"
+                ws.cell(row=row_idx, column=12, value=Decimal(bill_total)).number_format = "0.00"
             # Excel has cell types: store the name as plain text, exactly as written,
             # so a name like "=1+1" is never evaluated (openpyxl would make it a formula).
-            _text_cell(ws.cell(row=row_idx, column=12), partner)
+            _text_cell(ws.cell(row=row_idx, column=13), partner)
 
         # Auto-fit column widths
         for col in ws.columns:

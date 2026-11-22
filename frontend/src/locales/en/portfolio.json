@@ -142,7 +142,6 @@
       "type": "Type",
       "currency": "Currency",
       "exchange": "Exchange",
-      "wallet": "Wallet *",
       "quantity": "Quantity *",
       "price": "Purchase price *",
       "date": "Purchase date *",
@@ -158,17 +157,7 @@
     "sharesTimesPrice_other": "{{count}} shares × {{price}}",
     "title": "🛒 Buy shares",
     "titleDetails": "📝 Trade details",
-    "totalCost": "Total cost",
-    "wallet": {
-      "portfolio": {
-        "label": "Portfolio",
-        "description": "Invested assets (stocks, ETFs and so on)"
-      },
-      "emergency": {
-        "label": "Emergency",
-        "description": "Emergency fund"
-      }
-    }
+    "totalCost": "Total cost"
   },
   "charts": {
     "analytics": "Analytics",
@@ -328,17 +317,6 @@
   "holdingsList": "Holdings List",
   "holdingsUnit_one": "{{count}} holding",
   "holdingsUnit_other": "{{count}} holdings",
-  "holdingWallet": {
-    "title": "Wallet",
-    "portfolio": {
-      "label": "Portfolio",
-      "description": "Invested assets such as stocks and ETFs"
-    },
-    "emergency": {
-      "label": "Emergency Fund",
-      "description": "Emergency fund, not used for trading"
-    }
-  },
   "loading": {
     "allocation": "Loading allocation...",
     "assetTrend": "Loading asset trend...",
@@ -682,18 +660,6 @@
     "emergency": "Emergency",
     "life": "Life",
     "portfolio": "Portfolio"
-  },
-  "wallets": {
-    "all": "All Wallets",
-    "allDesc": "Show all portfolios",
-    "investment": "Investment Wallet",
-    "investmentDesc": "Cash available for trading",
-    "label": "Wallets",
-    "manage": "Manage",
-    "portfolioPerformanceDesc": "Invested assets",
-    "portfolio_performance": "Portfolio",
-    "urgent": "Emergency Wallet",
-    "urgentDesc": "Emergency reserve funds"
   },
   "warnings": {
     "multiCurrencyDesc": "This wallet contains holdings in different currencies. All values are displayed in their original currencies and may not reflect accurate totals without conversion to TWD.",

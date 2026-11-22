@@ -12,3 +12,9 @@ export function categoryLabel(value: string | null | undefined, t: TFunction): s
     if (!value) return '';
     return t(`transactions:form.categories.${value}`, { defaultValue: value });
 }
+
+/** The display name for a stored subcategory ("Beauty" → 「美容」); unknown values fall back to themselves. */
+export function subcategoryLabel(value: string | null | undefined, t: TFunction): string {
+    if (!value) return '';
+    return t(`transactions:form.subcategories.${value}`, { defaultValue: value });
+}

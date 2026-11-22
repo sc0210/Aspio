@@ -47,6 +47,20 @@ import { fetchDailyPerformance } from './fetchDailyPerformance';
  * }
  * ```
  */
+/**
+ * The Portfolio page is the Portfolio wallet: what is invested and moves with
+ * the market. Emergency-wallet holdings are legacy cash at a fixed price (cash
+ * has lived in the Emergency wallet as transactions since #137); they never
+ * move, the page's totals already leave them out, and the dashboard counts
+ * them under Emergency. Listing them here put a cash row among the funds.
+ *
+ * Applied through `select`, so the cached response stays whole.
+ */
+function onlyPortfolioWallet<T extends { holdings?: Array<{ walletType?: string }> } | null | undefined>(data: T): T {
+  if (!data?.holdings) return data;
+  return { ...data, holdings: data.holdings.filter((h) => (h.walletType ?? 'portfolio') === 'portfolio') };
+}
+
 export function usePortfolioData(filters: PortfolioFilters) {
   const { data: session } = useSession();
 
@@ -80,6 +94,7 @@ export function usePortfolioData(filters: PortfolioFilters) {
 
       return response.data;
     },
+    select: onlyPortfolioWallet,
     enabled: true,
     staleTime: 2 * 60 * 1000, // 2 minutes
     refetchOnWindowFocus: true,  // re-fetch prices when user returns to the tab
@@ -213,31 +228,13 @@ export function usePortfolioData(filters: PortfolioFilters) {
   });
 
   // ============================================================
-  // 7. Aggregated Holdings (computed with wallet filter)
+  // 7. Aggregated Holdings
   // ============================================================
 
-  // All holdings (unfiltered) for wallet tab counts
-  const allAggregatedHoldings = useMemo(() => {
-    if (!portfolioData?.holdings) return [];
-    return aggregateHoldingsBySymbol(portfolioData.holdings);
-  }, [portfolioData]);
-
-  // Filtered holdings based on wallet type
-  const aggregatedHoldings = useMemo(() => {
-    if (!portfolioData?.holdings) return [];
-
-    let filteredHoldings = portfolioData.holdings;
-
-    // Apply wallet type filter
-    if (filters.walletType && filters.walletType !== 'all') {
-      filteredHoldings = portfolioData.holdings.filter(holding => {
-        const holdingWalletType = holding.walletType || 'portfolio';
-        return holdingWalletType === filters.walletType;
-      });
-    }
-
-    return aggregateHoldingsBySymbol(filteredHoldings);
-  }, [portfolioData, filters.walletType]);
+  const aggregatedHoldings = useMemo(
+    () => (portfolioData?.holdings ? aggregateHoldingsBySymbol(portfolioData.holdings) : []),
+    [portfolioData],
+  );
 
   // ============================================================
   // 8. Retirement Projection (computed)
@@ -301,8 +298,7 @@ export function usePortfolioData(filters: PortfolioFilters) {
     retirementProjection,
 
     // Computed data
-    aggregatedHoldings, // Filtered by wallet type
-    allAggregatedHoldings, // Unfiltered for wallet tab counts
+    aggregatedHoldings,
 
     // Loading states
     isLoading,

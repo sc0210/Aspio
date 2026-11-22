@@ -120,7 +120,6 @@ function DesktopPortfolioPage() {
     realizedPnl,
     dailyPerformanceData,
     aggregatedHoldings,
-    allAggregatedHoldings,
     retirementProjection,
     isLoading,
     hasError,
@@ -139,7 +138,7 @@ function DesktopPortfolioPage() {
   const holdingOps = usePortfolioHoldingOperations(
     filters.memoizedFilters,
     modals,
-    allAggregatedHoldings,
+    aggregatedHoldings,
   );
 
   // ============================================================
@@ -365,7 +364,6 @@ function DesktopPortfolioPage() {
           <PortfolioHoldingsSection
             viewType={viewState.viewType}
             holdings={aggregatedHoldings}
-            allHoldings={allAggregatedHoldings}
             rawHoldings={portfolioData?.holdings || []}
             analyticsData={analyticsData}
             filters={filters}

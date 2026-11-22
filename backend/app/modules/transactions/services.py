@@ -593,6 +593,18 @@ class TransactionService:
                 data["auto_categorized"] = False
                 data["categorization_confidence"] = None
                 logger.info(f"✅ UPDATE TRANSACTION - Set category_id to {category_id}")
+                # A subcategory is a detail of its category (Beauty under Shopping).
+                # A writer that moves the row to another category without naming a
+                # detail (bulk reassign, the API) must not leave "Dining · Beauty".
+                # Compared by name, not id: some names have duplicate global rows,
+                # and re-sending "Dining" may resolve to the other Dining row.
+                if "subcategory" not in data:
+                    stored = await stored_row()
+                    if stored is not None and stored.subcategory and str(stored.category_id) != str(category_id):
+                        old_cat = await self.category_repo.get_by_id(str(stored.category_id))
+                        new_cat = await self.category_repo.get_by_id(str(category_id))
+                        if not (old_cat and new_cat and old_cat.name.lower() == new_cat.name.lower()):
+                            data["subcategory"] = None
             else:
                 logger.warning(
                     f"⚠️ UPDATE TRANSACTION - _ensure_category_id returned None!"
