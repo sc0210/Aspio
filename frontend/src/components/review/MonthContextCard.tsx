@@ -131,8 +131,7 @@ export function MonthContextCard({ context, loading, error }: MonthContextCardPr
                     <Bar
                         key={month.key}
                         month={month}
-                        up={up}
-                        down={down}
+                        span={span}
                         baseline={baseline}
                         title={
                             month.empty
@@ -174,45 +173,44 @@ function Heading() {
     );
 }
 
-function Bar({ month, up, down, baseline, title }: {
-    month: ContextMonth; up: number; down: number; baseline: number; title: string;
+function Bar({ month, span, baseline, title }: {
+    month: ContextMonth; span: number; baseline: number; title: string;
 }) {
     // Zero-baselined on purpose. Scaling these from the smallest month would
     // make a normal month look dramatic, which is the opposite of what the card
     // is for: if every bar is the same height, the month was ordinary, and that
     // is the answer.
+    //
+    // A share of the whole row, with a floor in pixels: a share of one half
+    // shrank to nothing when the other side dominated, taking the selected
+    // month's bar with it.
     const negative = !month.empty && month.net < 0;
-    const height = month.empty
-        ? 0
-        : Math.max(4, (Math.abs(month.net) / (negative ? down : up || 1)) * 100);
-
-    const bar = (
-        <div
-            className={cn(
-                'w-full transition-colors',
-                negative ? 'rounded-b-sm' : 'rounded-t-sm',
-                month.empty && 'bg-gray-100 dark:bg-gray-800 h-1 rounded-sm',
-                negative && 'bg-error-400/70',
-                !month.empty && !negative && (month.selected
-                    ? 'bg-prosperity-500'
-                    : month.partial
-                        ? 'bg-prosperity-200 dark:bg-prosperity-900/60'
-                        : 'bg-prosperity-300/70 dark:bg-prosperity-700/60'),
-                month.selected && 'ring-2 ring-offset-1 dark:ring-offset-gray-900',
-                month.selected && (negative ? 'ring-error-500' : 'ring-prosperity-500'),
-            )}
-            style={month.empty ? undefined : { height: `${height}%` }}
-        />
-    );
+    const share = month.empty ? 0 : (Math.abs(month.net) / span) * 100;
 
     return (
-        <li className="flex-1 flex flex-col h-full" title={title}>
-            <div className="flex flex-col justify-end" style={{ height: `${baseline}%` }}>
-                {!negative && bar}
-            </div>
-            <div className="flex flex-col justify-start" style={{ height: `${100 - baseline}%` }}>
-                {negative && bar}
-            </div>
+        <li className="relative flex-1 h-full" title={title}>
+            <div
+                className={cn(
+                    'absolute inset-x-0 transition-colors',
+                    negative ? 'rounded-b-sm' : 'rounded-t-sm',
+                    month.empty && 'bg-gray-100 dark:bg-gray-800 rounded-sm',
+                    negative && 'bg-error-400/70',
+                    !month.empty && !negative && (month.selected
+                        ? 'bg-prosperity-500'
+                        : month.partial
+                            ? 'bg-prosperity-200 dark:bg-prosperity-900/60'
+                            : 'bg-prosperity-300/70 dark:bg-prosperity-700/60'),
+                    month.selected && 'ring-2 ring-offset-1 dark:ring-offset-gray-900',
+                    month.selected && (negative ? 'ring-error-500' : 'ring-prosperity-500'),
+                )}
+                style={
+                    month.empty
+                        ? { bottom: `${100 - baseline}%`, height: 4 }
+                        : negative
+                            ? { top: `${baseline}%`, height: `max(3px, ${share}%)` }
+                            : { bottom: `${100 - baseline}%`, height: `max(3px, ${share}%)` }
+                }
+            />
         </li>
     );
 }

@@ -549,12 +549,24 @@ describe('MonthContextCard', () => {
         );
 
         expect(screen.getByText(/Saved each month\. Below the line/)).toBeInTheDocument();
-        const bars = container.querySelectorAll('ol[aria-hidden] > li');
-        const december = bars[2];
-        // Its bar sits in the lower half (below the line), not the upper.
-        expect(december.children[0].children).toHaveLength(0);
-        expect(december.children[1].children).toHaveLength(1);
+        const bars = container.querySelectorAll<HTMLElement>('ol[aria-hidden] > li > div');
+        // December hangs from the line; the months around it stand on it.
+        expect(bars[2].style.top).not.toBe('');
+        expect(bars[2].style.bottom).toBe('');
+        expect(bars[3].style.bottom).not.toBe('');
         expect(container.querySelector('ol[aria-hidden] > span')).not.toBeNull();
+    });
+
+    it('keeps a small month visible when one huge month sets the scale', () => {
+        // One month overspent by 1.2M leaves the saving side a sliver of the row;
+        // the bars there must still draw, the selected one included.
+        const lopsided = year.map((m) => (m.month === '2025-12' ? trend('2025-12', 1_280_000) : m));
+        const { container } = show(
+            <MonthContextCard context={buildMonthContext(lopsided, monthRange('2026-07', NOW_CONTEXT), NOW_CONTEXT)} />,
+        );
+        const bars = container.querySelectorAll<HTMLElement>('ol[aria-hidden] > li > div');
+        // jsdom drops a max() it cannot parse, so read the source attribute.
+        expect(bars[9].getAttribute('style')).toMatch(/max\(3px/);
     });
 
     it('draws no baseline when every month saved', () => {

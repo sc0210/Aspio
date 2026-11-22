@@ -3,6 +3,7 @@
 import { useTranslation } from 'react-i18next';
 import { WAN } from '@/lib/housing/readiness';
 import { formatMoney } from '@/utils/formatters';
+import { usePrivacy } from '@/contexts/PrivacyContext';
 
 /**
  * The housing pages' money inputs. Both panels used to keep a copy of each.
@@ -61,9 +62,12 @@ export function WanField({ label, value, onChange, isValueVisible }: FieldProps)
  */
 export function useWanAmount() {
   const { t, i18n } = useTranslation('common');
+  const { isValueVisible } = usePrivacy();
   const zh = i18n.language?.startsWith('zh');
-  return (amount: number) =>
-    zh ? `${Math.round(amount / WAN).toLocaleString()} ${t('housing.unitWan')}` : formatMoney(amount, 'TWD');
+  return (amount: number) => {
+    if (!isValueVisible) return '•••';
+    return zh ? `${Math.round(amount / WAN).toLocaleString()} ${t('housing.unitWan')}` : formatMoney(amount, 'TWD');
+  };
 }
 
 /** Typed in whole NT$. */

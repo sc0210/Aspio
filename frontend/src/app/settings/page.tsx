@@ -387,7 +387,7 @@ function LineBotSection() {
       </div>
 
       {/* Command reference */}
-      {/* Folded: nine rows of reference pushed Account and Danger Zone far down. */}
+      {/* Folded: nine rows of reference pushed the sections below it far down. */}
       <details className="group">
         <summary className="flex items-center gap-1 min-h-[44px] cursor-pointer list-none text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wide rounded focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-500">
           <ChevronRightIcon className="w-3.5 h-3.5 transition-transform group-open:rotate-90" aria-hidden="true" />

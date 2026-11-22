@@ -48,9 +48,10 @@ function VerifyEmailContent() {
           router.push('/auth/signin');
         }, 3000);
       } else {
-        // The backend answers a bad or used-up token with a plain 400 and no
-        // code, so a 400 is the link, not the server. The message is always
-        // our own: the backend's is English on a zh-TW page.
+        // The backend answers a bad or used-up token with a 400 carrying only
+        // the generic HTTP_ERROR code (never TOKEN_EXPIRED / TOKEN_INVALID), so
+        // a 400 is the link, not the server. The message is always our own:
+        // the backend's is English on a zh-TW page.
         const errorStatus: VerificationStatus =
           data.code === 'TOKEN_EXPIRED' ? 'expired' :
           data.code === 'TOKEN_INVALID' || response.status === 400 ? 'invalid' : 'error';
@@ -59,7 +60,11 @@ function VerifyEmailContent() {
           status: errorStatus,
           message: errorStatus === 'error'
             ? t('auth:verification.status.failedMessage')
-            : t('auth:verification.status.invalidOrExpiredMessage'),
+            // "Send a new one below" only when there is a below: the resend
+            // button needs the email from the link.
+            : email
+              ? t('auth:verification.status.invalidOrExpiredMessage')
+              : t('auth:verification.status.invalidMessage'),
           userEmail: email || undefined,
         });
       }

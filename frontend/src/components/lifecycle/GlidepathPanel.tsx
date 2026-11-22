@@ -1,6 +1,6 @@
 'use client';
 
-import { useMemo, useState } from 'react';
+import { useId, useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import dynamic from 'next/dynamic';
 import {
@@ -75,6 +75,7 @@ function YearField({
     onChange: (v: number) => void; hint?: string;
 }) {
     // A draft, so "19" on the way to "1990" isn't committed as year 19.
+    const id = useId();
     const [draft, setDraft] = useState(String(value));
     const [shown, setShown] = useState(value);
     if (shown !== value) { setShown(value); setDraft(String(value)); }
@@ -85,9 +86,9 @@ function YearField({
     };
     return (
         <div>
-            <label htmlFor="lifecycle-birth-year" className="block mb-1 text-xs font-medium text-gray-600 dark:text-gray-400">{label}</label>
+            <label htmlFor={id} className="block mb-1 text-xs font-medium text-gray-600 dark:text-gray-400">{label}</label>
             <input
-                id="lifecycle-birth-year"
+                id={id}
                 type="number" inputMode="numeric" min={min} max={max} step={1}
                 value={draft}
                 onChange={(e) => {
