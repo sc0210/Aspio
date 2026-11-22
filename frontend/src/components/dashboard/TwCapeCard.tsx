@@ -5,21 +5,9 @@ import { Area, AreaChart, ReferenceLine, ResponsiveContainer, Tooltip, YAxis } f
 import { InformationCircleIcon } from '@heroicons/react/24/outline';
 import { Card } from '@/components/ui/Card';
 import { QueryErrorCard } from '@/components/ui/QueryErrorCard';
-import { useTwCape, type CapeBand, type TwCape } from '@/hooks/useTwCape';
+import { useTwCape, type TwCape } from '@/hooks/useTwCape';
 import { useAppMode } from '@/hooks/useAppMode';
-
-const BAND_LABEL: Record<CapeBand, string> = { cheap: 'Cheap', fair: 'Fair', expensive: 'Expensive' };
-
-const BAND_STYLE: Record<CapeBand, string> = {
-  cheap: 'bg-prosperity-100 dark:bg-prosperity-900/40 text-prosperity-700 dark:text-prosperity-300',
-  fair: 'bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300',
-  expensive: 'bg-warning-100 dark:bg-warning-900/40 text-warning-800 dark:text-warning-300',
-};
-
-function monthLabel(isoMonth: string, language: string): string {
-  const [y, m] = isoMonth.split('-').map(Number);
-  return new Intl.DateTimeFormat(language, { year: 'numeric', month: 'short' }).format(new Date(y, m - 1, 1));
-}
+import { BAND_LABEL, BAND_STYLE, monthLabel } from './twCape';
 
 function CapeBody({ cape }: { cape: TwCape }) {
   const { t, i18n } = useTranslation(['dashboard']);
