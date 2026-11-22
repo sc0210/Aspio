@@ -196,8 +196,11 @@ describe('RecentTransactions', () => {
     });
 
     it('shows at most five rows even when the source returns more (demo ignores limit)', () => {
+      // One date for all: each defaulting to new Date() let a clock tick
+      // mid-loop make the later items "newer" and sort Item 4 out.
+      const sameDay = new Date().toISOString();
       mockTransactions = Array.from({ length: 14 }, (_, i) =>
-        makeTransaction({ id: String(i), description: `Item ${i}` }),
+        makeTransaction({ id: String(i), description: `Item ${i}`, date: sameDay }),
       );
       render(<RecentTransactions />);
       expect(screen.getByText('Item 4')).toBeInTheDocument();

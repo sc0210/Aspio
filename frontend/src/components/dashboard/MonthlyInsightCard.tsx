@@ -176,7 +176,7 @@ export function MonthlyInsightCard({ stats, dateRange, trendData }: MonthlyInsig
             <ul className="space-y-1">
               {cashFlow.topIncome.length > 0 ? cashFlow.topIncome.map((c) => (
                 <li key={c.name} className="flex items-center justify-between gap-2 text-xs">
-                  <span className="truncate text-gray-600 dark:text-gray-300">{c.name}</span>
+                  <span className="truncate text-gray-600 dark:text-gray-300" title={c.name}>{c.name}</span>
                   <span className="flex-shrink-0 font-semibold tabular-nums text-prosperity-700 dark:text-prosperity-400">
                     {isValueVisible ? `+${formatTWD(c.amount)}` : '•••'}
                   </span>
@@ -193,7 +193,7 @@ export function MonthlyInsightCard({ stats, dateRange, trendData }: MonthlyInsig
             <ul className="space-y-1">
               {cashFlow.topExpense.length > 0 ? cashFlow.topExpense.map((c) => (
                 <li key={c.name} className="flex items-center justify-between gap-2 text-xs">
-                  <span className="truncate text-gray-600 dark:text-gray-300">{c.name}</span>
+                  <span className="truncate text-gray-600 dark:text-gray-300" title={c.name}>{c.name}</span>
                   <span className="flex-shrink-0 font-semibold tabular-nums text-error-700 dark:text-error-400">
                     {isValueVisible ? `-${formatTWD(c.amount)}` : '•••'}
                   </span>

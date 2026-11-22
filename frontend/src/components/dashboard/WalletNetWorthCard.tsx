@@ -492,12 +492,12 @@ export function WalletNetWorthCard({
                     {chartData.length > 0 && (
                         <div className="flex items-center gap-x-0.5 gap-y-0.5 text-xs flex-wrap">
                             {([
-                                { lineKey: 'netWorth' as const,        color: 'bg-emerald-500', labelKey: 'wallet.netWorth',       fallback: 'Net Worth' },
-                                { lineKey: 'totalAsset' as const,      color: 'bg-indigo-500',  labelKey: 'wallet.totalAsset',      fallback: 'Total Assets' },
-                                { lineKey: 'lifeWallet' as const,      color: 'bg-sky-500',     labelKey: 'wallet.lifeWallet',      fallback: 'Life Wallet' },
-                                { lineKey: 'portfolioWallet' as const, color: 'bg-violet-500',  labelKey: 'wallet.portfolioWallet', fallback: 'Portfolio' },
-                                { lineKey: 'emergencyWallet' as const, color: 'bg-amber-500',   labelKey: 'wallet.emergencyFund',   fallback: 'Emergency Fund' },
-                            ]).map(({ lineKey, color, labelKey, fallback }) => {
+                                { lineKey: 'netWorth' as const,        color: 'bg-emerald-500', ring: 'border-emerald-500', labelKey: 'wallet.netWorth',       fallback: 'Net Worth' },
+                                { lineKey: 'totalAsset' as const,      color: 'bg-indigo-500', ring: 'border-indigo-500',  labelKey: 'wallet.totalAsset',      fallback: 'Total Assets' },
+                                { lineKey: 'lifeWallet' as const,      color: 'bg-sky-500', ring: 'border-sky-500',     labelKey: 'wallet.lifeWallet',      fallback: 'Life Wallet' },
+                                { lineKey: 'portfolioWallet' as const, color: 'bg-violet-500', ring: 'border-violet-500',  labelKey: 'wallet.portfolioWallet', fallback: 'Portfolio' },
+                                { lineKey: 'emergencyWallet' as const, color: 'bg-amber-500', ring: 'border-amber-500',   labelKey: 'wallet.emergencyFund',   fallback: 'Emergency Fund' },
+                            ]).map(({ lineKey, color, ring, labelKey, fallback }) => {
                                 const visible = lineVisibility[lineKey];
                                 return (
                                     <button
@@ -507,15 +507,18 @@ export function WalletNetWorthCard({
                                         aria-label={`${visible ? 'Hide' : 'Show'} ${t(labelKey, fallback)}`}
                                         className="flex items-center gap-1.5 rounded-md px-1.5 py-1 min-h-[44px] lg:min-h-[32px] transition-colors touch-manipulation hover:bg-gray-100 dark:hover:bg-gray-700"
                                     >
+                                        {/* Hidden: a hollow dot in the series' own colour, so the
+                                            legend still says which line it would bring back. A
+                                            strikethrough read as "deleted". */}
                                         <span className={cn(
-                                            'w-2.5 h-2.5 rounded-full flex-shrink-0 transition-colors',
-                                            visible ? color : 'bg-gray-300 dark:bg-gray-600'
+                                            'w-2.5 h-2.5 rounded-full flex-shrink-0 border-2 transition-colors',
+                                            visible ? cn(color, ring) : cn('bg-transparent', ring)
                                         )} />
                                         <span className={cn(
                                             'font-medium transition-colors',
                                             visible
                                                 ? 'text-gray-600 dark:text-gray-300'
-                                                : 'text-gray-500 dark:text-gray-400 line-through decoration-gray-300 dark:decoration-gray-600'
+                                                : 'text-gray-500 dark:text-gray-400'
                                         )}>
                                             {t(labelKey, fallback)}
                                         </span>
@@ -536,7 +539,7 @@ export function WalletNetWorthCard({
                                         'font-medium transition-colors',
                                         lineVisibility.debtBalance
                                             ? 'text-rose-700 dark:text-rose-400'
-                                            : 'text-gray-500 dark:text-gray-400 line-through decoration-gray-300 dark:decoration-gray-600'
+                                            : 'text-gray-500 dark:text-gray-400'
                                     )}>
                                         {t('wallet.debtBalance', 'Debt Balance')}
                                     </span>

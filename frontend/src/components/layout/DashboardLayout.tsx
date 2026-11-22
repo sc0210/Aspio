@@ -94,7 +94,7 @@ export function DashboardLayout({ children, rightSidebar, topBarActions }: Dashb
 
           {/* Mobile Header Bar — no hamburger: its drawer listed the same pages as
               the tab bar's More sheet. Search, the drawer's one extra, sits here. */}
-          <div className="md:hidden bg-white dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700 flex items-center justify-between px-3 py-1">
+          <header className="md:hidden bg-white dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700 flex items-center justify-between px-3 py-1">
             <Link href="/dashboard" className="flex items-center space-x-2 min-h-[44px] hover:opacity-80 transition-opacity">
               <div className="w-8 h-8 bg-gradient-to-br from-primary-600 to-primary-500 rounded-lg flex items-center justify-center">
                 <span className="text-white font-bold text-lg">A</span>
@@ -118,10 +118,10 @@ export function DashboardLayout({ children, rightSidebar, topBarActions }: Dashb
                 <NotificationBell />
               </div>
             </div>
-          </div>
+          </header>
 
           {/* Desktop top bar */}
-          <div className="hidden md:flex items-center px-6 py-3 min-h-[52px] border-b border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800">
+          <header className="hidden md:flex items-center px-6 py-3 min-h-[52px] border-b border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800">
             <PageTitle />
             <div className="flex-1" />
             {topBarActions && (
@@ -134,7 +134,7 @@ export function DashboardLayout({ children, rightSidebar, topBarActions }: Dashb
                 <NotificationBell />
               </div>
             </div>
-          </div>
+          </header>
 
           {/* Main Dashboard Content */}
           <div className="flex-1 flex overflow-hidden">

@@ -81,8 +81,14 @@ export function MonthContextCard({ context, loading, error }: MonthContextCardPr
     }
 
     // One scale for all twelve bars, so their heights are comparable to each
-    // other rather than each filling its own column.
-    const scale = Math.max(...context.months.map((month) => Math.abs(month.net)), 1);
+    // other rather than each filling its own column. Saving months rise from a
+    // baseline and overspent ones hang below it; drawn the same way up, a red
+    // bar read as a good month in the wrong colour.
+    const filled = context.months.filter((month) => !month.empty);
+    const up = Math.max(0, ...filled.map((month) => month.net));
+    const down = Math.max(0, ...filled.map((month) => -month.net));
+    const span = Math.max(up + down, 1);
+    const baseline = (up / span) * 100;
 
     return (
         <Card>
@@ -109,12 +115,24 @@ export function MonthContextCard({ context, loading, error }: MonthContextCardPr
                 </p>
             )}
 
-            <ol className="mt-4 flex items-end gap-1 h-20" aria-hidden="true">
+            <p className="mt-4 text-xs text-gray-500 dark:text-gray-400">
+                {down > 0
+                    ? t('review.contextBarsCaptionNegative', 'Saved each month. Below the line: spent more than came in.')
+                    : t('review.contextBarsCaption', 'Saved each month')}
+            </p>
+            <ol className="relative mt-1 flex gap-1 h-20" aria-hidden="true">
+                {down > 0 && (
+                    <span
+                        className="absolute inset-x-0 h-px bg-gray-300 dark:bg-gray-600"
+                        style={{ top: `${baseline}%` }}
+                    />
+                )}
                 {context.months.map((month) => (
                     <Bar
                         key={month.key}
                         month={month}
-                        scale={scale}
+                        span={span}
+                        baseline={baseline}
                         title={
                             month.empty
                                 ? t('review.contextNoData', '{{month}}: nothing recorded', {
@@ -155,28 +173,43 @@ function Heading() {
     );
 }
 
-function Bar({ month, scale, title }: { month: ContextMonth; scale: number; title: string }) {
+function Bar({ month, span, baseline, title }: {
+    month: ContextMonth; span: number; baseline: number; title: string;
+}) {
     // Zero-baselined on purpose. Scaling these from the smallest month would
     // make a normal month look dramatic, which is the opposite of what the card
     // is for: if every bar is the same height, the month was ordinary, and that
     // is the answer.
-    const height = month.empty ? 0 : Math.max(4, (Math.abs(month.net) / scale) * 100);
+    //
+    // A share of the whole row, with a floor in pixels: a share of one half
+    // shrank to nothing when the other side dominated, taking the selected
+    // month's bar with it.
+    const negative = !month.empty && month.net < 0;
+    const share = month.empty ? 0 : (Math.abs(month.net) / span) * 100;
 
     return (
-        <li className="flex-1 flex flex-col justify-end h-full" title={title}>
+        <li className="relative flex-1 h-full" title={title}>
             <div
                 className={cn(
-                    'w-full rounded-sm transition-colors',
-                    month.empty && 'bg-gray-100 dark:bg-gray-800 h-1',
-                    !month.empty && month.net < 0 && 'bg-error-400/70',
-                    !month.empty && month.net >= 0 && (month.selected
+                    'absolute inset-x-0 transition-colors',
+                    negative ? 'rounded-b-sm' : 'rounded-t-sm',
+                    month.empty && 'bg-gray-100 dark:bg-gray-800 rounded-sm',
+                    negative && 'bg-error-400/70',
+                    !month.empty && !negative && (month.selected
                         ? 'bg-prosperity-500'
                         : month.partial
                             ? 'bg-prosperity-200 dark:bg-prosperity-900/60'
                             : 'bg-prosperity-300/70 dark:bg-prosperity-700/60'),
-                    month.selected && 'ring-2 ring-prosperity-500 ring-offset-1 dark:ring-offset-gray-900',
+                    month.selected && 'ring-2 ring-offset-1 dark:ring-offset-gray-900',
+                    month.selected && (negative ? 'ring-error-500' : 'ring-prosperity-500'),
                 )}
-                style={month.empty ? undefined : { height: `${height}%` }}
+                style={
+                    month.empty
+                        ? { bottom: `${100 - baseline}%`, height: 4 }
+                        : negative
+                            ? { top: `${baseline}%`, height: `max(3px, ${share}%)` }
+                            : { bottom: `${100 - baseline}%`, height: `max(3px, ${share}%)` }
+                }
             />
         </li>
     );

@@ -10,6 +10,7 @@ jest.mock('react-i18next', () => ({
   useTranslation: () => ({
     t: (_k: string, f: string, o?: Record<string, unknown>) =>
       (typeof f === 'string' ? f : _k).replace(/\{\{(\w+)\}\}/g, (_m, n) => String(o?.[n] ?? '')),
+    i18n: { language: 'en' },
   }),
 }));
 

@@ -203,6 +203,7 @@ export function DashboardSidebar({ collapsed, onToggleCollapsed }: DashboardSide
             used to be there. */}
         <nav
           data-tour="nav"
+          aria-label={t('navigation.mainLandmark')}
           onScroll={() => setRailTooltip(null)}
           className={cn('flex-1 py-3 overflow-y-auto space-y-1', isCollapsed ? 'px-1' : 'px-3')}
         >

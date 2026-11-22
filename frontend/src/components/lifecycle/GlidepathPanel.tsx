@@ -1,6 +1,6 @@
 'use client';
 
-import { useMemo, useState } from 'react';
+import { useId, useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import dynamic from 'next/dynamic';
 import {
@@ -58,6 +58,47 @@ function Slider({
                 onChange={(e) => onChange(parseFloat(e.target.value))}
                 className="w-full h-11 sm:h-6 cursor-pointer accent-indigo-600 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-400"
                 aria-label={label}
+            />
+            {hint && <p className="mt-1 text-sm text-gray-500 dark:text-gray-400">{hint}</p>}
+        </div>
+    );
+}
+
+/**
+ * A year is typed, not dragged: a slider over seventy years moved several
+ * years a pixel on a phone.
+ */
+function YearField({
+    label, value, min, max, onChange, hint,
+}: {
+    label: string; value: number; min: number; max: number;
+    onChange: (v: number) => void; hint?: string;
+}) {
+    // A draft, so "19" on the way to "1990" isn't committed as year 19.
+    const id = useId();
+    const [draft, setDraft] = useState(String(value));
+    const [shown, setShown] = useState(value);
+    if (shown !== value) { setShown(value); setDraft(String(value)); }
+    const commit = (text: string) => {
+        const n = Number(text);
+        if (Number.isInteger(n) && n >= min && n <= max) onChange(n);
+        else setDraft(String(value));
+    };
+    return (
+        <div>
+            <label htmlFor={id} className="block mb-1 text-xs font-medium text-gray-600 dark:text-gray-400">{label}</label>
+            <input
+                id={id}
+                type="number" inputMode="numeric" min={min} max={max} step={1}
+                value={draft}
+                onChange={(e) => {
+                    setDraft(e.target.value);
+                    const n = Number(e.target.value);
+                    if (e.target.value.length === 4 && n >= min && n <= max) onChange(n);
+                }}
+                onBlur={(e) => commit(e.target.value)}
+                onWheel={(e) => e.currentTarget.blur()}
+                className="w-28 rounded-lg border border-gray-300 bg-white px-2 py-1.5 text-sm tabular-nums text-gray-900 focus-visible:border-primary-500 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-500/30 dark:border-gray-600 dark:bg-gray-800 dark:text-white"
             />
             {hint && <p className="mt-1 text-sm text-gray-500 dark:text-gray-400">{hint}</p>}
         </div>
@@ -219,10 +260,10 @@ export function GlidepathPanel({ seed, preferences, onPreferenceChange }: Props)
                         min={45} max={80} step={1} suffix=""
                         onChange={(v) => onPreferenceChange('retirementAge', v)}
                     />
-                    <Slider
+                    <YearField
                         label={t('lifecycle.glide.birthYear', 'Birth year')}
                         value={preferences.birthYear}
-                        min={1950} max={new Date().getFullYear() - 18} step={1} suffix=""
+                        min={1950} max={new Date().getFullYear() - 18}
                         onChange={(v) => onPreferenceChange('birthYear', v)}
                         hint={t('lifecycle.glide.ageNow', 'Age now: {{n}}', { n: seed.currentAge })}
                     />

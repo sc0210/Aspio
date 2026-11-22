@@ -556,7 +556,7 @@ export function GrowthForecastCard({ stats, loading = false }: GrowthForecastCar
                         return (
                             <span key={g.id} className="inline-flex items-center gap-1.5 rounded-full border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800/60 px-2.5 py-1 text-xs text-gray-600 dark:text-gray-300">
                                 <span aria-hidden="true">{g.icon}</span>
-                                <span className="font-medium truncate max-w-[8rem]">{g.title}</span>
+                                <span className="font-medium truncate max-w-[8rem]" title={g.title}>{g.title}</span>
                                 <span className="tabular-nums text-gray-500 dark:text-gray-400">{etaText}</span>
                                 {g.status === 'short' && g.requiredExtraPerMonth != null && (
                                     <span className="font-semibold text-error-700 dark:text-error-400 tabular-nums">
@@ -669,7 +669,7 @@ export function GrowthForecastCard({ stats, loading = false }: GrowthForecastCar
                                                 className="rounded border-gray-300 dark:border-gray-600 text-indigo-600 focus-visible:ring-indigo-500 cursor-pointer"
                                                 aria-label={groupLabel(c)}
                                             />
-                                            <span className="flex-1 truncate text-gray-600 dark:text-gray-300">
+                                            <span className="flex-1 truncate text-gray-600 dark:text-gray-300" title={groupLabel(c)}>
                                                 <span className="mr-1" aria-hidden="true">{c.icon}</span>{groupLabel(c)}
                                             </span>
                                         </label>

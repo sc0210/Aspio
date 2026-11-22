@@ -438,9 +438,6 @@ export function LandingPage() {
               <Link href="/terms" className="inline-flex items-center min-h-[44px] px-2 rounded text-gray-400 hover:text-white transition-colors text-sm">
                 {t('landing.footer.terms')}
               </Link>
-              <Link href="/support" className="inline-flex items-center min-h-[44px] px-2 rounded text-gray-400 hover:text-white transition-colors text-sm">
-                {t('landing.footer.support')}
-              </Link>
             </div>
           </div>
 

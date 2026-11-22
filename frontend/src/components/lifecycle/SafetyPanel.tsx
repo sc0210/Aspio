@@ -140,9 +140,11 @@ export function SafetyPanel({ stress, cashFlowBasisMonths = 0 }: Props) {
 
             <DrawdownSlider stress={stress} />
 
-            {/* Drawdown table. */}
+            {/* Drawdown table. No minimum width: at 380px it scrolled sideways
+                inside a phone card, hiding the leverage column. The headings
+                wrap instead; the figures are short. */}
             <div className="overflow-x-auto -mx-1 px-1">
-                <table className="w-full text-xs min-w-[380px]">
+                <table className="w-full text-xs">
                     <thead>
                         <tr className="text-xs uppercase tracking-wide text-gray-500 dark:text-gray-400">
                             <th className="text-left font-medium py-1.5">{t('lifecycle.safety.colDrop', 'Market drop')}</th>

@@ -379,7 +379,6 @@
     "footer": {
       "copyright": "© 2026 Aspiro. All rights reserved.",
       "privacy": "Privacy Policy",
-      "support": "Support",
       "terms": "Terms of Service"
     },
     "header": {
@@ -678,7 +677,9 @@
     "trend": "Asset trend",
     "holdings": "Holdings",
     "groupDetail": "Group",
-    "xpProgress": "XP progress"
+    "xpProgress": "XP progress",
+    "mainLandmark": "Main",
+    "tabBarLandmark": "Tabs"
   },
   "notFoundPage": {
     "description": "The page you're looking for doesn't exist or has been moved.",
@@ -1037,29 +1038,9 @@
     "annualReturnDesc": "Used to benchmark portfolio performance in reports",
     "appearance": "Appearance & Language",
     "baseCurrency": "Base Currency",
-    "comingSoon": {
-      "description": "More settings options coming soon",
-      "financialPreferences": {
-        "description": "Set your currency, date format, and regional settings.",
-        "title": "Financial Preferences"
-      },
-      "notifications": {
-        "description": "Manage alerts and reminders for transactions, goals, and budgets.",
-        "title": "Notifications"
-      },
-      "privacySecurity": {
-        "description": "Control your data sharing, two-factor authentication, and account security.",
-        "title": "Privacy & Security"
-      },
-      "title": "Soon"
-    },
     "currencySaveError": "Failed to update currency",
     "currencySaved": "Preferred currency updated",
-    "dangerZone": "Danger Zone",
     "days": "days",
-    "delete": "Delete",
-    "deleteAccount": "Delete Account",
-    "deleteAccountDesc": "Permanently delete all your data",
     "demoNotice": "Demo mode — profile changes are not saved.",
     "displayName": "Display Name",
     "editProfile": "Edit Profile",
@@ -1071,8 +1052,6 @@
     "languageDesc": "Choose your preferred language",
     "notifNote": "These alerts appear in the bell. Mute a shared-spending partner from the Savings page.",
     "notifications": "Notifications",
-    "password": "Password",
-    "passwordDesc": "Change your login password",
     "portfolioPrefs": "Portfolio Preferences",
     "preferredCurrency": "Preferred Currency",
     "preferredCurrencyDesc": "Default currency for new transactions",
@@ -1293,6 +1272,8 @@
     "contextRunning": "Still running — it joins the comparison when the month closes.",
     "contextAboveAverage": "{{amount}} above the average month.",
     "contextBelowAverage": "{{amount}} below the average month.",
+    "contextBarsCaption": "Saved each month",
+    "contextBarsCaptionNegative": "Saved each month. Below the line: spent more than came in.",
     "contextOutOfWindow": "This page compares against the last twelve months, and this one is further back than that.",
     "contextTooNew": "Once there is a second month on record, this is where the two get compared.",
     "contextNoData": "{{month}}: nothing recorded",

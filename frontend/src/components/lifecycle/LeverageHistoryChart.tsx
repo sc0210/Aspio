@@ -126,16 +126,23 @@ export function LeverageHistoryChart({
     const xTicks = useMemo(() => {
         if (rows.length === 0) return [];
         const stride = Math.max(1, Math.ceil(rows.length / 6));
-        const ticks = rows.filter((_, i) => i % stride === 0).map((r) => r.label);
-        const last = rows[rows.length - 1].label;
-        if (ticks[ticks.length - 1] !== last) ticks.push(last);
-        return ticks;
+        const lastIndex = rows.length - 1;
+        const indexes = rows.map((_, i) => i).filter((i) => i % stride === 0);
+        // The latest date replaces a stride tick too close to it; side by side
+        // the two labels overprinted.
+        if (indexes[indexes.length - 1] !== lastIndex) {
+            if (indexes.length > 1 && lastIndex - indexes[indexes.length - 1] < stride / 2) indexes.pop();
+            indexes.push(lastIndex);
+        }
+        return indexes.map((i) => rows[i].label);
     }, [rows]);
 
     return (
         <div className="h-56 sm:h-64">
             <ResponsiveContainer width="100%" height="100%">
-                <LineChart data={rows} margin={{ top: 8, right: 8, left: 0, bottom: 0 }}>
+                {/* right: the latest date's label is centred on the plot's edge, and
+                    half of it hung past an 8px margin. */}
+                <LineChart data={rows} margin={{ top: 8, right: 28, left: 0, bottom: 0 }}>
                     <CartesianGrid strokeDasharray="3 3" stroke="currentColor" className="text-gray-200 dark:text-gray-700 opacity-50" vertical={false} />
                     <XAxis
                         dataKey="label"

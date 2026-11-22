@@ -8,6 +8,7 @@ import { formatTWD, formatTWDCompact } from '@/utils/formatters';
 import { cn } from '@/utils/cn';
 import { evaluateCarImpact, DEFAULT_CAR_IMPACT, WAN, type CarImpactInputs, type HouseTimelineContext } from '@/lib/housing';
 import { Card } from '@/components/ui/Card';
+import { MONEY_INPUT, useWanAmount } from '@/components/housing/MoneyFields';
 
 
 interface Props {
@@ -47,6 +48,7 @@ export function CarImpactPanel({ context }: Props) {
 
     const impact = useMemo(() => evaluateCarImpact(car, context), [car, context]);
     const priceWan = Math.round(car.carPrice / WAN);
+    const wanAmount = useWanAmount();
 
     // Headline state: reachable-with-delay / no-delay / never-reaches / base-unreachable.
     const baseYear = impact.baseline.targetYear;
@@ -152,14 +154,14 @@ export function CarImpactPanel({ context }: Props) {
                             <div>
                                 <div className="flex items-baseline justify-between mb-1">
                                     <label className="text-xs font-medium text-gray-600 dark:text-gray-400">{t('housing.car.carPrice', 'Car price')}</label>
-                                    <span className="text-xs font-bold text-gray-900 dark:text-white tabular-nums">{priceWan.toLocaleString()} {t('housing.unitWan')}</span>
+                                    <span className="text-xs font-bold text-gray-900 dark:text-white tabular-nums">{wanAmount(car.carPrice)}</span>
                                 </div>
                                 <input
                                     type="number" min={0} step={5} value={priceWan}
                                     inputMode="decimal"
                                     onWheel={(e) => e.currentTarget.blur()}
                                     onChange={(e) => set('carPrice', Math.max(0, Math.round(Number(e.target.value) || 0)) * WAN)}
-                                    className="w-full text-right tabular-nums bg-transparent border-b border-gray-200 dark:border-gray-600 focus-visible:border-amber-500 focus-visible:outline-none px-1 py-0.5 text-sm"
+                                    className={MONEY_INPUT}
                                     aria-label={t('housing.car.carPrice', 'Car price')}
                                 />
                             </div>
@@ -177,7 +179,7 @@ export function CarImpactPanel({ context }: Props) {
                                     inputMode="decimal"
                                     onWheel={(e) => e.currentTarget.blur()}
                                     onChange={(e) => set('monthlyRunningCost', Math.max(0, Math.round(Number(e.target.value) || 0)))}
-                                    className="w-full text-right tabular-nums bg-transparent border-b border-gray-200 dark:border-gray-600 focus-visible:border-amber-500 focus-visible:outline-none px-1 py-0.5 text-sm"
+                                    className={MONEY_INPUT}
                                     aria-label={t('housing.car.running', 'Running cost / mo')}
                                 />
                                 <p className="mt-1 text-sm text-gray-500 dark:text-gray-400">{t('housing.car.runningHint', 'insurance, fuel, upkeep, parking')}</p>

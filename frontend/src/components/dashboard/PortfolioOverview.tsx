@@ -23,7 +23,7 @@ import { useMemo } from 'react';
 import { Card } from '@/components/ui/Card';
 
 const PERIOD_LABELS: Record<string, string> = {
-  '7d': '7D', 'month': 'MTD', '30d': '30D', '90d': '90D',
+  '7d': '7D', '14d': '14D', 'month': 'MTD', '30d': '30D', '90d': '90D',
   '6m': '6M', 'ytd': 'YTD', '1y': '1Y',
 };
 
@@ -328,7 +328,6 @@ export function PortfolioOverview({ portfolio, dateRange }: PortfolioOverviewPro
           <h3 className="text-sm font-semibold text-gray-700 dark:text-gray-300">
             {t('dashboard:portfolioOverview.title', 'Investments')}
           </h3>
-          <span className="text-xs font-medium text-gray-600 dark:text-gray-300 bg-gray-100 dark:bg-gray-700 px-2 py-0.5 rounded-full ml-2">{dateRange ? PERIOD_LABELS[dateRange] ?? dateRange : t('dashboard:portfolioOverview.allPeriods')}</span>
         </div>
         <div className="flex items-center gap-2">
           <button
@@ -421,7 +420,13 @@ export function PortfolioOverview({ portfolio, dateRange }: PortfolioOverviewPro
             return (
               <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 lg:gap-0">
                 {/* Chart — 2/3 width (drops to full width when there's no calendar) */}
-                <div className={cn('h-[260px]', showCalendar ? 'lg:col-span-2 lg:pr-5' : 'lg:col-span-3')}>
+                <div className={cn(showCalendar ? 'lg:col-span-2 lg:pr-5' : 'lg:col-span-3')}>
+                {/* The period labels the chart only. Beside the card title it read as
+                    scoping the metrics above too, which are annualised since inception. */}
+                <span className="inline-block mb-1 text-xs font-medium text-gray-600 dark:text-gray-300 bg-gray-100 dark:bg-gray-700 px-2 py-0.5 rounded-full">
+                  {PERIOD_LABELS[dateRange ?? '30d'] ?? dateRange}
+                </span>
+                <div className="h-[260px]">
                   {trendLoading ? (
                     <div className="flex items-center justify-center h-full">
                       <div className="animate-pulse flex flex-col items-center gap-3">
@@ -463,6 +468,7 @@ export function PortfolioOverview({ portfolio, dateRange }: PortfolioOverviewPro
                       </div>
                     </div>
                   )}
+                </div>
                 </div>
 
                 {/* P&L calendar — 1/3 width */}

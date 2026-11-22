@@ -379,9 +379,10 @@ function DesktopGoalsPage() {
                                     <div className="shrink-0">
                                         <button
                                             onClick={() => handleEdit(retirementGoal)}
-                                            className="inline-flex items-center gap-2 px-4 py-2 rounded-lg bg-primary-700 hover:bg-primary-800 text-white text-sm font-medium transition-colors border border-primary-500 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-400 focus-visible:ring-offset-1"
+                                            // Secondary, not filled: editing is the card's only action, not its point.
+                                            className="inline-flex items-center gap-2 px-4 py-2 min-h-[44px] lg:min-h-0 rounded-lg border border-primary-300 dark:border-primary-700 bg-white/70 dark:bg-gray-800/60 text-primary-700 dark:text-primary-300 hover:bg-primary-50 dark:hover:bg-primary-900/30 text-sm font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-400 focus-visible:ring-offset-1"
                                         >
-                                            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
                                                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
                                             </svg>
                                             {t('goals:edit')}

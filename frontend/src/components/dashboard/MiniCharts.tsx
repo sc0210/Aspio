@@ -375,7 +375,7 @@ const MiniPieChart = React.memo(({
                                 className="w-2 h-2 rounded-full flex-shrink-0"
                                 style={{ backgroundColor: slice.color }}
                             />
-                            <span className="text-gray-700 dark:text-gray-300 truncate">
+                            <span className="text-gray-700 dark:text-gray-300 truncate" title={slice.label}>
                                 {slice.label}
                             </span>
                         </button>
@@ -426,7 +426,7 @@ const MiniBarChart = React.memo(({
         <div className={cn('space-y-3', className)}>
             {data.map((item, index) => (
                 <div key={index} className="flex items-center gap-2">
-                    <span className="text-xs font-medium text-gray-600 dark:text-gray-400 w-16 truncate">
+                    <span className="text-xs font-medium text-gray-600 dark:text-gray-400 w-16 truncate" title={item.label}>
                         {item.label}
                     </span>
                     <div className="flex-1">

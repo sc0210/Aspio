@@ -115,10 +115,8 @@ function DesktopLoansPage() {
                 <BanknotesIcon className="w-4 h-4 text-red-700 dark:text-red-500" />
                 <p className="text-sm text-gray-600 dark:text-gray-400">{t('summary.totalDebt')}</p>
               </div>
+              {/* No "Active loans: N" under it: the next card is that count. */}
               <p className="text-2xl font-bold text-gray-900 dark:text-white">{fmt(summary.total_debt)}</p>
-              <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
-                {t('summary.activeLoans')}: {summary.loan_count}
-              </p>
             </Card>
 
             <Card padding="sm" accent="cyan">

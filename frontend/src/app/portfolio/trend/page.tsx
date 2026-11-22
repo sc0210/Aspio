@@ -45,6 +45,7 @@ import { cn } from '@/utils/cn';
 import { formatCurrency, formatMoney } from '@/utils/formatters';
 import toast from 'react-hot-toast';
 import { useTranslation } from 'react-i18next';
+import { formatAssetTypeLabel } from '@/utils/holdingLabels';
 import { dailyPerformanceKey, DAILY_PERFORMANCE_DAYS_MAX } from '@/lib/queryKeys';
 import { usePortfolioSnapshot } from '@/hooks/portfolio/usePortfolioSnapshot';
 import { allTimeReturnPercent, filterTrendByPreset, type TrendPreset } from '@/lib/portfolio/trendRange';
@@ -201,7 +202,7 @@ function SortIcon({
 
 function HoldingsTable({ rows, currency, isValueVisible, isLoading }: HoldingsTableProps) {
     const [scrollerRef, moreToTheRight] = useMoreToTheRight<HTMLDivElement>();
-    const { t } = useTranslation(['portfolio']);
+    const { t } = useTranslation(['portfolio', 'common']);
     const [sortKey, setSortKey] = useState<SortKey>('weight');
     const [sortDir, setSortDir] = useState<'asc' | 'desc'>('desc');
     const [search, setSearch] = useState('');
@@ -347,18 +348,19 @@ function HoldingsTable({ rows, currency, isValueVisible, isLoading }: HoldingsTa
                 <div className="flex items-center gap-1.5">
                     <FunnelIcon className="w-3.5 h-3.5 text-gray-500 dark:text-gray-400" />
                     <div className="flex gap-1">
-                        {assetTypes.map((t) => (
+                        {assetTypes.map((type) => (
                             <button
-                                key={t}
-                                onClick={() => setTypeFilter(t)}
+                                key={type}
+                                onClick={() => setTypeFilter(type)}
+                                aria-pressed={typeFilter === type}
                                 className={cn(
-                                    'px-2.5 py-1 text-[11px] font-semibold rounded-lg capitalize transition-all',
-                                    typeFilter === t
+                                    'px-2.5 py-1 text-xs font-semibold rounded-lg transition-all',
+                                    typeFilter === type
                                         ? 'bg-primary-700 text-white'
                                         : 'bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-400 hover:bg-gray-200 dark:hover:bg-gray-600',
                                 )}
                             >
-                                {t}
+                                {type === 'all' ? t('common:common.all') : formatAssetTypeLabel(type, t)}
                             </button>
                         ))}
                     </div>

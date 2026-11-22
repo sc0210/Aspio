@@ -379,7 +379,6 @@
     "footer": {
       "copyright": "© 2026 Aspiro. 保留所有權利。",
       "privacy": "隱私政策",
-      "support": "支援",
       "terms": "服務條款"
     },
     "header": {
@@ -678,7 +677,9 @@
     "trend": "資產走勢",
     "holdings": "持股明細",
     "groupDetail": "群組",
-    "xpProgress": "經驗值進度"
+    "xpProgress": "經驗值進度",
+    "mainLandmark": "主選單",
+    "tabBarLandmark": "分頁"
   },
   "notFoundPage": {
     "description": "您要找的頁面不存在或已被移動。",
@@ -1035,29 +1036,9 @@
     "annualReturnDesc": "用於報告中的投資組合績效基準",
     "appearance": "外觀與語言",
     "baseCurrency": "基本貨幣",
-    "comingSoon": {
-      "description": "更多設定選項即將推出",
-      "financialPreferences": {
-        "description": "設定您的貨幣、日期格式和區域設定。",
-        "title": "財務偏好"
-      },
-      "notifications": {
-        "description": "管理交易、目標和預算的提醒和通知。",
-        "title": "通知"
-      },
-      "privacySecurity": {
-        "description": "控制您的資料分享、雙因素驗證和帳戶安全。",
-        "title": "隱私與安全"
-      },
-      "title": "即將推出"
-    },
     "currencySaveError": "貨幣更新失敗",
     "currencySaved": "偏好貨幣已更新",
-    "dangerZone": "危險區域",
     "days": "天",
-    "delete": "刪除",
-    "deleteAccount": "刪除帳戶",
-    "deleteAccountDesc": "永久刪除所有資料",
     "demoNotice": "示範模式 — 個人資料變更不會儲存。",
     "displayName": "顯示名稱",
     "editProfile": "編輯個人資料",
@@ -1069,8 +1050,6 @@
     "languageDesc": "選擇您偏好的語言",
     "notifNote": "這些提醒會出現在鈴鐺通知中。要將共同支出的夥伴設為靜音，請到儲蓄頁面。",
     "notifications": "通知",
-    "password": "密碼",
-    "passwordDesc": "更改登入密碼",
     "portfolioPrefs": "投資組合偏好",
     "preferredCurrency": "偏好貨幣",
     "preferredCurrencyDesc": "新增交易時的預設貨幣",
@@ -1289,6 +1268,8 @@
     "contextRunning": "本月尚未結束，結算後才會納入比較。",
     "contextAboveAverage": "比平均月份多存 {{amount}}。",
     "contextBelowAverage": "比平均月份少存 {{amount}}。",
+    "contextBarsCaption": "每月儲蓄",
+    "contextBarsCaptionNegative": "每月儲蓄。線以下：支出多於收入。",
     "contextOutOfWindow": "這個頁面只和最近十二個月比較，這個月已經超出範圍。",
     "contextTooNew": "等到有第二個月的記錄，這裡就會開始比較。",
     "contextNoData": "{{month}}：沒有記錄",
