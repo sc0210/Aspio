@@ -224,6 +224,7 @@ function DesktopGroupsPage() {
 
     // A retry can start while an older load is in flight; only the latest may land.
     let cancelled = false;
+    const tokens = latest.current; // one map, mutated in place, never replaced
     async function load() {
       try {
         const statusRes = await apiClient.get<LinkStatus>('/line-bot/link-status');
@@ -250,7 +251,12 @@ function DesktopGroupsPage() {
       }
     }
     load();
-    return () => { cancelled = true; };
+    return () => {
+      cancelled = true;
+      // Also drop any balances still in flight: switching to demo, or leaving
+      // the page, must not let a late live answer land.
+      for (const id of Object.keys(tokens)) tokens[id] += 1;
+    };
   }, [isDemo, attempt]);
 
   const retryLoad = () => { setLoadFailed(false); setLoading(true); setAttempt(a => a + 1); };
