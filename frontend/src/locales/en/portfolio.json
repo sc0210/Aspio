@@ -6,7 +6,6 @@
     "cancel": "Cancel",
     "cancelEditing": "Cancel editing",
     "sell": "Sell",
-    "sellShares": "Sell shares",
     "sellHolding": "Sell holding",
     "sellHoldingHint": "Sell shares of this holding",
     "deleteInvestment": "Delete Investment",
@@ -559,8 +558,6 @@
     "pricesUpdating": "Updating prices...",
     "refreshedPricesOnly": "Prices updated, but chart history could not be refreshed.",
     "refreshSuccess": "Updated: {{updated}} prices refreshed, {{cached}} cached",
-    "sellTransactionCreated": "Sell transaction created successfully",
-    "sellTransactionFailed": "Failed to create sell transaction",
     "soldShares": "Successfully sold {{count}} shares of {{symbol}}",
     "syncComplete": "Synced {{count}} symbols ({{records}} records)",
     "syncFailed": "Sync failed: {{message}}",
@@ -623,38 +620,6 @@
   "viewToggle": {
     "assetAllocation": "Asset Allocation",
     "holdings": "Holdings"
-  },
-  "walletManagement": {
-    "title": "💳 Wallet management",
-    "deposit": "Deposit",
-    "depositHint": "Add to the wallet balance",
-    "withdraw": "Withdraw",
-    "withdrawHint": "Take from the wallet balance",
-    "depositAmount": "Amount in",
-    "withdrawAmount": "Amount out",
-    "notesPlaceholder": "e.g. salary, cash withdrawal, transfer…",
-    "cancel": "Cancel",
-    "processing": "Working…",
-    "confirmDeposit": "✅ Confirm deposit",
-    "confirmWithdraw": "✅ Confirm withdrawal",
-    "field": {
-      "action": "Action *",
-      "wallet": "Wallet *",
-      "amount": "Amount *",
-      "currency": "Currency",
-      "date": "Date *",
-      "notes": "Notes"
-    },
-    "wallet": {
-      "portfolio": {
-        "label": "Portfolio wallet",
-        "description": "Assets already in the market"
-      },
-      "emergency": {
-        "label": "Emergency wallet",
-        "description": "Emergency fund"
-      }
-    }
   },
   "walletTypes": {
     "emergency": "Emergency",

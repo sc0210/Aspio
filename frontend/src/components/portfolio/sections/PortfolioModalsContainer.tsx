@@ -23,10 +23,6 @@ const ImportExportModal = dynamic(
   () => import('@/components/portfolio/ImportExportModal').then(m => ({ default: m.ImportExportModal })),
   { ssr: false }
 );
-const WalletManagementModal = dynamic(
-  () => import('@/components/portfolio/WalletManagementModal').then(m => ({ default: m.WalletManagementModal })),
-  { ssr: false }
-);
 const EditGoalModal = dynamic(
   () => import('@/components/goals/EditGoalModal').then(m => ({ default: m.EditGoalModal })),
   { ssr: false }
@@ -123,22 +119,6 @@ export function PortfolioModalsContainer({
           onClose={() => modals.closeModal('importExport')}
           onImportSuccess={() => {
             modals.closeModal('importExport');
-            onRefreshPortfolio();
-          }}
-        />
-      )}
-
-      {/* Wallet Management Modal */}
-      {modals.modals.walletManagement && (
-        <WalletManagementModal
-          isOpen={modals.modals.walletManagement}
-          onClose={() => modals.closeModal('walletManagement')}
-          onDeposit={async () => {
-            modals.closeModal('walletManagement');
-            onRefreshPortfolio();
-          }}
-          onWithdraw={async () => {
-            modals.closeModal('walletManagement');
             onRefreshPortfolio();
           }}
         />

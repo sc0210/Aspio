@@ -25,7 +25,6 @@ const TRANSLATED = [
     'components/portfolio/BuyHoldingModal.tsx',
     'components/portfolio/HoldingDetailModal.tsx',
     'components/portfolio/SellHoldingModal.tsx',
-    'components/portfolio/WalletManagementModal.tsx',
     'components/transactions/ExpenseGroupSummary.tsx',
     'components/ui/ConfirmDialog.tsx',
     'components/ui/LoadingOverlay.tsx',

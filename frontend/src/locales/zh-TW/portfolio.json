@@ -6,7 +6,6 @@
     "cancel": "取消",
     "cancelEditing": "取消編輯",
     "sell": "賣出",
-    "sellShares": "賣出股份",
     "sellHolding": "賣出持股",
     "sellHoldingHint": "賣出此持股的股份",
     "deleteInvestment": "刪除投資",
@@ -555,8 +554,6 @@
     "pricesUpdating": "更新價格中...",
     "refreshedPricesOnly": "價格已更新，但圖表的歷史資料這次沒有更新成功。",
     "refreshSuccess": "已更新：{{updated}} 筆價格已刷新，{{cached}} 筆快取",
-    "sellTransactionCreated": "賣出交易已成功建立",
-    "sellTransactionFailed": "建立賣出交易失敗",
     "soldShares": "成功賣出 {{count}} 股 {{symbol}}",
     "syncComplete": "已同步 {{count}} 個標的（{{records}} 筆記錄）",
     "syncFailed": "同步失敗：{{message}}",
@@ -619,38 +616,6 @@
   "viewToggle": {
     "assetAllocation": "資產配置",
     "holdings": "持股"
-  },
-  "walletManagement": {
-    "title": "💳 錢包管理",
-    "deposit": "存入",
-    "depositHint": "增加錢包餘額",
-    "withdraw": "提取",
-    "withdrawHint": "減少錢包餘額",
-    "depositAmount": "存入金額",
-    "withdrawAmount": "提取金額",
-    "notesPlaceholder": "例如：薪資存入、提款、轉帳...",
-    "cancel": "取消",
-    "processing": "處理中...",
-    "confirmDeposit": "✅ 確認存入",
-    "confirmWithdraw": "✅ 確認提取",
-    "field": {
-      "action": "操作類型 *",
-      "wallet": "選擇錢包 *",
-      "amount": "金額 *",
-      "currency": "幣別",
-      "date": "日期 *",
-      "notes": "備註"
-    },
-    "wallet": {
-      "portfolio": {
-        "label": "投資組合錢包",
-        "description": "已投入市場的資產"
-      },
-      "emergency": {
-        "label": "緊急錢包",
-        "description": "緊急備用金"
-      }
-    }
   },
   "walletTypes": {
     "emergency": "緊急",

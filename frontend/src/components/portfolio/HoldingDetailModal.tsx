@@ -8,7 +8,6 @@ import {
   CheckIcon,
   XMarkIcon as CancelIcon,
   TrashIcon,
-  ArrowTrendingDownIcon,
   AdjustmentsHorizontalIcon
 } from '@heroicons/react/24/outline';
 import Link from 'next/link';
@@ -17,8 +16,6 @@ import { formatCurrency, localDateString, formatMoney } from '@/utils/formatters
 import toast from 'react-hot-toast';
 import { useTranslation } from 'react-i18next';
 import { formatSectorLabel } from '@/utils/holdingLabels';
-import { LotSelectionModal } from './LotSelectionModal';
-import type { CostBasisMethod } from '@/utils/costBasis';
 import { Modal } from '@/components/ui/Modal';
 import { ConfirmDialog } from '@/components/ui/ConfirmDialog';
 import { Card } from '@/components/ui/Card';
@@ -51,7 +48,6 @@ interface HoldingDetailModalProps {
   onSellLot?: (holding: HoldingLot) => void;
   onDeleteLot?: (lotId: string) => Promise<void>;
   onUpdateSymbol?: (symbol: string, updates: { name?: string; sector?: string }) => Promise<void>;
-  onSellHolding?: (symbol: string, quantity: number, price: number, selectedLotIds: string[], method: CostBasisMethod) => Promise<void>;
 }
 
 export function HoldingDetailModal({
@@ -63,7 +59,6 @@ export function HoldingDetailModal({
   onSellLot,
   onDeleteLot,
   onUpdateSymbol,
-  onSellHolding
 }: HoldingDetailModalProps) {
   const bodyRef = useRef<HTMLDivElement>(null);
   const { t } = useTranslation(['portfolio']);
@@ -71,8 +66,6 @@ export function HoldingDetailModal({
   const [editingAggregate, setEditingAggregate] = useState(false);
   // `whole` deletes the investment's only lot and closes this modal with it.
   const [pendingDelete, setPendingDelete] = useState<{ lotId: string; whole: boolean; message: string } | null>(null);
-  const [showSellModal, setShowSellModal] = useState(false);
-  const [sellQuantity, setSellQuantity] = useState(0);
   const [editPurchaseDate, setEditPurchaseDate] = useState('');
   // What the editor opened with, so Save can tell a date the user changed from one
   // it merely prefilled. See the Save handler for why that distinction matters.
@@ -295,23 +288,6 @@ export function HoldingDetailModal({
         }
         headerActions={
           <>
-            {/* Sell Button - show when onSellHolding is available */}
-            {onSellHolding && (
-              <button
-                onClick={() => {
-                  setSellQuantity(aggregatedMetrics.totalQuantity);
-                  setShowSellModal(true);
-                }}
-                className="flex items-center gap-2 px-3 py-2 text-sm font-medium text-white bg-orange-700 hover:bg-orange-800 dark:bg-orange-600 dark:hover:bg-orange-700 rounded-lg transition-all shadow-sm"
-                title={t('portfolio:holdingModal.sellShares')}
-                aria-label={t('portfolio:holdingModal.sellShares')}
-              >
-                <ArrowTrendingDownIcon className="w-4 h-4" />
-                <span>{t('portfolio:holdingModal.sell')}</span>
-              </button>
-            )}
-
-            {/* Sell Button - New simplified sell flow */}
             {onSellLot && holdings.length > 0 && (
               <button
                 onClick={() => {
@@ -831,40 +807,6 @@ export function HoldingDetailModal({
             </div>
           </div>
         </div>
-        {/* Lot Selection Modal for Selling */}
-        {showSellModal && (
-          <LotSelectionModal
-            symbol={symbol}
-            // sortedLots, not the raw holdings prop: the lots table above is date
-            // ordered, so handing the sell picker the API's value-desc order made the
-            // same lots appear in a different order the moment you clicked Sell.
-            // Cost-basis maths is unaffected either way — costBasis.ts sorts for
-            // itself — but the list you pick SPECIFIC lots from should match the one
-            // you were just reading.
-            lots={sortedLots.map(h => ({
-              id: h.id,
-              purchaseDate: h.purchaseDate || new Date().toISOString(),
-              quantity: h.quantity,
-              averageCost: h.averageCost
-            }))}
-            quantityToSell={sellQuantity}
-            currentPrice={aggregatedMetrics.currentPrice}
-            currency={aggregatedMetrics.currency}
-            onConfirm={async (selectedLotIds, method) => {
-              if (!onSellHolding) return;
-              try {
-                await onSellHolding(symbol, sellQuantity, aggregatedMetrics.currentPrice, selectedLotIds, method);
-                toast.success(t('portfolio:toast.sellTransactionCreated'));
-                setShowSellModal(false);
-                onClose();
-              } catch (error: unknown) {
-                toast.error(error instanceof Error ? error.message : t('portfolio:toast.sellTransactionFailed'));
-              }
-            }}
-            onCancel={() => setShowSellModal(false)}
-          />
-        )}
-
         {/* Inside the dialog: Headless UI makes everything outside it inert. */}
         <ConfirmDialog
           isOpen={pendingDelete !== null}
