@@ -769,17 +769,19 @@ class DashboardService:
                         # TWD: these values join TWD wallet balances in the
                         # net-worth trend (see the daily-performance note).
                         base_currency = "TWD"
+                        from app.modules.portfolio.daily_valuation import (
+                            DailyFx,
+                            settled_quote_day,
+                        )
 
-                        # Pre-fetch all unique exchange rates before the date loop
-                        _currencies_needed = {
-                            h.currency for h in tradable_holdings
-                            if h.currency and h.currency != base_currency
+                        daily_fx = await DailyFx.load(
+                            hist_price_service, exchange_service, base_currency,
+                            start_date - timedelta(days=10), end_date,
+                        )
+                        quote_close_day = {
+                            h.id: settled_quote_day(h) for h in tradable_holdings
                         }
-                        # Serial: shared session (see _calculate_all_wallets).
-                        for _currency in _currencies_needed:
-                            await exchange_service.get_exchange_rate(
-                                from_currency=_currency, to_currency=base_currency
-                            )
+
 
                         last_known_prices = {}
 
@@ -833,6 +835,10 @@ class DashboardService:
                                         if price_data and price_data.get("close"):
                                             price = Decimal(str(price_data["close"]))
                                             last_known_prices[holding.symbol] = price
+                                        elif current_date == quote_close_day.get(holding.id):
+                                            # Close in current_price, not in history yet.
+                                            price = Decimal(str(holding.current_price))
+                                            last_known_prices[holding.symbol] = price
                                         elif holding.symbol in last_known_prices:
                                             price = last_known_prices[holding.symbol]
                                         elif holding.current_price:
@@ -855,9 +861,11 @@ class DashboardService:
                                     )
                                     if holding_currency != base_currency:
                                         try:
-                                            exchange_rate = await exchange_service.get_exchange_rate(
-                                                from_currency=holding_currency,
-                                                to_currency=base_currency,
+                                            # The day's rate, as daily-performance
+                                            # uses; today's for every past day moved
+                                            # the month's opening value with FX.
+                                            exchange_rate = await daily_fx.rate(
+                                                holding_currency, current_date
                                             )
                                             if exchange_rate:
                                                 holding_value = (
@@ -1179,18 +1187,20 @@ class DashboardService:
 
                     exchange_service = ExchangeRateService(self.db)
                     base_currency = "TWD"
+                    from app.modules.portfolio.daily_valuation import (
+                        DailyFx,
+                        settled_quote_day,
+                    )
 
-                    # Pre-fetch all unique exchange rates across all wallet holdings
-                    _all_holdings = [h for hs in holdings_by_wallet.values() for h in hs]
-                    _currencies_needed = {
-                        h.currency for h in _all_holdings
-                        if h.currency and h.currency != base_currency
+                    daily_fx = await DailyFx.load(
+                        hist_price_service, exchange_service, base_currency,
+                        start_date - timedelta(days=10), end_date,
+                    )
+                    quote_close_day = {
+                        h.id: settled_quote_day(h)
+                        for hs in holdings_by_wallet.values() for h in hs
                     }
-                    # Serial: shared session (see _calculate_all_wallets).
-                    for _currency in _currencies_needed:
-                        await exchange_service.get_exchange_rate(
-                            from_currency=_currency, to_currency=base_currency
-                        )
+
 
                     for wallet_type, holdings in holdings_by_wallet.items():
                         if not holdings:
@@ -1247,6 +1257,10 @@ class DashboardService:
                                         if price_data and price_data.get("close"):
                                             price = Decimal(str(price_data["close"]))
                                             last_known_prices[holding.symbol] = price
+                                        elif current_date == quote_close_day.get(holding.id):
+                                            # Close in current_price, not in history yet.
+                                            price = Decimal(str(holding.current_price))
+                                            last_known_prices[holding.symbol] = price
                                         elif holding.symbol in last_known_prices:
                                             price = last_known_prices[holding.symbol]
                                         elif holding.current_price:
@@ -1265,9 +1279,11 @@ class DashboardService:
                                     )
                                     if holding_currency != base_currency:
                                         try:
-                                            exchange_rate = await exchange_service.get_exchange_rate(
-                                                from_currency=holding_currency,
-                                                to_currency=base_currency,
+                                            # The day's rate, as daily-performance
+                                            # uses; today's for every past day moved
+                                            # the month's opening value with FX.
+                                            exchange_rate = await daily_fx.rate(
+                                                holding_currency, current_date
                                             )
                                             if exchange_rate:
                                                 holding_value = (

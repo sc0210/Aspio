@@ -106,25 +106,15 @@ Using the same scenario:
 ---
 
 ### 3. **Total Value** (Portfolio Page) 💼
-**What it is:** Current market value of all holdings shown on the portfolio page
+**What it is:** Current market value of the Portfolio wallet's holdings, the same figure as Investment Total
 
 **Context:**
-- On portfolio page with "All Wallets" filter: every holding you own
-- On portfolio page with a wallet filter (e.g. "Emergency"): holdings in that wallet only
+- The portfolio page shows the Portfolio wallet only. Emergency-wallet holdings (legacy cash at a fixed price; Emergency money is cash transactions) are left out of its list, charts and totals, and counted under Emergency on the dashboard.
 
 **Formula:**
 ```
-Total Value = Sum of (quantity × current_price) for all visible holdings
+Total Value = Sum of (quantity × current_price) for Portfolio-wallet holdings
 ```
-
-**Example:**
-If viewing only the Emergency Wallet:
-- Holdings parked as reserve: NT$150,000
-- **Total Value = NT$150,000**
-
-If viewing All Wallets:
-- All holdings across both holding wallets
-- **Total Value = NT$950,000** (Portfolio + Emergency — note this excludes Life Wallet cash, so it does *not* equal Total Asset)
 
 **Where you see it:** Portfolio page header, PortfolioStats component
 
@@ -275,6 +265,18 @@ All of these measure the **Portfolio wallet only**, in **TWD**, with your own de
 
 ---
 
+## Market Valuation (Dashboard)
+
+### Taiwan CAPE (Shiller P/E of the TAIEX)
+- **Formula:** `CAPE_t = (TAIEX_t / CPI_t) / mean over the 120 months to t of (E_s / CPI_s)`, where `E_s = TAIEX_s / market P/E_s` is the TAIEX's earnings that month.
+- **Market P/E** for a day is total market cap over total trailing-four-quarter earnings of the listed companies TWSE gives a P/E for (positive earnings): per stock, cap = close × shares issued and earnings = cap / P/E. Loss-makers have no P/E, so they are left out rather than subtracted, which flatters earnings in a bad year.
+- **Inputs, one row a month** (`tw_market_valuations`): TWSE's dated reports MI_INDEX (closes; the TAIEX from ~2009), FMTQIK (the TAIEX for older months), BWIBBU_d (P/E) and MI_QFIIS (shares), read on the month's last trading day; DGBAS's general CPI (2021 = 100) once published; its download URL is read from the data.gov.tw catalogue (dataset 6019), and every fetch rewrites the whole CPI column so a new base year cannot mix bases. Since 2005-10, so the series starts in 2015-03.
+- **Window:** a CAPE needs at least 114 of the 120 months (a few may be missing after an outage) reaching back about ten years.
+- **Reading:** the share of earlier months whose CAPE was strictly lower ("higher than 94% of months"). Fewer than 20% lower is **cheap**, more than 80% **expensive**, otherwise **fair**. The API returns both band edges as CAPE values (`cheapAtOrBelow`, `expensiveAbove`) and the card's dashed lines are drawn at them. Not a fixed number: Taiwan's ten-year earnings average lags how fast its largest companies' profits grew, so a US-style "above 30" would say expensive every month.
+- **Where:** `backend/app/modules/market/` (`valuation.py` is the pure math); `GET /market/tw-cape` (public); refreshed by the daily job `sync_tw_market` (08:30 UTC) or `scripts/run_tw_market_sync.py`. The first run backfills from 2005, about an hour of paced requests.
+
+---
+
 ## Quick Reference Table
 
 | Term | Formula | What It Shows | Where Used |
@@ -310,13 +312,7 @@ All of these measure the **Portfolio wallet only**, in **TWD**, with your own de
 
 ### ❓ "Why don't Total Value and Total Asset match on Portfolio page?"
 
-**Answer:** Two reasons — the wallet filter, and Life Wallet cash.
-
-- **Filter = "All Wallets"** → Total Value = Portfolio + Emergency holdings
-- **Filter = "Portfolio"** → Total Value = Only invested assets ✅
-- **Filter = "Emergency"** → Total Value = Only holdings parked in the emergency fund ✅
-
-Total Value never includes Life Wallet cash, because the portfolio page shows *holdings*. So even at "All Wallets" it sits below Total Asset by the amount of your Life Wallet balance.
+**Answer:** Total Value is the Portfolio wallet only. Total Asset adds the Life and Emergency wallets (cash, plus any legacy Emergency holdings), so it is higher by those two balances.
 
 ---
 
