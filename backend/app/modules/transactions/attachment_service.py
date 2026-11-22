@@ -513,6 +513,13 @@ def _safe_cell(text: str) -> str:
     return f"'{text}" if text and text[0] in "=+-@\t\r" else text
 
 
+def _unsafe_cell(text: Optional[str]) -> Optional[str]:
+    """Undo _safe_cell on import, so an export read back is what was written:
+    "'-50% sale" becomes "-50% sale" again. Only an apostrophe _safe_cell could
+    have added is removed; "'quoted'" stays as it is."""
+    return text[1:] if text and len(text) > 1 and text[0] == "'" and text[1] in "=+-@\t\r" else text
+
+
 def _text_cell(cell, text: str) -> None:
     """Excel has cell types: store free text as text, exactly as written, so a
     leading "=" is never evaluated (openpyxl would otherwise make it a formula)."""
@@ -647,13 +654,13 @@ class ImportExportService:
         def find_value(field_name: str) -> Optional[str]:
             # Try custom mapping first
             if field_name in mappings:
-                return row.get(mappings[field_name])
-            
+                return _unsafe_cell(row.get(mappings[field_name]))
+
             # Try default mappings
             for possible_column in default_mappings.get(field_name, []):
                 if possible_column in row:
-                    return row[possible_column]
-            
+                    return _unsafe_cell(row[possible_column])
+
             return None
         
         # Parse transaction data

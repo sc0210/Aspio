@@ -116,8 +116,8 @@ class TestCsvImportRoundtrip:
     def test_a_free_text_detail_survives_export_then_import(self, client: TestClient):
         """Older rows carry details that aren't on today's list; a backup round trip keeps them."""
         r = client.post("/api/v1/transactions/", json={
-            "type": "expense", "amount": 10, "currency": "TWD", "description": "old row",
-            "transaction_date": "2026-07-09", "category_name": "Shopping", "subcategory": "蝦皮",
+            "type": "expense", "amount": 10, "currency": "TWD", "description": "+Bonus",
+            "transaction_date": "2026-07-09", "category_name": "Shopping", "subcategory": "-50% 蝦皮",
         })
         assert r.status_code in (200, 201), r.text
         exported = client.get("/api/v1/transactions/export?format=csv").text
@@ -129,12 +129,27 @@ class TestCsvImportRoundtrip:
         )
         assert response.json()["imported"] == 1, response.text
         row = client.get("/api/v1/transactions/").json()["transactions"][0]
-        assert row["subcategory"] == "蝦皮"
+        # The export prefixed both with ' (spreadsheet formula guard); import undoes it.
+        assert (row["description"], row["subcategory"]) == ("+Bonus", "-50% 蝦皮")
+
+    def test_reimporting_an_export_with_escaped_text_skips_the_duplicate(self, client: TestClient):
+        client.post("/api/v1/transactions/", json={
+            "type": "expense", "amount": 10, "currency": "TWD", "description": "=refund",
+            "transaction_date": "2026-07-09", "category_name": "Shopping",
+        })
+        exported = client.get("/api/v1/transactions/export?format=csv").text
+        assert "'=refund" in exported
+        response = client.post(
+            "/api/v1/transactions/upload-import",
+            files={"file": ("backup.csv", exported, "text/csv")},
+        )
+        assert response.json()["imported"] == 0, response.text
 
     def test_another_categorys_detail_is_dropped_and_free_text_kept(self, client: TestClient):
-        """A hand-edited file: another category's detail and one on a category that
-        resolves to Others are dropped. Free text is kept, as the export wrote it
-        (cut to the column, so a long cell cannot fail the row). Every row imports."""
+        """A hand-edited file. A listed detail is dropped when the row's category
+        isn't its own: another category's, or a name that falls back to Others.
+        Free text is kept, as the API keeps it, cut to the column so a long cell
+        cannot fail the row. Every row imports."""
         csv_text = (
             "Date,Type,Amount,Currency,Description,Category,Subcategory\n"
             "2026-07-09,expense,100.00,TWD,Bus,Shopping,Parking\n"

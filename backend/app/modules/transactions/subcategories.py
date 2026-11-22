@@ -32,4 +32,4 @@ def imported_detail(value: Optional[str]) -> Optional[str]:
     (this app's export writes the free text older rows carry), cut to fit the
     column so a hand-edited cell cannot fail the row. None when blank."""
     text = (value or "").strip()
-    return listed_detail(text) or (text[:MAX_LENGTH] or None)
+    return listed_detail(text) or (text[:MAX_LENGTH].rstrip() or None)
