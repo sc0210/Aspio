@@ -113,6 +113,40 @@ class TestCsvImportRoundtrip:
         out = list(_csv.DictReader(_io.StringIO(exported.text)))
         assert (out[0]["Category"], out[0]["Subcategory"]) == ("Shopping", "Beauty")
 
+    def test_a_subcategory_that_is_not_the_categorys_detail_is_dropped_not_saved(self, client: TestClient):
+        """A hand-edited file: another category's detail, one on a category that
+        resolves to Others, a made-up one, one too long for the column. Each row
+        imports under its category, without the detail."""
+        csv_text = (
+            "Date,Type,Amount,Currency,Description,Category,Subcategory\n"
+            "2026-07-09,expense,100.00,TWD,Bus,Shopping,Parking\n"
+            "2026-07-10,expense,150.00,TWD,Lunch,Dining,Beauty\n"
+            "2026-07-11,expense,200.00,TWD,Thing,Shopping,Gadgets\n"
+            f"2026-07-12,expense,300.00,TWD,Long,Shopping,{'x' * 150}\n"
+            "2026-07-13,expense,400.00,TWD,Lipstick,shopping,beauty\n"
+        )
+        response = client.post(
+            "/api/v1/transactions/upload-import",
+            files={"file": ("edited.csv", csv_text, "text/csv")},
+        )
+        assert response.status_code == 200, response.text
+        assert response.json()["imported"] == 5
+        rows = {r["description"]: r for r in client.get("/api/v1/transactions/").json()["transactions"]}
+        assert [rows[d]["subcategory"] for d in ("Bus", "Lunch", "Thing", "Long")] == [None] * 4
+        assert rows["Lunch"]["category_obj"]["name"] == "Others"  # no Dining here: the fallback
+        assert rows["Lipstick"]["subcategory"] == "Beauty"  # case-insensitive, stored as spelled
+
+    def test_the_api_drops_another_categorys_detail_and_keeps_free_text(self, client: TestClient):
+        for sub in ("Parking", "Gadgets"):
+            r = client.post("/api/v1/transactions/", json={
+                "type": "expense", "amount": 10, "currency": "TWD", "description": f"api {sub}",
+                "transaction_date": "2026-07-09", "category_name": "Shopping", "subcategory": sub,
+            })
+            assert r.status_code in (200, 201), r.text
+        rows = {r["description"]: r for r in client.get("/api/v1/transactions/").json()["transactions"]}
+        assert rows["api Parking"]["subcategory"] is None
+        assert rows["api Gadgets"]["subcategory"] == "Gadgets"
+
     def test_reimporting_the_same_file_skips_the_duplicate(self, client: TestClient):
         client.post(
             "/api/v1/transactions/upload-import",
@@ -154,3 +188,43 @@ class TestCsvImportRoundtrip:
         assert body["imported"] == 0
         assert body["failed"] == 1
         assert "category" in body["errors"][0]["error"].lower()
+
+
+@pytest.mark.asyncio
+async def test_an_edit_cannot_set_another_categorys_detail(async_engine):
+    """Through the service, one session per request as the app runs it (the API
+    client above shares one session across requests, which no real request does)."""
+    from datetime import date
+    from sqlalchemy.ext.asyncio import async_sessionmaker
+    from app.modules.transactions.repositories import (
+        RecurringTransactionRepository, TransactionCategoryRepository, TransactionRepository,
+    )
+    from app.modules.transactions.schemas import TransactionCreate, TransactionResponse, TransactionUpdate
+    from app.modules.transactions.services import TransactionService
+
+    maker = async_sessionmaker(async_engine, expire_on_commit=False, autoflush=False)
+    user_id = str(uuid4())
+
+    def service(s):
+        return TransactionService(
+            TransactionRepository(s), TransactionCategoryRepository(s), RecurringTransactionRepository(s)
+        )
+
+    async with maker() as s:
+        created = await service(s).create_transaction(TransactionCreate(
+            type="expense", amount=10, currency="TWD", description="edit me",
+            transaction_date=date(2026, 7, 9), category_name="Shopping", subcategory="Beauty",
+        ), user_id)
+        txn_id = str(created["transaction"].id)
+
+    async def detail_after(**changes):
+        async with maker() as s:
+            await service(s).update_transaction(txn_id, user_id, TransactionUpdate(**changes))
+        async with maker() as s:  # read back as GET does
+            stored = await TransactionRepository(s).get_by_id(txn_id, user_id)
+            return TransactionResponse.model_validate(stored).subcategory
+
+    assert await detail_after(subcategory="Parking") is None  # Transportation's, on a Shopping row
+    assert await detail_after(subcategory="clothing") == "Clothing"
+    assert await detail_after(subcategory="Gadgets") == "Gadgets"  # free text, as before
+    assert await detail_after(category_name="Dining", subcategory="Beauty") is None  # resolves to Others

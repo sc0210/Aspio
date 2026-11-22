@@ -20,6 +20,7 @@ from fastapi import UploadFile, HTTPException
 from .repositories import TransactionRepository
 from .models import TransactionAttachment
 from .schemas import TransactionAttachmentResponse
+from .subcategories import listed_detail
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.config import get_settings
@@ -729,8 +730,11 @@ class ImportExportService:
             'category_id': None if category_str else settings.get('default_category_id'),
             'category_name': category_str or None,
             # The detail under the category (Beauty under Shopping); written by
-            # this app's own export, so a round trip keeps it.
-            'subcategory': (find_value('subcategory') or '').strip() or None,
+            # this app's own export, so a round trip keeps it. Only a listed
+            # detail: a hand-edited cell too long for the column must not fail
+            # the row. create_transaction drops one that isn't the resolved
+            # category's (a "Dining, Beauty" row).
+            'subcategory': listed_detail(find_value('subcategory')),
             'merchant_name': find_value('merchant'),
             'import_source': 'csv'
         }

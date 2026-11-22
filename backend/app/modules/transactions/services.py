@@ -39,6 +39,7 @@ from .schemas import (
     RecurringTransactionUpdate,
 )
 from app.utils.datetime_helpers import business_day_of, business_today
+from .subcategories import is_detail_of, listed_detail
 
 logger = logging.getLogger(__name__)
 
@@ -126,6 +127,20 @@ class TransactionService:
         logger.warning(f"⚠️ No category_id or category_name provided, returning None")
         return None
 
+    async def _checked_detail(self, category_id: Optional[str], value: str) -> Optional[str]:
+        """A listed detail (Beauty) only under its own category (Shopping), else None.
+
+        A row that resolved elsewhere — a "Dining, Beauty" import, a name that
+        fell back to Others, an edit naming another category's detail — must
+        not save "Dining · Beauty". Text that isn't a listed detail is returned
+        unchanged: older rows carry free text the edit form keeps.
+        """
+        detail = listed_detail(value)
+        if not detail:
+            return value
+        names = await self.category_repo.names_of(category_id) if category_id else ()
+        return detail if is_detail_of(names, detail) else None
+
     async def create_transaction(
         self, transaction_data: TransactionCreate, user_id: str
     ) -> Dict[str, Any]:
@@ -161,6 +176,8 @@ class TransactionService:
         # Set the category_id
         if category_id:
             data["category_id"] = category_id
+            if data.get("subcategory"):
+                data["subcategory"] = await self._checked_detail(category_id, data["subcategory"])
         else:
             # Fallback: use a default "Other" category or raise error
             raise ValidationException(
@@ -612,6 +629,13 @@ class TransactionService:
 
             # Remove category_name from data (not a database field)
             data.pop("category_name", None)
+
+        if listed_detail(data.get("subcategory")):
+            category_id = data.get("category_id")
+            if not category_id:
+                stored = await stored_row()
+                category_id = stored.category_id if stored is not None else None
+            data["subcategory"] = await self._checked_detail(category_id, data["subcategory"])
 
         # The cash side of a holding: its money follows the holding. Changing it here
         # would leave the lot's cost basis and the Life Wallet disagreeing, so only

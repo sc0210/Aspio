@@ -34,6 +34,9 @@ MAX_LOOKBACK_DAYS = 12
 # reading further back means a report was missing on the true last trading
 # day (a TWSE hiccup, not a holiday), so the month stays open and is retried.
 FINAL_WITHIN_DAYS = 10
+# A month's CPI is due this many days after the month starts (DGBAS
+# publishes about a week after it ends).
+CPI_DUE_DAYS = 37
 
 SessionFactory = Callable[[], "AsyncSession"]
 Sleep = Callable[[float], Awaitable[None]]
@@ -129,16 +132,24 @@ class TwMarketSync:
             await session.commit()
 
     async def _fill_cpi(self, today: date) -> int:
-        """Refresh CPI from DGBAS when a month's CPI is due and still missing.
+        """Refresh CPI from DGBAS when the newest month whose CPI is due lacks it.
 
-        A month's CPI comes out about a week after it ends, so only rows from
-        before last month — or last month, once a week has passed — are due.
-        Each fetch rewrites every month (a new base year moves them all).
+        A month's CPI comes out about a week after it ends, so last month is
+        due 37 days after it starts. The download (the whole series, up to two
+        minutes) runs that day, then weekly while the month is still missing:
+        a file that lags must not be fetched every day. Only that month
+        counts: an older gap DGBAS never fills would otherwise trigger it for
+        good. Each fetch rewrites every month (a new base year moves them all),
+        so older gaps fill at the next download. A table with no CPI at all (a
+        first run) is filled right away.
         """
         async with self._session_factory() as session:
-            missing = [r.month for r in await TwMarketRepository(session).months_missing_cpi()]
-        latest_due = _month_start(today - timedelta(days=37))
-        if not any(m <= latest_due for m in missing):
+            rows = await TwMarketRepository(session).all_months()
+        missing = {r.month for r in rows if r.cpi is None}
+        latest_due = _month_start(today - timedelta(days=CPI_DUE_DAYS))
+        never_filled = len(missing) == len(rows) and any(m <= latest_due for m in missing)
+        days_due = (today - latest_due).days - CPI_DUE_DAYS
+        if not never_filled and not (latest_due in missing and days_due % 7 == 0):
             return 0
         # Fetched with no session open: the download can take a couple of
         # minutes and must not hold a pooled connection idle in a transaction.

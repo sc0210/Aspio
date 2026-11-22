@@ -1524,6 +1524,19 @@ class TransactionCategoryRepository:
         await self.db.refresh(category)
         return category
 
+    async def names_of(self, category_id: str) -> tuple:
+        """A category's name and English name, or () if there is none.
+
+        Reads the two columns, not the row: a category loaded into the session
+        here would keep its subcategories unloaded, and a transaction re-read
+        later in the request would then serialise it outside the async context.
+        """
+        row = (await self.db.execute(
+            select(TransactionCategory.name, TransactionCategory.name_en)
+            .where(TransactionCategory.id == uuid_module.UUID(str(category_id)))
+        )).first()
+        return tuple(row) if row else ()
+
     async def get_by_name(
         self, name: str, category_type: Optional[str] = None
     ) -> Optional[TransactionCategory]:

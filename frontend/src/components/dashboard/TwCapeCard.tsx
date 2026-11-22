@@ -7,11 +7,14 @@ import { Card } from '@/components/ui/Card';
 import { QueryErrorCard } from '@/components/ui/QueryErrorCard';
 import { useTwCape, type TwCape } from '@/hooks/useTwCape';
 import { useAppMode } from '@/hooks/useAppMode';
+import { useIsDark } from '@/contexts/ThemeContext';
+import { chartTooltipStyle } from '@/lib/charts/tooltipStyle';
 import { BAND_LABEL, BAND_STYLE, monthLabel } from './twCape';
 
 function CapeBody({ cape }: { cape: TwCape }) {
   const { t, i18n } = useTranslation(['dashboard']);
   const language = i18n.language || 'en';
+  const isDark = useIsDark();
   // The band's edges exactly as the server applied them, so the dashed lines
   // and the badge cannot disagree.
   const since = monthLabel(cape.since?.slice(0, 7), language);
@@ -62,7 +65,7 @@ function CapeBody({ cape }: { cape: TwCape }) {
                 const month = payload?.[0]?.payload?.month as string | undefined;
                 return month ? monthLabel(month, language) : '';
               }}
-              contentStyle={{ fontSize: 12 }}
+              {...chartTooltipStyle(isDark)}
             />
             <Area type="monotone" dataKey="cape" stroke="#6366f1" strokeWidth={2} fill="url(#twCapeFill)" isAnimationActive={false} />
           </AreaChart>
