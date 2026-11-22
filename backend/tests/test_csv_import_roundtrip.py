@@ -188,3 +188,43 @@ class TestCsvImportRoundtrip:
         assert body["imported"] == 0
         assert body["failed"] == 1
         assert "category" in body["errors"][0]["error"].lower()
+
+
+@pytest.mark.asyncio
+async def test_an_edit_cannot_set_another_categorys_detail(async_engine):
+    """Through the service, one session per request as the app runs it (the API
+    client above shares one session across requests, which no real request does)."""
+    from datetime import date
+    from sqlalchemy.ext.asyncio import async_sessionmaker
+    from app.modules.transactions.repositories import (
+        RecurringTransactionRepository, TransactionCategoryRepository, TransactionRepository,
+    )
+    from app.modules.transactions.schemas import TransactionCreate, TransactionResponse, TransactionUpdate
+    from app.modules.transactions.services import TransactionService
+
+    maker = async_sessionmaker(async_engine, expire_on_commit=False, autoflush=False)
+    user_id = str(uuid4())
+
+    def service(s):
+        return TransactionService(
+            TransactionRepository(s), TransactionCategoryRepository(s), RecurringTransactionRepository(s)
+        )
+
+    async with maker() as s:
+        created = await service(s).create_transaction(TransactionCreate(
+            type="expense", amount=10, currency="TWD", description="edit me",
+            transaction_date=date(2026, 7, 9), category_name="Shopping", subcategory="Beauty",
+        ), user_id)
+        txn_id = str(created["transaction"].id)
+
+    async def detail_after(**changes):
+        async with maker() as s:
+            await service(s).update_transaction(txn_id, user_id, TransactionUpdate(**changes))
+        async with maker() as s:  # read back as GET does
+            stored = await TransactionRepository(s).get_by_id(txn_id, user_id)
+            return TransactionResponse.model_validate(stored).subcategory
+
+    assert await detail_after(subcategory="Parking") is None  # Transportation's, on a Shopping row
+    assert await detail_after(subcategory="clothing") == "Clothing"
+    assert await detail_after(subcategory="Gadgets") == "Gadgets"  # free text, as before
+    assert await detail_after(category_name="Dining", subcategory="Beauty") is None  # resolves to Others
