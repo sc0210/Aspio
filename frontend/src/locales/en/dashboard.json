@@ -518,13 +518,16 @@
   "title": "Dashboard",
   "todayStrip": {
     "details": "Details",
-    "portfolio": "Portfolio",
-    "portfolioChangeHint": "Change in portfolio value over this period. Includes money you put in or took out, not just market movement — see the portfolio page for return on cost.",
     "saved": "Saved",
     "savingsRate": "{{rate}}% savings rate",
     "totalAssets": "Total Assets",
-    "noIncome": "No income this period",
-    "portfolioChangeCaption": "Incl. buys & sells"
+    "incomeAndSpent": "Income {{income}} · Spent {{spent}}",
+    "leverage": "Leverage",
+    "leverageHint": "Debt as a share of your invested portfolio. It rises when markets fall or you borrow more, and falls as you repay or the portfolio grows.",
+    "leverageFrom": "from {{pct}}%",
+    "leveragePts": "{{pts}} pts",
+    "leverageBasis": "{{debt}} debt / {{invested}} invested",
+    "leverageUnavailable": "Couldn't load — refresh to try again"
   },
   "view": {
     "compact": "Compact",

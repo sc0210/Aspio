@@ -46,8 +46,6 @@ interface PortfolioHoldingsSectionProps {
   viewType: 'list' | 'allocation';
   /** Holdings data */
   holdings: Holding[];
-  /** All aggregated holdings (before wallet filter) */
-  allHoldings: Holding[];
   /** Raw non-aggregated holdings for per-lot detail view inside HoldingsList */
   rawHoldings?: Holding[];
   /** Analytics data for allocation view */
@@ -91,7 +89,9 @@ interface PortfolioHoldingsSectionProps {
  * - Allocation pie chart view
  * - Bulk selection mode
  * - Quick actions (edit, sell, view details)
- * - Wallet type filtering
+ *
+ * Portfolio wallet only: usePortfolioData leaves Emergency-wallet holdings
+ * out, so there are no wallet tabs.
  *
  * @example
  * ```tsx
@@ -105,18 +105,9 @@ interface PortfolioHoldingsSectionProps {
  * />
  * ```
  */
-const WALLET_TYPE_OPTIONS = [
-  { value: 'all',       label: 'All Wallets', description: 'Show all wallets',  icon: '💼' },
-  // No 'life': holdings live in the portfolio or emergency wallet only (cash is
-  // Life's), so that filter was always empty.
-  { value: 'portfolio', label: 'Portfolio',   description: 'Invested assets',   icon: '📈' },
-  { value: 'emergency', label: 'Emergency',   description: 'Emergency fund',    icon: '🚨' },
-];
-
 export function PortfolioHoldingsSection({
   viewType,
   holdings,
-  allHoldings,
   rawHoldings,
   analyticsData,
   filters,
@@ -155,8 +146,7 @@ export function PortfolioHoldingsSection({
     [openSellModal],
   );
 
-  // Don't render wallet filter or empty state if no holdings at all
-  const hasAnyHoldings = allHoldings && allHoldings.length > 0;
+  const hasAnyHoldings = holdings.length > 0;
 
   if (!hasAnyHoldings) {
     return (
@@ -239,47 +229,6 @@ export function PortfolioHoldingsSection({
               )}
             </button>
           )}
-        </div>
-      </div>
-
-      {/* Wallet Filter Tabs */}
-      <div className="border-b border-gray-200 dark:border-gray-700">
-        <div className="flex overflow-x-auto scrollbar-hide snap-x snap-mandatory scroll-smooth px-4 pt-4 pb-0 pr-4">
-          {WALLET_TYPE_OPTIONS.map((option) => {
-            const isActive = filters.filters.walletType === option.value;
-            const count = option.value === 'all'
-              ? allHoldings.length
-              : allHoldings.filter(h => {
-                  const holdingWalletType = h.walletType || 'portfolio';
-                  return holdingWalletType === option.value;
-                }).length;
-
-            return (
-              <button
-                key={option.value}
-                onClick={() => filters.updateFilter('walletType', option.value)}
-                className={`
-                  flex-shrink-0 px-4 py-3 mb-2 mr-2 rounded-xl border transition-all snap-start focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-500
-                  ${isActive
-                    ? 'bg-primary-50 border-primary-500 dark:bg-primary-900/20 dark:border-primary-400'
-                    : 'bg-gray-50 border-gray-200 hover:border-gray-300 dark:bg-gray-800/50 dark:border-gray-700 dark:hover:border-gray-600'
-                  }
-                `}
-              >
-                <div className="flex items-center gap-2 min-w-[140px]">
-                  <span className="text-2xl" aria-hidden="true">{option.icon}</span>
-                  <div className="text-left">
-                    <div className={`text-sm font-semibold ${isActive ? 'text-primary-700 dark:text-primary-300' : 'text-gray-900 dark:text-gray-100'}`}>
-                      {t(`portfolio:wallets.${option.value}`, option.label)}
-                    </div>
-                    <div className="text-xs text-gray-500 dark:text-gray-400">
-                      {t('portfolio:holdingsUnit', { count })}
-                    </div>
-                  </div>
-                </div>
-              </button>
-            );
-          })}
         </div>
       </div>
 

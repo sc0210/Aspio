@@ -65,7 +65,7 @@ import {
 } from '@heroicons/react/24/outline';
 import { cn } from '@/utils/cn';
 import { DashboardTodayStrip } from './DashboardTodayStrip';
-import { periodChange, netWorthOf } from '@/lib/dashboard/periodChange';
+import { periodChange, netWorthOf, leverageChange } from '@/lib/dashboard/periodChange';
 import { PERIOD_FALLBACKS, periodLabelKey } from '@/lib/dashboard/periodLabels';
 
 const PERIOD_OPTIONS = [
@@ -137,7 +137,7 @@ export function ComprehensiveDashboard() {
 
   // Fetch wallet trends independently so transaction mutations invalidate it immediately
   // (useWalletTrends listens to 'dashboard-data-updated' events and has staleTime: 0)
-  const { data: walletTrendsData = [] } = useWalletTrends(
+  const { data: walletTrendsData = [], isLoading: walletTrendsLoading, isError: walletTrendsFailed } = useWalletTrends(
     dateRange as '7d' | 'month' | '30d' | '90d' | '6m' | '1y' | 'ytd'
   );
 
@@ -200,23 +200,19 @@ export function ComprehensiveDashboard() {
     [netWorthSeries],
   );
 
-  // Portfolio change over the SELECTED period, read off the same wallet-trend
-  // series the hero card's net-worth delta uses.
+  // Leverage (debt over the Portfolio wallet) where the selected period opened
+  // and where it is now, off the same series as the net-worth delta.
   //
-  // It used to come from portfolio.gainLossPercentage / totalGainLoss, which is
-  // all-time unrealized P&L against cost basis — a figure with no period in it at
-  // all. So the two tiles sat side by side on the same strip with different time
-  // bases: changing the period moved the Total Assets delta and left Portfolio's
-  // untouched, which reads as the dashboard ignoring the selector.
-  //
-  // Note this is the change in portfolio *value* over the window, so contributions
-  // and withdrawals count toward it, not just market movement. That is the same
-  // basis Total Assets already uses. All-time unrealized P&L is still on the
-  // portfolio page, where it isn't sitting under a period selector.
-  const portfolioChange = useMemo(
-    () => periodChange(trendFromOpen, 'portfolioWallet'),
-    [trendFromOpen],
-  );
+  // This slot used to hold the Portfolio wallet's value and its change over the
+  // period, which the Portfolio section directly below already states, and the
+  // two were computed on different bases and disagreed (by an eighth one
+  // month with no trades). Leverage is what nothing else on the page shows: a
+  // market fall raises it with no new borrowing.
+  const leverage = useMemo(() => leverageChange(trendFromOpen), [trendFromOpen]);
+  const stripStats = memoizedDashboardData.stats;
+  // `|| leverage`: a debt repaid to zero during the period still has a start
+  // to show, though total_debt is now 0.
+  const hasDebt = ('total_debt' in stripStats && (stripStats.total_debt ?? 0) > 0) || leverage !== undefined;
 
   const quickActions = useMemo(() => [
     { label: t('dashboard:quickActions.addTransaction.title', 'Add Transaction'), href: '/transactions/add', icon: PlusIcon },
@@ -352,16 +348,19 @@ export function ComprehensiveDashboard() {
             about. The hero keeps the balance; the strip keeps the flow.
 
             These figures do follow the period selector, unlike the balances
-            above them. The portfolio delta comes from walletTrendsData so it
-            shares the hero's time base — stats.portfolioGrowth is avoided
-            because the backend computes it over a different holding set. */}
+            above them. Saved is the period's income less spending. Leverage
+            (debt over the Portfolio wallet) is read off walletTrendsData at
+            both ends of the period, the hero's time base; whether the column
+            exists comes from stats.total_debt, which arrives with the strip,
+            so the layout does not jump when the trend lands. */}
         <section aria-label="This period" data-tour="dash-flow" className="animate-fade-in-up animation-delay-200">
           <DashboardTodayStrip
-            netSaved={memoizedDashboardData.stats.monthlyIncome - memoizedDashboardData.stats.monthlyExpenses}
-            savingsRate={memoizedDashboardData.stats.monthlyIncome > 0 ? memoizedDashboardData.stats.savingsRate : null}
-            portfolioValue={memoizedDashboardData.stats.portfolio_wallet}
-            portfolioChangePercent={portfolioChange.percent}
-            portfolioChangeAmount={portfolioChange.amount}
+            income={memoizedDashboardData.stats.monthlyIncome}
+            expenses={memoizedDashboardData.stats.monthlyExpenses}
+            leverage={leverage}
+            hasDebt={hasDebt}
+            leverageLoading={walletTrendsLoading}
+            leverageFailed={walletTrendsFailed}
             isLoading={isLoading}
             periodLabel={periodLabel}
           />
