@@ -23,8 +23,9 @@ from .valuation import CapeReading, MonthInput, read_cape
 
 logger = logging.getLogger(__name__)
 
-# The oldest month the dated TWSE reports serve all three tables for. The first
-# CAPE needs ten years of earnings, so the series starts in the second half of 2015.
+# The oldest month the dated TWSE reports serve all three tables for. A CAPE
+# needs at least 114 months of earnings behind it, so the series starts in
+# 2015-03.
 FIRST_MONTH = date(2005, 10, 1)
 # How far back from a target day to look for a trading day: long enough for
 # Lunar New Year, short enough not to wander into the previous month's data.

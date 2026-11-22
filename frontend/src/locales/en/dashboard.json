@@ -617,6 +617,7 @@
     "percentile": "Higher than {{pct}}% of months since {{since}}",
     "range": "Range {{low}}–{{high}} · market P/E {{pe}}",
     "source": "TWSE · DGBAS",
-    "collecting": "Collecting market history — the first daily update backfills it from 2005."
+    "collecting": "Collecting market history — the first daily update backfills it from 2005.",
+    "shortTitle": "Taiwan market · CAPE"
   }
 }

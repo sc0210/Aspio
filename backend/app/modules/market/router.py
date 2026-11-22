@@ -1,6 +1,7 @@
 """GET /market/tw-cape: the Taiwan CAPE and where it sits in its own history.
 
-Public: it is about the market, not anyone's money, and demo mode shows it too.
+Public: it is about the market, not anyone's money. The frontend does not
+call it in demo mode, which runs without a backend.
 """
 
 from fastapi import APIRouter, Depends

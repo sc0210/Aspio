@@ -93,10 +93,12 @@ async def lifespan(app: FastAPI):
         logger.warning(f"Database initialization skipped: {e}")
 
     # Start background scheduler for price updates.
-    # Gated by ENABLE_SCHEDULER: ON for local Docker dev, OFF in production
-    # The routine price-refresh jobs load pandas/finlab/yfinance in-process and
-    # spike RAM, so on a memory-tight host they run only
-    # locally. See app/core/scheduler.py and config.ENABLE_SCHEDULER.
+    # Gated by ENABLE_SCHEDULER, on by default: the dev stack and the self-hosted
+    # stack (docker-compose.pi.yml) both run it. docker-compose.prodlocal.yml turns
+    # it off because it shares the dev stack's database, whose backend already
+    # runs the jobs. The price-refresh jobs load pandas/finlab/yfinance in-process
+    # and spike RAM; on a memory-tight host, set it off and run the
+    # scripts/run_*_job.py runners from cron instead. See app/core/scheduler.py.
     # Under `uvicorn --workers N` every worker runs this startup, so the
     # scheduler is elected rather than simply started: exactly one process
     # takes a Postgres advisory lock and owns the cron jobs. Without it, N

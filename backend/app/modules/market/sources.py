@@ -18,6 +18,7 @@ CPI is DGBAS's monthly general index from the data.gov.tw dataset 6019.
 
 import logging
 import xml.etree.ElementTree as ET
+from xml.parsers import expat
 from dataclasses import dataclass
 from datetime import date
 from typing import Dict, Optional
@@ -162,8 +163,30 @@ def market_day(
     return MarketDay(day=day, taiex=taiex, market_pe=cap / earnings, companies=companies)
 
 
+def _refuse_dtd(content: bytes) -> None:
+    """Raise if the document declares a DOCTYPE or any entity.
+
+    A full pass with expat itself rather than a byte search: expat decodes the
+    payload (UTF-16, a BOM, a long leading comment), so nothing slips past a
+    pattern match, and it stops at the first declaration, before any entity
+    could be expanded.
+    """
+    def refuse(*_):
+        raise ValueError("CPI XML declares a DTD or entities; refusing to parse it")
+
+    scanner = expat.ParserCreate()
+    scanner.StartDoctypeDeclHandler = refuse
+    scanner.EntityDeclHandler = refuse
+    scanner.Parse(content, True)
+
+
 def parse_cpi_xml(content: bytes) -> Dict[date, float]:
-    """{first of month: general CPI} from the DGBAS dataset (2021 = 100)."""
+    """{first of month: general CPI} from the DGBAS dataset (2021 = 100).
+
+    The URL comes from a remote catalogue, so a payload that declares a DTD or
+    entities is refused before ElementTree, which would expand them, sees it.
+    """
+    _refuse_dtd(content)
     root = ET.fromstring(content)
     out: Dict[date, float] = {}
     for record in root:
