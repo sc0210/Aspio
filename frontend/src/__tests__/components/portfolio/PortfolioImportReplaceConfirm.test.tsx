@@ -41,18 +41,18 @@ const existing = [
 const reachConfirm = async () => {
   const onImport = jest.fn().mockResolvedValue(undefined);
   const onClose = jest.fn();
-  const { container } = render(
+  render(
     <I18nextProvider i18n={i18n}>
       <ImportExportModal holdings={existing} onClose={onClose} onImport={onImport} />
     </I18nextProvider>,
   );
-  const input = container.querySelector('input[type="file"]') as HTMLInputElement;
+  const input = document.body.querySelector('input[type="file"]') as HTMLInputElement;
   // jsdom's File has no text(), which the modal reads the upload with.
   const file = Object.assign(new File([CSV], 'holdings.csv', { type: 'text/csv' }), { text: async () => CSV });
   fireEvent.change(input, { target: { files: [file] } });
   // The import button's label is still a literal; switch to its key once translated.
   const importButton = await screen.findByRole('button', { name: /Import 1 Lot/ });
-  fireEvent.click(container.querySelector('input[type="radio"][value="replace"]') as HTMLInputElement);
+  fireEvent.click(document.body.querySelector('input[type="radio"][value="replace"]') as HTMLInputElement);
   fireEvent.click(importButton);
   return { onImport, onClose };
 };

@@ -1,11 +1,10 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
-import { Dialog, DialogPanel, DialogTitle, Transition, TransitionChild } from '@headlessui/react';
-import { Fragment } from 'react';
 import { useUpdateGoal, UpdateGoalData, Goal } from '@/hooks/useGoals';
 import { useTranslation } from 'react-i18next';
 import { useScrollLock } from '@/hooks/useScrollLock';
+import { Modal } from '@/components/ui/Modal';
 
 // Format a number to a comma-separated string, e.g. 1000000 → "1,000,000"
 const fmtAmt = (n: number): string =>
@@ -131,216 +130,187 @@ export function EditGoalModal({ isOpen, onClose, goal }: EditGoalModalProps) {
         : 0;
 
     return (
-        <Transition appear show={isOpen} as={Fragment}>
-            <Dialog as="div" className="relative z-50" onClose={onClose}>
-                <TransitionChild
-                    as={Fragment}
-                    enter="ease-out duration-300"
-                    enterFrom="opacity-0"
-                    enterTo="opacity-100"
-                    leave="ease-in duration-200"
-                    leaveFrom="opacity-100"
-                    leaveTo="opacity-0"
-                >
-                    <div className="fixed inset-0 bg-black/50" />
-                </TransitionChild>
+        <Modal
+          isOpen={isOpen}
+          onClose={onClose}
+          size="lg"
+          title={t('goals:edit')}
+        >
+          <form onSubmit={handleSubmit} className="space-y-5">
+              {/* Title */}
+              <div>
+                  <label htmlFor="edit-goal-title" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                      {t('goals:fields.title')} <span aria-hidden="true">*</span>
+                  </label>
+                  <input
+                      id="edit-goal-title"
+                      type="text"
+                      required
+                      value={formData.title || ''}
+                      onChange={(e) => handleChange('title', e.target.value)}
+                      className="w-full px-4 py-2.5 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus-visible:ring-2 focus-visible:ring-primary-500 focus-visible:border-transparent"
+                  />
+              </div>
 
-                <div className="fixed inset-0 overflow-y-auto">
-                    <div className="flex min-h-full items-center justify-center p-4">
-                        <TransitionChild
-                            as={Fragment}
-                            enter="ease-out duration-300"
-                            enterFrom="opacity-0 scale-95"
-                            enterTo="opacity-100 scale-100"
-                            leave="ease-in duration-200"
-                            leaveFrom="opacity-100 scale-100"
-                            leaveTo="opacity-0 scale-95"
-                        >
-                            <DialogPanel className="w-full max-w-2xl transform overflow-hidden rounded-2xl bg-white dark:bg-gray-800 p-6 shadow-xl transition-all">
-                                <DialogTitle className="text-2xl font-bold text-gray-900 dark:text-white mb-6">
-                                    {t('goals:edit')}
-                                </DialogTitle>
+              {/* Description */}
+              <div>
+                  <label htmlFor="edit-goal-description" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                      {t('goals:fields.description')}
+                  </label>
+                  <textarea
+                      id="edit-goal-description"
+                      value={formData.description || ''}
+                      onChange={(e) => handleChange('description', e.target.value)}
+                      rows={3}
+                      className="w-full px-4 py-2.5 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus-visible:ring-2 focus-visible:ring-primary-500 focus-visible:border-transparent resize-none"
+                  />
+              </div>
 
-                                <form onSubmit={handleSubmit} className="space-y-5">
-                                    {/* Title */}
-                                    <div>
-                                        <label htmlFor="edit-goal-title" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                                            {t('goals:fields.title')} <span aria-hidden="true">*</span>
-                                        </label>
-                                        <input
-                                            id="edit-goal-title"
-                                            type="text"
-                                            required
-                                            value={formData.title || ''}
-                                            onChange={(e) => handleChange('title', e.target.value)}
-                                            className="w-full px-4 py-2.5 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus-visible:ring-2 focus-visible:ring-primary-500 focus-visible:border-transparent"
-                                        />
-                                    </div>
+              {/* Category and Priority */}
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                  <div>
+                      <label htmlFor="edit-goal-category" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                          {t('goals:fields.category')}
+                      </label>
+                      <select
+                          id="edit-goal-category"
+                          value={formData.category || 'savings'}
+                          onChange={(e) => handleChange('category', e.target.value)}
+                          className="w-full px-4 py-2.5 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus-visible:ring-2 focus-visible:ring-primary-500 focus-visible:border-transparent"
+                      >
+                          {CATEGORY_KEYS.map((key) => (
+                              <option key={key} value={key}>
+                                  {t(`goals:categories.${key}` as const)}
+                              </option>
+                          ))}
+                      </select>
+                  </div>
 
-                                    {/* Description */}
-                                    <div>
-                                        <label htmlFor="edit-goal-description" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                                            {t('goals:fields.description')}
-                                        </label>
-                                        <textarea
-                                            id="edit-goal-description"
-                                            value={formData.description || ''}
-                                            onChange={(e) => handleChange('description', e.target.value)}
-                                            rows={3}
-                                            className="w-full px-4 py-2.5 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus-visible:ring-2 focus-visible:ring-primary-500 focus-visible:border-transparent resize-none"
-                                        />
-                                    </div>
+                  <div>
+                      <label htmlFor="edit-goal-priority" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                          {t('goals:fields.priority')}
+                      </label>
+                      <select
+                          id="edit-goal-priority"
+                          value={formData.priority || 'medium'}
+                          onChange={(e) => handleChange('priority', e.target.value as 'high' | 'medium' | 'low')}
+                          className="w-full px-4 py-2.5 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus-visible:ring-2 focus-visible:ring-primary-500 focus-visible:border-transparent"
+                      >
+                          {PRIORITY_KEYS.map((key) => (
+                              <option key={key} value={key}>
+                                  {t(`goals:priorities.${key}` as const)}
+                              </option>
+                          ))}
+                      </select>
+                  </div>
 
-                                    {/* Category and Priority */}
-                                    <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                                        <div>
-                                            <label htmlFor="edit-goal-category" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                                                {t('goals:fields.category')}
-                                            </label>
-                                            <select
-                                                id="edit-goal-category"
-                                                value={formData.category || 'savings'}
-                                                onChange={(e) => handleChange('category', e.target.value)}
-                                                className="w-full px-4 py-2.5 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus-visible:ring-2 focus-visible:ring-primary-500 focus-visible:border-transparent"
-                                            >
-                                                {CATEGORY_KEYS.map((key) => (
-                                                    <option key={key} value={key}>
-                                                        {t(`goals:categories.${key}` as const)}
-                                                    </option>
-                                                ))}
-                                            </select>
-                                        </div>
+                  <div>
+                      <label htmlFor="edit-goal-status" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                          {t('goals:fields.status')}
+                      </label>
+                      <select
+                          id="edit-goal-status"
+                          value={formData.status || 'active'}
+                          onChange={(e) => handleChange('status', e.target.value as 'active' | 'completed' | 'paused' | 'cancelled')}
+                          className="w-full px-4 py-2.5 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus-visible:ring-2 focus-visible:ring-primary-500 focus-visible:border-transparent"
+                      >
+                          {STATUS_KEYS.map((key) => (
+                              <option key={key} value={key}>
+                                  {t(`goals:status.${key}` as const)}
+                              </option>
+                          ))}
+                      </select>
+                  </div>
+              </div>
 
-                                        <div>
-                                            <label htmlFor="edit-goal-priority" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                                                {t('goals:fields.priority')}
-                                            </label>
-                                            <select
-                                                id="edit-goal-priority"
-                                                value={formData.priority || 'medium'}
-                                                onChange={(e) => handleChange('priority', e.target.value as 'high' | 'medium' | 'low')}
-                                                className="w-full px-4 py-2.5 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus-visible:ring-2 focus-visible:ring-primary-500 focus-visible:border-transparent"
-                                            >
-                                                {PRIORITY_KEYS.map((key) => (
-                                                    <option key={key} value={key}>
-                                                        {t(`goals:priorities.${key}` as const)}
-                                                    </option>
-                                                ))}
-                                            </select>
-                                        </div>
+              {/* Target Amount and Current Amount */}
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div>
+                      <label htmlFor="edit-goal-target-amount" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                          {t('goals:fields.targetAmount')} <span aria-hidden="true">*</span>
+                      </label>
+                      <input
+                          id="edit-goal-target-amount"
+                          type="text"
+                          inputMode="decimal"
+                          required
+                          value={targetDisplay}
+                          onChange={(e) => {
+                              const formatted = liveFormat(e.target.value);
+                              setTargetDisplay(formatted);
+                              handleChange('target_amount', parseAmt(formatted));
+                          }}
+                          onFocus={(e) => e.target.select()}
+                          className="w-full px-4 py-2.5 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus-visible:ring-2 focus-visible:ring-primary-500 focus-visible:border-transparent"
+                      />
+                  </div>
 
-                                        <div>
-                                            <label htmlFor="edit-goal-status" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                                                {t('goals:fields.status')}
-                                            </label>
-                                            <select
-                                                id="edit-goal-status"
-                                                value={formData.status || 'active'}
-                                                onChange={(e) => handleChange('status', e.target.value as 'active' | 'completed' | 'paused' | 'cancelled')}
-                                                className="w-full px-4 py-2.5 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus-visible:ring-2 focus-visible:ring-primary-500 focus-visible:border-transparent"
-                                            >
-                                                {STATUS_KEYS.map((key) => (
-                                                    <option key={key} value={key}>
-                                                        {t(`goals:status.${key}` as const)}
-                                                    </option>
-                                                ))}
-                                            </select>
-                                        </div>
-                                    </div>
+                  <div>
+                      <label id="edit-goal-current-amount-label" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                          {t('goals:fields.currentAmount')}
+                      </label>
+                      {/* Progress moves only by reserving or releasing Life Wallet cash
+                          (Reserve / Release on the goal card), never by typing a number. */}
+                      <p
+                          id="edit-goal-current-amount"
+                          className="w-full px-4 py-2.5 border border-dashed border-gray-300 dark:border-gray-600 rounded-lg bg-gray-50 dark:bg-gray-700/50 text-gray-900 dark:text-white tabular-nums"
+                      >
+                          {fmtAmt(Number(goal.currentAmount) || 0)}
+                      </p>
+                  </div>
+              </div>
 
-                                    {/* Target Amount and Current Amount */}
-                                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                                        <div>
-                                            <label htmlFor="edit-goal-target-amount" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                                                {t('goals:fields.targetAmount')} <span aria-hidden="true">*</span>
-                                            </label>
-                                            <input
-                                                id="edit-goal-target-amount"
-                                                type="text"
-                                                inputMode="decimal"
-                                                required
-                                                value={targetDisplay}
-                                                onChange={(e) => {
-                                                    const formatted = liveFormat(e.target.value);
-                                                    setTargetDisplay(formatted);
-                                                    handleChange('target_amount', parseAmt(formatted));
-                                                }}
-                                                onFocus={(e) => e.target.select()}
-                                                className="w-full px-4 py-2.5 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus-visible:ring-2 focus-visible:ring-primary-500 focus-visible:border-transparent"
-                                            />
-                                        </div>
+              {/* Progress Preview */}
+              <div aria-hidden="true" className="bg-gray-50 dark:bg-gray-700/50 rounded-lg p-4">
+                  <div className="flex justify-between items-baseline mb-2">
+                      <span className="text-sm font-medium text-gray-600 dark:text-gray-400">{t('goals:progress.title')}</span>
+                      <span className="text-sm font-semibold text-gray-900 dark:text-white">
+                          {progress.toFixed(1)}%
+                      </span>
+                  </div>
+                  <div className="relative w-full h-2.5 bg-gray-200 dark:bg-gray-600 rounded-full overflow-hidden">
+                      <div
+                          className="h-full bg-primary-500 transition-all duration-300 rounded-full"
+                          style={{ width: `${Math.min(100, progress)}%` }}
+                      />
+                  </div>
+              </div>
 
-                                        <div>
-                                            <label id="edit-goal-current-amount-label" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                                                {t('goals:fields.currentAmount')}
-                                            </label>
-                                            {/* Progress moves only by reserving or releasing Life Wallet cash
-                                                (Reserve / Release on the goal card), never by typing a number. */}
-                                            <p
-                                                id="edit-goal-current-amount"
-                                                className="w-full px-4 py-2.5 border border-dashed border-gray-300 dark:border-gray-600 rounded-lg bg-gray-50 dark:bg-gray-700/50 text-gray-900 dark:text-white tabular-nums"
-                                            >
-                                                {fmtAmt(Number(goal.currentAmount) || 0)}
-                                            </p>
-                                        </div>
-                                    </div>
+              {/* Target Date */}
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
 
-                                    {/* Progress Preview */}
-                                    <div aria-hidden="true" className="bg-gray-50 dark:bg-gray-700/50 rounded-lg p-4">
-                                        <div className="flex justify-between items-baseline mb-2">
-                                            <span className="text-sm font-medium text-gray-600 dark:text-gray-400">{t('goals:progress.title')}</span>
-                                            <span className="text-sm font-semibold text-gray-900 dark:text-white">
-                                                {progress.toFixed(1)}%
-                                            </span>
-                                        </div>
-                                        <div className="relative w-full h-2.5 bg-gray-200 dark:bg-gray-600 rounded-full overflow-hidden">
-                                            <div
-                                                className="h-full bg-primary-500 transition-all duration-300 rounded-full"
-                                                style={{ width: `${Math.min(100, progress)}%` }}
-                                            />
-                                        </div>
-                                    </div>
+                  <div>
+                      <label htmlFor="edit-goal-target-date" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                          {t('goals:fields.targetDate')}
+                      </label>
+                      <input
+                          id="edit-goal-target-date"
+                          type="date"
+                          value={formData.target_date || ''}
+                          onChange={(e) => handleChange('target_date', e.target.value)}
+                          className="w-full px-4 py-2.5 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus-visible:ring-2 focus-visible:ring-primary-500 focus-visible:border-transparent"
+                      />
+                  </div>
+              </div>
 
-                                    {/* Target Date */}
-                                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-
-                                        <div>
-                                            <label htmlFor="edit-goal-target-date" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                                                {t('goals:fields.targetDate')}
-                                            </label>
-                                            <input
-                                                id="edit-goal-target-date"
-                                                type="date"
-                                                value={formData.target_date || ''}
-                                                onChange={(e) => handleChange('target_date', e.target.value)}
-                                                className="w-full px-4 py-2.5 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus-visible:ring-2 focus-visible:ring-primary-500 focus-visible:border-transparent"
-                                            />
-                                        </div>
-                                    </div>
-
-                                    {/* Actions */}
-                                    <div className="flex gap-3 justify-end pt-4 border-t border-gray-200 dark:border-gray-700">
-                                        <button
-                                            type="button"
-                                            onClick={onClose}
-                                            className="px-4 py-2.5 min-h-[44px] text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg transition-colors font-medium"
-                                        >
-                                            {t('common:common.cancel')}
-                                        </button>
-                                        <button
-                                            type="submit"
-                                            disabled={updateGoal.isPending}
-                                            className="px-6 py-2.5 min-h-[44px] bg-primary-700 hover:bg-primary-800 text-white rounded-lg transition-colors font-medium disabled:opacity-50 disabled:cursor-not-allowed"
-                                        >
-                                            {updateGoal.isPending ? t('goals:saving') : t('goals:saveChanges')}
-                                        </button>
-                                    </div>
-                                </form>
-                            </DialogPanel>
-                        </TransitionChild>
-                    </div>
-                </div>
-            </Dialog>
-        </Transition>
+              {/* Actions */}
+              <div className="flex gap-3 justify-end pt-4 border-t border-gray-200 dark:border-gray-700">
+                  <button
+                      type="button"
+                      onClick={onClose}
+                      className="px-4 py-2.5 min-h-[44px] text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg transition-colors font-medium"
+                  >
+                      {t('common:common.cancel')}
+                  </button>
+                  <button
+                      type="submit"
+                      disabled={updateGoal.isPending}
+                      className="px-6 py-2.5 min-h-[44px] bg-primary-700 hover:bg-primary-800 text-white rounded-lg transition-colors font-medium disabled:opacity-50 disabled:cursor-not-allowed"
+                  >
+                      {updateGoal.isPending ? t('goals:saving') : t('goals:saveChanges')}
+                  </button>
+              </div>
+          </form>
+        </Modal>
     );
 }

@@ -2,11 +2,10 @@
 
 import { useState, useEffect } from 'react';
 import { useTranslation } from 'react-i18next';
-import { XMarkIcon } from '@heroicons/react/24/outline';
 import { apiClient } from '@/lib/api-client';
 import type { PeerConnectionOut, SharedGoalOut } from '@/shared/types';
 import type { Goal } from '@/hooks/useGoals';
-import { useDialog } from '@/hooks/useDialog';
+import { Modal } from '@/components/ui/Modal';
 import { formatCurrency as formatCurrencyUtil } from '@/utils/formatters';
 
 interface CreateGoalModalProps {
@@ -149,8 +148,6 @@ export default function CreateGoalModal({
     }
   };
 
-  const { panelRef, dialogProps } = useDialog({ isOpen: isOpen, onClose: onClose });
-
   if (!isOpen) return null;
 
   const heading = mode === 'edit'
@@ -160,176 +157,159 @@ export default function CreateGoalModal({
       : t('savings.createGoalTitle', 'New Savings Goal');
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
-      <div className="absolute inset-0 bg-gray-900/60" onClick={onClose} aria-hidden="true" />
-      <div
-        ref={panelRef}
-        {...dialogProps}
-        aria-labelledby="create-savings-goal-title"
-        className="relative bg-white dark:bg-gray-800 rounded-2xl shadow-xl w-full max-w-sm p-6 max-h-[90vh] overflow-y-auto"
-      >
-        <div className="flex items-center justify-between mb-5">
-          <h2 id="create-savings-goal-title" className="text-base font-semibold text-gray-900 dark:text-white">
-            {heading}
-          </h2>
-          <button
-            type="button"
-            onClick={onClose}
-            aria-label={t('savings.history.close', 'Close')}
-            className="text-gray-500 dark:text-gray-400 hover:text-gray-600 dark:hover:text-gray-200 transition-colors"
-          >
-            <XMarkIcon className="w-5 h-5" />
-          </button>
-        </div>
+    <Modal
+      isOpen={isOpen}
+      onClose={onClose}
+      size="xs"
+      title={heading}
+    >
+      <form onSubmit={handleSubmit} className="space-y-4">
+        {mode === 'create' && connections.length > 1 && (
+          <div>
+            <label htmlFor="creategoal-savings-selectpeer" className={labelClass}>
+              {t('savings.selectPeer', 'Saving with')}
+            </label>
+            <select
+              id="creategoal-savings-selectpeer"
+              value={connectionId}
+              onChange={(e) => setConnectionId(e.target.value)}
+              className={inputClass}
+            >
+              {connections.map((c) => (
+                <option key={c.id} value={c.id}>
+                  {c.other_user.name}
+                  {c.other_user.username ? ` (@${c.other_user.username})` : ''}
+                </option>
+              ))}
+            </select>
+          </div>
+        )}
 
-        <form onSubmit={handleSubmit} className="space-y-4">
-          {mode === 'create' && connections.length > 1 && (
-            <div>
-              <label htmlFor="creategoal-savings-selectpeer" className={labelClass}>
-                {t('savings.selectPeer', 'Saving with')}
+        {mode !== 'join' && (
+          <div>
+            <label htmlFor="creategoal-savings-goaltitlelabel" className={labelClass}>
+              {t('savings.goalTitleLabel', 'Goal Name')}
+            </label>
+            <input
+              id="creategoal-savings-goaltitlelabel"
+              type="text"
+              value={title}
+              onChange={(e) => setTitle(e.target.value)}
+              placeholder={t('savings.goalTitlePlaceholder', 'e.g. Japan Trip Fund')}
+              maxLength={100}
+              required
+              className={inputClass}
+            />
+          </div>
+        )}
+
+        {mode === 'join' && joinGoal && (
+          <p className="text-xs text-gray-600 dark:text-gray-400">
+            {joinGoal.peer_joined
+              ? t('savings.joinHint', '{{name}}’s part is {{amount}}. The goal’s target is both parts together.', {
+                  name: joinGoal.peer_name, amount: money(joinGoal.peer_target),
+                })
+              : t('savings.partHint', 'The goal’s target is your part plus your partner’s. Each of you sets and edits your own.')}
+          </p>
+        )}
+
+        {mode !== 'edit' && (
+          <fieldset className="space-y-2">
+            <legend className={labelClass}>{t('savings.myPartLabel', 'Your part')}</legend>
+            <div className="flex gap-4 text-sm text-gray-700 dark:text-gray-300">
+              <label className="flex items-center gap-1.5">
+                <input type="radio" name="part-source" value="new" checked={partSource === 'new'}
+                  onChange={() => setPartSource('new')} />
+                {t('savings.partNew', 'A new goal')}
               </label>
-              <select
-                id="creategoal-savings-selectpeer"
-                value={connectionId}
-                onChange={(e) => setConnectionId(e.target.value)}
-                className={inputClass}
-              >
-                {connections.map((c) => (
-                  <option key={c.id} value={c.id}>
-                    {c.other_user.name}
-                    {c.other_user.username ? ` (@${c.other_user.username})` : ''}
-                  </option>
-                ))}
-              </select>
-            </div>
-          )}
-
-          {mode !== 'join' && (
-            <div>
-              <label htmlFor="creategoal-savings-goaltitlelabel" className={labelClass}>
-                {t('savings.goalTitleLabel', 'Goal Name')}
+              <label className="flex items-center gap-1.5">
+                <input type="radio" name="part-source" value="existing" checked={partSource === 'existing'}
+                  onChange={() => setPartSource('existing')} disabled={ownGoals !== null && ownGoals.length === 0} />
+                {t('savings.partExisting', 'A goal I already have')}
               </label>
-              <input
-                id="creategoal-savings-goaltitlelabel"
-                type="text"
-                value={title}
-                onChange={(e) => setTitle(e.target.value)}
-                placeholder={t('savings.goalTitlePlaceholder', 'e.g. Japan Trip Fund')}
-                maxLength={100}
-                required
-                className={inputClass}
-              />
             </div>
-          )}
-
-          {mode === 'join' && joinGoal && (
-            <p className="text-xs text-gray-600 dark:text-gray-400">
-              {joinGoal.peer_joined
-                ? t('savings.joinHint', '{{name}}’s part is {{amount}}. The goal’s target is both parts together.', {
-                    name: joinGoal.peer_name, amount: money(joinGoal.peer_target),
-                  })
-                : t('savings.partHint', 'The goal’s target is your part plus your partner’s. Each of you sets and edits your own.')}
-            </p>
-          )}
-
-          {mode !== 'edit' && (
-            <fieldset className="space-y-2">
-              <legend className={labelClass}>{t('savings.myPartLabel', 'Your part')}</legend>
-              <div className="flex gap-4 text-sm text-gray-700 dark:text-gray-300">
-                <label className="flex items-center gap-1.5">
-                  <input type="radio" name="part-source" value="new" checked={partSource === 'new'}
-                    onChange={() => setPartSource('new')} />
-                  {t('savings.partNew', 'A new goal')}
+            {partSource === 'new' ? (
+              <div>
+                <label htmlFor="creategoal-savings-mytarget" className="sr-only">
+                  {t('savings.myTargetLabel', 'Your part (TWD)')}
                 </label>
-                <label className="flex items-center gap-1.5">
-                  <input type="radio" name="part-source" value="existing" checked={partSource === 'existing'}
-                    onChange={() => setPartSource('existing')} disabled={ownGoals !== null && ownGoals.length === 0} />
-                  {t('savings.partExisting', 'A goal I already have')}
-                </label>
+                <input
+                  id="creategoal-savings-mytarget"
+                  type="number"
+                  inputMode="numeric"
+                  onWheel={(e) => e.currentTarget.blur()}
+                  value={myTarget}
+                  onChange={(e) => setMyTarget(e.target.value)}
+                  placeholder="25000"
+                  min="1"
+                  step="1"
+                  required
+                  className={inputClass}
+                />
               </div>
-              {partSource === 'new' ? (
-                <div>
-                  <label htmlFor="creategoal-savings-mytarget" className="sr-only">
-                    {t('savings.myTargetLabel', 'Your part (TWD)')}
-                  </label>
-                  <input
-                    id="creategoal-savings-mytarget"
-                    type="number"
-                    inputMode="numeric"
-                    onWheel={(e) => e.currentTarget.blur()}
-                    value={myTarget}
-                    onChange={(e) => setMyTarget(e.target.value)}
-                    placeholder="25000"
-                    min="1"
-                    step="1"
-                    required
-                    className={inputClass}
-                  />
-                </div>
-              ) : (
-                <div>
-                  <label htmlFor="creategoal-savings-existing" className="sr-only">
-                    {t('savings.existingGoalLabel', 'Your goal')}
-                  </label>
-                  <select
-                    id="creategoal-savings-existing"
-                    value={existingGoalId}
-                    onChange={(e) => setExistingGoalId(e.target.value)}
-                    required
-                    className={inputClass}
-                  >
-                    <option value="">{t('savings.pickGoal', 'Choose a goal…')}</option>
-                    {(ownGoals ?? []).map((g) => (
-                      <option key={g.id} value={g.id}>
-                        {g.title} · {money(Number(g.targetAmount))}
-                      </option>
-                    ))}
-                  </select>
-                </div>
-              )}
-              {mode === 'create' && (
-                <p className="text-xs text-gray-500 dark:text-gray-400">
-                  {t('savings.partHint', 'The goal’s target is your part plus your partner’s. Each of you sets and edits your own.')}
-                </p>
-              )}
-            </fieldset>
-          )}
+            ) : (
+              <div>
+                <label htmlFor="creategoal-savings-existing" className="sr-only">
+                  {t('savings.existingGoalLabel', 'Your goal')}
+                </label>
+                <select
+                  id="creategoal-savings-existing"
+                  value={existingGoalId}
+                  onChange={(e) => setExistingGoalId(e.target.value)}
+                  required
+                  className={inputClass}
+                >
+                  <option value="">{t('savings.pickGoal', 'Choose a goal…')}</option>
+                  {(ownGoals ?? []).map((g) => (
+                    <option key={g.id} value={g.id}>
+                      {g.title} · {money(Number(g.targetAmount))}
+                    </option>
+                  ))}
+                </select>
+              </div>
+            )}
+            {mode === 'create' && (
+              <p className="text-xs text-gray-500 dark:text-gray-400">
+                {t('savings.partHint', 'The goal’s target is your part plus your partner’s. Each of you sets and edits your own.')}
+              </p>
+            )}
+          </fieldset>
+        )}
 
-          {mode !== 'join' && (
-            <div>
-              <label htmlFor="creategoal-savings-targetdatelabel" className={labelClass}>
-                {t('savings.targetDateLabel', 'Target Date (optional)')}
-              </label>
-              <input
-                id="creategoal-savings-targetdatelabel"
-                type="date"
-                value={targetDate}
-                onChange={(e) => setTargetDate(e.target.value)}
-                min={new Date().toISOString().split('T')[0]}
-                className={inputClass}
-              />
-            </div>
-          )}
+        {mode !== 'join' && (
+          <div>
+            <label htmlFor="creategoal-savings-targetdatelabel" className={labelClass}>
+              {t('savings.targetDateLabel', 'Target Date (optional)')}
+            </label>
+            <input
+              id="creategoal-savings-targetdatelabel"
+              type="date"
+              value={targetDate}
+              onChange={(e) => setTargetDate(e.target.value)}
+              min={new Date().toISOString().split('T')[0]}
+              className={inputClass}
+            />
+          </div>
+        )}
 
-          {error && (
-            <p role="alert" className="text-xs text-red-700 dark:text-red-400">{error}</p>
-          )}
+        {error && (
+          <p role="alert" className="text-xs text-red-700 dark:text-red-400">{error}</p>
+        )}
 
-          <button
-            type="submit"
-            disabled={submitting || !ready}
-            className="w-full py-2.5 bg-blue-600 text-white text-sm font-medium rounded-lg hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
-          >
-            {submitting
-              ? t('savings.sending', 'Sending…')
-              : mode === 'edit'
-                ? t('savings.saveGoal', 'Save')
-                : mode === 'join'
-                  ? t('savings.addPart', 'Add my part')
-                  : t('savings.createGoal', 'New Goal')}
-          </button>
-        </form>
-      </div>
-    </div>
+        <button
+          type="submit"
+          disabled={submitting || !ready}
+          className="w-full py-2.5 bg-blue-600 text-white text-sm font-medium rounded-lg hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+        >
+          {submitting
+            ? t('savings.sending', 'Sending…')
+            : mode === 'edit'
+              ? t('savings.saveGoal', 'Save')
+              : mode === 'join'
+                ? t('savings.addPart', 'Add my part')
+                : t('savings.createGoal', 'New Goal')}
+        </button>
+      </form>
+    </Modal>
   );
 }

@@ -2,9 +2,8 @@
 
 import { useEffect, useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { XMarkIcon } from '@heroicons/react/24/outline';
 import { apiClient } from '@/lib/api-client';
-import { useDialog } from '@/hooks/useDialog';
+import { Modal } from '@/components/ui/Modal';
 import type { SplitMethod, SplitOut } from '@/shared/types';
 
 interface AmendSplitModalProps {
@@ -53,8 +52,6 @@ export default function AmendSplitModal({ split, onClose, onSuccess }: AmendSpli
   const payerShare = split?.payer_is_me ? myShare : totalNum - myShare;
   const invalidShare = (method !== 'equal' && (myValue === '' || myShare < 0 || myShare > totalNum))
     || (split?.from_recorded_expense === true && payerShare <= 0);
-
-  const { panelRef, dialogProps } = useDialog({ isOpen, onClose });
   if (!split) return null;
   const unanswered = split.status === 'proposed';
   // That total is an expense the payer recorded; withdrawing hands it back as it was.
@@ -83,93 +80,77 @@ export default function AmendSplitModal({ split, onClose, onSuccess }: AmendSpli
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
-      <div className="absolute inset-0 bg-gray-900/60" onClick={onClose} aria-hidden="true" />
-      <div
-        ref={panelRef}
-        {...dialogProps}
-        aria-labelledby="amend-split-title"
-        className="relative bg-white dark:bg-gray-800 rounded-2xl shadow-xl w-full max-w-sm p-6 max-h-[90dvh] overflow-y-auto"
-      >
-        <div className="flex items-center justify-between mb-4">
-          <h2 id="amend-split-title" className="text-base font-semibold text-gray-900 dark:text-white">
-            {t('savings.splits.amend.title', 'Change this split')}
-          </h2>
-          <button
-            onClick={onClose}
-            aria-label={t('common.close', 'Close')}
-            className="min-w-[44px] min-h-[44px] flex items-center justify-center text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200"
-          >
-            <XMarkIcon className="w-5 h-5" />
-          </button>
+    <Modal
+      isOpen={isOpen}
+      onClose={onClose}
+      size="xs"
+      title={t('savings.splits.amend.title', 'Change this split')}
+    >
+      <form onSubmit={handleSubmit} className="space-y-4">
+        <div>
+          <label htmlFor="amend-description" className={LABEL}>{t('savings.splits.description', 'What was it?')}</label>
+          <input id="amend-description" type="text" maxLength={200} required value={description}
+            onChange={(e) => setDescription(e.target.value)} className={INPUT} />
         </div>
-
-        <form onSubmit={handleSubmit} className="space-y-4">
-          <div>
-            <label htmlFor="amend-description" className={LABEL}>{t('savings.splits.description', 'What was it?')}</label>
-            <input id="amend-description" type="text" maxLength={200} required value={description}
-              onChange={(e) => setDescription(e.target.value)} className={INPUT} />
+        <div>
+          <label htmlFor="amend-total" className={LABEL}>
+            {t('savings.splits.amend.total', 'Total ({{currency}})', { currency: split.currency })}
+          </label>
+          <input id="amend-total" type="number" inputMode="decimal" min="0.01" step="0.01" required value={total}
+            readOnly={totalLocked} aria-describedby={totalLocked ? 'amend-total-locked' : undefined}
+            onWheel={(e) => e.currentTarget.blur()} onChange={(e) => setTotal(e.target.value)}
+            className={`${INPUT} ${totalLocked ? 'opacity-60 cursor-not-allowed' : ''}`} />
+          {totalLocked && (
+            <p id="amend-total-locked" className="mt-1 text-xs text-gray-600 dark:text-gray-400">
+              {t('savings.splits.amend.totalLocked', 'This is the expense you recorded, so its total stays.')}
+            </p>
+          )}
+        </div>
+        <fieldset>
+          <legend className={LABEL}>{t('savings.splits.how', 'How to split')}</legend>
+          <div className="grid grid-cols-3 gap-2" role="group">
+            {(['equal', 'percent', 'fixed'] as const).map((m) => (
+              <button key={m} type="button" aria-pressed={method === m}
+                onClick={() => { setMethod(m); setMyValue(''); }}
+                className={`min-h-[44px] rounded-lg border text-sm font-medium ${method === m
+                  ? 'border-primary-600 bg-primary-50 text-primary-800 dark:bg-primary-900/30 dark:text-primary-200'
+                  : 'border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300'}`}>
+                {t(`savings.splits.method.${m}`, { equal: '50 / 50', percent: '%', fixed: t('savings.splits.method.fixedLabel', 'Amount') }[m])}
+              </button>
+            ))}
           </div>
-          <div>
-            <label htmlFor="amend-total" className={LABEL}>
-              {t('savings.splits.amend.total', 'Total ({{currency}})', { currency: split.currency })}
-            </label>
-            <input id="amend-total" type="number" inputMode="decimal" min="0.01" step="0.01" required value={total}
-              readOnly={totalLocked} aria-describedby={totalLocked ? 'amend-total-locked' : undefined}
-              onWheel={(e) => e.currentTarget.blur()} onChange={(e) => setTotal(e.target.value)}
-              className={`${INPUT} ${totalLocked ? 'opacity-60 cursor-not-allowed' : ''}`} />
-            {totalLocked && (
-              <p id="amend-total-locked" className="mt-1 text-xs text-gray-600 dark:text-gray-400">
-                {t('savings.splits.amend.totalLocked', 'This is the expense you recorded, so its total stays.')}
-              </p>
-            )}
-          </div>
-          <fieldset>
-            <legend className={LABEL}>{t('savings.splits.how', 'How to split')}</legend>
-            <div className="grid grid-cols-3 gap-2" role="group">
-              {(['equal', 'percent', 'fixed'] as const).map((m) => (
-                <button key={m} type="button" aria-pressed={method === m}
-                  onClick={() => { setMethod(m); setMyValue(''); }}
-                  className={`min-h-[44px] rounded-lg border text-sm font-medium ${method === m
-                    ? 'border-primary-600 bg-primary-50 text-primary-800 dark:bg-primary-900/30 dark:text-primary-200'
-                    : 'border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300'}`}>
-                  {t(`savings.splits.method.${m}`, { equal: '50 / 50', percent: '%', fixed: t('savings.splits.method.fixedLabel', 'Amount') }[m])}
-                </button>
-              ))}
+          {method !== 'equal' && (
+            <div className="mt-2">
+              <label htmlFor="amend-mine" className={LABEL}>
+                {method === 'percent' ? t('savings.splits.myPercent', 'My share (%)') : t('savings.splits.myAmount', 'My share')}
+              </label>
+              <input id="amend-mine" type="number" inputMode="decimal" min="0" step="0.01" required value={myValue}
+                onWheel={(e) => e.currentTarget.blur()} onChange={(e) => setMyValue(e.target.value)} className={INPUT} />
             </div>
-            {method !== 'equal' && (
-              <div className="mt-2">
-                <label htmlFor="amend-mine" className={LABEL}>
-                  {method === 'percent' ? t('savings.splits.myPercent', 'My share (%)') : t('savings.splits.myAmount', 'My share')}
-                </label>
-                <input id="amend-mine" type="number" inputMode="decimal" min="0" step="0.01" required value={myValue}
-                  onWheel={(e) => e.currentTarget.blur()} onChange={(e) => setMyValue(e.target.value)} className={INPUT} />
-              </div>
-            )}
-            {totalNum > 0 && !invalidShare && (
-              <p className="mt-2 text-xs text-gray-600 dark:text-gray-400">
-                {t('savings.splits.preview', 'About — you: {{mine}} · {{name}}: {{theirs}}', {
-                  mine: myShare.toFixed(2), theirs: (totalNum - myShare).toFixed(2), name: split.partner_name,
-                })}
-              </p>
-            )}
-          </fieldset>
-          <p className="text-xs text-gray-600 dark:text-gray-400">
-            {unanswered
-              ? t('savings.splits.amend.noteUnanswered', '{{name}} hasn’t answered yet, so this changes now. They’ll see the updated bill.', { name: split.partner_name })
-              : t('savings.splits.amend.note', 'Nothing changes until {{name}} accepts. Then both of your accounts take the new shares.', { name: split.partner_name })}
-          </p>
-          {error && <p role="alert" className="text-xs text-error-700 dark:text-error-400">{error}</p>}
-          <button type="submit" disabled={submitting || totalNum <= 0 || invalidShare || !description.trim()}
-            className="w-full min-h-[44px] rounded-lg bg-primary-700 hover:bg-primary-800 text-white text-sm font-semibold disabled:opacity-50">
-            {submitting
-              ? t('savings.sending', 'Sending…')
-              : unanswered
-                ? t('savings.splits.amend.submitUnanswered', 'Update the bill')
-                : t('savings.splits.amend.submit', 'Send the change')}
-          </button>
-        </form>
-      </div>
-    </div>
+          )}
+          {totalNum > 0 && !invalidShare && (
+            <p className="mt-2 text-xs text-gray-600 dark:text-gray-400">
+              {t('savings.splits.preview', 'About — you: {{mine}} · {{name}}: {{theirs}}', {
+                mine: myShare.toFixed(2), theirs: (totalNum - myShare).toFixed(2), name: split.partner_name,
+              })}
+            </p>
+          )}
+        </fieldset>
+        <p className="text-xs text-gray-600 dark:text-gray-400">
+          {unanswered
+            ? t('savings.splits.amend.noteUnanswered', '{{name}} hasn’t answered yet, so this changes now. They’ll see the updated bill.', { name: split.partner_name })
+            : t('savings.splits.amend.note', 'Nothing changes until {{name}} accepts. Then both of your accounts take the new shares.', { name: split.partner_name })}
+        </p>
+        {error && <p role="alert" className="text-xs text-error-700 dark:text-error-400">{error}</p>}
+        <button type="submit" disabled={submitting || totalNum <= 0 || invalidShare || !description.trim()}
+          className="w-full min-h-[44px] rounded-lg bg-primary-700 hover:bg-primary-800 text-white text-sm font-semibold disabled:opacity-50">
+          {submitting
+            ? t('savings.sending', 'Sending…')
+            : unanswered
+              ? t('savings.splits.amend.submitUnanswered', 'Update the bill')
+              : t('savings.splits.amend.submit', 'Send the change')}
+        </button>
+      </form>
+    </Modal>
   );
 }

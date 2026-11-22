@@ -25,41 +25,7 @@ jest.mock('@/utils/formatters', () => ({
   localDateString: () => '2026-05-23',
 }));
 
-jest.mock('@headlessui/react', () => {
-  function Dialog({ children }: { children: React.ReactNode }) {
-    return <div data-testid="dialog">{children}</div>;
-  }
-  function DialogTitle({ children, className }: { children: React.ReactNode; className?: string }) {
-    return <h2 className={className}>{children}</h2>;
-  }
-  function DialogPanel({ children, className }: { children: React.ReactNode; className?: string }) {
-    return <div data-testid="dialog-panel" className={className}>{children}</div>;
-  }
-  Dialog.Title = DialogTitle;
-  Dialog.Panel = DialogPanel;
 
-  function Transition({ children, show }: { children: React.ReactNode; show: boolean }) {
-    return show ? <>{children}</> : null;
-  }
-  function TransitionChild({ children }: { children: React.ReactNode }) {
-    return <>{children}</>;
-  }
-  Transition.Child = TransitionChild;
-
-  // Headless UI v2 exports DialogPanel / DialogTitle / TransitionChild as named
-  // top-level components, and ContributeModal imports them that way. Returning
-  // only the v1 compound form (Dialog.Panel, Transition.Child) left those
-  // imports undefined and React refused to render the modal at all. Both forms
-  // are exported here so either import style resolves.
-  return {
-    Dialog,
-    DialogTitle,
-    DialogPanel,
-    Transition,
-    TransitionChild,
-    Fragment: React.Fragment,
-  };
-});
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
 

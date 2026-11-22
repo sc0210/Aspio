@@ -118,11 +118,33 @@ than a scaled-down desktop grid.
 
 ### Dialogs — `Modal`
 
-A new dialog is `Modal` from `components/ui/Modal.tsx`, or `ConfirmDialog` for a yes/no.
-Older ones use Headless UI's `Dialog` directly or the `useDialog` hook over their own
-markup; all three share one dialog stack, so Escape and Tab reach the innermost.
-`__tests__/guards/dialogs.test.ts` lists those older files and fails on a new one. Moving
-one to `Modal` means deleting its line there.
+Every dialog is `Modal` from `components/ui/Modal.tsx`, or `ConfirmDialog` for a yes/no
+(`busy` / `busyLabel` while the action runs). A bottom sheet on a phone, centred above.
+
+```tsx
+<Modal isOpen onClose={close} title="Record Payment" description={loan.name} size="sm"
+       footer={<><Button>Cancel</Button><Button>Save</Button></>}>   // footer stays put while the body scrolls
+  …
+</Modal>
+```
+
+- Sizes: `xs` (max-w-sm) · `sm` · `md` · `lg` · `xl` · `full` (max-w-7xl).
+- `headerActions` sit beside the close button; `headerContent` is interactive content under
+  the title (an inline edit form) that should not be announced as the description.
+- No `title`: the dialog draws its own header and must render Headless UI's `DialogTitle`
+  inside it (the achievement card).
+- Focus goes to the dialog itself, so its title is announced; put `data-autofocus` on a
+  field to start there instead.
+- A form passes `closeOnOverlay={false}`: a stray tap beside a bottom sheet must not throw
+  away what was typed. Escape and the close button still close it.
+- A submit button in `footer` sits outside the `<form>`: give the form an `id` and the
+  button `form="<id>"`.
+- **A dialog opened from inside another is rendered inside it.** Headless UI makes
+  everything outside the open dialog inert, so a `ConfirmDialog` placed beside the
+  `<Modal>` instead of inside it cannot be clicked.
+
+`__tests__/guards/dialogs.test.ts` fails on any other overlay. The command palette and the
+tab bar's More sheet are the two exceptions, named there with why.
 
 ### Surfaces — `Card`
 

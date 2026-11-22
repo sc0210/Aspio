@@ -83,7 +83,10 @@ describe('HoldingDetailModal lot delete', () => {
         await waitFor(() => expect(onDeleteLot).toHaveBeenCalledWith('lot-1'));
         expect(onClose).not.toHaveBeenCalled();
         // focus stays inside the holding modal rather than on the deleted row's button
-        await waitFor(() => expect(document.activeElement?.getAttribute('role')).toBe('dialog'));
+        await waitFor(() => {
+            expect(document.activeElement).not.toBe(document.body);
+            expect(screen.getByRole('dialog').contains(document.activeElement)).toBe(true);
+        });
     });
 
     it('cancels on Escape without deleting or closing the holding modal', () => {

@@ -1,11 +1,9 @@
 'use client';
 
 import { useState, FormEvent } from 'react';
-import { useTranslation } from 'react-i18next';
-import { XMarkIcon } from '@heroicons/react/24/outline';
 import { useUpdatePayment } from '@/hooks/useLoans';
 import type { LoanPaymentRecord } from '@/services/loanService';
-import { useDialog } from '@/hooks/useDialog';
+import { Modal } from '@/components/ui/Modal';
 
 interface Props {
   loanId: string;
@@ -14,8 +12,6 @@ interface Props {
 }
 
 export function EditPaymentModal({ loanId, payment, onClose }: Props) {
-  const { t } = useTranslation('loans');
-  const { panelRef, dialogProps } = useDialog({ isOpen: true, onClose: onClose });
 
   const updatePayment = useUpdatePayment();
 
@@ -51,115 +47,105 @@ export function EditPaymentModal({ loanId, payment, onClose }: Props) {
   }
 
   return (
-    <div className="fixed inset-0 z-50 bg-black/60 flex items-center justify-center p-4">
-      <div
-        ref={panelRef}
-        {...dialogProps}
-        aria-labelledby="edit-payment-modal-title"
-        className="bg-white dark:bg-gray-800 rounded-2xl w-full max-w-md shadow-xl"
-      >
-        <div className="flex items-center justify-between px-6 py-4 border-b border-gray-200 dark:border-gray-700">
-          <div>
-            <h2 id="edit-payment-modal-title" className="text-base font-semibold text-gray-900 dark:text-white">Edit Payment</h2>
-            <p className="text-xs text-gray-500 dark:text-gray-400">{payment.payment_date}</p>
-          </div>
-          <button type="button" onClick={onClose} aria-label={t('common.close', 'Close')} className="p-1.5 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700">
-            <XMarkIcon className="w-5 h-5 text-gray-500" aria-hidden="true" />
-          </button>
+    <Modal
+      isOpen
+      onClose={onClose}
+      size="sm"
+      closeOnOverlay={false}
+      title={<>Edit Payment</>}
+      description={payment.payment_date}
+    >
+      <form onSubmit={handleSubmit} className="space-y-4">
+        <div>
+          <label htmlFor="ep-date" className="block text-xs font-medium text-gray-700 dark:text-gray-300 mb-1">Payment Date</label>
+          <input
+            id="ep-date"
+            type="date"
+            required
+            value={paymentDate}
+            onChange={e => setPaymentDate(e.target.value)}
+            className="w-full rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-sm text-gray-900 dark:text-white px-3 py-2 focus-visible:ring-2 focus-visible:ring-primary-500 focus-visible:border-transparent outline-none"
+          />
         </div>
 
-        <form onSubmit={handleSubmit} className="px-6 py-5 space-y-4">
-          <div>
-            <label htmlFor="ep-date" className="block text-xs font-medium text-gray-700 dark:text-gray-300 mb-1">Payment Date</label>
-            <input
-              id="ep-date"
-              type="date"
-              required
-              value={paymentDate}
-              onChange={e => setPaymentDate(e.target.value)}
-              className="w-full rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-sm text-gray-900 dark:text-white px-3 py-2 focus-visible:ring-2 focus-visible:ring-primary-500 focus-visible:border-transparent outline-none"
-            />
-          </div>
+        <div>
+          <label htmlFor="ep-total" className="block text-xs font-medium text-gray-700 dark:text-gray-300 mb-1">Total Amount</label>
+          <input
+            id="ep-total"
+            type="number"
+            inputMode="numeric"
+            onWheel={(e) => e.currentTarget.blur()}
+            required
+            min="1"
+            step="1"
+            value={totalAmount || ''}
+            onChange={e => setTotalAmount(Number(e.target.value))}
+            className="w-full rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-sm text-gray-900 dark:text-white px-3 py-2 focus-visible:ring-2 focus-visible:ring-primary-500 focus-visible:border-transparent outline-none"
+          />
+        </div>
 
+        <div className="grid grid-cols-2 gap-3">
           <div>
-            <label htmlFor="ep-total" className="block text-xs font-medium text-gray-700 dark:text-gray-300 mb-1">Total Amount</label>
+            <label htmlFor="ep-principal" className="block text-xs font-medium text-gray-700 dark:text-gray-300 mb-1">Principal</label>
             <input
-              id="ep-total"
+              id="ep-principal"
               type="number"
               inputMode="numeric"
               onWheel={(e) => e.currentTarget.blur()}
               required
-              min="1"
+              min="0"
               step="1"
-              value={totalAmount || ''}
-              onChange={e => setTotalAmount(Number(e.target.value))}
+              value={principalPortion || ''}
+              onChange={e => setPrincipalPortion(Number(e.target.value))}
               className="w-full rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-sm text-gray-900 dark:text-white px-3 py-2 focus-visible:ring-2 focus-visible:ring-primary-500 focus-visible:border-transparent outline-none"
             />
           </div>
-
-          <div className="grid grid-cols-2 gap-3">
-            <div>
-              <label htmlFor="ep-principal" className="block text-xs font-medium text-gray-700 dark:text-gray-300 mb-1">Principal</label>
-              <input
-                id="ep-principal"
-                type="number"
-                inputMode="numeric"
-                onWheel={(e) => e.currentTarget.blur()}
-                required
-                min="0"
-                step="1"
-                value={principalPortion || ''}
-                onChange={e => setPrincipalPortion(Number(e.target.value))}
-                className="w-full rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-sm text-gray-900 dark:text-white px-3 py-2 focus-visible:ring-2 focus-visible:ring-primary-500 focus-visible:border-transparent outline-none"
-              />
-            </div>
-            <div>
-              <label htmlFor="ep-interest" className="block text-xs font-medium text-gray-700 dark:text-gray-300 mb-1">Interest (auto)</label>
-              <input
-                id="ep-interest"
-                type="number"
-                inputMode="decimal"
-                onWheel={(e) => e.currentTarget.blur()}
-                readOnly
-                value={interestPortion}
-                className="w-full rounded-lg border border-gray-200 dark:border-gray-600 bg-gray-50 dark:bg-gray-700/50 text-sm text-gray-600 dark:text-gray-400 px-3 py-2 outline-none cursor-not-allowed"
-              />
-            </div>
-          </div>
-
-          {splitError && (
-            <p className="text-xs text-red-700 dark:text-red-400">{splitError}</p>
-          )}
-
           <div>
-            <label htmlFor="ep-notes" className="block text-xs font-medium text-gray-700 dark:text-gray-300 mb-1">Notes</label>
-            <textarea
-              id="ep-notes"
-              rows={2}
-              value={notes}
-              onChange={e => setNotes(e.target.value)}
-              className="w-full rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-sm text-gray-900 dark:text-white px-3 py-2 focus-visible:ring-2 focus-visible:ring-primary-500 focus-visible:border-transparent outline-none resize-none"
+            <label htmlFor="ep-interest" className="block text-xs font-medium text-gray-700 dark:text-gray-300 mb-1">Interest (auto)</label>
+            <input
+              id="ep-interest"
+              type="number"
+              inputMode="decimal"
+              onWheel={(e) => e.currentTarget.blur()}
+              readOnly
+              value={interestPortion}
+              className="w-full rounded-lg border border-gray-200 dark:border-gray-600 bg-gray-50 dark:bg-gray-700/50 text-sm text-gray-600 dark:text-gray-400 px-3 py-2 outline-none cursor-not-allowed"
             />
           </div>
+        </div>
 
-          <div className="flex gap-3 pt-2">
-            <button
-              type="button"
-              onClick={onClose}
-              className="flex-1 py-2.5 rounded-xl border border-gray-300 dark:border-gray-600 text-sm font-medium text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors"
-            >
-              Cancel
-            </button>
-            <button
-              type="submit"
-              disabled={!isValid || updatePayment.isPending}
-              className="flex-1 py-2.5 rounded-xl bg-primary-700 hover:bg-primary-800 text-sm font-medium text-white transition-colors disabled:opacity-50"
-            >
-              {updatePayment.isPending ? 'Saving…' : 'Save Changes'}
-            </button>
-          </div>
-        </form>
-      </div>
-    </div>
+        {splitError && (
+          <p className="text-xs text-red-700 dark:text-red-400">{splitError}</p>
+        )}
+
+        <div>
+          <label htmlFor="ep-notes" className="block text-xs font-medium text-gray-700 dark:text-gray-300 mb-1">Notes</label>
+          <textarea
+            id="ep-notes"
+            rows={2}
+            value={notes}
+            onChange={e => setNotes(e.target.value)}
+            className="w-full rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-sm text-gray-900 dark:text-white px-3 py-2 focus-visible:ring-2 focus-visible:ring-primary-500 focus-visible:border-transparent outline-none resize-none"
+          />
+        </div>
+
+        <div className="flex gap-3 pt-2">
+          <button
+            type="button"
+            onClick={onClose}
+            className="flex-1 py-2.5 rounded-xl border border-gray-300 dark:border-gray-600 text-sm font-medium text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors"
+          >
+            Cancel
+          </button>
+          <button
+            type="submit"
+            disabled={!isValid || updatePayment.isPending}
+            className="flex-1 py-2.5 rounded-xl bg-primary-700 hover:bg-primary-800 text-sm font-medium text-white transition-colors disabled:opacity-50"
+          >
+            {updatePayment.isPending ? 'Saving…' : 'Save Changes'}
+          </button>
+        </div>
+      </form>
+    </Modal>
   );
 }

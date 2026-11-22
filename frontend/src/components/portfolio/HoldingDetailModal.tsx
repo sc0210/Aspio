@@ -1,8 +1,7 @@
 'use client';
 
-import { useMemo, useState } from 'react';
+import { useMemo, useRef, useState } from 'react';
 import {
-  XMarkIcon,
   CalendarIcon,
   CurrencyDollarIcon,
   PencilIcon,
@@ -20,7 +19,7 @@ import { useTranslation } from 'react-i18next';
 import { formatSectorLabel } from '@/utils/holdingLabels';
 import { LotSelectionModal } from './LotSelectionModal';
 import type { CostBasisMethod } from '@/utils/costBasis';
-import { useDialog } from '@/hooks/useDialog';
+import { Modal } from '@/components/ui/Modal';
 import { ConfirmDialog } from '@/components/ui/ConfirmDialog';
 import { Card } from '@/components/ui/Card';
 import { editLotDraft, lotDraft, lotDraftErrors, type LotDraft, type LotDraftField } from '@/lib/portfolio/lotDraft';
@@ -66,7 +65,7 @@ export function HoldingDetailModal({
   onUpdateSymbol,
   onSellHolding
 }: HoldingDetailModalProps) {
-  const { panelRef, dialogProps } = useDialog({ isOpen: true, onClose: onClose });
+  const bodyRef = useRef<HTMLDivElement>(null);
   const { t } = useTranslation(['portfolio']);
   const [editingLotId, setEditingLotId] = useState<string | null>(null);
   const [editingAggregate, setEditingAggregate] = useState(false);
@@ -209,7 +208,7 @@ export function HoldingDetailModal({
         toast.success(t('portfolio:toast.lotDeleted'));
         // The confirm handed focus back to this lot's delete button, which goes
         // with the row; park it on the dialog so it doesn't fall to <body>.
-        panelRef.current?.focus();
+        bodyRef.current?.focus();
       }
     } catch (error) {
       console.error(whole ? 'Failed to delete investment:' : 'Failed to delete lot:', error);
@@ -218,159 +217,148 @@ export function HoldingDetailModal({
   };
   return (
     <>
-      <div
-        className="fixed inset-0 bg-black/60 dark:bg-black/80 backdrop-blur-sm flex items-end sm:items-center justify-center z-50 p-0 sm:p-4 overflow-y-auto"
-        onClick={onClose}
-      >
-        <div
-          ref={panelRef}
-          {...dialogProps}
-          className="bg-white dark:bg-gray-900 rounded-t-2xl sm:rounded-2xl w-full max-w-7xl shadow-2xl border border-gray-200 dark:border-gray-700 animate-slide-up max-h-[90vh] overflow-y-auto"
-          onClick={(e) => e.stopPropagation()}
-        >
-          {/* Header */}
-          <div className="sticky top-0 bg-white dark:bg-gray-900 border-b border-gray-200 dark:border-gray-700 p-6 z-10">
-            <div className="flex items-start justify-between gap-4">
-              <div className="flex-1 min-w-0">
-                <div className="flex items-center gap-3 mb-2">
-                  <h2 className="text-2xl font-bold text-gray-900 dark:text-white">
-                    {symbol}
-                  </h2>
-                  <span className="px-3 py-1 bg-primary-100 dark:bg-primary-900/30 text-primary-700 dark:text-primary-300 text-sm font-semibold rounded-full">
-                    {t('portfolio:holdingDetail.lotCount', { count: holdings.length })}
-                  </span>
-                  {onUpdateSymbol && !editingAggregate && (
+      <Modal
+        isOpen
+        onClose={onClose}
+        size="full"
+        bodyClassName="p-0 sm:p-0"
+        title={symbol}
+        headerContent={
+          // The pencil sits after the name it edits.
+          <div className="flex items-start gap-2">
+            <div className="min-w-0 flex-1">
+              {/* Beside the name, not in the title: the dialog is named by its symbol. */}
+              <span className="inline-block mb-1.5 px-3 py-0.5 bg-primary-100 dark:bg-primary-900/30 text-primary-700 dark:text-primary-300 text-sm font-semibold rounded-full">
+                {t('portfolio:holdingDetail.lotCount', { count: holdings.length })}
+              </span>
+              {editingAggregate ? (
+                <div className="space-y-2 mt-2">
+                  <div className="flex items-center gap-2">
+                    <input
+                      type="text"
+                      value={aggregateEditForm.name}
+                      onChange={(e) => setAggregateEditForm({ ...aggregateEditForm, name: e.target.value })}
+                      placeholder={t('portfolio:fields.namePlaceholder', 'Investment Name')}
+                      aria-label={t('portfolio:fields.namePlaceholder', 'Investment Name')}
+                      className="flex-1 px-3 py-1.5 text-sm border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus-visible:ring-2 focus-visible:ring-primary-500 dark:focus-visible:ring-primary-400"
+                    />
+                    <input
+                      type="text"
+                      value={aggregateEditForm.sector}
+                      onChange={(e) => setAggregateEditForm({ ...aggregateEditForm, sector: e.target.value })}
+                      placeholder={t('portfolio:fields.sectorPlaceholder', 'Sector')}
+                      aria-label={t('portfolio:fields.sectorPlaceholder', 'Sector')}
+                      className="w-40 px-3 py-1.5 text-sm border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus-visible:ring-2 focus-visible:ring-primary-500 dark:focus-visible:ring-primary-400"
+                    />
+                  </div>
+                  <div className="flex items-center gap-2">
                     <button
-                      onClick={handleStartAggregateEdit}
-                      className="p-1.5 text-gray-500 dark:text-gray-400 hover:text-primary-600 dark:hover:text-primary-400 hover:bg-primary-50 dark:hover:bg-primary-900/20 rounded-lg transition-all"
-                      title={t('portfolio:holdingModal.editNameSector')}
+                      onClick={handleSaveAggregateEdit}
+                      className="flex items-center gap-1 px-3 py-1.5 text-xs font-medium text-white bg-success-700 hover:bg-success-800 rounded-lg transition-colors"
                     >
-                      <PencilIcon className="w-4 h-4" />
+                      <CheckIcon className="w-3.5 h-3.5" />
+                      {t('portfolio:holdingModal.save')}
                     </button>
+                    <button
+                      onClick={handleCancelAggregateEdit}
+                      className="flex items-center gap-1 px-3 py-1.5 text-xs font-medium text-gray-700 dark:text-gray-300 bg-gray-100 dark:bg-gray-700 hover:bg-gray-200 dark:hover:bg-gray-600 rounded-lg transition-colors"
+                    >
+                      <CancelIcon className="w-3.5 h-3.5" />
+                      {t('portfolio:holdingModal.cancel')}
+                    </button>
+                  </div>
+                </div>
+              ) : (
+                <div className="space-y-1">
+                  <p className="text-sm font-medium text-gray-900 dark:text-white">
+                    {aggregatedMetrics.name}
+                  </p>
+                  {aggregatedMetrics.sector && (
+                    <p className="text-xs text-gray-600 dark:text-gray-400">
+                      {formatSectorLabel(aggregatedMetrics.sector, t)}
+                    </p>
                   )}
                 </div>
-
-                {editingAggregate ? (
-                  <div className="space-y-2 mt-2">
-                    <div className="flex items-center gap-2">
-                      <input
-                        type="text"
-                        value={aggregateEditForm.name}
-                        onChange={(e) => setAggregateEditForm({ ...aggregateEditForm, name: e.target.value })}
-                        placeholder={t('portfolio:fields.namePlaceholder', 'Investment Name')}
-                        aria-label={t('portfolio:fields.namePlaceholder', 'Investment Name')}
-                        className="flex-1 px-3 py-1.5 text-sm border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus-visible:ring-2 focus-visible:ring-primary-500 dark:focus-visible:ring-primary-400"
-                      />
-                      <input
-                        type="text"
-                        value={aggregateEditForm.sector}
-                        onChange={(e) => setAggregateEditForm({ ...aggregateEditForm, sector: e.target.value })}
-                        placeholder={t('portfolio:fields.sectorPlaceholder', 'Sector')}
-                        aria-label={t('portfolio:fields.sectorPlaceholder', 'Sector')}
-                        className="w-40 px-3 py-1.5 text-sm border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus-visible:ring-2 focus-visible:ring-primary-500 dark:focus-visible:ring-primary-400"
-                      />
-                    </div>
-                    <div className="flex items-center gap-2">
-                      <button
-                        onClick={handleSaveAggregateEdit}
-                        className="flex items-center gap-1 px-3 py-1.5 text-xs font-medium text-white bg-success-700 hover:bg-success-800 rounded-lg transition-colors"
-                      >
-                        <CheckIcon className="w-3.5 h-3.5" />
-                        {t('portfolio:holdingModal.save')}
-                      </button>
-                      <button
-                        onClick={handleCancelAggregateEdit}
-                        className="flex items-center gap-1 px-3 py-1.5 text-xs font-medium text-gray-700 dark:text-gray-300 bg-gray-100 dark:bg-gray-700 hover:bg-gray-200 dark:hover:bg-gray-600 rounded-lg transition-colors"
-                      >
-                        <CancelIcon className="w-3.5 h-3.5" />
-                        {t('portfolio:holdingModal.cancel')}
-                      </button>
-                    </div>
-                  </div>
-                ) : (
-                  <div className="space-y-1">
-                    <p className="text-sm font-medium text-gray-900 dark:text-white">
-                      {aggregatedMetrics.name}
-                    </p>
-                    {aggregatedMetrics.sector && (
-                      <p className="text-xs text-gray-600 dark:text-gray-400">
-                        {formatSectorLabel(aggregatedMetrics.sector, t)}
-                      </p>
-                    )}
-                  </div>
-                )}
-              </div>
-              <div className="flex items-center gap-2">
-                {/* Sell Button - show when onSellHolding is available */}
-                {onSellHolding && (
-                  <button
-                    onClick={() => {
-                      setSellQuantity(aggregatedMetrics.totalQuantity);
-                      setShowSellModal(true);
-                    }}
-                    className="flex items-center gap-2 px-3 py-2 text-sm font-medium text-white bg-orange-700 hover:bg-orange-800 dark:bg-orange-600 dark:hover:bg-orange-700 rounded-lg transition-all shadow-sm"
-                    title={t('portfolio:holdingModal.sellShares')}
-                    aria-label={t('portfolio:holdingModal.sellShares')}
-                  >
-                    <ArrowTrendingDownIcon className="w-4 h-4" />
-                    <span>{t('portfolio:holdingModal.sell')}</span>
-                  </button>
-                )}
-
-                {/* Sell Button - New simplified sell flow */}
-                {onSellLot && holdings.length > 0 && (
-                  <button
-                    onClick={() => {
-                      // Use the first holding's data for the sell modal
-                      // (or aggregate if needed)
-                      onSellLot(holdings[0]);
-                      onClose(); // Close detail modal before sell modal opens
-                    }}
-                    className="flex items-center gap-2 px-3 py-2 text-sm font-medium text-white bg-green-700 hover:bg-green-800 dark:bg-green-600 dark:hover:bg-green-700 rounded-lg transition-all shadow-sm"
-                    title={t('portfolio:holdingModal.sellHoldingHint')}
-                    aria-label={t('portfolio:holdingModal.sellHolding')}
-                  >
-                    <CurrencyDollarIcon className="w-4 h-4" />
-                    <span>{t('portfolio:holdingModal.sell')}</span>
-                  </button>
-                )}
-
-                {/* Delete Investment Button - always show when onDeleteLot is available */}
-                {onDeleteLot && (
-                  <button
-                    onClick={async () => {
-                      // For single lot: delete the entire investment
-                      // For multiple lots: show warning that they need to delete individual lots
-                      if (holdings.length === 1) {
-                        setPendingDelete({
-                          lotId: holdings[0].id,
-                          whole: true,
-                          message: t('portfolio:holdingDelete.investmentMessage', { name: aggregatedMetrics.name, symbol }),
-                        });
-                      } else {
-                        // Multiple lots: inform user to delete individual lots from the table below
-                        toast.error(t('portfolio:toast.investmentHasLots', { count: holdings.length }));
-                      }
-                    }}
-                    className="flex items-center gap-2 px-3 py-2 text-sm font-medium text-white bg-error-600 hover:bg-error-700 dark:bg-error-600 dark:hover:bg-error-700 rounded-lg transition-all shadow-sm"
-                    title={t('portfolio:holdingModal.deleteInvestmentTitle', { count: holdings.length })}
-                    aria-label={t('portfolio:holdingModal.deleteInvestmentLabel')}
-                  >
-                    <TrashIcon className="w-4 h-4" />
-                    <span>{t('portfolio:holdingModal.deleteInvestment')}</span>
-                  </button>
-                )}
-                <button
-                  onClick={onClose}
-                  className="flex-shrink-0 p-2 text-gray-500 dark:text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-800 rounded-lg transition-all"
-                  aria-label={t('portfolio:holdingModal.close')}
-                >
-                  <XMarkIcon className="w-6 h-6" />
-                </button>
-              </div>
+              )}
             </div>
+            {onUpdateSymbol && !editingAggregate && (
+              <button
+                onClick={handleStartAggregateEdit}
+                className="p-1.5 text-gray-500 dark:text-gray-400 hover:text-primary-600 dark:hover:text-primary-400 hover:bg-primary-50 dark:hover:bg-primary-900/20 rounded-lg transition-all"
+                title={t('portfolio:holdingModal.editNameSector')}
+                aria-label={t('portfolio:holdingModal.editNameSector')}
+              >
+                <PencilIcon className="w-4 h-4" />
+              </button>
+            )}
           </div>
+        }
+        headerActions={
+          <>
+            {/* Sell Button - show when onSellHolding is available */}
+            {onSellHolding && (
+              <button
+                onClick={() => {
+                  setSellQuantity(aggregatedMetrics.totalQuantity);
+                  setShowSellModal(true);
+                }}
+                className="flex items-center gap-2 px-3 py-2 text-sm font-medium text-white bg-orange-700 hover:bg-orange-800 dark:bg-orange-600 dark:hover:bg-orange-700 rounded-lg transition-all shadow-sm"
+                title={t('portfolio:holdingModal.sellShares')}
+                aria-label={t('portfolio:holdingModal.sellShares')}
+              >
+                <ArrowTrendingDownIcon className="w-4 h-4" />
+                <span>{t('portfolio:holdingModal.sell')}</span>
+              </button>
+            )}
 
+            {/* Sell Button - New simplified sell flow */}
+            {onSellLot && holdings.length > 0 && (
+              <button
+                onClick={() => {
+                  // Use the first holding's data for the sell modal
+                  // (or aggregate if needed)
+                  onSellLot(holdings[0]);
+                  onClose(); // Close detail modal before sell modal opens
+                }}
+                className="flex items-center gap-2 px-3 py-2 text-sm font-medium text-white bg-green-700 hover:bg-green-800 dark:bg-green-600 dark:hover:bg-green-700 rounded-lg transition-all shadow-sm"
+                title={t('portfolio:holdingModal.sellHoldingHint')}
+                aria-label={t('portfolio:holdingModal.sellHolding')}
+              >
+                <CurrencyDollarIcon className="w-4 h-4" />
+                <span>{t('portfolio:holdingModal.sell')}</span>
+              </button>
+            )}
+
+            {/* Delete Investment Button - always show when onDeleteLot is available */}
+            {onDeleteLot && (
+              <button
+                onClick={async () => {
+                  // For single lot: delete the entire investment
+                  // For multiple lots: show warning that they need to delete individual lots
+                  if (holdings.length === 1) {
+                    setPendingDelete({
+                      lotId: holdings[0].id,
+                      whole: true,
+                      message: t('portfolio:holdingDelete.investmentMessage', { name: aggregatedMetrics.name, symbol }),
+                    });
+                  } else {
+                    // Multiple lots: inform user to delete individual lots from the table below
+                    toast.error(t('portfolio:toast.investmentHasLots', { count: holdings.length }));
+                  }
+                }}
+                className="flex items-center gap-2 px-3 py-2 text-sm font-medium text-white bg-error-600 hover:bg-error-700 dark:bg-error-600 dark:hover:bg-error-700 rounded-lg transition-all shadow-sm"
+                title={t('portfolio:holdingModal.deleteInvestmentTitle', { count: holdings.length })}
+                aria-label={t('portfolio:holdingModal.deleteInvestmentLabel')}
+              >
+                <TrashIcon className="w-4 h-4" />
+                <span>{t('portfolio:holdingModal.deleteInvestment')}</span>
+              </button>
+            )}
+          </>
+        }
+      >
+        {/* A focus target for when the row that had focus is deleted. */}
+        <div ref={bodyRef} tabIndex={-1} className="outline-none">
           {/* Summary Cards */}
           <div className="p-6 bg-gradient-to-br from-primary-50 to-blue-50 dark:from-primary-900/20 dark:to-blue-900/20 border-b border-gray-200 dark:border-gray-700">
             <h3 className="text-sm font-semibold text-gray-700 dark:text-gray-300 mb-4 uppercase tracking-wide">
@@ -843,7 +831,6 @@ export function HoldingDetailModal({
             </div>
           </div>
         </div>
-
         {/* Lot Selection Modal for Selling */}
         {showSellModal && (
           <LotSelectionModal
@@ -877,14 +864,16 @@ export function HoldingDetailModal({
             onCancel={() => setShowSellModal(false)}
           />
         )}
-      </div>
-      <ConfirmDialog
-        isOpen={pendingDelete !== null}
-        title={t(pendingDelete?.whole ? 'portfolio:holdingDelete.investmentTitle' : 'portfolio:holdingDelete.lotTitle')}
-        message={pendingDelete?.message ?? ''}
-        onCancel={() => setPendingDelete(null)}
-        onConfirm={confirmPendingDelete}
-      />
+
+        {/* Inside the dialog: Headless UI makes everything outside it inert. */}
+        <ConfirmDialog
+          isOpen={pendingDelete !== null}
+          title={t(pendingDelete?.whole ? 'portfolio:holdingDelete.investmentTitle' : 'portfolio:holdingDelete.lotTitle')}
+          message={pendingDelete?.message ?? ''}
+          onCancel={() => setPendingDelete(null)}
+          onConfirm={confirmPendingDelete}
+        />
+      </Modal>
     </>
   );
 }

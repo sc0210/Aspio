@@ -2,14 +2,14 @@
 
 import { useTranslation } from 'react-i18next';
 import { useState, useEffect, useRef } from 'react';
-import { Dialog, DialogPanel, DialogTitle } from '@headlessui/react';
-import { XMarkIcon, MagnifyingGlassIcon, ArrowPathIcon } from '@heroicons/react/24/outline';
+import { MagnifyingGlassIcon, ArrowPathIcon } from '@heroicons/react/24/outline';
 import { Button } from '@/components/ui/Button';
 import { formatCurrency, localDateString, formatMoney } from '@/utils/formatters';
 import symbolService from '@/services/symbolService';
 import { listingDefaults } from '@/lib/portfolio/holdingFormOptions';
 import { useAppMode } from '@/hooks/useAppMode';
 import { useScrollLock } from '@/hooks/useScrollLock';
+import { Modal } from '@/components/ui/Modal';
 
 interface BuyHoldingModalProps {
     isOpen: boolean;
@@ -212,319 +212,302 @@ export function BuyHoldingModal({ isOpen, onClose, onBuy, existingHoldings = [] 
     };
 
     return (
-        <Dialog open={isOpen} onClose={handleClose} className="relative z-50">
-            <div className="fixed inset-0 bg-black/30 backdrop-blur-sm" aria-hidden="true" />
+        <Modal
+          isOpen={isOpen}
+          onClose={handleClose}
+          size="lg"
+          title={step === 'search' ? t('buy.title') : t('buy.titleDetails')}
+        >
+          <div>
+              {step === 'search' ? (
+                  <div className="space-y-6">
+                      {/* Search Bar */}
+                      <div>
+                          <label htmlFor="buyholding-field" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                              {t('buy.searchLabel')}
+                          </label>
+                          <div className="relative">
+                              <MagnifyingGlassIcon className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-500 dark:text-gray-400" />
+                              <input
+                                  id="buyholding-field"
+                                  type="text"
+                                  value={searchQuery}
+                                  onChange={(e) => setSearchQuery(e.target.value)}
+                                  placeholder={t('buy.searchPlaceholder')}
+                                  className="w-full pl-10 pr-4 py-3 border border-gray-300 dark:border-gray-600 rounded-lg focus-visible:ring-2 focus-visible:ring-primary-500 focus-visible:border-transparent bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
+                                  autoFocus
+                              />
+                              {isSearching && (
+                                  <div className="absolute right-3 top-1/2 -translate-y-1/2">
+                                      <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-primary-600"></div>
+                                  </div>
+                              )}
+                          </div>
+                      </div>
 
-            <div className="fixed inset-0 flex items-center justify-center p-4">
-                <DialogPanel className="mx-auto max-w-2xl w-full bg-white dark:bg-gray-800 rounded-2xl shadow-2xl">
-                    {/* Header */}
-                    <div className="flex items-center justify-between p-6 border-b border-gray-200 dark:border-gray-700">
-                        <DialogTitle className="text-2xl font-bold text-gray-900 dark:text-white">
-                            {step === 'search' ? t('buy.title') : t('buy.titleDetails')}
-                        </DialogTitle>
-                        <button
-                            type="button"
-                            onClick={handleClose}
-                            aria-label="Close dialog"
-                            className="text-gray-500 dark:text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 transition-colors"
-                        >
-                            <XMarkIcon className="w-6 h-6" aria-hidden="true" />
-                        </button>
-                    </div>
+                      {/* Search Results */}
+                      {searchResults.length > 0 && (
+                          <div className="space-y-2">
+                              <h3 className="text-sm font-medium text-gray-700 dark:text-gray-300">{t('buy.searchResults')}</h3>
+                              <div className="space-y-2 max-h-60 overflow-y-auto">
+                                  {searchResults.map((stock, idx) => (
+                                      <button
+                                          key={idx}
+                                          onClick={() => handleSelectStock(stock)}
+                                          className="w-full flex items-center justify-between p-4 bg-gray-50 dark:bg-gray-700 hover:bg-gray-100 dark:hover:bg-gray-600 rounded-lg transition-colors text-left"
+                                      >
+                                          <div className="flex-1">
+                                              <div className="font-medium text-gray-900 dark:text-white">
+                                                  {stock.symbol || stock.ticker}
+                                              </div>
+                                              <div className="text-sm text-gray-500 dark:text-gray-400">
+                                                  {stock.name || stock.shortName}
+                                              </div>
+                                          </div>
+                                          <div className="text-right">
+                                              <div className="text-sm font-medium text-gray-900 dark:text-white">
+                                                  {stock.regularMarketPrice ? `$${stock.regularMarketPrice.toFixed(2)}` : ''}
+                                              </div>
+                                              <div className="text-xs text-gray-500 dark:text-gray-400">
+                                                  {stock.exchange}
+                                              </div>
+                                          </div>
+                                      </button>
+                                  ))}
+                              </div>
+                          </div>
+                      )}
 
-                    {/* Content */}
-                    <div className="p-6 max-h-[calc(100vh-12rem)] overflow-y-auto">
-                        {step === 'search' ? (
-                            <div className="space-y-6">
-                                {/* Search Bar */}
-                                <div>
-                                    <label htmlFor="buyholding-field" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                                        {t('buy.searchLabel')}
-                                    </label>
-                                    <div className="relative">
-                                        <MagnifyingGlassIcon className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-500 dark:text-gray-400" />
-                                        <input
-                                            id="buyholding-field"
-                                            type="text"
-                                            value={searchQuery}
-                                            onChange={(e) => setSearchQuery(e.target.value)}
-                                            placeholder={t('buy.searchPlaceholder')}
-                                            className="w-full pl-10 pr-4 py-3 border border-gray-300 dark:border-gray-600 rounded-lg focus-visible:ring-2 focus-visible:ring-primary-500 focus-visible:border-transparent bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
-                                            autoFocus
-                                        />
-                                        {isSearching && (
-                                            <div className="absolute right-3 top-1/2 -translate-y-1/2">
-                                                <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-primary-600"></div>
-                                            </div>
-                                        )}
-                                    </div>
-                                </div>
+                      {/* Existing Holdings */}
+                      {existingHoldings.length > 0 && (
+                          <div className="space-y-2">
+                              <h3 className="text-sm font-medium text-gray-700 dark:text-gray-300">{t('buy.addToExisting')}</h3>
+                              <div className="grid grid-cols-2 gap-2">
+                                  {existingHoldings.slice(0, 6).map((holding, idx) => (
+                                      <button
+                                          key={idx}
+                                          onClick={() => handleSelectExisting(holding)}
+                                          className="p-3 bg-blue-50 dark:bg-blue-900/20 hover:bg-blue-100 dark:hover:bg-blue-900/30 rounded-lg transition-colors text-left"
+                                      >
+                                          <div className="font-medium text-blue-900 dark:text-blue-300 text-sm">
+                                              {holding.symbol}
+                                          </div>
+                                          <div className="text-xs text-blue-700 dark:text-blue-400 truncate">
+                                              {holding.name}
+                                          </div>
+                                      </button>
+                                  ))}
+                              </div>
+                          </div>
+                      )}
 
-                                {/* Search Results */}
-                                {searchResults.length > 0 && (
-                                    <div className="space-y-2">
-                                        <h3 className="text-sm font-medium text-gray-700 dark:text-gray-300">{t('buy.searchResults')}</h3>
-                                        <div className="space-y-2 max-h-60 overflow-y-auto">
-                                            {searchResults.map((stock, idx) => (
-                                                <button
-                                                    key={idx}
-                                                    onClick={() => handleSelectStock(stock)}
-                                                    className="w-full flex items-center justify-between p-4 bg-gray-50 dark:bg-gray-700 hover:bg-gray-100 dark:hover:bg-gray-600 rounded-lg transition-colors text-left"
-                                                >
-                                                    <div className="flex-1">
-                                                        <div className="font-medium text-gray-900 dark:text-white">
-                                                            {stock.symbol || stock.ticker}
-                                                        </div>
-                                                        <div className="text-sm text-gray-500 dark:text-gray-400">
-                                                            {stock.name || stock.shortName}
-                                                        </div>
-                                                    </div>
-                                                    <div className="text-right">
-                                                        <div className="text-sm font-medium text-gray-900 dark:text-white">
-                                                            {stock.regularMarketPrice ? `$${stock.regularMarketPrice.toFixed(2)}` : ''}
-                                                        </div>
-                                                        <div className="text-xs text-gray-500 dark:text-gray-400">
-                                                            {stock.exchange}
-                                                        </div>
-                                                    </div>
-                                                </button>
-                                            ))}
-                                        </div>
-                                    </div>
-                                )}
+                      {/* Manual Entry */}
+                      <button
+                          onClick={handleManualEntry}
+                          className="w-full p-4 border-2 border-dashed border-gray-300 dark:border-gray-600 hover:border-primary-500 dark:hover:border-primary-400 rounded-lg transition-colors text-gray-600 dark:text-gray-400 hover:text-primary-600 dark:hover:text-primary-400 font-medium"
+                      >
+                          {t('buy.manualEntry')}
+                      </button>
+                  </div>
+              ) : (
+                  <form onSubmit={handleSubmit} className="space-y-6">
+                      {/* Stock Info */}
+                      <div className="grid grid-cols-2 gap-4">
+                          <div>
+                              <label htmlFor="buyholding-field-2" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                                  {t('buy.field.symbol')}
+                              </label>
+                              <input
+                                  id="buyholding-field-2"
+                                  type="text"
+                                  value={symbol}
+                                  onChange={(e) => setSymbol(e.target.value.toUpperCase())}
+                                  className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus-visible:ring-2 focus-visible:ring-primary-500 bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
+                                  required
+                              />
+                          </div>
+                          <div>
+                              <label htmlFor="buyholding-field-3" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                                  {t('buy.field.name')}
+                              </label>
+                              <input
+                                  id="buyholding-field-3"
+                                  type="text"
+                                  value={name}
+                                  onChange={(e) => setName(e.target.value)}
+                                  className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus-visible:ring-2 focus-visible:ring-primary-500 bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
+                                  required
+                              />
+                          </div>
+                      </div>
 
-                                {/* Existing Holdings */}
-                                {existingHoldings.length > 0 && (
-                                    <div className="space-y-2">
-                                        <h3 className="text-sm font-medium text-gray-700 dark:text-gray-300">{t('buy.addToExisting')}</h3>
-                                        <div className="grid grid-cols-2 gap-2">
-                                            {existingHoldings.slice(0, 6).map((holding, idx) => (
-                                                <button
-                                                    key={idx}
-                                                    onClick={() => handleSelectExisting(holding)}
-                                                    className="p-3 bg-blue-50 dark:bg-blue-900/20 hover:bg-blue-100 dark:hover:bg-blue-900/30 rounded-lg transition-colors text-left"
-                                                >
-                                                    <div className="font-medium text-blue-900 dark:text-blue-300 text-sm">
-                                                        {holding.symbol}
-                                                    </div>
-                                                    <div className="text-xs text-blue-700 dark:text-blue-400 truncate">
-                                                        {holding.name}
-                                                    </div>
-                                                </button>
-                                            ))}
-                                        </div>
-                                    </div>
-                                )}
+                      {/* Type and Currency */}
+                      <div className="grid grid-cols-3 gap-4">
+                          <div>
+                              <label htmlFor="buyholding-field-4" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                                  {t('buy.field.type')}
+                              </label>
+                              <select
+                                  id="buyholding-field-4"
+                                  value={type}
+                                  onChange={(e) => setType(e.target.value)}
+                                  className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus-visible:ring-2 focus-visible:ring-primary-500 bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
+                              >
+                                  {INVESTMENT_TYPES.map(investmentType => (
+                                      <option key={investmentType.value} value={investmentType.value}>{investmentType.label}</option>
+                                  ))}
+                              </select>
+                          </div>
+                          <div>
+                              <label htmlFor="buyholding-field-5" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                                  {t('buy.field.currency')}
+                              </label>
+                              <select
+                                  id="buyholding-field-5"
+                                  value={currency}
+                                  onChange={(e) => setCurrency(e.target.value)}
+                                  className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus-visible:ring-2 focus-visible:ring-primary-500 bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
+                              >
+                                  {CURRENCIES.map(c => (
+                                      <option key={c} value={c}>{c}</option>
+                                  ))}
+                              </select>
+                          </div>
+                          <div>
+                              <label htmlFor="buyholding-field-6" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                                  {t('buy.field.exchange')}
+                              </label>
+                              <input
+                                  id="buyholding-field-6"
+                                  type="text"
+                                  value={exchange}
+                                  onChange={(e) => setExchange(e.target.value)}
+                                  className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus-visible:ring-2 focus-visible:ring-primary-500 bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
+                              />
+                          </div>
+                      </div>
 
-                                {/* Manual Entry */}
-                                <button
-                                    onClick={handleManualEntry}
-                                    className="w-full p-4 border-2 border-dashed border-gray-300 dark:border-gray-600 hover:border-primary-500 dark:hover:border-primary-400 rounded-lg transition-colors text-gray-600 dark:text-gray-400 hover:text-primary-600 dark:hover:text-primary-400 font-medium"
-                                >
-                                    {t('buy.manualEntry')}
-                                </button>
-                            </div>
-                        ) : (
-                            <form onSubmit={handleSubmit} className="space-y-6">
-                                {/* Stock Info */}
-                                <div className="grid grid-cols-2 gap-4">
-                                    <div>
-                                        <label htmlFor="buyholding-field-2" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                                            {t('buy.field.symbol')}
-                                        </label>
-                                        <input
-                                            id="buyholding-field-2"
-                                            type="text"
-                                            value={symbol}
-                                            onChange={(e) => setSymbol(e.target.value.toUpperCase())}
-                                            className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus-visible:ring-2 focus-visible:ring-primary-500 bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
-                                            required
-                                        />
-                                    </div>
-                                    <div>
-                                        <label htmlFor="buyholding-field-3" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                                            {t('buy.field.name')}
-                                        </label>
-                                        <input
-                                            id="buyholding-field-3"
-                                            type="text"
-                                            value={name}
-                                            onChange={(e) => setName(e.target.value)}
-                                            className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus-visible:ring-2 focus-visible:ring-primary-500 bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
-                                            required
-                                        />
-                                    </div>
-                                </div>
+                      {/* Quantity and Price */}
+                      <div className="grid grid-cols-2 gap-4">
+                          <div>
+                              <label htmlFor="buyholding-field-7" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                                  {t('buy.field.quantity')}
+                              </label>
+                              <input
+                                  id="buyholding-field-7"
+                                  type="number"
+                                  inputMode="decimal"
+                                  onWheel={(e) => e.currentTarget.blur()}
+                                  step="any"
+                                  value={quantity}
+                                  onChange={(e) => setQuantity(e.target.value)}
+                                  className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus-visible:ring-2 focus-visible:ring-primary-500 bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
+                                  required
+                              />
+                          </div>
+                          <div>
+                              <label htmlFor="buyholding-field-8" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                                  {t('buy.field.price')}
+                              </label>
+                              <input
+                                  id="buyholding-field-8"
+                                  type="number"
+                                  inputMode="decimal"
+                                  onWheel={(e) => e.currentTarget.blur()}
+                                  step="any"
+                                  value={isCash ? '1' : price}
+                                  onChange={(e) => setPrice(e.target.value)}
+                                  disabled={isCash}
+                                  className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus-visible:ring-2 focus-visible:ring-primary-500 bg-white dark:bg-gray-700 text-gray-900 dark:text-white disabled:opacity-60 disabled:cursor-not-allowed"
+                                  required
+                              />
+                          </div>
+                      </div>
 
-                                {/* Type and Currency */}
-                                <div className="grid grid-cols-3 gap-4">
-                                    <div>
-                                        <label htmlFor="buyholding-field-4" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                                            {t('buy.field.type')}
-                                        </label>
-                                        <select
-                                            id="buyholding-field-4"
-                                            value={type}
-                                            onChange={(e) => setType(e.target.value)}
-                                            className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus-visible:ring-2 focus-visible:ring-primary-500 bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
-                                        >
-                                            {INVESTMENT_TYPES.map(investmentType => (
-                                                <option key={investmentType.value} value={investmentType.value}>{investmentType.label}</option>
-                                            ))}
-                                        </select>
-                                    </div>
-                                    <div>
-                                        <label htmlFor="buyholding-field-5" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                                            {t('buy.field.currency')}
-                                        </label>
-                                        <select
-                                            id="buyholding-field-5"
-                                            value={currency}
-                                            onChange={(e) => setCurrency(e.target.value)}
-                                            className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus-visible:ring-2 focus-visible:ring-primary-500 bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
-                                        >
-                                            {CURRENCIES.map(c => (
-                                                <option key={c} value={c}>{c}</option>
-                                            ))}
-                                        </select>
-                                    </div>
-                                    <div>
-                                        <label htmlFor="buyholding-field-6" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                                            {t('buy.field.exchange')}
-                                        </label>
-                                        <input
-                                            id="buyholding-field-6"
-                                            type="text"
-                                            value={exchange}
-                                            onChange={(e) => setExchange(e.target.value)}
-                                            className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus-visible:ring-2 focus-visible:ring-primary-500 bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
-                                        />
-                                    </div>
-                                </div>
+                      {/* Purchase Date */}
+                      <div>
+                          <label htmlFor="buyholding-field-9" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                              {t('buy.field.date')}
+                          </label>
+                          <input
+                              id="buyholding-field-9"
+                              type="date"
+                              value={purchaseDate}
+                              onChange={(e) => setPurchaseDate(e.target.value)}
+                              max={localDateString()}
+                              className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus-visible:ring-2 focus-visible:ring-primary-500 bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
+                              required
+                          />
+                      </div>
 
-                                {/* Quantity and Price */}
-                                <div className="grid grid-cols-2 gap-4">
-                                    <div>
-                                        <label htmlFor="buyholding-field-7" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                                            {t('buy.field.quantity')}
-                                        </label>
-                                        <input
-                                            id="buyholding-field-7"
-                                            type="number"
-                                            inputMode="decimal"
-                                            onWheel={(e) => e.currentTarget.blur()}
-                                            step="any"
-                                            value={quantity}
-                                            onChange={(e) => setQuantity(e.target.value)}
-                                            className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus-visible:ring-2 focus-visible:ring-primary-500 bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
-                                            required
-                                        />
-                                    </div>
-                                    <div>
-                                        <label htmlFor="buyholding-field-8" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                                            {t('buy.field.price')}
-                                        </label>
-                                        <input
-                                            id="buyholding-field-8"
-                                            type="number"
-                                            inputMode="decimal"
-                                            onWheel={(e) => e.currentTarget.blur()}
-                                            step="any"
-                                            value={isCash ? '1' : price}
-                                            onChange={(e) => setPrice(e.target.value)}
-                                            disabled={isCash}
-                                            className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus-visible:ring-2 focus-visible:ring-primary-500 bg-white dark:bg-gray-700 text-gray-900 dark:text-white disabled:opacity-60 disabled:cursor-not-allowed"
-                                            required
-                                        />
-                                    </div>
-                                </div>
+                      {/* Notes */}
+                      <div>
+                          <label htmlFor="buyholding-field-10" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                              {t('buy.field.notes')}
+                          </label>
+                          <textarea
+                              id="buyholding-field-10"
+                              value={notes}
+                              onChange={(e) => setNotes(e.target.value)}
+                              rows={2}
+                              className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus-visible:ring-2 focus-visible:ring-primary-500 bg-white dark:bg-gray-700 text-gray-900 dark:text-white resize-none"
+                              placeholder={t('buy.notesPlaceholder')}
+                          />
+                      </div>
 
-                                {/* Purchase Date */}
-                                <div>
-                                    <label htmlFor="buyholding-field-9" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                                        {t('buy.field.date')}
-                                    </label>
-                                    <input
-                                        id="buyholding-field-9"
-                                        type="date"
-                                        value={purchaseDate}
-                                        onChange={(e) => setPurchaseDate(e.target.value)}
-                                        max={localDateString()}
-                                        className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus-visible:ring-2 focus-visible:ring-primary-500 bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
-                                        required
-                                    />
-                                </div>
+                      {/* Total Cost Summary */}
+                      {totalCost > 0 && (
+                          <div className="p-4 bg-prosperity-50 dark:bg-prosperity-900/20 rounded-lg border border-prosperity-200 dark:border-prosperity-800">
+                              <div className="flex items-center justify-between">
+                                  <span className="text-sm font-medium text-prosperity-900 dark:text-prosperity-300">
+                                      {t('buy.totalCost')}
+                                  </span>
+                                  <span className="text-xl font-bold text-prosperity-900 dark:text-prosperity-300">
+                                      {formatMoney(totalCost, currency)}
+                                  </span>
+                              </div>
+                              <div className="text-xs text-prosperity-700 dark:text-prosperity-400 mt-1">
+                                  {t('buy.sharesTimesPrice', { count: quantityNum, price: formatCurrency(priceNum, currency) })}
+                              </div>
+                          </div>
+                      )}
 
-                                {/* Notes */}
-                                <div>
-                                    <label htmlFor="buyholding-field-10" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                                        {t('buy.field.notes')}
-                                    </label>
-                                    <textarea
-                                        id="buyholding-field-10"
-                                        value={notes}
-                                        onChange={(e) => setNotes(e.target.value)}
-                                        rows={2}
-                                        className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus-visible:ring-2 focus-visible:ring-primary-500 bg-white dark:bg-gray-700 text-gray-900 dark:text-white resize-none"
-                                        placeholder={t('buy.notesPlaceholder')}
-                                    />
-                                </div>
+                      {/* Error Message */}
+                      {error && (
+                          <div className="p-3 bg-error-50 dark:bg-error-900/20 border border-error-200 dark:border-error-800 rounded-lg text-sm text-error-700 dark:text-error-400">
+                              {error}
+                          </div>
+                      )}
 
-                                {/* Total Cost Summary */}
-                                {totalCost > 0 && (
-                                    <div className="p-4 bg-prosperity-50 dark:bg-prosperity-900/20 rounded-lg border border-prosperity-200 dark:border-prosperity-800">
-                                        <div className="flex items-center justify-between">
-                                            <span className="text-sm font-medium text-prosperity-900 dark:text-prosperity-300">
-                                                {t('buy.totalCost')}
-                                            </span>
-                                            <span className="text-xl font-bold text-prosperity-900 dark:text-prosperity-300">
-                                                {formatMoney(totalCost, currency)}
-                                            </span>
-                                        </div>
-                                        <div className="text-xs text-prosperity-700 dark:text-prosperity-400 mt-1">
-                                            {t('buy.sharesTimesPrice', { count: quantityNum, price: formatCurrency(priceNum, currency) })}
-                                        </div>
-                                    </div>
-                                )}
-
-                                {/* Error Message */}
-                                {error && (
-                                    <div className="p-3 bg-error-50 dark:bg-error-900/20 border border-error-200 dark:border-error-800 rounded-lg text-sm text-error-700 dark:text-error-400">
-                                        {error}
-                                    </div>
-                                )}
-
-                                {/* Actions */}
-                                <div className="flex gap-3 pt-4 border-t border-gray-200 dark:border-gray-700">
-                                    <Button
-                                        type="button"
-                                        variant="outline"
-                                        onClick={() => setStep('search')}
-                                        disabled={isSubmitting}
-                                        className="flex-1"
-                                    >
-                                        {t('buy.back')}
-                                    </Button>
-                                    <Button
-                                        type="submit"
-                                        disabled={!canSubmit}
-                                        className="flex-1 flex items-center justify-center gap-2"
-                                    >
-                                        {isSubmitting ? (
-                                            <>
-                                                <ArrowPathIcon className="w-4 h-4 animate-spin" />
-                                                {t('buy.processing')}
-                                            </>
-                                        ) : (
-                                            t('buy.confirm')
-                                        )}
-                                    </Button>
-                                </div>
-                            </form>
-                        )}
-                    </div>
-                </DialogPanel>
-            </div>
-        </Dialog>
+                      {/* Actions */}
+                      <div className="flex gap-3 pt-4 border-t border-gray-200 dark:border-gray-700">
+                          <Button
+                              type="button"
+                              variant="outline"
+                              onClick={() => setStep('search')}
+                              disabled={isSubmitting}
+                              className="flex-1"
+                          >
+                              {t('buy.back')}
+                          </Button>
+                          <Button
+                              type="submit"
+                              disabled={!canSubmit}
+                              className="flex-1 flex items-center justify-center gap-2"
+                          >
+                              {isSubmitting ? (
+                                  <>
+                                      <ArrowPathIcon className="w-4 h-4 animate-spin" />
+                                      {t('buy.processing')}
+                                  </>
+                              ) : (
+                                  t('buy.confirm')
+                              )}
+                          </Button>
+                      </div>
+                  </form>
+              )}
+          </div>
+        </Modal>
     );
 }

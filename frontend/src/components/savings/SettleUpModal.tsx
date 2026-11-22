@@ -2,9 +2,8 @@
 
 import { useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { XMarkIcon } from '@heroicons/react/24/outline';
 import { apiClient } from '@/lib/api-client';
-import { useDialog } from '@/hooks/useDialog';
+import { Modal } from '@/components/ui/Modal';
 
 export interface SettleTarget {
   connectionId: string;
@@ -45,7 +44,6 @@ export default function SettleUpModal({ target, onClose, onSuccess }: SettleUpMo
     setError('');
   }, [target]);
 
-  const { panelRef, dialogProps } = useDialog({ isOpen, onClose });
   if (!target) return null;
 
   const theyOwe = target.net > 0;
@@ -76,29 +74,14 @@ export default function SettleUpModal({ target, onClose, onSuccess }: SettleUpMo
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
-      <div className="absolute inset-0 bg-gray-900/60" onClick={onClose} aria-hidden="true" />
-      <div
-        ref={panelRef}
-        {...dialogProps}
-        aria-labelledby="settle-title"
-        className="relative bg-white dark:bg-gray-800 rounded-2xl shadow-xl w-full max-w-sm p-6"
-      >
-        <div className="flex items-center justify-between mb-4">
-          <h2 id="settle-title" className="text-base font-semibold text-gray-900 dark:text-white">
-            {theyOwe
-              ? t('savings.splits.settle.receivedTitle', '{{name}} paid you back', { name: target.partnerName })
-              : t('savings.splits.settle.paidTitle', 'You paid {{name}} back', { name: target.partnerName })}
-          </h2>
-          <button
-            onClick={onClose}
-            aria-label={t('common.close', 'Close')}
-            className="min-w-[44px] min-h-[44px] flex items-center justify-center text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200"
-          >
-            <XMarkIcon className="w-5 h-5" />
-          </button>
-        </div>
-
+    <Modal
+      isOpen={isOpen}
+      onClose={onClose}
+      size="xs"
+      title={theyOwe
+        ? t('savings.splits.settle.receivedTitle', '{{name}} paid you back', { name: target.partnerName })
+        : t('savings.splits.settle.paidTitle', 'You paid {{name}} back', { name: target.partnerName })}
+    >
         <form onSubmit={handleSubmit} className="space-y-4">
           <div>
             <label htmlFor="settle-amount" className={LABEL}>
@@ -131,7 +114,6 @@ export default function SettleUpModal({ target, onClose, onSuccess }: SettleUpMo
               : theyOwe ? t('savings.splits.settle.submitReceived', 'Record repayment') : t('savings.splits.settle.submitPaid', 'Send for confirmation')}
           </button>
         </form>
-      </div>
-    </div>
+    </Modal>
   );
 }

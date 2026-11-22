@@ -39,15 +39,15 @@ const existing = [{ id: 'old-1', date: '2026-01-01', amount: 99, category: 'Food
 const reachConfirm = async () => {
   const onImport = jest.fn().mockResolvedValue(undefined);
   const onClose = jest.fn();
-  const { container } = render(
+  render(
     <I18nextProvider i18n={i18n}>
       <TransactionImportExportModal transactions={existing} onClose={onClose} onImport={onImport} />
     </I18nextProvider>,
   );
-  const input = container.querySelector('input[type="file"]') as HTMLInputElement;
+  const input = document.body.querySelector('input[type="file"]') as HTMLInputElement;
   fireEvent.change(input, { target: { files: [new File([CSV], 'tx.csv', { type: 'text/csv' })] } });
   const importButton = await screen.findByRole('button', { name: /Import 1 Transactions/ });
-  fireEvent.click(container.querySelector('input[type="radio"][value="replace"]') as HTMLInputElement);
+  fireEvent.click(document.body.querySelector('input[type="radio"][value="replace"]') as HTMLInputElement);
   fireEvent.click(importButton);
   return { onImport, onClose };
 };
