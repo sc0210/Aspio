@@ -6,7 +6,6 @@ import { Dialog, DialogPanel, DialogTitle } from '@headlessui/react';
 import { XMarkIcon, MagnifyingGlassIcon, ArrowPathIcon } from '@heroicons/react/24/outline';
 import { Button } from '@/components/ui/Button';
 import { formatCurrency, localDateString, formatMoney } from '@/utils/formatters';
-import { cn } from '@/utils/cn';
 import symbolService from '@/services/symbolService';
 import { listingDefaults } from '@/lib/portfolio/holdingFormOptions';
 import { useAppMode } from '@/hooks/useAppMode';
@@ -43,12 +42,6 @@ interface StockSearchResult {
     regularMarketPrice?: number;
 }
 
-// Keys, not strings: this array is built at module load, where there is no `t`.
-const WALLET_TYPES = [
-    { value: 'portfolio', labelKey: 'buy.wallet.portfolio.label', descriptionKey: 'buy.wallet.portfolio.description', icon: '📈', color: 'from-purple-500 to-pink-500' },
-    { value: 'emergency', labelKey: 'buy.wallet.emergency.label', descriptionKey: 'buy.wallet.emergency.description', icon: '🚨', color: 'from-orange-500 to-red-500' },
-];
-
 const INVESTMENT_TYPES = [
     { value: 'stock', label: 'Stock' },
     { value: 'etf', label: 'ETF' },
@@ -77,7 +70,6 @@ export function BuyHoldingModal({ isOpen, onClose, onBuy, existingHoldings = [] 
     const [symbol, setSymbol] = useState('');
     const [name, setName] = useState('');
     const [type, setType] = useState('stock');
-    const [walletType, setWalletType] = useState('portfolio');
     const [quantity, setQuantity] = useState('');
     const [price, setPrice] = useState('');
     const [currency, setCurrency] = useState('TWD');
@@ -176,7 +168,8 @@ export function BuyHoldingModal({ isOpen, onClose, onBuy, existingHoldings = [] 
                 symbol: symbol.toUpperCase(),
                 name,
                 type,
-                walletType,
+                // Always Portfolio: the page lists only that wallet.
+                walletType: 'portfolio',
                 quantity: quantityNum,
                 averageCost: priceNum,
                 currency,
@@ -204,7 +197,6 @@ export function BuyHoldingModal({ isOpen, onClose, onBuy, existingHoldings = [] 
         setSymbol('');
         setName('');
         setType('stock');
-        setWalletType('portfolio');
         setQuantity('');
         setPrice('');
         setCurrency('TWD');
@@ -407,36 +399,6 @@ export function BuyHoldingModal({ isOpen, onClose, onBuy, existingHoldings = [] 
                                             onChange={(e) => setExchange(e.target.value)}
                                             className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus-visible:ring-2 focus-visible:ring-primary-500 bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
                                         />
-                                    </div>
-                                </div>
-
-                                {/* Wallet Type */}
-                                <div>
-                                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-3">
-                                        {t('buy.field.wallet')}
-                                    </label>
-                                    <div className="grid grid-cols-3 gap-3">
-                                        {WALLET_TYPES.map((wallet) => (
-                                            <button
-                                                key={wallet.value}
-                                                type="button"
-                                                onClick={() => setWalletType(wallet.value)}
-                                                className={cn(
-                                                    'p-4 rounded-xl border-2 transition-all text-left',
-                                                    walletType === wallet.value
-                                                        ? 'border-primary-500 bg-primary-50 dark:bg-primary-900/20 shadow-md'
-                                                        : 'border-gray-200 dark:border-gray-700 hover:border-gray-300 dark:hover:border-gray-600'
-                                                )}
-                                            >
-                                                <div className="text-2xl mb-1">{wallet.icon}</div>
-                                                <div className="font-medium text-sm text-gray-900 dark:text-white">
-                                                    {t(wallet.labelKey)}
-                                                </div>
-                                                <div className="text-xs text-gray-500 dark:text-gray-400 mt-1">
-                                                    {t(wallet.descriptionKey)}
-                                                </div>
-                                            </button>
-                                        ))}
                                     </div>
                                 </div>
 

@@ -16,7 +16,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.modules.line_bot import service as svc
 from app.modules.line_bot.models import LineUserLink
-from app.modules.line_bot.quick_log import guess_category_name, parse_quick_entry
+from app.modules.line_bot.quick_log import guess_category_name, guess_subcategory, parse_quick_entry
 from app.modules.line_bot.schemas import LineEvent
 from app.modules.transactions.models import (
     CategoryType,
@@ -82,12 +82,38 @@ def test_ignores_chat(text):
         ("business lunch", False, "Dining"),  # not "bus"
         ("薪水", True, "Salary"),
         ("年終", True, "Bonus"),
+        ("美甲", False, "Shopping"),     # beauty is a detail under Shopping, not its own category
+        ("車險保費", False, "Insurance"),
+        ("機車保養", False, "Transportation"),  # a car service, not skincare
+        ("保養品", False, "Shopping"),
+        ("租車", False, "Transportation"),
         ("隨便", False, "Others"),
         ("午餐", True, "Others"),        # income never takes an expense keyword
     ],
 )
 def test_guesses_category(description, is_income, expected):
     assert guess_category_name(description, is_income) == expected
+
+
+@pytest.mark.parametrize(
+    "description, category, expected",
+    [
+        ("美甲", "Shopping", "Beauty"),
+        ("剪髮", "Shopping", "Beauty"),
+        ("買衣服", "Shopping", "Clothing"),
+        ("捷運", "Transportation", "Public Transit"),
+        ("機車保養", "Transportation", "Car Maintenance"),
+        ("保養", "Transportation", "Car Maintenance"),  # the same word reads by its category
+        ("保養", "Shopping", "Beauty"),
+        ("business taxi", "Transportation", None),  # "bus" only as a whole word
+        ("停車費", "Transportation", "Parking"),
+        ("租車", "Transportation", "Car Rental"),
+        ("蝦皮", "Shopping", None),      # Shopping, but no detail suggested
+        ("美甲", "Dining", None),        # a detail only under its own category
+    ],
+)
+def test_guesses_subcategory(description, category, expected):
+    assert guess_subcategory(description, category) == expected
 
 
 # ---------------------------------------------------------------------------
@@ -141,6 +167,17 @@ async def _only_txn(session: AsyncSession) -> Transaction:
 
 
 class TestHandleQuickLog:
+    @pytest.mark.asyncio
+    async def test_beauty_is_filed_as_shopping_with_its_detail(self, async_session, link, categories):
+        shopping = _category("Shopping", CategoryType.EXPENSE, 20)
+        async_session.add(shopping)
+        await async_session.flush()
+        with patch.object(svc, "_reply_flex", new_callable=AsyncMock) as reply:
+            await svc.handle_quick_log(async_session, "美甲 1200", LINE_USER, REPLY_TOKEN)
+        txn = await _only_txn(async_session)
+        assert (txn.category_id, txn.subcategory) == (shopping.id, "Beauty")
+        assert "Shopping · Beauty" in reply.call_args[0][1]
+
     @pytest.mark.asyncio
     async def test_records_expense_with_keyword_category(self, async_session, link, categories):
         with patch.object(svc, "_reply_flex", new_callable=AsyncMock) as reply:
@@ -301,6 +338,20 @@ class TestQuickCategory:
         # The same words again now follow the user's choice.
         again = await _log(async_session, "麻辣燙 180")
         assert again.category_id == categories["Groceries"].id
+
+    @pytest.mark.asyncio
+    async def test_moving_drops_the_detail_instead_of_reguessing(self, async_session, link, categories):
+        shopping = _category("Shopping", CategoryType.EXPENSE, 20)
+        transport = _category("Transportation", CategoryType.EXPENSE, 20)
+        async_session.add_all([shopping, transport])
+        await async_session.flush()
+        txn = await _log(async_session, "保養品 500")  # skincare: Shopping · Beauty
+        assert (txn.category_id, txn.subcategory) == (shopping.id, "Beauty")
+        with patch.object(svc, "_reply", new_callable=AsyncMock):
+            await svc.handle_quick_set_category(
+                async_session, LINE_USER, REPLY_TOKEN, str(txn.id), str(transport.id))
+        # Not "Car Maintenance": the same word means something else there.
+        assert (txn.category_id, txn.subcategory) == (transport.id, None)
 
     @pytest.mark.asyncio
     async def test_rejects_a_category_of_the_other_type(self, async_session, link, categories):

@@ -26,6 +26,7 @@ EXPECTED_JOBS = {
     "tw_market_price_update", "us_market_price_update", "crypto_price_update",
     "daily_historical_sync", "daily_payment_due_reminders", "daily_spending_alerts",
     "daily_recurring_transactions",
+    "daily_tw_market_sync",
 }
 
 

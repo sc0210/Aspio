@@ -59,6 +59,7 @@ interface LoadedRow {
   currency: string;
   description: string;
   category: string;
+  subcategory?: string;
   walletType: string;
   paymentMethod: string;
   date: string;
@@ -99,6 +100,7 @@ export default function EditTransactionPage() {
     currency: 'TWD',
     description: '',
     category: '',
+    subcategory: '',
     paymentMethod: '',
     walletType: 'life',
     fromWallet: 'life', // For transfers
@@ -189,6 +191,7 @@ export default function EditTransactionPage() {
             currency: txn.currency || defaultCurrency,
             description: txn.description,
             category: txn.category,
+            subcategory: txn.subcategory || undefined,
             walletType: txn.walletType || 'life',
             paymentMethod: txn.paymentMethod || '',
             date: day,
@@ -243,6 +246,7 @@ export default function EditTransactionPage() {
               currency: parsed?.currency || defaultCurrency,
               description: txn.description,
               category: INVESTMENT_PURCHASE,
+              subcategory: '',
               paymentMethod: txn.paymentMethod || 'bank_transfer',
               walletType: txn.walletType || 'life',
               fromWallet: 'life',
@@ -261,6 +265,7 @@ export default function EditTransactionPage() {
               currency: txn.currency || defaultCurrency,
               description: txn.description,
               category: INVESTMENT_SALE,
+              subcategory: '',
               walletType: txn.walletType || 'life',
               date: day,
               tags: txn.tags || [],
@@ -295,6 +300,7 @@ export default function EditTransactionPage() {
                 // leg somehow has no description at all.
                 description: txn.description || transfer.notes || '',
                 category: '', // Not used for transfers
+                subcategory: '',
                 paymentMethod: '',
                 walletType: transfer.fromWallet,
                 fromWallet: transfer.fromWallet,
@@ -324,6 +330,7 @@ export default function EditTransactionPage() {
                 currency: txn.currency || defaultCurrency,
                 description: txn.description,
                 category: '', // Not used for transfers
+                subcategory: '',
                 paymentMethod: '',
                 walletType: from,
                 fromWallet: from, // Source wallet
@@ -367,6 +374,7 @@ export default function EditTransactionPage() {
               currency: txn.currency || defaultCurrency,
               description: txn.description,
               category: categoryValue,
+              subcategory: txn.subcategory ?? '',
               paymentMethod: paymentMethodValue,
               walletType: txn.walletType || 'life',
               fromWallet: 'life',
@@ -489,6 +497,7 @@ export default function EditTransactionPage() {
         description: formData.description,
         date: formData.date,
         category: formData.category,
+        subcategory: formData.subcategory || undefined,
         paymentMethod: formData.paymentMethod || undefined,
         walletType: formData.walletType as 'life' | 'emergency',
         tags: formData.tags,
@@ -613,7 +622,8 @@ export default function EditTransactionPage() {
           date: formData.date,
           category: formData.category,
           // null, not undefined: undefined is left out of the request, so a payment
-          // method cleared in the form stayed saved.
+          // method (or detail) cleared in the form stayed saved.
+          subcategory: (formData.subcategory || null) as string | undefined,
           paymentMethod: (formData.paymentMethod || null) as string | undefined,
           walletType: formData.walletType as 'life' | 'emergency',
           tags: formData.tags,
@@ -718,7 +728,8 @@ export default function EditTransactionPage() {
   const same = (a?: string | null, b?: string | null) => (a ?? '') === (b ?? '');
   const unsaved = !!baseline && (
     !same(formData.amount, baseline.amount) || !same(formData.description, baseline.description)
-    || !same(formData.category, baseline.category) || !same(formData.currency, baseline.currency)
+    || !same(formData.category, baseline.category) || !same(formData.subcategory, baseline.subcategory)
+    || !same(formData.currency, baseline.currency)
     || formData.type !== baseline.type || formData.date !== baseline.date
     || !same(formData.loanId, baseline.loanId) || !same(formData.paymentMethod, baseline.paymentMethod)
     || !same(formData.goalId, baseline.goalId)
@@ -739,6 +750,7 @@ export default function EditTransactionPage() {
       walletType: loaded.walletType,
     });
     if (loaded.paymentMethod) q.set('paymentMethod', loaded.paymentMethod);
+    if (loaded.subcategory) q.set('subcategory', loaded.subcategory);
     if (returnTo !== '/transactions') q.set(RETURN_TO_PARAM, returnTo);
     return `/transactions/add?${q.toString()}`;
   })();
@@ -813,6 +825,7 @@ export default function EditTransactionPage() {
                 onPick={(type) => {
                   handleInputChange('type', type);
                   handleInputChange('category', '');
+                  handleInputChange('subcategory', '');
                   // A loan link is an expense's; an income would keep it otherwise.
                   if (type !== 'expense') handleInputChange('loanId', '');
                 }}
