@@ -33,11 +33,6 @@ class TwMarketRepository(BaseRepository[TwMarketMonth]):
         await self.db.flush()
         return row
 
-    async def months_missing_cpi(self) -> List[TwMarketMonth]:
-        return list((await self.db.execute(
-            select(TwMarketMonth).where(TwMarketMonth.cpi.is_(None))
-        )).scalars())
-
     async def set_cpi(self, cpi: Dict[date, float]) -> int:
         """Write CPI on every month the series covers; flushes, the caller commits.
 

@@ -391,3 +391,11 @@ class TestDispatch:
         with patch.object(svc, "_reply_flex", new_callable=AsyncMock) as reply:
             await svc.handle_event(async_session, _text_event("hello"))
         assert reply.call_args[0][1] == "Aspiro Menu"
+
+
+def test_quick_log_guesses_only_details_the_app_knows():
+    from app.modules.line_bot.quick_log import SUBCATEGORY_KEYWORDS
+    from app.modules.transactions.subcategories import SUBCATEGORIES
+
+    for category, details in SUBCATEGORY_KEYWORDS.items():
+        assert set(details) <= set(SUBCATEGORIES[category]), category

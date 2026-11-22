@@ -76,7 +76,8 @@ export const CATEGORIES = {
 // Optional detail under a category, stored in `transaction.subcategory`. Every
 // total, chart and budget keys on the category, so a Beauty purchase still counts
 // as Shopping everywhere; the detail only says which kind. A category without an
-// entry here offers none.
+// entry here offers none. The backend keeps the same list (transactions/
+// subcategories.py) to check imported rows; change both together.
 export const SUBCATEGORIES: Record<string, { value: string; label: string; icon: string }[]> = {
   Shopping: [
     { value: 'Clothing',    label: 'Clothing',    icon: '👗' },

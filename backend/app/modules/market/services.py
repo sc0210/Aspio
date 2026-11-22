@@ -129,16 +129,22 @@ class TwMarketSync:
             await session.commit()
 
     async def _fill_cpi(self, today: date) -> int:
-        """Refresh CPI from DGBAS when a month's CPI is due and still missing.
+        """Refresh CPI from DGBAS while the newest month whose CPI is due lacks it.
 
-        A month's CPI comes out about a week after it ends, so only rows from
-        before last month — or last month, once a week has passed — are due.
-        Each fetch rewrites every month (a new base year moves them all).
+        A month's CPI comes out about a week after it ends, so last month is
+        due once a week has passed. Only that month triggers a download: an
+        older gap DGBAS never fills would otherwise download the whole series
+        every day, for good. Each fetch rewrites every month (a new base year
+        moves them all), so older gaps fill at the next monthly download. A
+        table with no CPI at all (a first run whose newest month failed) is
+        filled right away.
         """
         async with self._session_factory() as session:
-            missing = [r.month for r in await TwMarketRepository(session).months_missing_cpi()]
+            rows = await TwMarketRepository(session).all_months()
+        missing = {r.month for r in rows if r.cpi is None}
         latest_due = _month_start(today - timedelta(days=37))
-        if not any(m <= latest_due for m in missing):
+        never_filled = len(missing) == len(rows) and any(m <= latest_due for m in missing)
+        if not never_filled and latest_due not in missing:
             return 0
         # Fetched with no session open: the download can take a couple of
         # minutes and must not hold a pooled connection idle in a transaction.

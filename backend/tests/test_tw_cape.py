@@ -408,6 +408,29 @@ async def test_cpi_is_downloaded_only_once_a_missing_month_is_due(session_factor
 
 @pytest.mark.asyncio
 @pytest.mark.database
+@pytest.mark.parametrize("today, fetches", [
+    (date(2026, 11, 20), False),  # October has its CPI; an old gap alone does not re-download
+    (date(2026, 12, 20), True),   # November is due and missing: the monthly download, which fills the gap too
+])
+async def test_an_old_gap_dgbas_never_fills_does_not_download_daily(session_factory, today, fetches):
+    await _seed(session_factory, [date(2026, 8, 1), date(2026, 10, 1)], cpi=110)
+    await _seed(session_factory, [date(2026, 9, 1), date(2026, 11, 1)])
+    twse = FakeTwse(published=today)
+    await TwMarketSync(session_factory, twse, sleep=_no_sleep)._fill_cpi(today)
+    assert (("cpi", None) in twse.calls) is fetches
+
+
+@pytest.mark.asyncio
+@pytest.mark.database
+async def test_a_table_with_no_cpi_at_all_is_filled_even_if_the_newest_due_month_is_absent(session_factory):
+    # A first run whose October fetch failed: no October row to be "missing".
+    await _seed(session_factory, [date(2026, 8, 1), date(2026, 9, 1)])
+    twse = FakeTwse(published=date(2026, 11, 20))
+    assert await TwMarketSync(session_factory, twse, sleep=_no_sleep)._fill_cpi(date(2026, 11, 20)) == 2
+
+
+@pytest.mark.asyncio
+@pytest.mark.database
 async def test_no_cpi_download_when_nothing_is_missing(session_factory):
     await _seed(session_factory, [date(2026, 9, 1)], cpi=110)
     twse = FakeTwse(published=date(2026, 11, 20))

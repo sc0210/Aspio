@@ -113,6 +113,26 @@ class TestCsvImportRoundtrip:
         out = list(_csv.DictReader(_io.StringIO(exported.text)))
         assert (out[0]["Category"], out[0]["Subcategory"]) == ("Shopping", "Beauty")
 
+    def test_a_subcategory_that_is_not_the_categorys_detail_is_dropped_not_saved(self, client: TestClient):
+        """A hand-edited file: a detail of another category, a made-up one, one too
+        long for the column. Each row imports under its category, without the detail."""
+        csv_text = (
+            "Date,Type,Amount,Currency,Description,Category,Subcategory\n"
+            "2026-07-09,expense,100.00,TWD,Bus,Shopping,Parking\n"
+            "2026-07-10,expense,200.00,TWD,Thing,Shopping,Gadgets\n"
+            f"2026-07-11,expense,300.00,TWD,Long,Shopping,{'x' * 150}\n"
+            "2026-07-12,expense,400.00,TWD,Lipstick,shopping,beauty\n"
+        )
+        response = client.post(
+            "/api/v1/transactions/upload-import",
+            files={"file": ("edited.csv", csv_text, "text/csv")},
+        )
+        assert response.status_code == 200, response.text
+        assert response.json()["imported"] == 4
+        rows = {r["description"]: r for r in client.get("/api/v1/transactions/").json()["transactions"]}
+        assert [rows[d]["subcategory"] for d in ("Bus", "Thing", "Long")] == [None, None, None]
+        assert rows["Lipstick"]["subcategory"] == "Beauty"  # case-insensitive, stored as spelled
+
     def test_reimporting_the_same_file_skips_the_duplicate(self, client: TestClient):
         client.post(
             "/api/v1/transactions/upload-import",

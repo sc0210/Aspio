@@ -128,7 +128,7 @@ INCOME_KEYWORDS: dict[str, tuple[str, ...]] = {
 FALLBACK_CATEGORY = "Others"
 
 # Category name → its details (transaction.subcategory) → words that suggest each.
-# Mirrors SUBCATEGORIES in the web form (TransactionFormFields.tsx).
+# Only details listed in transactions/subcategories.py (a test checks).
 SUBCATEGORY_KEYWORDS: dict[str, dict[str, tuple[str, ...]]] = {
     "Shopping": {
         "Beauty": ("剪髮", "理髮", "美髮", "美甲", "美容", "保養", "化妝", "彩妝", "haircut", "salon", "nail", "makeup"),

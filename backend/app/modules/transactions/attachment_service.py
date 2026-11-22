@@ -20,6 +20,7 @@ from fastapi import UploadFile, HTTPException
 from .repositories import TransactionRepository
 from .models import TransactionAttachment
 from .schemas import TransactionAttachmentResponse
+from .subcategories import known_subcategory
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.config import get_settings
@@ -729,8 +730,10 @@ class ImportExportService:
             'category_id': None if category_str else settings.get('default_category_id'),
             'category_name': category_str or None,
             # The detail under the category (Beauty under Shopping); written by
-            # this app's own export, so a round trip keeps it.
-            'subcategory': (find_value('subcategory') or '').strip() or None,
+            # this app's own export, so a round trip keeps it. Kept only when it
+            # is one of the row's category's details: a hand-edited file must not
+            # save "Dining · Beauty", or a value too long for the column fail the row.
+            'subcategory': known_subcategory(category_str, find_value('subcategory')),
             'merchant_name': find_value('merchant'),
             'import_source': 'csv'
         }
