@@ -15,6 +15,7 @@ import { MonthPicker } from '@/components/review/MonthPicker';
 import { ReviewHero } from '@/components/review/ReviewHero';
 import { SpendingBreakdown } from '@/components/review/SpendingBreakdown';
 import { NextMonthCard } from '@/components/review/NextMonthCard';
+import { PageHeader } from '@/components/layout/PageHeader';
 
 /**
  * The month on a phone (#344): the verdict and the month's net (ReviewHero), then
@@ -37,9 +38,7 @@ export function MobileReview() {
     return (
         <DashboardLayout>
             <div className="max-w-md mx-auto space-y-4 pb-4">
-                <h1 className="pt-1 text-xl font-extrabold tracking-tight text-gray-900 dark:text-white">
-                    {t('common:review.pageTitle', 'Month in Review')}
-                </h1>
+                <PageHeader variant="flat" />
 
                 <BiggerScreenHint />
 

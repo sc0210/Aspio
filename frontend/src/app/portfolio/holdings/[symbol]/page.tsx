@@ -593,26 +593,26 @@ export default function AssetDetailPage() {
                             <div className={cn(
                                 'rounded-xl p-3 border',
                                 isPositiveReturn
-                                    ? 'bg-success-50/80 dark:bg-success-900/20 border-success-200 dark:border-success-800/50'
-                                    : 'bg-error-50/80 dark:bg-error-900/20 border-error-200 dark:border-error-800/50'
+                                    ? 'bg-rise-50/80 dark:bg-rise-900/20 border-rise-200 dark:border-rise-800/50'
+                                    : 'bg-fall-50/80 dark:bg-fall-900/20 border-fall-200 dark:border-fall-800/50'
                             )}>
                                 <div className="flex items-center gap-1.5 mb-1">
                                     {isPositiveReturn
-                                        ? <ArrowTrendingUpIcon className="w-3.5 h-3.5 text-success-700 dark:text-success-400" />
-                                        : <ArrowTrendingDownIcon className="w-3.5 h-3.5 text-error-700 dark:text-error-400" />}
+                                        ? <ArrowTrendingUpIcon className="w-3.5 h-3.5 text-rise-700 dark:text-rise-400" />
+                                        : <ArrowTrendingDownIcon className="w-3.5 h-3.5 text-fall-700 dark:text-fall-400" />}
                                     <p className={cn('text-xs font-bold uppercase tracking-wider',
-                                        isPositiveReturn ? 'text-success-700 dark:text-success-300' : 'text-error-700 dark:text-error-300'
+                                        isPositiveReturn ? 'text-rise-700 dark:text-rise-300' : 'text-fall-700 dark:text-fall-300'
                                     )}>{t('portfolio:holdingDetail.totalReturn')}</p>
                                 </div>
                                 <p className={cn('text-lg sm:text-xl font-bold tabular-nums',
-                                    isPositiveReturn ? 'text-success-900 dark:text-success-100' : 'text-error-900 dark:text-error-100'
+                                    isPositiveReturn ? 'text-rise-900 dark:text-rise-100' : 'text-fall-900 dark:text-fall-100'
                                 )}>
                                     {isValueVisible
                                         ? `${isPositiveReturn ? '+' : ''}${(holding?.gainLossPercentage ?? stats?.returnPercent ?? 0).toFixed(2)}%`
                                         : '•••%'}
                                 </p>
                                 <p className={cn('text-xs font-medium tabular-nums mt-0.5',
-                                    isPositiveReturn ? 'text-success-700 dark:text-success-300' : 'text-error-700 dark:text-error-300'
+                                    isPositiveReturn ? 'text-rise-700 dark:text-rise-300' : 'text-fall-700 dark:text-fall-300'
                                 )}>
                                     {isValueVisible
                                         ? `${isPositiveReturn ? '+' : ''}${formatCurrency(holding?.gainLoss ?? stats?.returnAmount ?? 0, currency)}`
@@ -628,12 +628,12 @@ export default function AssetDetailPage() {
                                 {stats ? (
                                     <>
                                         <p className={cn('text-lg sm:text-xl font-bold tabular-nums',
-                                            isPositivePeriod ? 'text-success-700 dark:text-success-300' : 'text-error-700 dark:text-error-300'
+                                            isPositivePeriod ? 'text-rise-700 dark:text-rise-300' : 'text-fall-700 dark:text-fall-300'
                                         )}>
                                             {isValueVisible ? `${isPositivePeriod ? '+' : ''}${stats.periodChangePct.toFixed(2)}%` : '•••%'}
                                         </p>
                                         <p className={cn('text-xs font-medium tabular-nums mt-0.5',
-                                            isPositivePeriod ? 'text-success-700 dark:text-success-300' : 'text-error-700 dark:text-error-300'
+                                            isPositivePeriod ? 'text-rise-700 dark:text-rise-300' : 'text-fall-700 dark:text-fall-300'
                                         )}>
                                             {isValueVisible ? `${isPositivePeriod ? '+' : ''}${formatCurrency(stats.periodChange, currency)}` : '•••'}
                                         </p>
@@ -811,11 +811,11 @@ export default function AssetDetailPage() {
                                                     <td className="px-4 sm:px-6 py-3 text-sm text-right whitespace-nowrap">
                                                         {isValueVisible ? (
                                                             <div>
-                                                                <span className={cn('font-medium', isLotUp ? 'text-success-700 dark:text-success-400' : 'text-error-700 dark:text-error-400')}>
+                                                                <span className={cn('font-medium', isLotUp ? 'text-rise-700 dark:text-rise-400' : 'text-fall-700 dark:text-fall-400')}>
                                                                     {isLotUp ? '+' : ''}{formatCurrency(lotGain, currency)}
                                                                 </span>
                                                                 {lotGainPct != null && (
-                                                                    <span className={cn('block text-xs', isLotUp ? 'text-success-700 dark:text-success-400' : 'text-error-700 dark:text-error-400')}>
+                                                                    <span className={cn('block text-xs', isLotUp ? 'text-rise-700 dark:text-rise-400' : 'text-fall-700 dark:text-fall-400')}>
                                                                         {isLotUp ? '+' : ''}{lotGainPct.toFixed(2)}%
                                                                     </span>
                                                                 )}
@@ -857,10 +857,10 @@ export default function AssetDetailPage() {
                                                     {isValueVisible ? (
                                                         <div>
                                                             {/* The holding's own sign, as on the phone's Total card */}
-                                                            <span className={cn('font-medium', (holding.gainLoss ?? 0) >= 0 ? 'text-success-700 dark:text-success-400' : 'text-error-700 dark:text-error-400')}>
+                                                            <span className={cn('font-medium', (holding.gainLoss ?? 0) >= 0 ? 'text-rise-700 dark:text-rise-400' : 'text-fall-700 dark:text-fall-400')}>
                                                                 {(holding.gainLoss ?? 0) >= 0 ? '+' : ''}{formatCurrency(holding.gainLoss, currency)}
                                                             </span>
-                                                            <span className={cn('block text-xs', (holding.gainLoss ?? 0) >= 0 ? 'text-success-700 dark:text-success-500' : 'text-error-700 dark:text-error-500')}>
+                                                            <span className={cn('block text-xs', (holding.gainLoss ?? 0) >= 0 ? 'text-rise-700 dark:text-rise-500' : 'text-fall-700 dark:text-fall-500')}>
                                                                 {(holding.gainLoss ?? 0) >= 0 ? '+' : ''}{(holding.gainLossPercentage ?? 0).toFixed(2)}%
                                                             </span>
                                                         </div>

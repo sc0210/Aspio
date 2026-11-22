@@ -1,8 +1,7 @@
 'use client';
 
 import { useTranslation } from 'react-i18next';
-import Link from 'next/link';
-import { ArrowLeftIcon, ChevronDownIcon } from '@heroicons/react/24/outline';
+import { ChevronDownIcon } from '@heroicons/react/24/outline';
 import { DashboardLayout } from '@/components/layout/DashboardLayout';
 import { BiggerScreenHint } from '@/components/dashboard/BiggerScreenHint';
 import { usePrivacy } from '@/contexts/PrivacyContext';
@@ -10,6 +9,7 @@ import { formatTWD } from '@/utils/formatters';
 import { cn } from '@/utils/cn';
 import { businessToday } from '@/lib/portfolio/businessDate';
 import { SUMMARY_BUCKETS, spendingOf, type MonthlySummaryRow, type SummaryBucketKey } from './monthlySummaryBuckets';
+import { PageHeader } from '@/components/layout/PageHeader';
 
 export type { MonthlySummaryRow as MobileMonthRow } from './monthlySummaryBuckets';
 
@@ -61,21 +61,18 @@ export function MobileMonthlySummary({ year, yearOptions, onYearChange, months, 
     return (
         <DashboardLayout>
             <div className="max-w-md mx-auto space-y-4 pb-4">
-                <div className="flex items-center gap-2 pt-1">
-                    <Link href="/transactions" aria-label={label('back')}
-                        className="grid place-items-center w-11 h-11 -ml-2 rounded-full text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-800 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-400">
-                        <ArrowLeftIcon className="w-5 h-5" />
-                    </Link>
-                    <h1 className="flex-1 text-xl font-extrabold tracking-tight text-gray-900 dark:text-white">{label('title')}</h1>
-                    <select
-                        aria-label={t('transactions:fields.year', 'Year')}
-                        value={year}
-                        onChange={(e) => onYearChange(Number(e.target.value))}
-                        className="h-10 rounded-xl border border-gray-200 dark:border-gray-600 bg-white dark:bg-gray-800 px-3 text-sm font-bold text-gray-900 dark:text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-400"
-                    >
-                        {yearOptions.map((y) => <option key={y} value={y}>{y}</option>)}
-                    </select>
-                </div>
+                <PageHeader variant="flat" backHref="/transactions" backLabel={label('back')}
+                    actions={<>
+                        <select
+                            aria-label={t('transactions:fields.year', 'Year')}
+                            value={year}
+                            onChange={(e) => onYearChange(Number(e.target.value))}
+                            className="h-10 rounded-xl border border-gray-200 dark:border-gray-600 bg-white dark:bg-gray-800 px-3 text-sm font-bold text-gray-900 dark:text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-400"
+                        >
+                            {yearOptions.map((y) => <option key={y} value={y}>{y}</option>)}
+                        </select>
+                    </>}
+                />
 
                 <BiggerScreenHint />
 

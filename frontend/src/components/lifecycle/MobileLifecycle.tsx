@@ -8,6 +8,7 @@ import { BiggerScreenHint } from '@/components/dashboard/BiggerScreenHint';
 import { PositionHeader } from '@/components/lifecycle/PositionHeader';
 import { SafetyPanel } from '@/components/lifecycle/SafetyPanel';
 import { useLifecycleModel } from '@/components/lifecycle/useLifecycleModel';
+import { PageHeader } from '@/components/layout/PageHeader';
 
 /**
  * The strategy on a phone (#344): question 1, where the leverage stands against
@@ -23,9 +24,7 @@ export function MobileLifecycle() {
     return (
         <DashboardLayout>
             <div className="max-w-md mx-auto space-y-4 pb-4">
-                <h1 className="pt-1 text-xl font-extrabold tracking-tight text-gray-900 dark:text-white">
-                    {t('common:lifecycle.pageTitle', 'Lifecycle Investing')}
-                </h1>
+                <PageHeader variant="flat" />
 
                 <BiggerScreenHint />
 

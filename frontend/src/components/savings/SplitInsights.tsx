@@ -10,6 +10,7 @@ import { formatCurrency } from '@/utils/formatters';
 import type { SplitOut } from '@/shared/types';
 import { accepted, byCategory, byMonth, currenciesByUse, frontedByPartner, monthLabel as formatMonth, monthOf, shiftMonth, summarize, type PartnerLabels } from './sharedSpendingStats';
 
+import { Card } from '@/components/ui/Card';
 // As the rest of the tab: whole dollars for TWD.
 const money = (value: number, currency: string) =>
   formatCurrency(value, currency, currency === 'TWD' ? { precision: 0 } : {});
@@ -97,7 +98,7 @@ export default function SplitInsights({ splits, partnerName, partnerLabels }: Sp
   const stepBtn = 'min-h-[44px] min-w-[44px] inline-flex items-center justify-center rounded-lg text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 disabled:opacity-40 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-500';
 
   return (
-    <section aria-labelledby="split-insights-title" className="bg-white dark:bg-gray-800 rounded-xl p-4 shadow-sm space-y-4">
+    <Card as="section" aria-labelledby="split-insights-title" padding="sm" className="space-y-4">
       {/* Filters in one row above the figures they scope. */}
       <div className="flex flex-wrap items-center gap-2">
         <h3 id="split-insights-title" className="text-sm font-semibold text-gray-900 dark:text-white mr-auto">
@@ -230,6 +231,6 @@ export default function SplitInsights({ splits, partnerName, partnerLabels }: Sp
           </table>
         </div>
       </div>
-    </section>
+    </Card>
   );
 }

@@ -19,6 +19,7 @@ import type { Transaction } from '@/shared/types';
 import { Card } from '@/components/ui/Card';
 import { isWalletTransfer } from '@/utils/expenseGroups';
 import { useAddHref, useEditHref } from '@/lib/transactions/returnTo';
+import { PageHeader } from '@/components/layout/PageHeader';
 
 
 function startOfMonth(): Date {
@@ -132,20 +133,21 @@ export function MobileTransactions() {
     return (
         <DashboardLayout>
             <div className="max-w-md mx-auto space-y-4 pb-4">
-                <div className="flex items-center justify-between pt-1">
-                    <h1 className="text-xl font-extrabold tracking-tight text-gray-900 dark:text-white">{t('transactions:title', 'Transactions')}</h1>
-                    <div className="flex items-center gap-2">
-                        {/* The phone is where a receipt gets photographed; the desktop toolbar was its only link. */}
-                        <Link href="/transactions/scan" aria-label={t('transactions:scan.title', 'Scan Receipt')}
-                            className="grid place-items-center w-11 h-11 rounded-full bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-400">
-                            <CameraIcon className="w-5 h-5" />
-                        </Link>
-                        <Link href={addHref} aria-label={t('transactions:add', 'Add transaction')}
-                            className="grid place-items-center w-11 h-11 rounded-full bg-primary-700 hover:bg-primary-800 text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-400">
-                            <PlusIcon className="w-5 h-5" />
-                        </Link>
-                    </div>
-                </div>
+                <PageHeader variant="flat"
+                    actions={<>
+                        <div className="flex items-center gap-2">
+                            {/* The phone is where a receipt gets photographed; the desktop toolbar was its only link. */}
+                            <Link href="/transactions/scan" aria-label={t('transactions:scan.title', 'Scan Receipt')}
+                                className="grid place-items-center w-11 h-11 rounded-full bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-400">
+                                <CameraIcon className="w-5 h-5" />
+                            </Link>
+                            <Link href={addHref} aria-label={t('transactions:add', 'Add transaction')}
+                                className="grid place-items-center w-11 h-11 rounded-full bg-primary-700 hover:bg-primary-800 text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-400">
+                                <PlusIcon className="w-5 h-5" />
+                            </Link>
+                        </div>
+                    </>}
+                />
 
                 <BiggerScreenHint />
 

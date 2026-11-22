@@ -157,8 +157,8 @@ export const DailyPerformanceChart = memo(function DailyPerformanceChart({
               className={cn(
                 'text-sm font-bold tabular-nums',
                 isPositive
-                  ? 'text-success-700 dark:text-success-400'
-                  : 'text-error-700 dark:text-error-400'
+                  ? 'text-rise-700 dark:text-rise-400'
+                  : 'text-fall-700 dark:text-fall-400'
               )}
             >
               {isValueVisible ? (
@@ -181,8 +181,8 @@ export const DailyPerformanceChart = memo(function DailyPerformanceChart({
               className={cn(
                 'text-sm font-bold tabular-nums',
                 isPositive
-                  ? 'text-success-700 dark:text-success-400'
-                  : 'text-error-700 dark:text-error-400'
+                  ? 'text-rise-700 dark:text-rise-400'
+                  : 'text-fall-700 dark:text-fall-400'
               )}
               aria-label={`Return ${isPositive ? 'gain' : 'loss'} of ${data.changePercent.toFixed(2)} percent`}
             >
@@ -219,8 +219,8 @@ export const DailyPerformanceChart = memo(function DailyPerformanceChart({
                         className={cn(
                           'text-xs font-bold tabular-nums',
                           holdingIsPositive
-                            ? 'text-success-700 dark:text-success-400'
-                            : 'text-error-700 dark:text-error-400'
+                            ? 'text-rise-700 dark:text-rise-400'
+                            : 'text-fall-700 dark:text-fall-400'
                         )}
                         aria-label={`${holding.symbol} ${holdingIsPositive ? 'gain' : 'loss'}`}
                       >
@@ -363,7 +363,8 @@ export const DailyPerformanceChart = memo(function DailyPerformanceChart({
                 return (
                   <Cell
                     key={`cell-${index}`}
-                    fill={isPositive ? 'var(--color-prosperity-500, #10b981)' : 'var(--color-error-500, #ef4444)'}
+                    // The rise/fall variables swap with the red-up preference.
+                    fill={isPositive ? 'rgb(var(--rise-500))' : 'rgb(var(--fall-500))'}
                     className="transition-opacity duration-200 hover:opacity-80"
                   />
                 );

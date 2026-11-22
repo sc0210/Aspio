@@ -19,6 +19,7 @@ import {
   demoGroupExpenses,
   DEMO_GROUP_SELF_ID,
 } from '@/data/demoData';
+import { DemoNotice } from '@/components/ui/DemoNotice';
 
 // ─── API response types ───────────────────────────────────────────────────────
 
@@ -538,9 +539,7 @@ function GroupDetailContent() {
             </div>
 
             {isDemo && (
-              <p className="text-sm text-amber-700 dark:text-amber-400 text-center -mt-1">
-                {t('demoNote')}
-              </p>
+              <DemoNotice>{t('demoNote')}</DemoNotice>
             )}
 
             {/* Balances card */}

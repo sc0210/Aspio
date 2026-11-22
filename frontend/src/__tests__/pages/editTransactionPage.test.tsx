@@ -20,6 +20,7 @@ jest.mock('next/navigation', () => ({
   useRouter: () => mockRouter,
   useParams: () => ({ id: 'test-transaction-id' }),
   useSearchParams: () => mockSearch,
+  usePathname: () => '/transactions/edit/test-transaction-id',
 }));
 
 jest.mock('next/link', () => {

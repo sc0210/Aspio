@@ -15,8 +15,11 @@ import { AuthSyncProvider } from '@/components/providers/AuthSyncProvider';
 import { DataSyncErrorBoundary } from '@/components/errors/DataSyncErrorBoundary';
 import { PrivacyProvider } from '@/contexts/PrivacyContext';
 import { ExchangeRatesLoader } from '@/components/providers/ExchangeRatesLoader';
+import { useMarketColorsAttribute } from '@/hooks/useMarketColors';
 
 export function Providers({ children }: { children: React.ReactNode }) {
+  // Gain/loss colours follow the red-up preference everywhere (rise-*/fall-*).
+  useMarketColorsAttribute();
   const [queryClient] = useState(
     () =>
       new QueryClient({

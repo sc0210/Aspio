@@ -152,9 +152,9 @@ function HoldingCardMobileBase({
         {/* Gain/Loss Indicator */}
         <div className="flex items-center gap-1 ml-3 flex-shrink-0">
           {!isCash && (holding.gainLoss >= 0 ? (
-            <ArrowTrendingUpIcon className="w-5 h-5 text-success-700 dark:text-success-500" />
+            <ArrowTrendingUpIcon className="w-5 h-5 text-rise-700 dark:text-rise-500" />
           ) : (
-            <ArrowTrendingDownIcon className="w-5 h-5 text-error-700 dark:text-error-500" />
+            <ArrowTrendingDownIcon className="w-5 h-5 text-fall-700 dark:text-fall-500" />
           ))}
         </div>
       </div>
@@ -214,7 +214,7 @@ function HoldingCardMobileBase({
           {!isCash && isValueVisible && holding.dayChange != null && (
             <p className={cn(
               'text-xs mt-0.5 leading-tight',
-              holding.dayChange >= 0 ? 'text-success-700 dark:text-success-400' : 'text-error-700 dark:text-error-400'
+              holding.dayChange >= 0 ? 'text-rise-700 dark:text-rise-400' : 'text-fall-700 dark:text-fall-400'
             )}>
               {holding.dayChange >= 0 ? '+' : ''}{formatCurrency(holding.dayChange, holding.currency)}
               {holding.dayChangePercentage != null && (
@@ -247,7 +247,7 @@ function HoldingCardMobileBase({
             <div className="flex flex-col">
               <p className={cn(
                 "text-base font-bold leading-tight",
-                holding.gainLoss >= 0 ? "text-success-700 dark:text-success-400" : "text-error-700 dark:text-error-400"
+                holding.gainLoss >= 0 ? "text-rise-700 dark:text-rise-400" : "text-fall-700 dark:text-fall-400"
               )}>
                 {isValueVisible ? (
                   <>
@@ -258,7 +258,7 @@ function HoldingCardMobileBase({
               </p>
               <p className={cn(
                 "text-xs font-semibold leading-tight mt-0.5",
-                holding.gainLossPercentage >= 0 ? "text-success-700 dark:text-success-500" : "text-error-700 dark:text-error-500"
+                holding.gainLossPercentage >= 0 ? "text-rise-700 dark:text-rise-500" : "text-fall-700 dark:text-fall-500"
               )}>
                 {isValueVisible ? (
                   <>

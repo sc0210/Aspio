@@ -5,6 +5,7 @@ import { XMarkIcon, ClockIcon } from '@heroicons/react/24/outline';
 import type { PeerConnectionOut } from '@/shared/types';
 import { PERSON_COLORS, personColors } from '@/components/compare/personColors';
 
+import { Card } from '@/components/ui/Card';
 interface PeerRosterProps {
   accepted: PeerConnectionOut[];
   sentPending: PeerConnectionOut[];
@@ -41,7 +42,7 @@ export function PeerRoster({ accepted, sentPending, removingId, onRemove }: Peer
   );
 
   return (
-    <div className="bg-white dark:bg-gray-800 rounded-xl p-4 shadow-sm">
+    <Card padding="sm">
       <p className="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wide mb-3">
         {t('savings.peersLabel', 'Members')}
       </p>
@@ -95,6 +96,6 @@ export function PeerRoster({ accepted, sentPending, removingId, onRemove }: Peer
           </li>
         ))}
       </ul>
-    </div>
+    </Card>
   );
 }

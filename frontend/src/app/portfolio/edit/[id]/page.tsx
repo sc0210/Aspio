@@ -323,7 +323,7 @@ export default function EditHoldingPage() {
           <div className="text-center">
             <h2 className="text-2xl font-bold text-gray-900 dark:text-white mb-2">Holding not found</h2>
             <p className="text-gray-600 dark:text-gray-400 mb-4">The holding you&apos;re looking for doesn&apos;t exist.</p>
-            <Link href="/portfolio" className="btn-primary">
+            <Link href="/portfolio" className="inline-flex items-center justify-center min-h-[44px] px-4 rounded-lg font-medium bg-primary-700 text-white hover:bg-primary-800 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-500">
               Back to Portfolio
             </Link>
           </div>
@@ -379,7 +379,7 @@ export default function EditHoldingPage() {
               </div>
               <div>
                 <span className="text-gray-600 dark:text-gray-400">Gain/Loss:</span>
-                <div className={`font-medium ${holding.gainLoss >= 0 ? 'text-success-700 dark:text-success-400' : 'text-error-700 dark:text-error-400'}`}>
+                <div className={`font-medium ${holding.gainLoss >= 0 ? 'text-rise-700 dark:text-rise-400' : 'text-fall-700 dark:text-fall-400'}`}>
                   {holding.gainLoss >= 0 ? '+' : ''}{holding.currency} {holding.gainLoss?.toLocaleString()}
                   ({holding.gainLossPercentage?.toFixed(2)}%)
                 </div>

@@ -11,7 +11,7 @@ const range = monthRange('2026-09', new Date(2026, 9, 20));
 
 jest.mock('@/hooks/useAppMode', () => ({ useAppMode: () => mockMode }));
 jest.mock('@/hooks/useMediaQuery', () => ({ useIsMobile: () => false }));
-jest.mock('next/navigation', () => ({ useRouter: () => ({ replace: jest.fn() }) }));
+jest.mock('next/navigation', () => ({ useRouter: () => ({ replace: jest.fn() }), usePathname: () => '/review' }));
 jest.mock('@/services/transactionService', () => ({ transactionService: { downloadCSV: (...a: unknown[]) => mockDownload(...a) } }));
 jest.mock('@/hooks/useMonthReview', () => ({
   useMonthReview: () => ({

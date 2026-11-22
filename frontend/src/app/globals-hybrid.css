@@ -2,6 +2,59 @@
 @tailwind components;
 @tailwind utilities;
 
+/*
+ * Market direction: `rise-*` and `fall-*` are the colours of a price going up
+ * or down. Western convention by default (rise = success green); the Taiwan
+ * convention (漲紅跌綠) swaps them when <html data-market="red-up">, set from the
+ * preference in hooks/useMarketColors.ts. Only market moves use these; income,
+ * expense and UI state keep success/error.
+ */
+:root {
+  --rise-50: 240 253 244;
+  --rise-100: 220 252 231;
+  --rise-200: 187 247 208;
+  --rise-300: 134 239 172;
+  --rise-400: 74 222 128;
+  --rise-500: 34 197 94;
+  --rise-600: 22 163 74;
+  --rise-700: 21 128 61;
+  --rise-800: 22 101 52;
+  --rise-900: 20 83 45;
+  --fall-50: 254 242 242;
+  --fall-100: 254 226 226;
+  --fall-200: 254 202 202;
+  --fall-300: 252 165 165;
+  --fall-400: 248 113 113;
+  --fall-500: 239 68 68;
+  --fall-600: 220 38 38;
+  --fall-700: 185 28 28;
+  --fall-800: 153 27 27;
+  --fall-900: 127 29 29;
+}
+:root[data-market="red-up"] {
+  --rise-50: 254 242 242;
+  --rise-100: 254 226 226;
+  --rise-200: 254 202 202;
+  --rise-300: 252 165 165;
+  --rise-400: 248 113 113;
+  --rise-500: 239 68 68;
+  --rise-600: 220 38 38;
+  --rise-700: 185 28 28;
+  --rise-800: 153 27 27;
+  --rise-900: 127 29 29;
+  --fall-50: 240 253 244;
+  --fall-100: 220 252 231;
+  --fall-200: 187 247 208;
+  --fall-300: 134 239 172;
+  --fall-400: 74 222 128;
+  --fall-500: 34 197 94;
+  --fall-600: 22 163 74;
+  --fall-700: 21 128 61;
+  --fall-800: 22 101 52;
+  --fall-900: 20 83 45;
+}
+
+
 /* Base styles without complex @apply directives */
 html {
   scroll-behavior: smooth;
@@ -100,50 +153,6 @@ body {
   .dark .card-hover:hover {
     background-color: rgb(55 65 81);
     box-shadow: 0 10px 15px -3px rgb(0 0 0 / 0.1), 0 4px 6px -4px rgb(0 0 0 / 0.1);
-  }
-
-  /* Button styles */
-  .btn {
-    padding: 0.5rem 1rem;
-    border-radius: 0.5rem;
-    font-weight: 500;
-    transition: all 200ms;
-    outline: none;
-    min-height: 44px;
-    min-width: 44px;
-  }
-
-  .btn:focus {
-    outline: 2px solid transparent;
-    outline-offset: 2px;
-    box-shadow: 0 0 0 2px rgb(59 130 246);
-  }
-
-  .btn-primary {
-    background-color: rgb(37 99 235);
-    color: white;
-  }
-
-  .btn-primary:hover {
-    background-color: rgb(29 78 216);
-  }
-
-  .btn-secondary {
-    background-color: rgb(229 231 235);
-    color: rgb(17 24 39);
-  }
-
-  .btn-secondary:hover {
-    background-color: rgb(209 213 219);
-  }
-
-  .dark .btn-secondary {
-    background-color: rgb(55 65 81);
-    color: rgb(243 244 246);
-  }
-
-  .dark .btn-secondary:hover {
-    background-color: rgb(75 85 99);
   }
 
   /* Financial data styling */
@@ -371,13 +380,6 @@ body {
     box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
   }
 
-  .btn {
-    font-size: 0.875rem;
-    padding: 0.625rem 1rem; /* Increased padding for better thumb access */
-    min-height: 48px;
-    min-width: 48px;
-  }
-
   .chart-container {
     height: 14rem; /* Reduced for mobile screens */
   }
@@ -458,19 +460,6 @@ body {
     color: rgb(254 202 202);
     border: 2px solid rgb(254 202 202);
   }
-
-  /* Enhanced button contrast */
-  .btn-primary {
-    border: 2px solid white;
-  }
-
-  .btn-secondary {
-    border: 2px solid rgb(17 24 39);
-  }
-
-  .dark .btn-secondary {
-    border: 2px solid rgb(243 244 246);
-  }
 }
 
 /* Enhanced Reduced motion support */
@@ -486,7 +475,6 @@ body {
   }
 
   /* Maintain focus indicators for accessibility */
-  .btn:focus,
   .input:focus {
     outline: 3px solid rgb(59 130 246);
     outline-offset: 2px;

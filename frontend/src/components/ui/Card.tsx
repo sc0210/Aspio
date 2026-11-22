@@ -58,6 +58,8 @@ interface CardProps {
     className?: string;
     /** For a value that cannot be a class — a per-item stagger delay, say. */
     style?: CSSProperties;
+    /** Names an `as="section"` landmark after its heading. */
+    'aria-labelledby'?: string;
 }
 
 export function Card({
@@ -71,12 +73,14 @@ export function Card({
     hover = false,
     className,
     style,
+    'aria-labelledby': labelledBy,
 }: CardProps) {
     const clipped = clip ?? Boolean(accent);
 
     return (
         <Tag
             style={style}
+            aria-labelledby={labelledBy}
             className={cn(
                 'bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700',
                 RADIUS[radius],
