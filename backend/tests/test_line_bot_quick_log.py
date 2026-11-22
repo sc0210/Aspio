@@ -399,3 +399,17 @@ def test_quick_log_guesses_only_details_the_app_knows():
 
     for category, details in SUBCATEGORY_KEYWORDS.items():
         assert set(details) <= set(SUBCATEGORIES[category]), category
+
+
+def test_the_backend_detail_list_matches_the_web_form():
+    import re
+    from pathlib import Path
+    from app.modules.transactions.subcategories import SUBCATEGORIES
+
+    form = Path(__file__).resolve().parents[2] / "frontend/src/components/transactions/TransactionFormFields.tsx"
+    if not form.exists():
+        pytest.skip("frontend not checked out")
+    block = form.read_text().split("export const SUBCATEGORIES", 1)[1].split("\n};", 1)[0]
+    web = {cat: tuple(re.findall(r"value: '([^']+)'", body))
+           for cat, body in re.findall(r"^  (\w+): \[(.*?)^  \]", block, re.S | re.M)}
+    assert web == SUBCATEGORIES

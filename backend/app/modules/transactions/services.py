@@ -39,6 +39,7 @@ from .schemas import (
     RecurringTransactionUpdate,
 )
 from app.utils.datetime_helpers import business_day_of, business_today
+from .subcategories import is_detail_of, listed_detail
 
 logger = logging.getLogger(__name__)
 
@@ -161,6 +162,15 @@ class TransactionService:
         # Set the category_id
         if category_id:
             data["category_id"] = category_id
+            # A listed detail belongs to one category (Beauty under Shopping). A
+            # row that resolved elsewhere — a "Dining, Beauty" import, or a name
+            # that fell back to Others — must not save "Dining · Beauty". Text
+            # that isn't a listed detail is left as it was.
+            detail = listed_detail(data.get("subcategory"))
+            if detail:
+                category = await self.category_repo.get_by_id(str(category_id))
+                names = (category.name, category.name_en) if category else ()
+                data["subcategory"] = detail if is_detail_of(names, detail) else None
         else:
             # Fallback: use a default "Other" category or raise error
             raise ValidationException(
