@@ -3,7 +3,7 @@
 import { useTranslation } from 'react-i18next';
 import type { PortfolioHolding } from '@/shared/types';
 import { cn } from '@/utils/cn';
-import { formatCurrency } from '@/utils/formatters';
+import { formatCurrency, formatMoney } from '@/utils/formatters';
 
 const toneOf = (up: boolean) => (up ? 'text-success-700 dark:text-success-400' : 'text-error-700 dark:text-error-400');
 const signOf = (up: boolean) => (up ? '+' : '');
@@ -43,7 +43,7 @@ export function HoldingLotCards({ lots, holding, currency, isValueVisible }: Hol
                                     : '—'}
                             </span>
                             <span className={cn('text-sm font-bold tabular-nums', toneOf(isLotUp))}>
-                                {isValueVisible ? `${signOf(isLotUp)}${formatCurrency(lotGain, currency)}` : '•••••'}
+                                {isValueVisible ? `${signOf(isLotUp)}${formatMoney(lotGain, currency)}` : '•••••'}
                                 {isValueVisible && lotGainPct != null && (
                                     <span className="ml-1 text-xs font-semibold">({signOf(isLotUp)}{lotGainPct.toFixed(2)}%)</span>
                                 )}
@@ -51,7 +51,7 @@ export function HoldingLotCards({ lots, holding, currency, isValueVisible }: Hol
                         </div>
                         <p className="mt-0.5 text-xs text-gray-500 dark:text-gray-400 tabular-nums">
                             {isValueVisible
-                                ? `${(lot.quantity ?? 0).toLocaleString(undefined, { maximumFractionDigits: 8 })} × ${formatCurrency(lot.averageCost, currency)} → ${formatCurrency(lot.totalValue, currency)}`
+                                ? `${(lot.quantity ?? 0).toLocaleString(undefined, { maximumFractionDigits: 8 })} × ${formatCurrency(lot.averageCost, currency)} → ${formatMoney(lot.totalValue, currency)}`
                                 : '•••••'}
                         </p>
                     </li>
@@ -63,7 +63,7 @@ export function HoldingLotCards({ lots, holding, currency, isValueVisible }: Hol
                     <div className="flex items-baseline justify-between gap-3">
                         <span className="text-xs font-semibold uppercase text-gray-500 dark:text-gray-400">{t('portfolio:holdingDetail.total')}</span>
                         <span className={cn('text-sm font-bold tabular-nums', toneOf(isTotalUp))}>
-                            {isValueVisible ? `${signOf(isTotalUp)}${formatCurrency(holding.gainLoss, currency)}` : '•••••'}
+                            {isValueVisible ? `${signOf(isTotalUp)}${formatMoney(holding.gainLoss, currency)}` : '•••••'}
                             {isValueVisible && (
                                 <span className="ml-1 text-xs font-semibold">({signOf(isTotalUp)}{(holding.gainLossPercentage ?? 0).toFixed(2)}%)</span>
                             )}
@@ -71,7 +71,7 @@ export function HoldingLotCards({ lots, holding, currency, isValueVisible }: Hol
                     </div>
                     <p className="mt-0.5 text-xs text-gray-500 dark:text-gray-400 tabular-nums">
                         {isValueVisible
-                            ? `${(holding.quantity ?? 0).toLocaleString(undefined, { maximumFractionDigits: 8 })} × ${formatCurrency(holding.averageCost, currency)} → ${formatCurrency(holding.totalValue, currency)}`
+                            ? `${(holding.quantity ?? 0).toLocaleString(undefined, { maximumFractionDigits: 8 })} × ${formatCurrency(holding.averageCost, currency)} → ${formatMoney(holding.totalValue, currency)}`
                             : '•••••'}
                     </p>
                 </li>

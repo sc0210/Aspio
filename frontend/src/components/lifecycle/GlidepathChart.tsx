@@ -12,6 +12,7 @@ import {
     ReferenceLine,
 } from 'recharts';
 import type { GlidepathPoint } from '@/lib/lifecycle';
+import { SERIES } from '@/lib/charts/palette';
 
 interface GlidepathChartLabels {
     actual: string;
@@ -126,9 +127,9 @@ export function GlidepathChart({ data, colors, crossoverAge, maxLeverage, labels
                     {/* The hard ceiling. */}
                     <ReferenceLine
                         y={maxLeverage}
-                        stroke="#ef4444"
+                        stroke={SERIES.red}
                         strokeDasharray="4 4"
-                        label={{ value: labels.ceiling, position: 'insideTopRight', fontSize: 10, fill: '#ef4444' }}
+                        label={{ value: labels.ceiling, position: 'insideTopRight', fontSize: 10, fill: SERIES.red }}
                     />
                     {crossoverAge !== null && (
                         <ReferenceLine

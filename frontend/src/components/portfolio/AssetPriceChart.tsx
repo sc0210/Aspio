@@ -22,7 +22,7 @@ import {
     ReferenceDot,
 } from 'recharts';
 import { cn } from '@/utils/cn';
-import { formatCurrency } from '@/utils/formatters';
+import { formatCurrency, formatMoney } from '@/utils/formatters';
 
 export interface ChartPoint {
     date: string;
@@ -92,7 +92,7 @@ function CustomTooltip({ active, payload, currency, isValueVisible, avgCost }: C
                             d.returnAmount >= 0 ? 'text-rise-700 dark:text-rise-400' : 'text-fall-700 dark:text-fall-400'
                         )}>
                             {isValueVisible
-                                ? `${d.returnAmount >= 0 ? '+' : ''}${formatCurrency(d.returnAmount, currency)} (${d.returnPercent.toFixed(2)}%)`
+                                ? `${d.returnAmount >= 0 ? '+' : ''}${formatMoney(d.returnAmount, currency)} (${d.returnPercent.toFixed(2)}%)`
                                 : '•••'}
                         </span>
                     </div>

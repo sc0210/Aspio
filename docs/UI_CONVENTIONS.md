@@ -33,6 +33,10 @@ change, a return) with `rise-*` / `fall-*`, never `success`/`error`: those two s
 variables that swap when `<html data-market="red-up">` is set. For a colour that can't be a class
 (a chart's hex scale), read `useMarketColors()`; an SVG `fill` can use `rgb(var(--rise-500))`.
 Income and expense are not market moves and keep `income`/`expense`.
+Raw `red-*`/`green-*`/`emerald-*`/`rose-*` say none of this; `__tests__/guards/rawRedGreen.test.ts`
+keeps their count from growing. Chart colours come from `lib/charts/palette.ts` (`SERIES`,
+`chartChrome(isDark)`), and a TWD money amount goes through `formatCashAmount` or `formatTWD`,
+never `formatCurrency`'s two-decimal default, which is for prices.
 
 ## Typography
 
@@ -111,6 +115,14 @@ than a scaled-down desktop grid.
   `// eslint-disable-next-line @next/next/no-img-element` where the rule complains.
 - **LINE brand green**: `#06C755`, hover `#05b34d`. Use it only for LINE-specific affordances.
 - Authenticated pages wrap in `DashboardLayout` from `components/layout/`.
+
+### Dialogs — `Modal`
+
+A new dialog is `Modal` from `components/ui/Modal.tsx`, or `ConfirmDialog` for a yes/no.
+Older ones use Headless UI's `Dialog` directly or the `useDialog` hook over their own
+markup; all three share one dialog stack, so Escape and Tab reach the innermost.
+`__tests__/guards/dialogs.test.ts` lists those older files and fails on a new one. Moving
+one to `Modal` means deleting its line there.
 
 ### Surfaces — `Card`
 

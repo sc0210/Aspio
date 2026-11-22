@@ -11,11 +11,12 @@ import {
 } from 'recharts';
 import { useTranslation } from 'react-i18next';
 import type { CompareDataResponse, PeerStatCard } from '@/shared/types';
-import { formatCurrency as formatCurrencyUtil } from '@/utils/formatters';
+import { formatMoney } from '@/utils/formatters';
 import { CURRENCIES } from '@/utils/constants';
 import { PERSON_COLORS, personColors } from './personColors';
 
 import { Card } from '@/components/ui/Card';
+import { chartChrome } from '@/lib/charts/palette';
 interface CompareLineChartProps {
   chart: CompareDataResponse['chart'];
   users: PeerStatCard[];
@@ -39,8 +40,9 @@ const formatCompact = (value: number, currency: string) => {
 
 // Force en-US so TWD shows its distinct "NT$" symbol (zh-TW renders TWD as a
 // bare "$", indistinguishable from USD).
-const formatFull = (value: number, currency: string) =>
-  formatCurrencyUtil(value, currency, { locale: 'en-US' });
+// Whole dollars for TWD, in the currency's own locale (zh-TW for TWD), as every
+// other money figure in the app shows it; it used to force en-US with cents.
+const formatFull = (value: number, currency: string) => formatMoney(value, currency);
 
 const formatDate = (dateStr: string) =>
   new Date(dateStr).toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
@@ -65,12 +67,12 @@ export default function CompareLineChart({ chart, users, currency }: CompareLine
     typeof document !== 'undefined' &&
     document.documentElement.classList.contains('dark');
 
-  const gridColor = isDark ? '#374151' : '#e5e7eb';
-  const tickColor = isDark ? '#9ca3af' : '#6b7280';
-  const tooltipBg = isDark ? '#1f2937' : '#ffffff';
-  const tooltipBorder = isDark ? '#4b5563' : '#d1d5db';
+  const gridColor = chartChrome(isDark).grid;
+  const tickColor = chartChrome(isDark).tick;
+  const tooltipBg = chartChrome(isDark).surface;
+  const tooltipBorder = chartChrome(isDark).border;
   const tooltipTextPrimary = isDark ? '#f3f4f6' : '#111827';
-  const tooltipTextSecondary = isDark ? '#9ca3af' : '#6b7280';
+  const tooltipTextSecondary = chartChrome(isDark).tick;
 
   return (
     <Card padding="none" className="p-4 sm:p-6">
@@ -195,7 +197,7 @@ export default function CompareLineChart({ chart, users, currency }: CompareLine
                     r: 6,
                     stroke: color,
                     strokeWidth: 3,
-                    fill: isDark ? '#1f2937' : '#ffffff',
+                    fill: chartChrome(isDark).surface,
                     style: { filter: 'drop-shadow(0 2px 4px rgba(0,0,0,0.2))' },
                   }}
                   animationDuration={800}

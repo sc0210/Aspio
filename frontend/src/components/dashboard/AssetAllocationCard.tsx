@@ -18,10 +18,11 @@ import { cn } from '@/utils/cn';
 import { isNearTarget, isOffTarget } from '@/lib/portfolio/rebalanceThreshold';
 import { Card } from '@/components/ui/Card';
 import { chartTooltipStyle } from '@/lib/charts/tooltipStyle';
+import { SERIES } from '@/lib/charts/palette';
 
 const ALLOCATION_COLORS = [
-  '#3b82f6', '#10b981', '#f59e0b', '#ef4444', '#8b5cf6',
-  '#ec4899', '#14b8a6', '#f97316', '#06b6d4', '#84cc16',
+  SERIES.blue, SERIES.emerald, SERIES.amber, SERIES.red, SERIES.violet,
+  '#ec4899', '#14b8a6', SERIES.orange, '#06b6d4', '#84cc16',
 ];
 
 interface AssetAllocation {

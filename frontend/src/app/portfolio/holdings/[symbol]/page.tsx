@@ -38,7 +38,7 @@ import type { PortfolioHolding } from '@/shared/types';
 import { usePrivacy } from '@/contexts/PrivacyContext';
 import { useAppMode } from '@/hooks/useAppMode';
 import { cn } from '@/utils/cn';
-import { formatCurrency } from '@/utils/formatters';
+import { formatCurrency, formatMoney } from '@/utils/formatters';
 import toast from 'react-hot-toast';
 import { useTranslation } from 'react-i18next';
 import { formatAssetTypeLabel } from '@/utils/holdingLabels';
@@ -615,7 +615,7 @@ export default function AssetDetailPage() {
                                     isPositiveReturn ? 'text-rise-700 dark:text-rise-300' : 'text-fall-700 dark:text-fall-300'
                                 )}>
                                     {isValueVisible
-                                        ? `${isPositiveReturn ? '+' : ''}${formatCurrency(holding?.gainLoss ?? stats?.returnAmount ?? 0, currency)}`
+                                        ? `${isPositiveReturn ? '+' : ''}${formatMoney(holding?.gainLoss ?? stats?.returnAmount ?? 0, currency)}`
                                         : '•••'}
                                 </p>
                             </div>
@@ -635,7 +635,7 @@ export default function AssetDetailPage() {
                                         <p className={cn('text-xs font-medium tabular-nums mt-0.5',
                                             isPositivePeriod ? 'text-rise-700 dark:text-rise-300' : 'text-fall-700 dark:text-fall-300'
                                         )}>
-                                            {isValueVisible ? `${isPositivePeriod ? '+' : ''}${formatCurrency(stats.periodChange, currency)}` : '•••'}
+                                            {isValueVisible ? `${isPositivePeriod ? '+' : ''}${formatMoney(stats.periodChange, currency)}` : '•••'}
                                         </p>
                                     </>
                                 ) : (
@@ -803,16 +803,16 @@ export default function AssetDetailPage() {
                                                         {isValueVisible ? formatCurrency(lot.averageCost, currency) : '•••••'}
                                                     </td>
                                                     <td className="px-4 sm:px-6 py-3 text-sm text-right text-gray-900 dark:text-white whitespace-nowrap">
-                                                        {isValueVisible ? formatCurrency(lot.totalCost, currency) : '•••••'}
+                                                        {isValueVisible ? formatMoney(lot.totalCost, currency) : '•••••'}
                                                     </td>
                                                     <td className="px-4 sm:px-6 py-3 text-sm text-right text-gray-900 dark:text-white whitespace-nowrap">
-                                                        {isValueVisible ? formatCurrency(lot.totalValue, currency) : '•••••'}
+                                                        {isValueVisible ? formatMoney(lot.totalValue, currency) : '•••••'}
                                                     </td>
                                                     <td className="px-4 sm:px-6 py-3 text-sm text-right whitespace-nowrap">
                                                         {isValueVisible ? (
                                                             <div>
                                                                 <span className={cn('font-medium', isLotUp ? 'text-rise-700 dark:text-rise-400' : 'text-fall-700 dark:text-fall-400')}>
-                                                                    {isLotUp ? '+' : ''}{formatCurrency(lotGain, currency)}
+                                                                    {isLotUp ? '+' : ''}{formatMoney(lotGain, currency)}
                                                                 </span>
                                                                 {lotGainPct != null && (
                                                                     <span className={cn('block text-xs', isLotUp ? 'text-rise-700 dark:text-rise-400' : 'text-fall-700 dark:text-fall-400')}>
@@ -837,17 +837,17 @@ export default function AssetDetailPage() {
                                                     {isValueVisible ? formatCurrency(holding.averageCost, currency) : '•••••'}
                                                 </td>
                                                 <td className="px-4 sm:px-6 py-3 text-sm text-right text-gray-900 dark:text-white">
-                                                    {isValueVisible ? formatCurrency(holding.totalCost, currency) : '•••••'}
+                                                    {isValueVisible ? formatMoney(holding.totalCost, currency) : '•••••'}
                                                 </td>
                                                 <td className="px-4 sm:px-6 py-3 text-sm text-right text-gray-900 dark:text-white">
                                                     {isValueVisible ? (
                                                         <>
-                                                            <div>{formatCurrency(holding.totalValue, currency)}</div>
+                                                            <div>{formatMoney(holding.totalValue, currency)}</div>
                                                             {baseRate !== undefined && (
                                                                 // Same rule as the holdings list: absent when the
                                                                 // pair cannot be priced, never a guess.
                                                                 <div className="text-xs font-normal text-gray-500 dark:text-gray-400 tabular-nums">
-                                                                    ≈ {formatCurrency(holding.totalValue * baseRate, BASE_CURRENCY)}
+                                                                    ≈ {formatMoney(holding.totalValue * baseRate, BASE_CURRENCY)}
                                                                 </div>
                                                             )}
                                                         </>
@@ -858,7 +858,7 @@ export default function AssetDetailPage() {
                                                         <div>
                                                             {/* The holding's own sign, as on the phone's Total card */}
                                                             <span className={cn('font-medium', (holding.gainLoss ?? 0) >= 0 ? 'text-rise-700 dark:text-rise-400' : 'text-fall-700 dark:text-fall-400')}>
-                                                                {(holding.gainLoss ?? 0) >= 0 ? '+' : ''}{formatCurrency(holding.gainLoss, currency)}
+                                                                {(holding.gainLoss ?? 0) >= 0 ? '+' : ''}{formatMoney(holding.gainLoss, currency)}
                                                             </span>
                                                             <span className={cn('block text-xs', (holding.gainLoss ?? 0) >= 0 ? 'text-rise-700 dark:text-rise-500' : 'text-fall-700 dark:text-fall-500')}>
                                                                 {(holding.gainLoss ?? 0) >= 0 ? '+' : ''}{(holding.gainLossPercentage ?? 0).toFixed(2)}%

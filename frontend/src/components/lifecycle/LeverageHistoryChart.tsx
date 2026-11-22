@@ -12,6 +12,7 @@ import {
     ReferenceLine,
 } from 'recharts';
 import type { LeverageHistoryPoint } from '@/lib/lifecycle';
+import { SERIES } from '@/lib/charts/palette';
 
 interface LeverageHistoryChartLabels {
     actual: string;
@@ -181,9 +182,9 @@ export function LeverageHistoryChart({
                     {inRange(maxLeverage) && (
                         <ReferenceLine
                             y={maxLeverage}
-                            stroke="#ef4444"
+                            stroke={SERIES.red}
                             strokeDasharray="4 4"
-                            label={{ value: labels.ceiling, position: 'insideTopRight', fontSize: 10, fill: '#ef4444' }}
+                            label={{ value: labels.ceiling, position: 'insideTopRight', fontSize: 10, fill: SERIES.red }}
                         />
                     )}
 

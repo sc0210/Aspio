@@ -5,7 +5,7 @@ import { useState } from 'react';
 import { Dialog, DialogPanel, DialogTitle } from '@headlessui/react';
 import { XMarkIcon, PlusCircleIcon, MinusCircleIcon } from '@heroicons/react/24/outline';
 import { Button } from '@/components/ui/Button';
-import { formatCurrency, localDateString } from '@/utils/formatters';
+import { formatCurrency, localDateString, formatCashAmount } from '@/utils/formatters';
 import { cn } from '@/utils/cn';
 import { useScrollLock } from '@/hooks/useScrollLock';
 
@@ -329,7 +329,7 @@ export function WalletManagementModal({
                                             ? 'text-green-900 dark:text-green-300'
                                             : 'text-red-900 dark:text-red-300'
                                     )}>
-                                        {action === 'deposit' ? '+' : '-'}{formatCurrency(amountNum, currency)}
+                                        {action === 'deposit' ? '+' : '-'}{formatCashAmount(amountNum, currency)}
                                     </span>
                                 </div>
                                 <div className={cn(
