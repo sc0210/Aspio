@@ -93,6 +93,10 @@ def test_ignores_chat(text):
         ("遠傳電信", False, "Utilities"),
         ("三商美邦保單繳費", False, "Insurance"),
         ("機車強制險任意險", False, "Insurance"),
+        ("關西機場伴手禮", False, "Travel"),
+        ("伊根舟屋行程套票", False, "Travel"),
+        ("演唱會門票", False, "Entertainment"),  # not a Travel activity
+        ("體驗課程", False, "Education"),
         ("隨便", False, "Others"),
         ("午餐", True, "Others"),        # income never takes an expense keyword
     ],

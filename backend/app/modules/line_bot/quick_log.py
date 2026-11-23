@@ -154,7 +154,9 @@ SUBCATEGORY_KEYWORDS: dict[str, dict[str, tuple[str, ...]]] = {
 
 # A detail's words also suggest its category, so they are listed once.
 for _category, _details in SUBCATEGORY_KEYWORDS.items():
-    if _category == "Shopping":  # Transport keeps its own longer forms (汽車保養 beats skincare 保養)
+    # Transport keeps its own longer forms (汽車保養 beats skincare 保養). A tie goes to
+    # the category listed first, so 演唱會門票 stays Entertainment, not Travel.
+    if _category in ("Shopping", "Travel"):
         EXPENSE_KEYWORDS[_category] += tuple(w for words in _details.values() for w in words)
 
 
