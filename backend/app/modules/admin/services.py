@@ -962,9 +962,6 @@ class UserManagementService:
         await self.session.execute(
             text("DELETE FROM email_verification_tokens WHERE user_id = :uid"), {"uid": uid}
         )
-        await self.session.execute(
-            text("DELETE FROM password_reset_tokens WHERE user_id = :uid"), {"uid": uid}
-        )
 
         # ── 3. User activity / gamification / notifications ───────────────────
         # These tables may not exist in all environments (optional migrations).
@@ -974,9 +971,6 @@ class UserManagementService:
             "user_gamification_achievements",
             "user_gamification_profiles",
             "user_activity_logs",
-            "user_data_exports",
-            "user_security_logs",
-            "user_preference_history",
             "notifications",
             "notification_preferences",
         )
@@ -991,16 +985,7 @@ class UserManagementService:
             except Exception:
                 await sp.rollback()
 
-        # ── 5. Transactions (attachments/batches first) ───────────────────────
-        await self.session.execute(
-            text("""
-                DELETE FROM transaction_attachments
-                WHERE transaction_id IN (
-                    SELECT id FROM transactions WHERE user_id = :uid
-                )
-            """),
-            {"uid": uid},
-        )
+        # ── 5. Transactions (batches first) ───────────────────────────────────
         await self.session.execute(
             text("DELETE FROM recurring_transactions WHERE user_id = :uid"), {"uid": uid}
         )

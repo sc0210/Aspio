@@ -246,3 +246,12 @@ FROM transaction_categories WHERE name = 'Insurance' AND type = 'EXPENSE'::categ
 -- after the apply; ~250 once the first daily sync has backfilled from 2005.
 SELECT 'tw_market_valuations months' AS what, count(*)::text AS value
 FROM tw_market_valuations;
+-- 2026_11_23_drop_unused_tables: expect 'gone' for each after the apply. Before
+-- it, a count above 0 on any of the first six stops the drop: look at those rows.
+SELECT t AS what,
+       CASE WHEN to_regclass(t) IS NULL THEN 'gone'
+            ELSE (xpath('/row/c/text()', query_to_xml(format('SELECT count(*) AS c FROM %I', t), false, true, '')))[1]::text
+       END AS value
+FROM unnest(ARRAY['chat_messages', 'chat_sessions', 'transaction_attachments', 'user_data_exports',
+                  'user_security_logs', 'user_preference_history', 'password_reset_tokens',
+                  'notification_templates', 'market_data']) AS t;
