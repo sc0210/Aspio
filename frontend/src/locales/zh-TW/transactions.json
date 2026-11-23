@@ -285,6 +285,7 @@
       "housing": "居住",
       "transport": "交通",
       "shopping": "購物",
+      "travel": "旅遊",
       "fun": "娛樂",
       "other": "其他"
     },
@@ -298,10 +299,16 @@
       "Clothing": "服飾",
       "Electronics": "3C 電子",
       "Household": "居家用品",
+      "Subscriptions": "訂閱",
       "Public Transit": "大眾運輸",
+      "Fuel": "加油",
       "Car Maintenance": "保養",
       "Parking": "停車費",
-      "Car Rental": "租車"
+      "Car Rental": "租車",
+      "Flights": "機票",
+      "Lodging": "住宿",
+      "Activities": "行程活動",
+      "Souvenirs": "伴手禮"
     }
   },
   "importExport": {

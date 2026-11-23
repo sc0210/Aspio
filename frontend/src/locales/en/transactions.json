@@ -285,6 +285,7 @@
       "housing": "Housing",
       "transport": "Transport",
       "shopping": "Shopping",
+      "travel": "Travel",
       "fun": "Fun",
       "other": "Others"
     },
@@ -298,10 +299,16 @@
       "Clothing": "Clothing",
       "Electronics": "Electronics",
       "Household": "Household",
+      "Subscriptions": "Subscriptions",
       "Public Transit": "Public transit",
+      "Fuel": "Fuel",
       "Car Maintenance": "Maintenance",
       "Parking": "Parking",
-      "Car Rental": "Car rental"
+      "Car Rental": "Car rental",
+      "Flights": "Flights",
+      "Lodging": "Lodging",
+      "Activities": "Activities",
+      "Souvenirs": "Souvenirs"
     }
   },
   "importExport": {

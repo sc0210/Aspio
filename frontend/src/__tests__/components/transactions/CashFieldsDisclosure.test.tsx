@@ -188,11 +188,11 @@ describe('CashFields — expense groups first, finer choices optional', () => {
   const details = () => screen.queryByRole('group', { name: /Detail/ });
   const tile = (name: RegExp) => screen.getByRole('button', { name });
 
-  it('shows six groups for an expense, not every category', () => {
+  it('shows seven groups for an expense, not every category', () => {
     renderFields(form());
     const grid = screen.getByRole('group', { name: /Category/ });
     const labels = within(grid).getAllByRole('button').map((b) => b.lastElementChild?.textContent);
-    expect(labels).toEqual(['Food', 'Housing', 'Transport', 'Shopping', 'Fun', 'Others']);
+    expect(labels).toEqual(['Food', 'Housing', 'Transport', 'Shopping', 'Travel', 'Fun', 'Others']);
   });
 
   it('saves a group on its own as its category, one tap', async () => {
@@ -230,11 +230,11 @@ describe('CashFields — expense groups first, finer choices optional', () => {
     expect(onChange).not.toHaveBeenCalled();
   });
 
-  it('offers Transport details: public transit, maintenance, parking, car rental', async () => {
+  it('offers Transport details: public transit, fuel, maintenance, parking, car rental', async () => {
     const onChange = jest.fn();
     renderFields(form({ category: 'Transportation' }), { onChange });
     const names = within(details()!).getAllByRole('button').map((b) => b.textContent);
-    expect(names).toEqual(['🚇Public transit', '🔧Maintenance', '🅿️Parking', '🚙Car rental']);
+    expect(names).toEqual(['🚇Public transit', '⛽Fuel', '🔧Maintenance', '🅿️Parking', '🚙Car rental']);
     await userEvent.click(within(details()!).getByRole('button', { name: /Parking/ }));
     expect(onChange).toHaveBeenCalledWith('subcategory', 'Parking');
   });

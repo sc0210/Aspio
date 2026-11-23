@@ -10,8 +10,9 @@ from typing import Optional
 MAX_LENGTH = 100
 
 SUBCATEGORIES: dict[str, tuple[str, ...]] = {
-    "Shopping": ("Clothing", "Beauty", "Electronics", "Household"),
-    "Transportation": ("Public Transit", "Car Maintenance", "Parking", "Car Rental"),
+    "Shopping": ("Clothing", "Beauty", "Electronics", "Household", "Subscriptions"),
+    "Transportation": ("Public Transit", "Fuel", "Car Maintenance", "Parking", "Car Rental"),
+    "Travel": ("Flights", "Lodging", "Activities", "Souvenirs"),
 }
 
 
