@@ -123,6 +123,7 @@ def test_guesses_category(description, is_income, expected):
         ("Uber（竹北高鐵）", "Transportation", "Taxi"),  # a ride to the station, not the train
         ("Uber竹北高鐵", "Transportation", "Taxi"),    # English touching Chinese still matches
         ("計程車", "Transportation", "Taxi"),
+        ("小黃去火車站", "Transportation", "Taxi"),  # a tie goes to Taxi
         ("加油", "Transportation", "Fuel"),
         ("中油", "Transportation", "Fuel"),
         ("剪頭髮", "Shopping", "Beauty"),

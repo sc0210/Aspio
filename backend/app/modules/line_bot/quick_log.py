@@ -137,9 +137,10 @@ SUBCATEGORY_KEYWORDS: dict[str, dict[str, tuple[str, ...]]] = {
         "Subscriptions": ("訂閱", "ai工具", "claude", "chatgpt"),
     },
     "Transportation": {
+        # Before Public Transit: a tie (小黃 vs 火車) is a taxi ride to the station.
+        "Taxi": ("計程車", "小黃", "uber", "taxi"),
         "Public Transit": ("捷運", "公車", "客運", "高鐵", "台鐵", "火車", "悠遊卡", "一卡通", "mrt", "bus", "train"),
         "Fuel": ("加油", "油錢", "中油", "gas", "fuel"),
-        "Taxi": ("計程車", "小黃", "uber", "taxi"),
         "Car Maintenance": ("保養", "修車", "換機油", "維修"),
         "Parking": ("停車", "parking"),
         "Car Rental": ("租車", "car rental"),
