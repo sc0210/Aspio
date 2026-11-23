@@ -179,20 +179,6 @@ async def unlink_line(
     return ApiResponse.success_response(data=None, message="LINE account unlinked")
 
 
-@router.get(
-    "/activity",
-    response_model=ApiResponse[list[schemas.LineBotActivityOut]],
-    summary="Recent LINE bot activity for the current user",
-)
-async def get_activity(
-    current_user: CurrentUser,
-    db: AsyncSession = Depends(get_db),
-    limit: int = Query(default=20, ge=1, le=100),
-) -> ApiResponse[list[schemas.LineBotActivityOut]]:
-    activities = await service.get_recent_activity(db, current_user.id, limit)
-    return ApiResponse.success_response(data=[schemas.LineBotActivityOut.model_validate(a) for a in activities])
-
-
 # ---------------------------------------------------------------------------
 # Authenticated: group data
 # ---------------------------------------------------------------------------

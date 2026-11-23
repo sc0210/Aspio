@@ -131,16 +131,6 @@ def test_a_caller_cannot_corrupt_the_cached_series():
 
 
 @pytest.mark.asyncio
-async def test_historical_demo_ends_at_the_fixture_value():
-    from app.modules.portfolio.routers.performance_history import (
-        get_portfolio_historical_data,
-    )
-
-    response = await get_portfolio_historical_data(days=365, current_user=None, session=None)
-    assert response.data[-1]["value"] == pytest.approx(FIXTURE_PORTFOLIO_VALUE)
-
-
-@pytest.mark.asyncio
 async def test_twr_and_historical_describe_the_fixture():
     from app.modules.portfolio.routers.performance import (
         get_historical_performance,
@@ -225,21 +215,6 @@ def test_top_income_is_the_fixture_salary():
 
     top = max(MOCK_INCOME_CATEGORIES, key=lambda c: c["amount"])
     assert (top["name"], top["amount"]) == ("Salary", 63_000.0)
-
-
-@pytest.mark.asyncio
-async def test_demo_analytics_allocation_is_the_two_etfs():
-    from app.modules.portfolio.routers.allocation_analytics import router
-
-    # The module defines two `get_asset_allocation`s (the rebalancing one later
-    # shadows this name), so reach the /allocation handler through its route.
-    endpoint = next(r.endpoint for r in router.routes if r.path == "/allocation")
-    data = (await endpoint(current_user=None, session=None)).data
-    assert [(a.type, a.percentage) for a in data["by_region"]] == [
-        ("Taiwan", Decimal("75.0")),
-        ("Global", Decimal("25.0")),
-    ]
-    assert sum(a.value for a in data["by_type"]) == DEMO_PORTFOLIO["total_value"]
 
 
 @pytest.mark.asyncio

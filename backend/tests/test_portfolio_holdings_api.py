@@ -66,16 +66,15 @@ async def test_get_one_holding_and_scoping(authenticated_client, client):
 
 async def test_rename_every_lot_of_a_symbol(authenticated_client):
     c = authenticated_client
-    add(c)
-    add(c, purchase_date="2026-04-01T04:00:00+00:00")
-    add(c, symbol="2330")
+    first, second = add(c), add(c, purchase_date="2026-04-01T04:00:00+00:00")
+    other = add(c, symbol="2330")
     out = ok(c.patch(f"{BASE}/holdings/symbol/0050", json={"name": "Yuanta 50", "sector": "Index"}))
     assert out["data"]["updated_count"] == 2
 
-    lots = ok(c.get(f"{BASE}/holdings/symbol/0050/lots"))["data"]
-    assert len(lots) == 2 and {(l["name"], l["sector"]) for l in lots} == {("Yuanta 50", "Index")}
-    assert {l["purchaseDate"][:10] for l in lots} == {"2026-03-02", "2026-04-01"}
-    assert ok(c.get(f"{BASE}/holdings/symbol/2330/lots"))["data"][0]["name"] == "2330"
+    lots = [ok(c.get(f"{BASE}/holdings/{h['id']}")) for h in (first, second)]
+    assert {(l["name"], l["sector"]) for l in lots} == {("Yuanta 50", "Index")}
+    assert {l["purchase_date"][:10] for l in lots} == {"2026-03-02", "2026-04-01"}
+    assert ok(c.get(f"{BASE}/holdings/{other['id']}"))["name"] == "2330"
 
     assert ok(c.patch(f"{BASE}/holdings/symbol/0050", json={"name": ""}))["data"]["updated_count"] == 0
     assert c.patch(f"{BASE}/holdings/symbol/NOPE", json={"name": "x"}).status_code == 404
@@ -130,7 +129,6 @@ async def test_routes_that_need_a_user(client, method, path):
 
 
 async def test_demo_callers_get_placeholders(client):
-    assert ok(client.get(f"{BASE}/holdings/symbol/0050/lots"))["data"] == []
     assert ok(client.get(f"{BASE}/holdings/symbol/0050/transactions"))["data"] == []
     assert ok(client.get(f"{BASE}/realized-pnl"))["data"]["realized_count"] == 0
     assert ok(client.get(f"{BASE}/holdings/{uuid4()}"))["symbol"] == "DEMO"

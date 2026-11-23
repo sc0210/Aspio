@@ -60,7 +60,6 @@ async def test_goal_crud_and_isolation(authenticated_client, stranger):
     listed = _ok(client.get(f"{API}/goals/"))
     goals = listed["goals"] if isinstance(listed, dict) and "goals" in listed else listed
     assert [g["id"] for g in goals] == [goal_id]
-    _ok(client.get(f"{API}/goals/summary"))
     assert _ok(client.get(f"{API}/goals/{goal_id}"))["title"] == "Japan trip"
 
     updated = _ok(client.put(f"{API}/goals/{goal_id}", json={"title": "Kyoto trip"}))

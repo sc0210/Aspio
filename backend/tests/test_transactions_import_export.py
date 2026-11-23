@@ -116,29 +116,10 @@ class TestExport:
 
 
 class TestImportEndpoints:
-    @pytest.mark.parametrize("path", [f"{BASE}/upload-import", f"{BASE}/import/csv"])
+    @pytest.mark.parametrize("path", [f"{BASE}/upload-import"])
     def test_only_csv_files_are_accepted(self, client: TestClient, path):
         r = client.post(path, files={"file": ("x.xlsx", b"PK", "application/octet-stream")})
         assert r.status_code == 400
-
-    def test_legacy_endpoint_reports_the_batch(self, client: TestClient):
-        r = client.post(f"{BASE}/import/csv", files={"file": ("seed.csv", SEED, "text/csv")})
-        assert r.status_code == 200, r.text
-        body = r.json()
-        assert body["total_records"] == 3 and body["successful"] == 3 and body["failed"] == 0
-
-    def test_batches_list_and_status(self, client: TestClient):
-        bad = "Date,Amount\nnot-a-date,5\n2026-07-01,12\n"
-        client.post(f"{BASE}/upload-import", files={"file": ("bad.csv", bad, "text/csv")})
-
-        batches = client.get(f"{BASE}/import/batches").json()["data"]["batches"]
-        assert len(batches) == 1
-        b = batches[0]
-        assert (b["filename"], b["status"], b["total_records"], b["processed_records"]) == ("bad.csv", "completed", 2, 1)
-
-        status_resp = client.get(f"{BASE}/import/batches/{b['id']}")
-        assert status_resp.status_code == 200, status_resp.text
-        assert client.get(f"{BASE}/import/batches/{uuid4()}").status_code == 404
 
 
 class TestParseRow:

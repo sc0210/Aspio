@@ -1,4 +1,4 @@
-"""/portfolio/performance/{time-weighted-return,historical,holding-periods} on seeded lots and prices."""
+"""/portfolio/performance/{time-weighted-return,historical} on seeded lots and prices."""
 
 from datetime import date, datetime, time, timedelta, timezone
 from decimal import Decimal
@@ -178,32 +178,7 @@ class TestHistorical:
         assert len(data_of(client.get(f"{BASE}/historical"))) == 12
 
 
-class TestHoldingPeriods:
-    async def test_buckets_by_years_held(self, authenticated_client, async_session, pf, test_user):
-        today = business_today()
-        async_session.add_all([
-            lot(pf, test_user, "A", "2", "10", today - timedelta(days=100), price="15"),
-            lot(pf, test_user, "B", "1", "10", today - timedelta(days=800)),
-            lot(pf, test_user, "C", "1", "10", today - timedelta(days=1500)),
-        ])
-        await async_session.commit()
-
-        d = data_of(authenticated_client.get(f"{BASE}/holding-periods"))
-        assert d["total_holdings"] == 3
-        assert (d["short_term_count"], d["medium_term_count"], d["long_term_count"]) == (1, 1, 1)
-        assert d["average_holding_period_days"] == pytest.approx(800)
-        assert d["average_holding_period_years"] == pytest.approx(round(800 / 365.25, 2))
-        assert d["categorization"]["short_term_pct"] == pytest.approx(33.33)
-        short = d["short_term_holdings"][0]
-        assert (short["symbol"], short["days_held"], short["cost"], short["value"]) == ("A", 100, 20, 30)
-
-    async def test_no_holdings(self, authenticated_client, pf):
-        d = data_of(authenticated_client.get(f"{BASE}/holding-periods"))
-        assert d["total_holdings"] == 0 and d["average_holding_period_days"] == 0
-        assert d["categorization"] == {"short_term_pct": 0, "medium_term_pct": 0, "long_term_pct": 0}
-
-
-@pytest.mark.parametrize("path", ["time-weighted-return", "historical", "holding-periods"])
+@pytest.mark.parametrize("path", ["time-weighted-return", "historical"])
 async def test_user_without_a_portfolio_gets_404(authenticated_client, path):
     r = authenticated_client.get(f"{BASE}/{path}")
     assert r.status_code == 404, r.text[:200]

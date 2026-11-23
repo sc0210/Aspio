@@ -5,11 +5,10 @@ Provides basic REST API for dashboard data to test API integration.
 
 import math
 from datetime import date, datetime, timedelta, timezone
-from typing import Optional, List
+from typing import Optional
 from fastapi import APIRouter, Query, status, Depends, Request, HTTPException
 from fastapi.responses import JSONResponse
 from app.modules.users.dependencies import (
-    get_current_active_user as get_current_user,
     get_optional_current_user as get_real_optional_user,
 )
 from app.modules.users.models import User
@@ -789,35 +788,6 @@ async def get_income_by_category(
             detail="Internal server error while fetching income data",
         )
 
-@router.get("/goals-overview", status_code=status.HTTP_200_OK)
-async def get_goals_overview():
-    """Get goals overview for dashboard"""
-
-    total_target = sum(goal["target"] for goal in MOCK_GOALS_OVERVIEW)
-    total_current = sum(goal["current"] for goal in MOCK_GOALS_OVERVIEW)
-    overall_progress = (total_current / total_target) * 100 if total_target > 0 else 0
-
-    return JSONResponse(
-        status_code=200,
-        content={
-            "success": True,
-            "data": {
-                "goals": MOCK_GOALS_OVERVIEW,
-                "summary": {
-                    "totalGoals": len(MOCK_GOALS_OVERVIEW),
-                    "totalTarget": total_target,
-                    "totalCurrent": total_current,
-                    "overallProgress": round(overall_progress, 1),
-                    "activeGoals": len(
-                        [g for g in MOCK_GOALS_OVERVIEW if g["progress"] < 100]
-                    ),
-                    "completedGoals": len(
-                        [g for g in MOCK_GOALS_OVERVIEW if g["progress"] >= 100]
-                    ),
-                },
-            },
-        },
-    )
 
 @router.get("/wallet-trends", status_code=status.HTTP_200_OK)
 async def get_wallet_trends(
@@ -1165,7 +1135,6 @@ async def refresh_dashboard():
                 "componentsRefreshed": [
                     "stats",
                     "recent-activity",
-                    "goals-overview",
                     "portfolio-overview",
                     "spending-categories",
                 ],
@@ -1173,13 +1142,3 @@ async def refresh_dashboard():
         },
     )
 
-# Health check for the dashboard module
-@router.get("/health")
-async def health_check():
-    """Health check endpoint for the dashboard module"""
-    return {
-        "status": "healthy",
-        "module": "dashboard-simple",
-        "timestamp": datetime.now(timezone.utc).isoformat() + "Z",
-        "mockDataComponents": ["stats", "activities", "categories", "goals", "events"],
-    }

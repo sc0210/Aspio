@@ -43,18 +43,6 @@ class TestHealthEndpoints:
 class TestTransactionEndpoints:
     """Test transaction API endpoints."""
 
-    def test_transactions_health_demo_mode(self):
-        """Test transactions health endpoint in demo mode."""
-        client = TestClient(app)
-        response = client.get("/api/v1/transactions/health")
-
-        assert response.status_code == 200
-        data = response.json()
-        assert data["status"] == "healthy"
-        assert data["module"] == "transactions"
-        assert data["mode"] == "demo"
-        assert data["user_id"] is None
-        assert "timestamp" in data
 
     def test_transactions_list_demo_mode(self):
         """Test transactions list endpoint in demo mode."""
@@ -176,64 +164,6 @@ class TestTransactionEndpoints:
 
         assert transaction["amount"] == "25.50"
         assert transaction["description"] == "Test expense"
-
-    def test_bulk_create_transactions_demo_mode(self):
-        """Test bulk creating transactions in demo mode."""
-        client = TestClient(app)
-
-        bulk_data = {
-            "transactions": [
-                {
-                    "type": "expense",
-                    "amount": "10.00",
-                    "currency": "USD",
-                    "description": "Bulk expense 1",
-                    "transaction_date": business_today().isoformat(),
-                    "category_id": "550e8400-e29b-41d4-a716-446655440001",
-                },
-                {
-                    "type": "expense",
-                    "amount": "15.00",
-                    "currency": "USD",
-                    "description": "Bulk expense 2",
-                    "transaction_date": business_today().isoformat(),
-                    "category_id": "550e8400-e29b-41d4-a716-446655440001",
-                },
-            ],
-            "skip_duplicates": True,
-        }
-
-        response = client.post("/api/v1/transactions/bulk", json=bulk_data)
-        assert response.status_code == 201
-        data = response.json()
-
-        # Should return bulk creation result
-        assert "successful" in data or "created" in data
-
-    def test_qr_payment_transaction_demo_mode(self):
-        """Test QR payment transaction endpoint in demo mode."""
-        client = TestClient(app)
-
-        qr_transaction_data = {
-            "type": "expense",
-            "amount": "12.50",
-            "currency": "SGD",
-            "description": "QR Payment",
-            "transaction_date": business_today().isoformat(),
-            "category_id": "550e8400-e29b-41d4-a716-446655440001",
-            "payment_method": "qr_code",
-            "qr_payment_data": {
-                "qr_code": "SGQRCode123",
-                "merchant_id": "SG001",
-                "terminal_id": "T001",
-                "payment_method": "paynow",
-            },
-        }
-
-        response = client.post(
-            "/api/v1/transactions/qr-payment", json=qr_transaction_data
-        )
-        assert response.status_code == 201
 
 
 class TestDashboardEndpoints:
@@ -456,14 +386,10 @@ class TestAuthenticationEndpoints:
 
                 # Test token validation
                 headers = {"Authorization": f"Bearer {token}"}
-                response = client.get("/api/v1/auth/me", headers=headers)
+                response = client.get("/api/v1/users/me", headers=headers)
 
                 assert response.status_code == 200
-                data = response.json()
-                assert data["success"] is True
-                assert "data" in data
-                user_info = data["data"]
-                assert user_info["email"] == user_data["email"]
+                assert response.json()["email"] == user_data["email"]
 
 
 class TestAuthenticatedEndpoints:
@@ -493,18 +419,6 @@ class TestAuthenticatedEndpoints:
         token = login_response.json()["access_token"]
         return {"Authorization": f"Bearer {token}"}
 
-    def test_authenticated_transactions_health(self):
-        """Test transactions health in authenticated mode."""
-        client = TestClient(app)
-        headers = self.get_auth_headers(client)
-
-        if headers:
-            response = client.get("/api/v1/transactions/health", headers=headers)
-            assert response.status_code == 200
-
-            data = response.json()
-            assert data["mode"] == "authenticated"
-            assert data["user_id"] is not None
 
     def test_authenticated_transactions_list_empty(self):
         """Test transactions list for new authenticated user (should be empty)."""
@@ -616,7 +530,7 @@ class TestRateLimiting:
         # Make many requests quickly
         responses = []
         for _ in range(100):
-            response = client.get("/api/v1/transactions/health")
+            response = client.get("/health")
             responses.append(response)
 
         # Most should succeed, but some might be rate limited

@@ -1710,7 +1710,6 @@ async def _log_activity(
 # ---------------------------------------------------------------------------
 
 
-
 async def _get_raw_link(db: AsyncSession, line_user_id: str) -> Optional[LineUserLink]:
     """The LineUserLink row regardless of the account's state.
 
@@ -4375,11 +4374,6 @@ async def unlink(db: AsyncSession, user_id: UUID) -> None:
     if link is not None:
         await account_repo.delete_tokens_by_line_user_id(link.line_user_id)
     await db.commit()
-
-
-async def get_recent_activity(db: AsyncSession, user_id: UUID, limit: int = 20) -> list:
-    """Recent LINE bot activity for a user (newest first), via the repository."""
-    return await LineAccountRepository(db).get_recent_activities(user_id, limit)
 
 
 async def assert_group_member(db: AsyncSession, group_id: UUID, user_id: UUID) -> None:
