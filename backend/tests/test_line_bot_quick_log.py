@@ -87,6 +87,19 @@ def test_ignores_chat(text):
         ("機車保養", False, "Transportation"),  # a car service, not skincare
         ("保養品", False, "Shopping"),
         ("租車", False, "Transportation"),
+        ("中油", False, "Transportation"),
+        ("剪頭髮", False, "Shopping"),
+        ("AI工具-Claude", False, "Shopping"),
+        ("遠傳電信", False, "Utilities"),
+        ("三商美邦保單繳費", False, "Insurance"),
+        ("機車強制險任意險", False, "Insurance"),
+        ("關西機場伴手禮", False, "Travel"),
+        ("伊根舟屋行程套票", False, "Travel"),
+        ("演唱會門票", False, "Entertainment"),  # not a Travel activity
+        ("train ticket", False, "Transportation"),  # no bare "ticket" in Travel
+        ("movie ticket", False, "Entertainment"),
+        ("spotify subscription", False, "Entertainment"),
+        ("台塑生醫", False, "Others"),            # a skincare brand, not fuel
         ("隨便", False, "Others"),
         ("午餐", True, "Others"),        # income never takes an expense keyword
     ],
@@ -106,6 +119,14 @@ def test_guesses_category(description, is_income, expected):
         ("保養", "Transportation", "Car Maintenance"),  # the same word reads by its category
         ("保養", "Shopping", "Beauty"),
         ("business taxi", "Transportation", None),  # "bus" only as a whole word
+        ("加油", "Transportation", "Fuel"),
+        ("中油", "Transportation", "Fuel"),
+        ("剪頭髮", "Shopping", "Beauty"),
+        ("AI工具-Claude", "Shopping", "Subscriptions"),
+        ("京都4晚住宿費", "Travel", "Lodging"),
+        ("機票", "Travel", "Flights"),
+        ("伊根舟屋行程套票", "Travel", "Activities"),
+        ("關西機場伴手禮", "Travel", "Souvenirs"),
         ("停車費", "Transportation", "Parking"),
         ("租車", "Transportation", "Car Rental"),
         ("蝦皮", "Shopping", None),      # Shopping, but no detail suggested

@@ -84,12 +84,20 @@ export const SUBCATEGORIES: Record<string, { value: string; label: string; icon:
     { value: 'Beauty',      label: 'Beauty',      icon: '💅' },
     { value: 'Electronics', label: 'Electronics', icon: '📱' },
     { value: 'Household',   label: 'Household',   icon: '🧴' },
+    { value: 'Subscriptions', label: 'Subscriptions', icon: '🔁' },
   ],
   Transportation: [
     { value: 'Public Transit',  label: 'Public transit', icon: '🚇' },
+    { value: 'Fuel',            label: 'Fuel',           icon: '⛽' },
     { value: 'Car Maintenance', label: 'Maintenance',    icon: '🔧' },
     { value: 'Parking',         label: 'Parking',        icon: '🅿️' },
     { value: 'Car Rental',      label: 'Car rental',     icon: '🚙' },
+  ],
+  Travel: [
+    { value: 'Flights',    label: 'Flights',    icon: '🛫' },
+    { value: 'Lodging',    label: 'Lodging',    icon: '🏨' },
+    { value: 'Activities', label: 'Activities', icon: '🎟️' },
+    { value: 'Souvenirs',  label: 'Souvenirs',  icon: '🛍️' },
   ],
 };
 
@@ -139,9 +147,9 @@ export const PICKER_GROUPS: CategoryGroup[] = [
   ] },
   { key: 'transport', label: 'Transport', icon: '🚗', category: 'Transportation', options: detailsOf('Transportation') },
   { key: 'shopping', label: 'Shopping', icon: '🛍️', category: 'Shopping', options: detailsOf('Shopping') },
+  { key: 'travel', label: 'Travel', icon: '✈️', category: 'Travel', options: detailsOf('Travel') },
   { key: 'fun', label: 'Fun', icon: '🎬', category: 'Entertainment', options: [
     choice('Entertainment', 'Fun', '🎬'),
-    choice('Travel', 'Travel', '✈️'),
     choice('Gift', 'Gift', '🎁'),
   ] },
   { key: 'other', label: 'Others', icon: '📦', category: 'Others', options: [
@@ -645,7 +653,7 @@ export function CashFields({ idPrefix: p, formData, errors, onChange, onTagsChan
             role="group"
             aria-labelledby={`${p}-group-category`}
             aria-describedby={errors.category ? `${p}-category-error` : undefined}
-            className={cn(CATEGORY_GRID, grouped || categories.length <= 6 ? 'grid-cols-3' : 'grid-cols-3 min-[360px]:grid-cols-4')}
+            className={cn(CATEGORY_GRID, (grouped ? PICKER_GROUPS.length : categories.length) <= 6 ? 'grid-cols-3' : 'grid-cols-3 min-[360px]:grid-cols-4')}
           >
             {/* Not a button: there is nothing to toggle, it only shows what the row
                 holds. Picking a listed chip replaces it. */}

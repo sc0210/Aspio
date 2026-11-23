@@ -102,7 +102,7 @@ EXPENSE_KEYWORDS: dict[str, tuple[str, ...]] = {
     ),
     "Groceries": ("全聯", "家樂福", "好市多", "costco", "超市", "菜市場", "買菜", "水果", "grocery", "supermarket"),
     "Transportation": (
-        "捷運", "公車", "客運", "計程車", "小黃", "高鐵", "台鐵", "火車", "加油", "油錢", "停車",
+        "捷運", "公車", "客運", "計程車", "小黃", "高鐵", "台鐵", "火車", "加油", "油錢", "中油", "停車",
         "悠遊卡", "一卡通", "etc", "uber", "taxi", "mrt", "bus", "train", "parking", "gas", "fuel",
         # Longer than Shopping's "保養" (skincare), so a car service wins over beauty.
         "汽車保養", "機車保養", "車保養", "保養廠", "修車", "換機油", "租車", "car rental",
@@ -111,11 +111,11 @@ EXPENSE_KEYWORDS: dict[str, tuple[str, ...]] = {
     "Shopping": ("蝦皮", "momo", "淘寶", "amazon", "shopee"),
     "Entertainment": ("電影", "唱歌", "ktv", "遊戲", "演唱會", "netflix", "spotify", "youtube", "disney", "steam", "movie", "game", "concert"),
     "Healthcare": ("看醫生", "掛號", "診所", "醫院", "藥局", "藥", "牙醫", "健保", "doctor", "clinic", "hospital", "pharmacy", "dentist"),
-    "Utilities": ("電費", "水費", "瓦斯", "電話費", "手機費", "網路費", "第四台", "electricity", "water bill", "internet", "phone bill"),
+    "Utilities": ("電費", "水費", "瓦斯", "電話費", "手機費", "網路費", "第四台", "電信", "遠傳", "台灣大哥大", "electricity", "water bill", "internet", "phone bill"),
     "Housing": ("房租", "租金", "管理費", "rent"),
     "Education": ("課程", "學費", "補習", "書", "udemy", "course", "tuition", "book"),
     "Gift": ("禮物", "紅包", "禮金", "gift"),
-    "Insurance": ("保險", "保費", "壽險", "醫療險", "車險", "insurance"),
+    "Insurance": ("保險", "保費", "壽險", "醫療險", "車險", "強制險", "保單", "insurance"),
     "Travel": ("機票", "住宿", "飯店", "旅館", "民宿", "訂房", "flight", "hotel", "airbnb"),
 }
 
@@ -131,22 +131,32 @@ FALLBACK_CATEGORY = "Others"
 # Only details listed in transactions/subcategories.py (a test checks).
 SUBCATEGORY_KEYWORDS: dict[str, dict[str, tuple[str, ...]]] = {
     "Shopping": {
-        "Beauty": ("剪髮", "理髮", "美髮", "美甲", "美容", "保養", "化妝", "彩妝", "haircut", "salon", "nail", "makeup"),
+        "Beauty": ("剪髮", "理髮", "頭髮", "美髮", "美甲", "美容", "保養", "化妝", "彩妝", "haircut", "salon", "nail", "makeup"),
         "Clothing": ("衣服", "褲子", "鞋", "包包", "clothes", "shoes"),
         "Household": ("日用品",),
+        "Subscriptions": ("訂閱", "ai工具", "claude", "chatgpt"),
     },
     "Transportation": {
         "Public Transit": ("捷運", "公車", "客運", "高鐵", "台鐵", "火車", "悠遊卡", "一卡通", "mrt", "bus", "train"),
+        "Fuel": ("加油", "油錢", "中油", "gas", "fuel"),
         "Car Maintenance": ("保養", "修車", "換機油", "維修"),
         "Parking": ("停車", "parking"),
         "Car Rental": ("租車", "car rental"),
+    },
+    "Travel": {
+        "Flights": ("機票", "flight"),
+        "Lodging": ("住宿", "飯店", "旅館", "民宿", "訂房", "hotel", "airbnb"),
+        "Activities": ("門票", "套票", "行程", "潛水"),
+        "Souvenirs": ("伴手禮", "紀念品", "souvenir"),
     },
 }
 
 
 # A detail's words also suggest its category, so they are listed once.
 for _category, _details in SUBCATEGORY_KEYWORDS.items():
-    if _category == "Shopping":  # Transport keeps its own longer forms (汽車保養 beats skincare 保養)
+    # Transport keeps its own longer forms (汽車保養 beats skincare 保養). A tie goes to
+    # the category listed first, so 演唱會門票 stays Entertainment, not Travel.
+    if _category in ("Shopping", "Travel"):
         EXPENSE_KEYWORDS[_category] += tuple(w for words in _details.values() for w in words)
 
 
