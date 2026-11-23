@@ -1754,7 +1754,7 @@ async def _get_or_create_group(
     # preferred_currency (which may be USD) — one member's setting should not silently
     # define the whole group's currency. Existing USD groups are backfilled by
     # migration 2026_06_22_line_group_currency_twd.
-    return await repo.create_group_if_absent(line_group_id, "TWD")
+    return await repo.create_group_if_absent(line_group_id, "TWD", creator_user_id)
 
 
 async def _ensure_member(
