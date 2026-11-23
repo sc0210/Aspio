@@ -507,9 +507,10 @@ class AttachmentService:
 
 def _safe_cell(text: str) -> str:
     """Free text made inert for a CSV opened in a spreadsheet: one starting with
-    = + - @ or a tab/CR is a formula to Excel and would run when the export is
-    opened. Text in an export can come from someone else (a partner's name, an
-    imported description, the LINE bot). A leading apostrophe makes it text.
+    = + - @ (or their full-width forms, which a CJK spreadsheet may read as the
+    same, even after spaces) or a tab/CR is a formula to Excel and would run when
+    the export is opened. Text in an export can come from someone else (a
+    partner's name, an imported description, the LINE bot). A leading apostrophe makes it text.
     Text already starting with an apostrophe before one of those is prefixed
     too, so _unsafe_cell on import gives back exactly what was written."""
     return f"'{text}" if _needs_guard(text) else text
@@ -519,7 +520,10 @@ def _needs_guard(text: Optional[str]) -> bool:
     """Whether _safe_cell prefixes `text`: a formula start, or an apostrophe
     before one (else that apostrophe would be stripped on import)."""
     rest = (text or "").lstrip("'")  # no recursion: any number of apostrophes is fine
-    return bool(rest) and rest[0] in "=+-@\t\r"
+    if rest[:1] in ("\t", "\r"):
+        return True
+    start = rest.lstrip(" \u3000")
+    return bool(start) and start[0] in "=+-@\uff1d\uff0b\uff0d\uff20"  # = + - @ and ＝ ＋ － ＠
 
 
 def _unsafe_cell(text: Optional[str]) -> Optional[str]:

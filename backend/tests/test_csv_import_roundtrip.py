@@ -266,7 +266,8 @@ async def test_an_edit_cannot_set_another_categorys_detail(async_engine):
 
 
 @pytest.mark.parametrize(
-    "text", ["-50% sale", "=SUM(A1)", "'=x", "''+y", "'quoted'", "plain", "@me", "\tx", "'" * 5000 + "=x", "'" * 5000]
+    "text", ["-50% sale", "=SUM(A1)", "'=x", "''+y", "'quoted'", "plain", "@me", "\tx", "'" * 5000 + "=x", "'" * 5000,
+             "＝SUM(A1)", "＋1", "－5", "＠me", "  =x", "\u3000＝x", "'  =x", "   ", ""]
 )
 def test_the_export_guard_and_the_import_undo_round_trip(text):
     from app.modules.transactions.attachment_service import _safe_cell, _unsafe_cell
@@ -279,3 +280,17 @@ def test_a_long_apostrophe_run_is_still_guarded():
 
     assert _safe_cell("'" * 5000 + "=x") == "'" * 5001 + "=x"
     assert _safe_cell("'" * 5000) == "'" * 5000
+
+
+@pytest.mark.parametrize("text", ["＝SUM(A1)", "＋1", "－5", "＠me", "  =x", "\u3000＝x", "'＝x"])
+def test_full_width_signs_and_leading_spaces_are_guarded(text):
+    from app.modules.transactions.attachment_service import _safe_cell
+
+    assert _safe_cell(text) == "'" + text
+
+
+@pytest.mark.parametrize("text", ["   ", "", "a=b", "100", "'quoted'"])
+def test_ordinary_text_is_left_alone(text):
+    from app.modules.transactions.attachment_service import _safe_cell
+
+    assert _safe_cell(text) == text
