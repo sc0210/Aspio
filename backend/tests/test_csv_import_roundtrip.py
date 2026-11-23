@@ -272,3 +272,10 @@ def test_the_export_guard_and_the_import_undo_round_trip(text):
     from app.modules.transactions.attachment_service import _safe_cell, _unsafe_cell
 
     assert _unsafe_cell(_safe_cell(text)) == text
+
+
+def test_a_long_apostrophe_run_is_still_guarded():
+    from app.modules.transactions.attachment_service import _safe_cell
+
+    assert _safe_cell("'" * 5000 + "=x") == "'" * 5001 + "=x"
+    assert _safe_cell("'" * 5000) == "'" * 5000
