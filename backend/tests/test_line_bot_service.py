@@ -871,6 +871,17 @@ class TestGetOrCreateGroup:
         assert group.currency == "TWD"
 
     @pytest.mark.asyncio
+    async def test_new_group_records_its_creator(self, async_session):
+        creator = _make_user()
+        async_session.add(creator)
+        await async_session.flush()
+
+        group = await svc._get_or_create_group(
+            async_session, "Cnewgroup002", creator_user_id=creator.id
+        )
+        assert group.created_by == creator.id
+
+    @pytest.mark.asyncio
     async def test_returns_existing_group_unchanged(self, async_session, group):
         # Existing groups are returned as-is (currency not re-derived on each access).
         result = await svc._get_or_create_group(
@@ -878,6 +889,7 @@ class TestGetOrCreateGroup:
         )
         assert result.id == group.id
         assert result.currency == group.currency
+        assert result.created_by == group.created_by  # a later member is not the creator
 
 
 # ---------------------------------------------------------------------------

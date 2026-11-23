@@ -255,14 +255,14 @@ class LineGroupRepository:
         return result.scalar_one_or_none()
 
     async def create_group_if_absent(
-        self, line_group_id: str, currency: str
+        self, line_group_id: str, currency: str, created_by: Optional[UUID] = None
     ) -> LineGroup:
         """Create a group, tolerating a concurrent insert.
 
         Mirrors the original ``_get_or_create_group`` flush-in-savepoint
         behaviour: on a unique-constraint race, re-fetch the winning row.
         """
-        group = LineGroup(line_group_id=line_group_id, currency=currency)
+        group = LineGroup(line_group_id=line_group_id, currency=currency, created_by=created_by)
         self.db.add(group)
         try:
             async with self.db.begin_nested():
