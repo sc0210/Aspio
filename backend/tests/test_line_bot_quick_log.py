@@ -88,6 +88,7 @@ def test_ignores_chat(text):
         ("保養品", False, "Shopping"),
         ("租車", False, "Transportation"),
         ("中油", False, "Transportation"),
+        ("買小黃瓜", False, "Groceries"),   # cucumber, not a taxi (小黃)
         ("剪頭髮", False, "Shopping"),
         ("AI工具-Claude", False, "Shopping"),
         ("遠傳電信", False, "Utilities"),
@@ -118,7 +119,11 @@ def test_guesses_category(description, is_income, expected):
         ("機車保養", "Transportation", "Car Maintenance"),
         ("保養", "Transportation", "Car Maintenance"),  # the same word reads by its category
         ("保養", "Shopping", "Beauty"),
-        ("business taxi", "Transportation", None),  # "bus" only as a whole word
+        ("business taxi", "Transportation", "Taxi"),  # not Public Transit: "bus" only as a whole word
+        ("Uber（竹北高鐵）", "Transportation", "Taxi"),  # a ride to the station, not the train
+        ("Uber竹北高鐵", "Transportation", "Taxi"),    # English touching Chinese still matches
+        ("計程車", "Transportation", "Taxi"),
+        ("小黃去火車站", "Transportation", "Taxi"),  # a tie goes to Taxi
         ("加油", "Transportation", "Fuel"),
         ("中油", "Transportation", "Fuel"),
         ("剪頭髮", "Shopping", "Beauty"),

@@ -89,6 +89,7 @@ export const SUBCATEGORIES: Record<string, { value: string; label: string; icon:
   Transportation: [
     { value: 'Public Transit',  label: 'Public transit', icon: '🚇' },
     { value: 'Fuel',            label: 'Fuel',           icon: '⛽' },
+    { value: 'Taxi',            label: 'Taxi',           icon: '🚕' },
     { value: 'Car Maintenance', label: 'Maintenance',    icon: '🔧' },
     { value: 'Parking',         label: 'Parking',        icon: '🅿️' },
     { value: 'Car Rental',      label: 'Car rental',     icon: '🚙' },
