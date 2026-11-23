@@ -105,11 +105,10 @@ describe('usePortfolioModals', () => {
     act(() => {
       result.current.openBuyModal();
       result.current.openImportExportModal();
-      result.current.openWalletManagementModal();
       result.current.openDebugPanel();
     });
     expect(result.current.modalData.buyingSymbol).toBeNull();
-    expect(result.current.modals).toMatchObject({ buy: true, importExport: true, walletManagement: true, debug: true });
+    expect(result.current.modals).toMatchObject({ buy: true, importExport: true, debug: true });
 
     act(() => result.current.toggleModal('debug'));
     expect(result.current.modals.debug).toBe(false);

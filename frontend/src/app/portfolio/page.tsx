@@ -73,7 +73,6 @@ import { DemoNotice } from '@/components/ui/DemoNotice';
  * - Retirement progress tracking
  * - Buy/sell holdings
  * - Import/export portfolio data
- * - Wallet management
  * - Price updates and historical data sync
  *
  * @refactored April 4, 2026 (Phase 4: Additional hook extraction)

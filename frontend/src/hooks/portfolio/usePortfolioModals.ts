@@ -8,7 +8,6 @@ type PortfolioModalName =
   | 'importExport'
   | 'sell'
   | 'buy'
-  | 'walletManagement'
   | 'debug'
   | 'editGoal'
   | 'contributeGoal'
@@ -21,7 +20,6 @@ interface ModalState {
   importExport: boolean;
   sell: boolean;
   buy: boolean;
-  walletManagement: boolean;
   debug: boolean;
   editGoal: boolean;
   contributeGoal: boolean;
@@ -46,7 +44,6 @@ const DEFAULT_MODAL_STATE: ModalState = {
   importExport: false,
   sell: false,
   buy: false,
-  walletManagement: false,
   debug: false,
   editGoal: false,
   contributeGoal: false,
@@ -193,13 +190,6 @@ export function usePortfolioModals() {
   }, [openModal]);
 
   /**
-   * Open the wallet management modal
-   */
-  const openWalletManagementModal = useCallback(() => {
-    openModal('walletManagement');
-  }, [openModal]);
-
-  /**
    * Open the debug panel
    */
   const openDebugPanel = useCallback(() => {
@@ -250,7 +240,6 @@ export function usePortfolioModals() {
     openSellModal,
     openBuyModal,
     openImportExportModal,
-    openWalletManagementModal,
     openDebugPanel,
     openEditGoalModal,
     openContributeModal,

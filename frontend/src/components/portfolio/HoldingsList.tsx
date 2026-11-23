@@ -457,7 +457,12 @@ export function HoldingsList({
             setSelectedWalletType(null);
           }}
           onUpdateLot={onUpdateLot}
-          onSellLot={onSellHolding ? (lot) => onSellHolding(lot as unknown as Holding) : undefined}
+          // The row's aggregated holding (every lot, weighted cost), as the row's own
+          // Sell passes: one lot would cap the sale at that lot's quantity.
+          onSellLot={onSellHolding ? (lot) => onSellHolding(
+            holdings.find((h) => h.symbol === selectedSymbol && (!selectedWalletType || h.walletType === selectedWalletType))
+              ?? (lot as unknown as Holding)
+          ) : undefined}
           onDeleteLot={onDeleteHolding ? async (lotId) => { onDeleteHolding(lotId); } : undefined}
           onUpdateSymbol={onUpdateSymbol}
         />
