@@ -17,6 +17,7 @@ import toast from 'react-hot-toast';
 import { transactionService } from '@/services/transactionService';
 import { Modal } from '@/components/ui/Modal';
 import { ConfirmDialog } from '@/components/ui/ConfirmDialog';
+import { unguardCell } from '@/utils/csvCell';
 
 interface Transaction {
   id?: string;
@@ -200,7 +201,8 @@ export function TransactionImportExportModal({ transactions, onClose, onImport }
       const row: ParsedRow = {};
 
       headers.forEach((header, index) => {
-        const value = values[index] || '';
+        // An export guards formula-like text with an apostrophe; read it back as written.
+        const value = unguardCell(values[index] || '');
 
         // Map CSV headers to object properties
         switch (header.toLowerCase()) {

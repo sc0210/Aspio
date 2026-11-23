@@ -49,6 +49,7 @@ import { formatAssetTypeLabel } from '@/utils/holdingLabels';
 import { dailyPerformanceKey, DAILY_PERFORMANCE_DAYS_MAX } from '@/lib/queryKeys';
 import { usePortfolioSnapshot } from '@/hooks/portfolio/usePortfolioSnapshot';
 import { allTimeReturnPercent, filterTrendByPreset, type TrendPreset } from '@/lib/portfolio/trendRange';
+import { csvCell } from '@/utils/csvCell';
 
 // ─── Types ───────────────────────────────────────────────────────────────────
 
@@ -1067,7 +1068,7 @@ export default function TrendPage() {
         ];
         const rows = holdingRows.map((r) => [
             r.symbol,
-            `"${r.name}"`,
+            r.name,
             r.type,
             r.quantity,
             r.avgCost.toFixed(2),
@@ -1077,7 +1078,7 @@ export default function TrendPage() {
             r.periodChangePct?.toFixed(2) ?? '',
             r.weight.toFixed(2),
         ]);
-        const csv = [headers.join(','), ...rows.map((r) => r.join(','))].join('\n');
+        const csv = [headers, ...rows].map((r) => r.map(csvCell).join(',')).join('\n');
         const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
         const url = URL.createObjectURL(blob);
         const a = document.createElement('a');

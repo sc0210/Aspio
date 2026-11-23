@@ -21,6 +21,7 @@ import { TransactionRow } from './TransactionRow';
 import SplitExpenseModal from './SplitExpenseModal';
 import { SortableDayGrid } from './SortableDayGrid';
 import { apiDate, applyDayOrder } from './dayOrder';
+import { csvCell } from '@/utils/csvCell';
 
 const ALL_CATEGORIES = [
   { value: 'Dining', emoji: '🍽️' },
@@ -252,7 +253,6 @@ export function TransactionList({ transactions, isLoading, isFetching, isSearchi
       t('transactions:export.currency', '貨幣'),
       t('transactions:export.paymentMethod', '付款方式'),
     ];
-    const escapeCell = (v: string) => `"${v.replace(/"/g, '""')}"`;
     const csvRows = selectedData.map(tx => [
       new Date(tx.date).toLocaleDateString(),
       tx.description,
@@ -265,9 +265,9 @@ export function TransactionList({ transactions, isLoading, isFetching, isSearchi
     ]);
 
     const csvContent = [
-      csvHeaders.join(','),
-      ...csvRows.map(row => row.map(escapeCell).join(','))
-    ].join('\n');
+      csvHeaders,
+      ...csvRows,
+    ].map(row => row.map(csvCell).join(',')).join('\n');
 
     const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
     const link = document.createElement('a');
