@@ -330,39 +330,6 @@ class UserActivityResponse(BaseModel):
     created_at: datetime
 
 
-class UserEngagementMetrics(BaseModel):
-    """User engagement analytics"""
-    user_id: uuid.UUID
-    total_sessions: int
-    average_session_duration: float  # in minutes
-    last_active: Optional[datetime] = None
-    features_used: List[str] = Field(default_factory=list)
-    daily_engagement_score: float
-    weekly_engagement_score: float
-    monthly_engagement_score: float
-    engagement_trend: str = Field(..., pattern="^(increasing|stable|decreasing)$")
-
-
-# ===== Data Privacy and Compliance Schemas =====
-
-class DataExportRequest(BaseModel):
-    """GDPR data export request"""
-    export_type: str = Field(
-        "full_export", 
-        pattern="^(full_export|data_portability|specific_data)$",
-        description="Type of data export requested"
-    )
-    data_categories: Optional[List[str]] = Field(
-        None,
-        description="Specific data categories if export_type is 'specific_data'"
-    )
-    format: str = Field(
-        "json", 
-        pattern="^(json|csv|pdf)$",
-        description="Export format preference"
-    )
-
-
 # ===== Regional and Localization Schemas =====
 
 class RegionalPreferencesUpdate(BaseModel):

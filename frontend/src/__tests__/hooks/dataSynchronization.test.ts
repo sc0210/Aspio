@@ -91,12 +91,12 @@ describe('a transaction or portfolio change invalidates everything derived from 
         expect(isStale(client, QUERY_KEYS.LIFE_CASH)).toBe(true);
     });
 
-    it('leaves goal progress totals and the profile alone', () => {
-        // Progress moves only by reserving or releasing (their own endpoints),
-        // never by spending, so the summary is not ledger-derived.
-        seed(client, [QUERY_KEYS.GOALS_SUMMARY, QUERY_KEYS.USER_PROFILE]);
+    it('leaves achievements and the profile alone', () => {
+        // Achievements follow contributions, never spending, so they are not
+        // ledger-derived.
+        seed(client, [QUERY_KEYS.ACHIEVEMENTS, QUERY_KEYS.USER_PROFILE]);
         invalidateDashboardData(client);
-        expect(isStale(client, QUERY_KEYS.GOALS_SUMMARY)).toBe(false);
+        expect(isStale(client, QUERY_KEYS.ACHIEVEMENTS)).toBe(false);
         expect(isStale(client, QUERY_KEYS.USER_PROFILE)).toBe(false);
     });
 

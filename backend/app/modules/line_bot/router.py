@@ -240,7 +240,7 @@ async def group_members(
     db: AsyncSession = Depends(get_db),
 ) -> ApiResponse[list[MemberOut]]:
     await service.assert_group_member(db, group_id, current_user.id)
-    result = await service.get_group_members_with_names(db, group_id, current_user.id)
+    result = await service.get_group_members_with_names(db, group_id)
     return ApiResponse.success_response(data=result)
 
 

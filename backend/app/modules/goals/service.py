@@ -513,9 +513,6 @@ class GoalService:
             await PeerService(self.session).sync_backed_goal(goal.shared_goal_id, goal.user_id)
         return contribution
 
-    async def _check_milestones(self, goal: Goal):
-        self._check_milestones_sync(goal)
-
     @staticmethod
     def _check_milestones_sync(goal: Goal):
         """Check and auto-complete milestones based on current amount"""

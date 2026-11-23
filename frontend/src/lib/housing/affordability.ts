@@ -304,35 +304,3 @@ export function projectAffordability(
         cashFlowCeiling: today.cashFlowCeiling,
     };
 }
-
-/**
- * Years until `targetPrice` becomes affordable, or null if not within `maxYears`.
- * Month-stepped so the answer is honest near the boundary rather than rounded to
- * a whole year that hasn't arrived yet.
- */
-export function yearsToAfford(
-    inputs: AffordabilityInputs,
-    targetPrice: number,
-    opts: { annualReturnPct?: number; maxYears?: number } = {},
-): number | null {
-    const { annualReturnPct = 6, maxYears = 40 } = opts;
-    if (calcAffordability(inputs).maxPrice >= targetPrice) return 0;
-
-    const monthlySavings = inputs.monthlyIncome - inputs.monthlyExpenses;
-    const r = annualReturnPct / 100 / 12;
-    let assets = inputs.financialAssets;
-    let liquid = inputs.liquidFunds;
-
-    // With no surplus and no return, the pot never moves — bail out rather than loop.
-    if (monthlySavings <= 0 && r === 0) return null;
-
-    for (let m = 1; m <= maxYears * 12; m++) {
-        const gain = assets * r;
-        assets += gain + Math.max(0, monthlySavings);
-        liquid += gain + Math.max(0, monthlySavings);
-        if (calcAffordability({ ...inputs, financialAssets: assets, liquidFunds: liquid }).maxPrice >= targetPrice) {
-            return Math.round((m / 12) * 10) / 10;
-        }
-    }
-    return null;
-}

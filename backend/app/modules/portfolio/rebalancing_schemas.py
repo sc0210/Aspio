@@ -10,7 +10,7 @@ from decimal import Decimal
 from typing import List, Optional
 from enum import Enum
 
-from pydantic import BaseModel, Field, field_validator
+from pydantic import BaseModel, Field
 
 
 class AlertType(str, Enum):
@@ -30,31 +30,6 @@ class ActionType(str, Enum):
     SELL = "sell"
     HOLD = "hold"
     CONVERT_FX = "convert_fx"
-
-
-# Asset Allocation Target schemas
-class AssetAllocationTarget(BaseModel):
-    """Schema for user-defined asset allocation targets"""
-
-    asset_symbol: str = Field(
-        ..., description="Asset symbol or category (e.g., 0050, VT, CASH, CRYPTO)"
-    )
-    asset_name: str = Field(..., description="Asset name for display")
-    asset_type: str = Field(..., description="Asset type: stock, etf, crypto, cash")
-    target_percentage: Decimal = Field(
-        ..., ge=0, le=100, description="Target allocation percentage (0-100)"
-    )
-    deviation_threshold: Decimal = Field(
-        default=Decimal("5.0"), description="Alert when deviation exceeds this %"
-    )
-    rebalance_enabled: bool = Field(
-        default=True, description="Enable automatic rebalancing suggestions"
-    )
-
-    @field_validator("target_percentage", "deviation_threshold")
-    @classmethod
-    def round_to_two_decimals(cls, v):
-        return v.quantize(Decimal("0.01"))
 
 
 # Current Asset Allocation schemas

@@ -79,15 +79,6 @@ export interface GoalContribution {
     createdAt: string;
 }
 
-interface GoalSummary {
-    totalGoals: number;
-    activeGoals: number;
-    completedGoals: number;
-    totalTargetAmount: number;
-    totalCurrentAmount: number;
-    overallProgress: number;
-}
-
 export interface CreateGoalData {
     title: string;
     description?: string;
@@ -239,55 +230,6 @@ export function useGoals(status?: string, category?: string) {
     });
 }
 
-export function useGoal(goalId: string) {
-    const { data: session } = useSession();
-    const { isDemoMode, demoGoals, demoRevision } = useDemo();
-
-    return useQuery<Goal>({
-        queryKey: [QUERY_KEYS.GOALS, goalId, isDemoMode ? `demo-${demoRevision ?? 0}` : (session?.user?.id || 'anon')],
-        queryFn: async () => {
-            if (isDemoMode) {
-                const goal = (demoGoals ?? []).find(g => g.id === goalId);
-                if (!goal) throw new Error('Demo goal not found');
-                return demoGoalToGoal(goal);
-            }
-            const response = await apiClient.get<Goal>(`/goals/${goalId}`);
-            return response.data!;
-        },
-        enabled: (!!session || isDemoMode) && !!goalId,
-    });
-}
-
-export function useGoalsSummary() {
-    const { data: session } = useSession();
-    const { isDemoMode, demoGoals, demoRevision, getDemoStats } = useDemo();
-
-    return useQuery<GoalSummary>({
-        queryKey: [QUERY_KEYS.GOALS_SUMMARY, isDemoMode ? `demo-${demoRevision ?? 0}` : (session?.user?.id || 'anon')],
-        queryFn: async () => {
-            if (isDemoMode) {
-                const emergency = Number(getDemoStats?.().emergency_wallet) || 0;
-                const goals = (demoGoals ?? []).map((g) => demoGoalToGoal(g, emergency));
-                const active = goals.filter(g => g.status === 'active');
-                const completed = goals.filter(g => g.status === 'completed');
-                const totalTarget = goals.reduce((sum, g) => sum + Number(g.targetAmount), 0);
-                const totalCurrent = goals.reduce((sum, g) => sum + Number(g.currentAmount), 0);
-                return {
-                    totalGoals: goals.length,
-                    activeGoals: active.length,
-                    completedGoals: completed.length,
-                    totalTargetAmount: totalTarget,
-                    totalCurrentAmount: totalCurrent,
-                    overallProgress: totalTarget > 0 ? (totalCurrent / totalTarget) * 100 : 0,
-                };
-            }
-            const response = await apiClient.get<GoalSummary>('/goals/summary');
-            return response.data!;
-        },
-        enabled: !!session || isDemoMode,
-    });
-}
-
 /** Demo writes resolve to this instead of calling the backend (it 401s there). */
 const DEMO_WRITE = { demo: true } as const;
 const isDemoWrite = (r: unknown): boolean =>
@@ -305,7 +247,6 @@ function useGoalDemoWrites() {
         /** The demo fixtures changed: show the simulated toast and refresh. */
         done: () => {
             queryClient.invalidateQueries({ queryKey: [QUERY_KEYS.GOALS] });
-            queryClient.invalidateQueries({ queryKey: [QUERY_KEYS.GOALS_SUMMARY] });
             toast.success(t('common:demoAlert.changesSimulated'));
         },
     };
@@ -343,7 +284,6 @@ export function useCreateGoal() {
         onSuccess: (result) => {
             if (isDemoWrite(result)) return done();
             queryClient.invalidateQueries({ queryKey: [QUERY_KEYS.GOALS] });
-            queryClient.invalidateQueries({ queryKey: [QUERY_KEYS.GOALS_SUMMARY] });
             // Refetch ALL instances (active + inactive) so dashboard & portfolio stay in sync
             queryClient.refetchQueries({ queryKey: [QUERY_KEYS.GOALS], type: 'all' });
             queryClient.invalidateQueries({ queryKey: [QUERY_KEYS.LIFE_CASH] });
@@ -391,7 +331,6 @@ export function useUpdateGoal() {
             if (isDemoWrite(result)) return done();
             queryClient.invalidateQueries({ queryKey: [QUERY_KEYS.GOALS] });
             queryClient.invalidateQueries({ queryKey: [QUERY_KEYS.GOALS, variables.id] });
-            queryClient.invalidateQueries({ queryKey: [QUERY_KEYS.GOALS_SUMMARY] });
             // Refetch ALL instances (active + inactive) so dashboard & portfolio stay in sync
             queryClient.refetchQueries({ queryKey: [QUERY_KEYS.GOALS], type: 'all' });
             queryClient.invalidateQueries({ queryKey: [QUERY_KEYS.LIFE_CASH] });
@@ -422,7 +361,6 @@ export function useDeleteGoal() {
         onSuccess: (result) => {
             if (isDemoWrite(result)) return done();
             queryClient.invalidateQueries({ queryKey: [QUERY_KEYS.GOALS] });
-            queryClient.invalidateQueries({ queryKey: [QUERY_KEYS.GOALS_SUMMARY] });
             // Refetch ALL instances (active + inactive) so dashboard & portfolio stay in sync
             queryClient.refetchQueries({ queryKey: [QUERY_KEYS.GOALS], type: 'all' });
             queryClient.invalidateQueries({ queryKey: [QUERY_KEYS.LIFE_CASH] });
@@ -502,7 +440,6 @@ function useGoalCash(kind: 'reserve' | 'release') {
             if (isDemoWrite(result)) return done();
             queryClient.invalidateQueries({ queryKey: [QUERY_KEYS.GOALS] });
             queryClient.invalidateQueries({ queryKey: [QUERY_KEYS.GOALS, variables.goalId] });
-            queryClient.invalidateQueries({ queryKey: [QUERY_KEYS.GOALS_SUMMARY] });
             queryClient.invalidateQueries({ queryKey: [QUERY_KEYS.LIFE_CASH] });
             // Refetch ALL instances (active + inactive) so dashboard & portfolio stay in sync
             queryClient.refetchQueries({ queryKey: [QUERY_KEYS.GOALS], type: 'all' });

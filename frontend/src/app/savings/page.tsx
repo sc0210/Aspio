@@ -225,7 +225,6 @@ function SavingsGroups() {
   // cached list without it.
   const partsChanged = useCallback(async () => {
     void queryClient.invalidateQueries({ queryKey: [QUERY_KEYS.GOALS] });
-    void queryClient.invalidateQueries({ queryKey: [QUERY_KEYS.GOALS_SUMMARY] });
     await refreshGoals();
   }, [queryClient, refreshGoals]);
 

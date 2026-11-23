@@ -2,7 +2,6 @@ import {
     calcAffordability,
     projectAffordability,
     proportionateTargets,
-    yearsToAfford,
     type AffordabilityInputs,
 } from '@/lib/housing/affordability';
 import { calcMortgage } from '@/lib/housing/mortgage';
@@ -209,51 +208,3 @@ describe('return on financial assets', () => {
     });
 });
 
-describe('yearsToAfford', () => {
-    it('returns 0 when the target is already affordable', () => {
-        expect(yearsToAfford(BASE, 100 * WAN)).toBe(0);
-    });
-
-    it('returns a finite horizon when saving is the lever that closes the gap', () => {
-        // Cash-bound: income comfortably services a bigger loan, the down payment
-        // is what's missing — so time and savings genuinely do get them there.
-        const cashBound: AffordabilityInputs = {
-            ...BASE,
-            financialAssets: 300 * WAN,
-            liquidFunds: 300 * WAN,
-        };
-        const c = calcAffordability(cashBound);
-        expect(c.binding).toBe('cash');
-
-        const target = c.maxPrice * 1.5; // out of reach today...
-        expect(target).toBeLessThan(c.cashFlowCeiling); // ...but under the wall
-
-        const y = yearsToAfford(cashBound, target);
-        expect(y).not.toBeNull();
-        expect(y!).toBeGreaterThan(0);
-    });
-
-    it('returns null for a target above the cash-flow wall, however long you save', () => {
-        // Saving cannot buy past what the monthly budget services, so this must
-        // report "never" rather than an encouraging but false horizon.
-        const ceiling = calcAffordability(BASE).cashFlowCeiling;
-        expect(yearsToAfford(BASE, ceiling * 1.2)).toBeNull();
-    });
-
-    it('returns null when the target is out of reach within the horizon', () => {
-        const y = yearsToAfford(
-            { ...BASE, financialAssets: 10 * WAN, liquidFunds: 10 * WAN, monthlyIncome: 4 * WAN, monthlyExpenses: 3.9 * WAN },
-            100000 * WAN,
-        );
-        expect(y).toBeNull();
-    });
-
-    it('terminates instead of looping when nothing can ever accumulate', () => {
-        const y = yearsToAfford(
-            { ...BASE, financialAssets: 0, liquidFunds: 0, monthlyIncome: 3 * WAN, monthlyExpenses: 3 * WAN },
-            1000 * WAN,
-            { annualReturnPct: 0 },
-        );
-        expect(y).toBeNull();
-    });
-});

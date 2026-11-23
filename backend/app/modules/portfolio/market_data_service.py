@@ -673,15 +673,6 @@ class MarketDataService:
                         # logged it and armed the cooldown.
                         return []
 
-                        _finlab_market_cache.update(frames)
-                        _finlab_market_cache["window_start"] = window_start
-                        _finlab_market_cache["last_fetch"] = utc_now()
-
-                        logger.info(
-                            "💾 Truncated market data cached in memory "
-                            "(subsequent symbols = 0 API calls)"
-                        )
-
             # ===== STEP 4: Extract symbol data from cached market DataFrames =====
             close_df = _finlab_market_cache["close"]
             open_df = _finlab_market_cache["open"]
@@ -1520,39 +1511,4 @@ def get_finlab_cache_status() -> Dict[str, Any]:
         "window_start": window_start.isoformat() if window_start else None,
         "is_stale": cache_age > timedelta(hours=1),
         "message": f"Market data cached {cache_age.seconds}s ago with {symbols_count} symbols",
-    }
-
-
-def get_api_optimization_stats() -> Dict[str, Any]:
-    """
-    Get API usage optimization statistics.
-
-    Returns:
-        Dictionary with optimization stats to help monitor API usage
-    """
-    cache_status = get_finlab_cache_status()
-
-    # Calculate potential savings
-    # If cache is valid, subsequent symbol fetches cost 0 API calls
-    potential_symbols_per_cache = cache_status.get("symbols_available", 0)
-
-    return {
-        "finlab_cache_status": cache_status,
-        "optimization_strategy": {
-            "market_level_caching": "Enabled - fetches all TW stocks in 5 API calls",
-            "symbol_level_caching": "Enabled - Redis cache with TTL until market close",
-            "request_deduplication": "Enabled - asyncio.Lock prevents concurrent fetches",
-            "database_storage": "Enabled - historical data stored in DB",
-        },
-        "api_call_estimate": {
-            "first_tw_symbol": "5 API calls (OHLCV for entire market)",
-            "subsequent_tw_symbols": "0 API calls (from memory cache)",
-            "yahoo_fallback": "1 API call per symbol (no batch)",
-            "cached_symbols": "0 API calls (from Redis or memory)",
-        },
-        "recommendations": [
-            "Sync multiple TW symbols together to leverage market-level cache",
-            "Run historical sync during off-peak hours",
-            "Use force_refresh sparingly to preserve API quota",
-        ],
     }

@@ -95,7 +95,6 @@ jest.mock('@/hooks/useDataSynchronization', () => ({
     WALLET_TRENDS: 'wallet_trends',
     TRANSACTION_STATS: 'transaction_stats',
     GOALS: 'goals',
-    GOALS_SUMMARY: 'goals_summary',
     REBALANCING: 'rebalancing',
   },
   invalidateDashboardData: jest.fn(),

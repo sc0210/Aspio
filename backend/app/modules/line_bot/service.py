@@ -1526,13 +1526,12 @@ def _flex_main_menu(is_group: bool = False) -> dict:
 LINE_RICH_MENU_URL = "https://api.line.me/v2/bot/richmenu"
 
 
-async def setup_rich_menu(image_url: str | None = None) -> dict:
+async def setup_rich_menu() -> dict:
     """
     Create and activate the Aspiro rich menu for all users.
     Call once from POST /line-bot/rich-menu/setup.
-    The menu has 6 tap areas sending slash commands.
-    If image_url is provided it will be linked; otherwise callers must
-    upload an image separately via LINE's upload endpoint.
+    The menu has 6 tap areas sending slash commands; upload its image
+    separately via LINE's upload endpoint.
     """
     if not settings.LINE_CHANNEL_ACCESS_TOKEN:
         raise ValueError("LINE_CHANNEL_ACCESS_TOKEN not set")
@@ -4531,7 +4530,7 @@ async def compute_balances(
 
 
 async def get_group_members_with_names(
-    db: AsyncSession, group_id: UUID, current_user_id: UUID
+    db: AsyncSession, group_id: UUID
 ) -> list:
     """
     Return all members of a LINE expense group with their display names.

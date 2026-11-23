@@ -10,29 +10,6 @@ from decimal import Decimal
 class TestMarketDataOptimization:
     """Test market data service API optimization."""
 
-    def test_api_optimization_stats_structure(self):
-        """Test that get_api_optimization_stats returns expected structure."""
-        from app.modules.portfolio.market_data_service import get_api_optimization_stats
-
-        stats = get_api_optimization_stats()
-
-        # Verify structure matches new format
-        assert "finlab_cache_status" in stats
-        assert "optimization_strategy" in stats
-        assert "api_call_estimate" in stats
-        assert "recommendations" in stats
-
-        # Verify finlab cache status structure
-        cache_status = stats["finlab_cache_status"]
-        assert "is_cached" in cache_status
-        assert "cache_age_seconds" in cache_status
-
-        # Verify optimization strategy structure
-        strategy = stats["optimization_strategy"]
-        assert "market_level_caching" in strategy
-        assert "request_deduplication" in strategy
-        assert "symbol_level_caching" in strategy
-
     def test_market_data_service_initialization(self):
         """Test MarketDataService can be initialized."""
         from app.modules.portfolio.market_data_service import MarketDataService

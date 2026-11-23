@@ -380,14 +380,6 @@ export type NotificationType =
   | 'system_update';
 
 // Authentication types
-export interface TokenResponse {
-  access_token: string;
-  refresh_token: string;
-  token_type: string;
-  expires_in: number;
-  user: User;
-}
-
 export interface LoginRequest {
   email: string;
   password: string;

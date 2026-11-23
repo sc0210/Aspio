@@ -106,11 +106,6 @@ class TestReads:
     async def test_price_on_date_before_any_data_is_none(self, seeded):
         assert await seeded.get_price_on_date("AAPL", date(2026, 1, 1)) is None
 
-    async def test_latest_price(self, seeded):
-        row = await seeded.get_latest_price("aapl")
-        assert row.date == date(2026, 10, 9)
-        assert await seeded.get_latest_price("NVDA") is None
-
     async def test_latest_prices_for_symbols(self, seeded):
         out = await seeded.get_latest_prices_for_symbols(["aapl", "MSFT", "nvda"])
         assert out["AAPL"]["date"] == "2026-10-09"

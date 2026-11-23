@@ -121,7 +121,3 @@ export function lotDraftErrors(
     }
     return errors;
 }
-
-export function hasLotDraftErrors(draft: LotDraft): boolean {
-    return Object.keys(lotDraftErrors(draft)).length > 0;
-}

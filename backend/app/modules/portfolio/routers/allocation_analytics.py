@@ -584,7 +584,6 @@ async def update_target_allocations(
 
         # Store target allocations in user's portfolio metadata
         # This is a simplified implementation using portfolio metadata
-        # In production, you'd want to create an AssetAllocationTarget model
 
         logger.info(f"Target allocations updated for user {current_user.id}: {targets}")
 

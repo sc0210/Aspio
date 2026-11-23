@@ -160,29 +160,93 @@ async def get_portfolio(
         # Create a synthetic cash holding for life wallet — always inject so
         # the row is visible even when balance is zero or temporarily negative
         # (a negative balance is a valid signal worth showing, not hiding).
-        if True:
-            import hashlib
+        import hashlib
 
-            # Generate deterministic UUID v4 from user ID and "life_wallet_cash"
-            # This ensures the same UUID for the same user's life wallet cash
-            seed = f"{current_user.id}-life_wallet_cash".encode()
+        # Generate deterministic UUID v4 from user ID and "life_wallet_cash"
+        # This ensures the same UUID for the same user's life wallet cash
+        seed = f"{current_user.id}-life_wallet_cash".encode()
+        hash_bytes = hashlib.md5(seed).digest()
+        # Convert to UUID v4 format by setting version and variant bits
+        life_wallet_id = UUID(bytes=hash_bytes, version=4)
+
+        life_wallet_cash = HoldingResponse(
+            id=life_wallet_id,
+            user_id=current_user.id,
+            portfolio_id=portfolio.id,
+            wallet_type="life",
+            symbol="CASH-TWD",
+            name="Life Wallet Cash",
+            type="cash",
+            quantity=float(life_wallet_balance),
+            average_cost=1.0,
+            current_price=1.0,
+            total_cost=float(life_wallet_balance),
+            total_value=float(life_wallet_balance),
+            gain_loss=0.0,
+            gain_loss_percentage=0.0,
+            currency="TWD",
+            exchange="",
+            sector="Cash",
+            region=None,
+            dividend_yield=None,
+            annual_dividend=None,
+            # This aggregates every Life-wallet transaction to date, not a
+            # single purchase — "purchase_date" defaults to None, which
+            # the frontend renders as "Not set". Use "now" so the Purchase
+            # History date column shows something meaningful instead.
+            purchase_date=datetime.now(ZoneInfo("UTC")),
+            is_active=True,
+            last_price_update_at=datetime.now(ZoneInfo("UTC")),
+            metadata={},
+            created_at=datetime.now(ZoneInfo("UTC")),
+            updated_at=datetime.now(ZoneInfo("UTC")),
+            sparkline_data=[],
+        )
+
+        # Add life wallet cash to holdings first
+        if portfolio.holdings:
+            portfolio.holdings.insert(0, life_wallet_cash)
+        else:
+            portfolio.holdings = [life_wallet_cash]
+
+        logger.info(f"💳 Added life wallet cash holding: {life_wallet_balance} TWD")
+
+        # A legacy emergency-wallet PortfolioHolding cash row (pre-#137)
+        # already represents this wallet in the list below. The synthetic
+        # row is transaction-only (see the comment above where it's
+        # computed), so when it's nonzero it's genuinely new money, not a
+        # duplicate of the real holding — inject it. Only skip it when
+        # there's a real holding AND nothing new from transactions to add;
+        # otherwise it'd show as an undeletable empty "lot" (no real DB
+        # id, so Delete 404s on it) — that's the case that must be avoided.
+        def _wallet_type_str(h) -> str:
+            wt = h.wallet_type if hasattr(h, "wallet_type") else h.get("wallet_type")
+            return str(wt.value if hasattr(wt, "value") else wt or "").lower()
+
+        has_real_emergency_holding = any(
+            _wallet_type_str(h) == "emergency" for h in (portfolio.holdings or [])
+        )
+
+        if not (has_real_emergency_holding and emergency_wallet_balance == 0):
+            # Generate deterministic UUID v4 for emergency wallet cash,
+            # mirroring the life wallet cash row above
+            seed = f"{current_user.id}-emergency_wallet_cash".encode()
             hash_bytes = hashlib.md5(seed).digest()
-            # Convert to UUID v4 format by setting version and variant bits
-            life_wallet_id = UUID(bytes=hash_bytes, version=4)
+            emergency_wallet_id = UUID(bytes=hash_bytes, version=4)
 
-            life_wallet_cash = HoldingResponse(
-                id=life_wallet_id,
+            emergency_wallet_cash = HoldingResponse(
+                id=emergency_wallet_id,
                 user_id=current_user.id,
                 portfolio_id=portfolio.id,
-                wallet_type="life",
+                wallet_type="emergency",
                 symbol="CASH-TWD",
-                name="Life Wallet Cash",
+                name="Emergency Cash",
                 type="cash",
-                quantity=float(life_wallet_balance),
+                quantity=float(emergency_wallet_balance),
                 average_cost=1.0,
                 current_price=1.0,
-                total_cost=float(life_wallet_balance),
-                total_value=float(life_wallet_balance),
+                total_cost=float(emergency_wallet_balance),
+                total_value=float(emergency_wallet_balance),
                 gain_loss=0.0,
                 gain_loss_percentage=0.0,
                 currency="TWD",
@@ -191,10 +255,9 @@ async def get_portfolio(
                 region=None,
                 dividend_yield=None,
                 annual_dividend=None,
-                # This aggregates every Life-wallet transaction to date, not a
-                # single purchase — "purchase_date" defaults to None, which
-                # the frontend renders as "Not set". Use "now" so the Purchase
-                # History date column shows something meaningful instead.
+                # Same reasoning as life_wallet_cash above — this aggregates
+                # transactions, not one purchase; use "now" instead of the
+                # "Not set" the frontend renders for a missing purchase_date.
                 purchase_date=datetime.now(ZoneInfo("UTC")),
                 is_active=True,
                 last_price_update_at=datetime.now(ZoneInfo("UTC")),
@@ -204,81 +267,17 @@ async def get_portfolio(
                 sparkline_data=[],
             )
 
-            # Add life wallet cash to holdings first
-            if portfolio.holdings:
-                portfolio.holdings.insert(0, life_wallet_cash)
-            else:
-                portfolio.holdings = [life_wallet_cash]
+            # Insert right after life wallet cash so ordering is stable
+            portfolio.holdings.insert(1, emergency_wallet_cash)
 
-            logger.info(f"💳 Added life wallet cash holding: {life_wallet_balance} TWD")
-
-            # A legacy emergency-wallet PortfolioHolding cash row (pre-#137)
-            # already represents this wallet in the list below. The synthetic
-            # row is transaction-only (see the comment above where it's
-            # computed), so when it's nonzero it's genuinely new money, not a
-            # duplicate of the real holding — inject it. Only skip it when
-            # there's a real holding AND nothing new from transactions to add;
-            # otherwise it'd show as an undeletable empty "lot" (no real DB
-            # id, so Delete 404s on it) — that's the case that must be avoided.
-            def _wallet_type_str(h) -> str:
-                wt = h.wallet_type if hasattr(h, "wallet_type") else h.get("wallet_type")
-                return str(wt.value if hasattr(wt, "value") else wt or "").lower()
-
-            has_real_emergency_holding = any(
-                _wallet_type_str(h) == "emergency" for h in (portfolio.holdings or [])
+            logger.info(
+                f"💳 Added emergency wallet cash holding: {emergency_wallet_balance} TWD"
             )
-
-            if not (has_real_emergency_holding and emergency_wallet_balance == 0):
-                # Generate deterministic UUID v4 for emergency wallet cash,
-                # mirroring the life wallet cash row above
-                seed = f"{current_user.id}-emergency_wallet_cash".encode()
-                hash_bytes = hashlib.md5(seed).digest()
-                emergency_wallet_id = UUID(bytes=hash_bytes, version=4)
-
-                emergency_wallet_cash = HoldingResponse(
-                    id=emergency_wallet_id,
-                    user_id=current_user.id,
-                    portfolio_id=portfolio.id,
-                    wallet_type="emergency",
-                    symbol="CASH-TWD",
-                    name="Emergency Cash",
-                    type="cash",
-                    quantity=float(emergency_wallet_balance),
-                    average_cost=1.0,
-                    current_price=1.0,
-                    total_cost=float(emergency_wallet_balance),
-                    total_value=float(emergency_wallet_balance),
-                    gain_loss=0.0,
-                    gain_loss_percentage=0.0,
-                    currency="TWD",
-                    exchange="",
-                    sector="Cash",
-                    region=None,
-                    dividend_yield=None,
-                    annual_dividend=None,
-                    # Same reasoning as life_wallet_cash above — this aggregates
-                    # transactions, not one purchase; use "now" instead of the
-                    # "Not set" the frontend renders for a missing purchase_date.
-                    purchase_date=datetime.now(ZoneInfo("UTC")),
-                    is_active=True,
-                    last_price_update_at=datetime.now(ZoneInfo("UTC")),
-                    metadata={},
-                    created_at=datetime.now(ZoneInfo("UTC")),
-                    updated_at=datetime.now(ZoneInfo("UTC")),
-                    sparkline_data=[],
-                )
-
-                # Insert right after life wallet cash so ordering is stable
-                portfolio.holdings.insert(1, emergency_wallet_cash)
-
-                logger.info(
-                    f"💳 Added emergency wallet cash holding: {emergency_wallet_balance} TWD"
-                )
-            else:
-                logger.info(
-                    "💳 Skipped synthetic emergency wallet cash — real holding "
-                    "already represents it and there's no transaction-only delta"
-                )
+        else:
+            logger.info(
+                "💳 Skipped synthetic emergency wallet cash — real holding "
+                "already represents it and there's no transaction-only delta"
+            )
 
         # Rename generic cash holding names based on wallet type (runs regardless of life wallet)
         if portfolio.holdings:

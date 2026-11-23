@@ -27,7 +27,6 @@ export const QUERY_KEYS = {
   // Goals
   GOALS: 'goals',
   LOANS: 'loans',
-  GOALS_SUMMARY: 'goals-summary',
   // The Life Wallet balance, what goals have reserved of it, and what is free.
   LIFE_CASH: 'life-cash',
 
@@ -157,14 +156,11 @@ const LEDGER_DERIVED: readonly QueryKeyValue[] = [
 /**
  * A user's own data that a ledger write does NOT touch.
  *
- * A goal's progress moves only by reserving or releasing (its own endpoints,
- * which invalidate their own queries); spending a goal's cash leaves progress
- * where it is. Achievements follow contributions the same way. So these are
+ * Achievements follow goal contributions, not spending, so these are
  * refreshed by the manual Refresh button and on an auth change, not by a save.
  * (The goals list itself is ledger-derived: see LEDGER_DERIVED.)
  */
 const USER_DATA: readonly QueryKeyValue[] = [
-  QUERY_KEYS.GOALS_SUMMARY,
   QUERY_KEYS.ACHIEVEMENTS,
   QUERY_KEYS.GAMIFICATION,
 ];
