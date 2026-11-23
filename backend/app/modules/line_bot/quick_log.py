@@ -100,7 +100,7 @@ EXPENSE_KEYWORDS: dict[str, tuple[str, ...]] = {
         "foodpanda", "ubereats", "uber eats", "breakfast", "lunch", "dinner", "brunch",
         "coffee", "cafe", "tea", "restaurant", "snack", "meal",
     ),
-    "Groceries": ("全聯", "家樂福", "好市多", "costco", "超市", "菜市場", "買菜", "水果", "grocery", "supermarket"),
+    "Groceries": ("全聯", "家樂福", "好市多", "costco", "超市", "菜市場", "買菜", "水果", "小黃瓜", "grocery", "supermarket"),  # 小黃瓜 outranks taxi 小黃
     "Transportation": (
         "捷運", "公車", "客運", "計程車", "小黃", "高鐵", "台鐵", "火車", "加油", "油錢", "中油", "停車",
         "悠遊卡", "一卡通", "etc", "uber", "taxi", "mrt", "bus", "train", "parking", "gas", "fuel",

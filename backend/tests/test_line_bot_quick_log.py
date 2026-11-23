@@ -88,6 +88,7 @@ def test_ignores_chat(text):
         ("保養品", False, "Shopping"),
         ("租車", False, "Transportation"),
         ("中油", False, "Transportation"),
+        ("買小黃瓜", False, "Groceries"),   # cucumber, not a taxi (小黃)
         ("剪頭髮", False, "Shopping"),
         ("AI工具-Claude", False, "Shopping"),
         ("遠傳電信", False, "Utilities"),
