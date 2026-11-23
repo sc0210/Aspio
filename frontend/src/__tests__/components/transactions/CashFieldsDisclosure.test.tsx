@@ -230,11 +230,11 @@ describe('CashFields — expense groups first, finer choices optional', () => {
     expect(onChange).not.toHaveBeenCalled();
   });
 
-  it('offers Transport details: public transit, fuel, maintenance, parking, car rental', async () => {
+  it('offers Transport details: public transit, fuel, taxi, maintenance, parking, car rental', async () => {
     const onChange = jest.fn();
     renderFields(form({ category: 'Transportation' }), { onChange });
     const names = within(details()!).getAllByRole('button').map((b) => b.textContent);
-    expect(names).toEqual(['🚇Public transit', '⛽Fuel', '🔧Maintenance', '🅿️Parking', '🚙Car rental']);
+    expect(names).toEqual(['🚇Public transit', '⛽Fuel', '🚕Taxi', '🔧Maintenance', '🅿️Parking', '🚙Car rental']);
     await userEvent.click(within(details()!).getByRole('button', { name: /Parking/ }));
     expect(onChange).toHaveBeenCalledWith('subcategory', 'Parking');
   });

@@ -118,7 +118,10 @@ def test_guesses_category(description, is_income, expected):
         ("機車保養", "Transportation", "Car Maintenance"),
         ("保養", "Transportation", "Car Maintenance"),  # the same word reads by its category
         ("保養", "Shopping", "Beauty"),
-        ("business taxi", "Transportation", None),  # "bus" only as a whole word
+        ("business taxi", "Transportation", "Taxi"),  # not Public Transit: "bus" only as a whole word
+        ("Uber（竹北高鐵）", "Transportation", "Taxi"),  # a ride to the station, not the train
+        ("Uber竹北高鐵", "Transportation", "Taxi"),    # English touching Chinese still matches
+        ("計程車", "Transportation", "Taxi"),
         ("加油", "Transportation", "Fuel"),
         ("中油", "Transportation", "Fuel"),
         ("剪頭髮", "Shopping", "Beauty"),

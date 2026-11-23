@@ -139,6 +139,7 @@ SUBCATEGORY_KEYWORDS: dict[str, dict[str, tuple[str, ...]]] = {
     "Transportation": {
         "Public Transit": ("捷運", "公車", "客運", "高鐵", "台鐵", "火車", "悠遊卡", "一卡通", "mrt", "bus", "train"),
         "Fuel": ("加油", "油錢", "中油", "gas", "fuel"),
+        "Taxi": ("計程車", "小黃", "uber", "taxi"),
         "Car Maintenance": ("保養", "修車", "換機油", "維修"),
         "Parking": ("停車", "parking"),
         "Car Rental": ("租車", "car rental"),
@@ -161,9 +162,11 @@ for _category, _details in SUBCATEGORY_KEYWORDS.items():
 
 
 def _contains(text: str, word: str) -> bool:
-    """`word` in `text`; an English word only as a whole word ("bus" is not in "business")."""
+    """`word` in `text`; an English word not inside a longer English word ("bus" is not
+    in "business"). Chinese may touch it: \b would miss "uber" in "uber竹北", since
+    Chinese characters count as word characters."""
     if word.isascii() and word.isalpha():
-        return re.search(rf"\b{re.escape(word)}\b", text) is not None
+        return re.search(rf"(?<![a-z0-9]){re.escape(word)}(?![a-z0-9])", text) is not None
     return word in text
 
 
