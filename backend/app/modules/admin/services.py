@@ -973,6 +973,12 @@ class UserManagementService:
             "user_activity_logs",
             "notifications",
             "notification_preferences",
+            # Dropped by 2026_11_23_drop_unused_tables. Cleared while a database that
+            # hasn't run it yet still has them (they reference users.id, no cascade).
+            "password_reset_tokens",
+            "user_data_exports",
+            "user_security_logs",
+            "user_preference_history",
         )
         for tbl in _optional_tables:
             sp = await self.session.begin_nested()
@@ -985,7 +991,21 @@ class UserManagementService:
             except Exception:
                 await sp.rollback()
 
-        # ── 5. Transactions (batches first) ───────────────────────────────────
+        # ── 5. Transactions ───────────────────────────────────────────────────
+        # transaction_attachments is dropped by 2026_11_23_drop_unused_tables; clear
+        # it where it still exists, in a savepoint so its absence is not an error.
+        sp = await self.session.begin_nested()
+        try:
+            await self.session.execute(
+                text("""
+                    DELETE FROM transaction_attachments
+                    WHERE transaction_id IN (SELECT id FROM transactions WHERE user_id = :uid)
+                """),
+                {"uid": uid},
+            )
+            await sp.commit()
+        except Exception:
+            await sp.rollback()
         await self.session.execute(
             text("DELETE FROM recurring_transactions WHERE user_id = :uid"), {"uid": uid}
         )
@@ -1013,10 +1033,6 @@ class UserManagementService:
         )
 
         # ── 7. Goals (have DB-level cascade but delete explicitly) ────────────
-        # chat_sessions is left to its ON DELETE CASCADE. The chat was retired
-        # and nothing imports its models at runtime any more, so a database the
-        # app created itself has no such table, and an explicit DELETE would
-        # fail the whole account deletion there.
         await self.session.execute(
             text("DELETE FROM goals WHERE user_id = :uid"), {"uid": uid}
         )

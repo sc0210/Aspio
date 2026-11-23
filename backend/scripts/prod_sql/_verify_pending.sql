@@ -195,7 +195,15 @@ WITH checks(sort, object, source_file, present) AS (
                          WHERE table_name = 'shared_goals' AND column_name = 'target_amount')),
     (42, 'table tw_market_valuations', '2026_11_21_tw_market_valuations.sql',
         (SELECT count(*) > 0 FROM information_schema.tables
-          WHERE table_schema = 'public' AND table_name = 'tw_market_valuations'))
+          WHERE table_schema = 'public' AND table_name = 'tw_market_valuations')),
+
+    -- 2026_11_23_drop_unused_tables.sql (present = all nine are gone)
+    (43, 'unused tables dropped', '2026_11_23_drop_unused_tables.sql',
+        (SELECT count(*) = 0 FROM information_schema.tables
+          WHERE table_schema = 'public' AND table_name IN (
+            'chat_messages', 'chat_sessions', 'transaction_attachments', 'user_data_exports',
+            'user_security_logs', 'user_preference_history', 'password_reset_tokens',
+            'notification_templates', 'market_data')))
 )
 SELECT
     CASE WHEN present THEN 'OK     ' ELSE 'MISSING' END AS status,

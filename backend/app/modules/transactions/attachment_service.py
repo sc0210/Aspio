@@ -43,7 +43,7 @@ logger = logging.getLogger(__name__)
 
 
 class AttachmentService:
-    """Service for handling transaction attachments"""
+    """Receipt scanning: OCR an uploaded receipt into transaction fields."""
     
     def __init__(self, db: AsyncSession, transaction_repo: TransactionRepository):
         self.db = db

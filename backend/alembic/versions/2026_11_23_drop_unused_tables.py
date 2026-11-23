@@ -58,5 +58,7 @@ def upgrade():
 
 
 def downgrade():
-    # Nothing used these tables; there is nothing to restore.
-    pass
+    # Older revisions' downgrades drop these tables, so stop here rather than let
+    # them fail halfway down the chain. Nothing used the tables; recreate them by
+    # hand from the earlier migrations if a downgrade past this point is needed.
+    raise NotImplementedError("2026_11_23_drop_unused_tables cannot be downgraded")

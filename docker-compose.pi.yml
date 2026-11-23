@@ -104,10 +104,9 @@ x-backend-environment: &backend-environment
   # local/prod stacks, which set this to http://quickchart:3400/chart. Set it
   # explicitly (rather than relying on the config default) so the trade-off is visible.
   - QUICKCHART_URL=https://quickchart.io/chart
-  # Receipt attachments. On the backend_uploads named volume (mounted at /app/uploads
-  # below), so they survive container recreation — before this they lived in the
-  # container's writable layer and every deploy, which recreates the container,
-  # discarded them. Set explicitly so it holds whatever the code's default is.
+  # Upload scratch space (receipt scans are written here while they are read). On
+  # the backend_uploads named volume (mounted at /app/uploads below). Set
+  # explicitly so it holds whatever the code's default is.
   - UPLOAD_PATH=/app/uploads/transactions
   # Deliberately NO ALLOW_INSECURE_DEFAULTS here. The backend refuses to start on a
   # placeholder SECRET_KEY or on the database password `aspiro_password`; that check
