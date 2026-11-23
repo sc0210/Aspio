@@ -113,10 +113,43 @@ class TestCsvImportRoundtrip:
         out = list(_csv.DictReader(_io.StringIO(exported.text)))
         assert (out[0]["Category"], out[0]["Subcategory"]) == ("Shopping", "Beauty")
 
-    def test_a_subcategory_that_is_not_the_categorys_detail_is_dropped_not_saved(self, client: TestClient):
-        """A hand-edited file: another category's detail, one on a category that
-        resolves to Others, a made-up one, one too long for the column. Each row
-        imports under its category, without the detail."""
+    def test_a_free_text_detail_survives_export_then_import(self, client: TestClient):
+        """Older rows carry details that aren't on today's list; a backup round trip keeps them."""
+        r = client.post("/api/v1/transactions/", json={
+            "type": "expense", "amount": 10, "currency": "TWD", "description": "+Bonus",
+            "transaction_date": "2026-07-09", "category_name": "Shopping", "subcategory": "-50% 蝦皮",
+        })
+        assert r.status_code in (200, 201), r.text
+        exported = client.get("/api/v1/transactions/export?format=csv").text
+        txn_id = client.get("/api/v1/transactions/").json()["transactions"][0]["id"]
+        assert client.delete(f"/api/v1/transactions/{txn_id}").status_code == 204
+        response = client.post(
+            "/api/v1/transactions/upload-import",
+            files={"file": ("backup.csv", exported, "text/csv")},
+        )
+        assert response.json()["imported"] == 1, response.text
+        row = client.get("/api/v1/transactions/").json()["transactions"][0]
+        # The export prefixed both with ' (spreadsheet formula guard); import undoes it.
+        assert (row["description"], row["subcategory"]) == ("+Bonus", "-50% 蝦皮")
+
+    def test_reimporting_an_export_with_escaped_text_skips_the_duplicate(self, client: TestClient):
+        client.post("/api/v1/transactions/", json={
+            "type": "expense", "amount": 10, "currency": "TWD", "description": "=refund",
+            "transaction_date": "2026-07-09", "category_name": "Shopping",
+        })
+        exported = client.get("/api/v1/transactions/export?format=csv").text
+        assert "'=refund" in exported
+        response = client.post(
+            "/api/v1/transactions/upload-import",
+            files={"file": ("backup.csv", exported, "text/csv")},
+        )
+        assert response.json()["imported"] == 0, response.text
+
+    def test_another_categorys_detail_is_dropped_and_free_text_kept(self, client: TestClient):
+        """A hand-edited file. A listed detail is dropped when the row's category
+        isn't its own: another category's, or a name that falls back to Others.
+        Free text is kept, as the API keeps it, cut to the column so a long cell
+        cannot fail the row. Every row imports."""
         csv_text = (
             "Date,Type,Amount,Currency,Description,Category,Subcategory\n"
             "2026-07-09,expense,100.00,TWD,Bus,Shopping,Parking\n"
@@ -132,7 +165,9 @@ class TestCsvImportRoundtrip:
         assert response.status_code == 200, response.text
         assert response.json()["imported"] == 5
         rows = {r["description"]: r for r in client.get("/api/v1/transactions/").json()["transactions"]}
-        assert [rows[d]["subcategory"] for d in ("Bus", "Lunch", "Thing", "Long")] == [None] * 4
+        assert [rows[d]["subcategory"] for d in ("Bus", "Lunch")] == [None, None]
+        assert rows["Thing"]["subcategory"] == "Gadgets"
+        assert rows["Long"]["subcategory"] == "x" * 100
         assert rows["Lunch"]["category_obj"]["name"] == "Others"  # no Dining here: the fallback
         assert rows["Lipstick"]["subcategory"] == "Beauty"  # case-insensitive, stored as spelled
 
@@ -228,3 +263,10 @@ async def test_an_edit_cannot_set_another_categorys_detail(async_engine):
     assert await detail_after(subcategory="clothing") == "Clothing"
     assert await detail_after(subcategory="Gadgets") == "Gadgets"  # free text, as before
     assert await detail_after(category_name="Dining", subcategory="Beauty") is None  # resolves to Others
+
+
+@pytest.mark.parametrize("text", ["-50% sale", "=SUM(A1)", "'=x", "''+y", "'quoted'", "plain", "@me", "\tx"])
+def test_the_export_guard_and_the_import_undo_round_trip(text):
+    from app.modules.transactions.attachment_service import _safe_cell, _unsafe_cell
+
+    assert _unsafe_cell(_safe_cell(text)) == text

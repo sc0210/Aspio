@@ -20,7 +20,7 @@ from fastapi import UploadFile, HTTPException
 from .repositories import TransactionRepository
 from .models import TransactionAttachment
 from .schemas import TransactionAttachmentResponse
-from .subcategories import listed_detail
+from .subcategories import imported_detail
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.config import get_settings
@@ -509,8 +509,25 @@ def _safe_cell(text: str) -> str:
     """Free text made inert for a CSV opened in a spreadsheet: one starting with
     = + - @ or a tab/CR is a formula to Excel and would run when the export is
     opened. Text in an export can come from someone else (a partner's name, an
-    imported description, the LINE bot). A leading apostrophe makes it text."""
-    return f"'{text}" if text and text[0] in "=+-@\t\r" else text
+    imported description, the LINE bot). A leading apostrophe makes it text.
+    Text already starting with an apostrophe before one of those is prefixed
+    too, so _unsafe_cell on import gives back exactly what was written."""
+    return f"'{text}" if _needs_guard(text) else text
+
+
+def _needs_guard(text: Optional[str]) -> bool:
+    """Whether _safe_cell prefixes `text`: a formula start, or an apostrophe
+    before one (else that apostrophe would be stripped on import)."""
+    if not text:
+        return False
+    return text[0] in "=+-@\t\r" or (text[0] == "'" and _needs_guard(text[1:]))
+
+
+def _unsafe_cell(text: Optional[str]) -> Optional[str]:
+    """Undo _safe_cell on import, so an export read back is what was written:
+    "'-50% sale" becomes "-50% sale" again. Only an apostrophe _safe_cell could
+    have added is removed; "'quoted'" stays as it is."""
+    return text[1:] if text and text[0] == "'" and _needs_guard(text[1:]) else text
 
 
 def _text_cell(cell, text: str) -> None:
@@ -647,13 +664,13 @@ class ImportExportService:
         def find_value(field_name: str) -> Optional[str]:
             # Try custom mapping first
             if field_name in mappings:
-                return row.get(mappings[field_name])
-            
+                return _unsafe_cell(row.get(mappings[field_name]))
+
             # Try default mappings
             for possible_column in default_mappings.get(field_name, []):
                 if possible_column in row:
-                    return row[possible_column]
-            
+                    return _unsafe_cell(row[possible_column])
+
             return None
         
         # Parse transaction data
@@ -730,11 +747,10 @@ class ImportExportService:
             'category_id': None if category_str else settings.get('default_category_id'),
             'category_name': category_str or None,
             # The detail under the category (Beauty under Shopping); written by
-            # this app's own export, so a round trip keeps it. Only a listed
-            # detail: a hand-edited cell too long for the column must not fail
-            # the row. create_transaction drops one that isn't the resolved
+            # this app's own export, so a round trip keeps it, free text included.
+            # create_transaction drops a listed detail that isn't the resolved
             # category's (a "Dining, Beauty" row).
-            'subcategory': listed_detail(find_value('subcategory')),
+            'subcategory': imported_detail(find_value('subcategory')),
             'merchant_name': find_value('merchant'),
             'import_source': 'csv'
         }
