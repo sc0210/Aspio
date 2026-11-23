@@ -3,7 +3,6 @@ import {
   normalizeDate,
   parsePortfolioCSV,
   validatePortfolioImportData,
-  CSV_EXPORT_HEADERS,
 } from '@/utils/portfolioCsvUtils';
 
 // ─── stripCurrencyPrefix ────────────────────────────────────────────────────
@@ -40,16 +39,6 @@ describe('normalizeDate', () => {
 
   it('leaves YYYY-MM-DD unchanged', () => {
     expect(normalizeDate('2025-01-03')).toBe('2025-01-03');
-  });
-});
-
-// ─── CSV_EXPORT_HEADERS ─────────────────────────────────────────────────────
-
-describe('CSV_EXPORT_HEADERS', () => {
-  it('has exactly 7 columns in the correct order', () => {
-    expect(CSV_EXPORT_HEADERS).toEqual([
-      'Date', 'Type', 'StockID', 'Currency', 'Shares', 'Price per shares', 'Net income',
-    ]);
   });
 });
 

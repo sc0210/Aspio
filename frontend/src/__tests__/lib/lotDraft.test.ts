@@ -2,7 +2,7 @@
  * The lot row's four editable figures, and which stored number each one sets.
  */
 
-import { editLotDraft, hasLotDraftErrors, lotDraft, lotDraftErrors } from '@/lib/portfolio/lotDraft';
+import { editLotDraft, lotDraft, lotDraftErrors } from '@/lib/portfolio/lotDraft';
 
 const lending = { quantity: 10688.88, averageCost: 1, currentPrice: 1 };
 
@@ -76,7 +76,6 @@ describe('lotDraft', () => {
 describe('lotDraftErrors', () => {
     it('reports nothing for an untouched lot', () => {
         expect(lotDraftErrors(lotDraft(lending))).toEqual({});
-        expect(hasLotDraftErrors(lotDraft(lending))).toBe(false);
     });
 
     it('flags a negative quantity the draft ignored, so Save cannot report it as saved', () => {
@@ -87,7 +86,6 @@ describe('lotDraftErrors', () => {
         expect(draft.text.quantity).toBe('-5');
         // ... so the draft must not be saveable.
         expect(lotDraftErrors(draft)).toEqual({ quantity: 'negative' });
-        expect(hasLotDraftErrors(draft)).toBe(true);
     });
 
     it.each(['averageCost', 'totalCost'] as const)('flags a negative %s', (field) => {

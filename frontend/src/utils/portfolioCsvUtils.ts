@@ -3,10 +3,6 @@
  * Keeping these separate from the modal makes them unit-testable.
  */
 
-export const CSV_EXPORT_HEADERS = [
-  'Date', 'Type', 'StockID', 'Currency', 'Shares', 'Price per shares', 'Net income',
-] as const;
-
 interface ParsedCsvRow {
   symbol: string;
   name: string;
