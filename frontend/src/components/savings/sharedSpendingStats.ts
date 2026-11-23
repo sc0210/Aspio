@@ -1,4 +1,5 @@
 import type { SplitOut, SplitStatus } from '@/shared/types';
+import { csvCell } from '@/utils/csvCell';
 
 /**
  * The numbers behind the Shared Spending insights, from the splits the tab
@@ -217,16 +218,6 @@ function partnerOptions(splits: SplitOut[], keep: string, labels: PartnerLabels)
   return [...ids].map((connectionId) => ({ connectionId, name: labels.get(connectionId) ?? null }))
     // By name, and a partner with no name to show last.
     .sort((a, b) => (a.name === null ? 1 : 0) - (b.name === null ? 1 : 0) || (a.name ?? '').localeCompare(b.name ?? ''));
-}
-
-function csvCell(value: string | number): string {
-  const text = String(value);
-  // Quote anything with a delimiter, quote or line break. Text a spreadsheet
-  // could run as a formula (=, +, - or @ first, even after spaces, or a leading
-  // tab or carriage return) is prefixed so it reads as text. A partner writes
-  // descriptions, so this is someone else's input.
-  const safe = typeof value === 'string' && /^(?:[\t\r]|[ ]*[=+\-@])/.test(text) ? `'${text}` : text;
-  return /[",\n\r]/.test(safe) ? `"${safe.replace(/"/g, '""')}"` : safe;
 }
 
 export const CSV_HEADER = ['Date', 'Description', 'Category', 'Partner', 'Paid by', 'Status', 'Currency', 'Total', 'My share', 'Partner share'];
