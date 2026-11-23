@@ -518,9 +518,8 @@ def _safe_cell(text: str) -> str:
 def _needs_guard(text: Optional[str]) -> bool:
     """Whether _safe_cell prefixes `text`: a formula start, or an apostrophe
     before one (else that apostrophe would be stripped on import)."""
-    if not text:
-        return False
-    return text[0] in "=+-@\t\r" or (text[0] == "'" and _needs_guard(text[1:]))
+    rest = (text or "").lstrip("'")  # a loop, not recursion: a long apostrophe run can't overflow the stack
+    return bool(rest) and rest[0] in "=+-@\t\r"
 
 
 def _unsafe_cell(text: Optional[str]) -> Optional[str]:

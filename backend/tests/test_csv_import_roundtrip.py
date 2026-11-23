@@ -265,7 +265,9 @@ async def test_an_edit_cannot_set_another_categorys_detail(async_engine):
     assert await detail_after(category_name="Dining", subcategory="Beauty") is None  # resolves to Others
 
 
-@pytest.mark.parametrize("text", ["-50% sale", "=SUM(A1)", "'=x", "''+y", "'quoted'", "plain", "@me", "\tx"])
+@pytest.mark.parametrize(
+    "text", ["-50% sale", "=SUM(A1)", "'=x", "''+y", "'quoted'", "plain", "@me", "\tx", "'" * 5000 + "=x", "'" * 5000]
+)
 def test_the_export_guard_and_the_import_undo_round_trip(text):
     from app.modules.transactions.attachment_service import _safe_cell, _unsafe_cell
 
