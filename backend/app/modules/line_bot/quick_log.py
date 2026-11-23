@@ -102,7 +102,7 @@ EXPENSE_KEYWORDS: dict[str, tuple[str, ...]] = {
     ),
     "Groceries": ("全聯", "家樂福", "好市多", "costco", "超市", "菜市場", "買菜", "水果", "grocery", "supermarket"),
     "Transportation": (
-        "捷運", "公車", "客運", "計程車", "小黃", "高鐵", "台鐵", "火車", "加油", "油錢", "中油", "台塑", "停車",
+        "捷運", "公車", "客運", "計程車", "小黃", "高鐵", "台鐵", "火車", "加油", "油錢", "中油", "停車",
         "悠遊卡", "一卡通", "etc", "uber", "taxi", "mrt", "bus", "train", "parking", "gas", "fuel",
         # Longer than Shopping's "保養" (skincare), so a car service wins over beauty.
         "汽車保養", "機車保養", "車保養", "保養廠", "修車", "換機油", "租車", "car rental",
@@ -134,11 +134,11 @@ SUBCATEGORY_KEYWORDS: dict[str, dict[str, tuple[str, ...]]] = {
         "Beauty": ("剪髮", "理髮", "頭髮", "美髮", "美甲", "美容", "保養", "化妝", "彩妝", "haircut", "salon", "nail", "makeup"),
         "Clothing": ("衣服", "褲子", "鞋", "包包", "clothes", "shoes"),
         "Household": ("日用品",),
-        "Subscriptions": ("訂閱", "subscription", "ai工具", "claude", "chatgpt"),
+        "Subscriptions": ("訂閱", "ai工具", "claude", "chatgpt"),
     },
     "Transportation": {
         "Public Transit": ("捷運", "公車", "客運", "高鐵", "台鐵", "火車", "悠遊卡", "一卡通", "mrt", "bus", "train"),
-        "Fuel": ("加油", "油錢", "中油", "台塑", "gas", "fuel"),
+        "Fuel": ("加油", "油錢", "中油", "gas", "fuel"),
         "Car Maintenance": ("保養", "修車", "換機油", "維修"),
         "Parking": ("停車", "parking"),
         "Car Rental": ("租車", "car rental"),
@@ -146,7 +146,7 @@ SUBCATEGORY_KEYWORDS: dict[str, dict[str, tuple[str, ...]]] = {
     "Travel": {
         "Flights": ("機票", "flight"),
         "Lodging": ("住宿", "飯店", "旅館", "民宿", "訂房", "hotel", "airbnb"),
-        "Activities": ("門票", "套票", "行程", "潛水", "體驗", "ticket", "tour"),
+        "Activities": ("門票", "套票", "行程", "潛水"),
         "Souvenirs": ("伴手禮", "紀念品", "souvenir"),
     },
 }

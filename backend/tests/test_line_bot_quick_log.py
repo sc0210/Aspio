@@ -96,7 +96,10 @@ def test_ignores_chat(text):
         ("關西機場伴手禮", False, "Travel"),
         ("伊根舟屋行程套票", False, "Travel"),
         ("演唱會門票", False, "Entertainment"),  # not a Travel activity
-        ("體驗課程", False, "Education"),
+        ("train ticket", False, "Transportation"),  # no bare "ticket" in Travel
+        ("movie ticket", False, "Entertainment"),
+        ("spotify subscription", False, "Entertainment"),
+        ("台塑生醫", False, "Others"),            # a skincare brand, not fuel
         ("隨便", False, "Others"),
         ("午餐", True, "Others"),        # income never takes an expense keyword
     ],
