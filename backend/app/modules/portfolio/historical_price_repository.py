@@ -249,17 +249,6 @@ class HistoricalPriceRepository:
         result = await self.session.execute(stmt)
         return result.scalar_one_or_none()
 
-    async def get_latest_price(self, symbol: str) -> Optional[HistoricalPrice]:
-        """Get the most recent price for a symbol"""
-        stmt = (
-            select(HistoricalPrice)
-            .where(HistoricalPrice.symbol == symbol.upper())
-            .order_by(HistoricalPrice.date.desc())
-            .limit(1)
-        )
-        result = await self.session.execute(stmt)
-        return result.scalar_one_or_none()
-
     async def get_latest_prices_for_symbols(
         self, symbols: List[str]
     ) -> Dict[str, Optional[Dict[str, Any]]]:

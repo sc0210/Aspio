@@ -36,16 +36,6 @@ class SpendingCategoryResponse(BaseModel):
     currency: str = Field(default="USD", description="Currency code")
 
 
-class SpendingByCategoryResponse(BaseModel):
-    """Response model for spending breakdown by category"""
-
-    categories: List[SpendingCategoryResponse] = Field(default_factory=list)
-    total_amount: Decimal = Field(..., description="Total amount across all categories")
-    period: str = Field(..., description="Time period analyzed")
-    currency: str = Field(default="USD", description="Currency code")
-    last_updated: datetime = Field(default_factory=datetime.utcnow)
-
-
 class DashboardStatsResponse(BaseModel):
     """Response model for dashboard statistics with three-wallet system"""
 

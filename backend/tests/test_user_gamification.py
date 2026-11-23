@@ -19,7 +19,7 @@ from app.modules.users.models import (
 )
 from app.modules.users.schemas import (
     UserGamificationStats, AchievementResponse, UserActivityRequest,
-    RegionalPreferencesUpdate, DataExportRequest
+    RegionalPreferencesUpdate
 )
 from app.modules.users.gamification_service import (
     GamificationService,
@@ -566,28 +566,6 @@ class TestRegionalFeatures:
             ]
 
 
-class TestSecurityFeatures:
-    """Test security and privacy features"""
-    
-    def test_data_export_request_validation(self):
-        """Test data export request validation"""
-        # Valid request
-        valid_request = DataExportRequest(
-            export_type="full_export",
-            format="json"
-        )
-        assert valid_request.export_type == "full_export"
-        assert valid_request.format == "json"
-        
-        # Test specific data categories
-        specific_request = DataExportRequest(
-            export_type="specific_data",
-            data_categories=["transactions", "goals"],
-            format="csv"
-        )
-        assert specific_request.export_type == "specific_data"
-        assert len(specific_request.data_categories) == 2
-    
 class TestAchievementCatalogue:
     """The catalogue is the single source of truth for badge metadata."""
 

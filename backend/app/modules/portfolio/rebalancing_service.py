@@ -18,7 +18,7 @@ from ...core.exceptions import AspiroException, NotFoundException, BusinessLogic
 from .models import PortfolioHolding, Portfolio
 from .repositories import PortfolioRepository, HoldingRepository
 from .rebalancing_schemas import (
-    AssetAllocationTarget, AssetAllocationSummary, CurrentAssetAllocation,
+    AssetAllocationSummary, CurrentAssetAllocation,
     RebalancingPlan, RebalancingTransaction, FXAccumulation,
     RebalancingAlert, AlertType, ActionType, DashboardMetricsEnhanced,
     DashboardRebalancingData
