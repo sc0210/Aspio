@@ -90,6 +90,22 @@ def test_another_users_holding_cannot_be_attached(authenticated_client, default_
     assert r.status_code == 404
 
 
+def test_delete_is_owner_only(authenticated_client, default_portfolio, other_user):
+    client = authenticated_client
+    dividend_id = client.post(BASE, json=_dividend()).json()["data"]["id"]
+    own = client.headers["Authorization"]
+
+    _as(client, other_user)
+    try:
+        assert client.delete(f"{BASE}/{dividend_id}").status_code == 404
+    finally:
+        client.headers["Authorization"] = own
+
+    assert client.delete(f"{BASE}/{dividend_id}").status_code == 204
+    assert client.delete(f"{BASE}/{dividend_id}").status_code == 404
+    assert client.get(BASE, params={"period": "1y"}).json()["data"]["payments"] == []
+
+
 def test_another_users_dividends_stay_out_of_my_analytics(authenticated_client, default_portfolio, other_user):
     client = authenticated_client
     own = client.headers["Authorization"]

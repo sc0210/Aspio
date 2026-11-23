@@ -43,7 +43,6 @@ class TestModeIsolation:
 
     # ===== DEMO MODE TESTS =====
 
-
     def test_demo_mode_transactions_list(self, client):
         """Test transactions list endpoint in demo mode."""
         response = client.get("/api/v1/transactions/")
@@ -268,6 +267,18 @@ class TestModeIsolation:
 
         assert demo_data["total"] >= 0  # Demo has data or zero
         assert auth_data["total"] >= 0  # Could be demo fallback or no data
+
+
+@pytest.mark.parametrize("token", [
+    "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiJ0ZXN0IiwiZXhwIjoxfQ.invalid",  # expired
+    "malformed.token.here",
+])
+def test_a_bad_token_is_refused_not_served_as_demo(client, token):
+    """No token gets the demo list; a token that doesn't verify gets a 401, which is
+    what sends the frontend to refresh or sign out, never someone's data or the demo."""
+    assert client.get("/api/v1/transactions/").status_code == 200
+    r = client.get("/api/v1/transactions/", headers={"Authorization": f"Bearer {token}"})
+    assert r.status_code == 401
 
 
 if __name__ == "__main__":

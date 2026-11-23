@@ -70,9 +70,6 @@ class TestGetDateRange:
         assert (today - date_from).days >= 89
 
 
-# ─── DashboardService.get_recent_activity ────────────────────────────────────
-
-
 # ─── DashboardService.get_monthly_trends ─────────────────────────────────────
 
 class TestGetMonthlyTrends:

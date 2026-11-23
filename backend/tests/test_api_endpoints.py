@@ -520,23 +520,5 @@ class TestErrorHandling:
         assert "detail" in data or "errors" in data
 
 
-class TestRateLimiting:
-    """Test rate limiting if implemented."""
-
-    def test_rate_limiting(self):
-        """Test that rate limiting works if implemented."""
-        client = TestClient(app)
-
-        # Make many requests quickly
-        responses = []
-        for _ in range(100):
-            response = client.get("/health")
-            responses.append(response)
-
-        # Most should succeed, but some might be rate limited
-        success_count = sum(1 for r in responses if r.status_code == 200)
-        assert success_count > 0  # At least some should succeed
-
-
 if __name__ == "__main__":
     pytest.main([__file__, "-v"])

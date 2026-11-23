@@ -183,3 +183,36 @@ async def create_dividend(
         )
 
 
+@router.delete("/dividends/{dividend_id}", status_code=status.HTTP_204_NO_CONTENT)
+async def delete_dividend(
+    dividend_id: UUID,
+    current_user: CurrentUser,
+    session: AsyncSession = Depends(get_db),
+):
+    """Delete a dividend record"""
+    from ..models import Dividend
+    from sqlalchemy import select
+
+    try:
+        stmt = select(Dividend).where(
+            Dividend.id == dividend_id, Dividend.user_id == current_user.id
+        )
+        result = await session.execute(stmt)
+        dividend = result.scalar_one_or_none()
+
+        if not dividend:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND, detail="Dividend not found"
+            )
+
+        await session.delete(dividend)
+        await session.commit()
+        return None
+    except HTTPException:
+        raise
+    except Exception as e:
+        await session.rollback()
+        logger.error(f"Failed to delete dividend: {str(e)}", exc_info=True)
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail="An internal error occurred"
+        )
