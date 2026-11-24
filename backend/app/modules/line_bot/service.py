@@ -1857,7 +1857,6 @@ async def _create_shared_expense(
     group: LineGroup,
     members: list[LineGroupMember],
     payer_id: UUID,
-    actor_user_id: UUID,
     amount: Decimal,
     description: str,
     ratios: Optional[list[Decimal]] = None,
@@ -1981,7 +1980,6 @@ async def handle_add_command(
         group=group,
         members=members,
         payer_id=payer_id,
-        actor_user_id=link.user_id,
         amount=cmd.amount,
         description=cmd.description,
         ratios=cmd.ratios,
@@ -2448,7 +2446,6 @@ async def handle_history_command(
     if link is None:
         await _reply_flex(reply_token, "Link your Aspiro account", _flex_not_linked())
         return
-
 
     # --- Group context ---
     if line_group_id:
@@ -4599,7 +4596,6 @@ async def web_add_expense(
             group=group,
             members=members,
             payer_id=payer_id,
-            actor_user_id=user_id,
             amount=body.amount,
             description=body.description,
             note=body.note,
