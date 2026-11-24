@@ -189,3 +189,44 @@ async def test_pass_through_money_is_not_living_expenses(world):
     # The wallet still paid both; only one was spending.
     assert summary["total_expenses"] == Decimal("70000")
     assert summary["living_expenses"] == Decimal("30000")
+
+
+async def test_only_my_own_money_leaves_pass_through_out(world):
+    from app.modules.transactions.schemas import TransactionFilter
+    s = world["session"]
+    s.add_all([
+        _expense(world, "房租", 30000, date(2026, 8, 10)),
+        _expense(world, "紐約押金", 40000, date(2026, 8, 10), pass_through=True),
+    ])
+    await s.commit()
+
+    async def expenses(exclude):
+        rows = await TransactionRepository(s).get_filtered_summary(
+            world["user_id"], TransactionFilter(exclude_transfers=exclude))
+        return next(r for r in rows if r["currency"] == "TWD")["expenses"]
+
+    assert await expenses(False) == Decimal("70000")
+    assert await expenses(True) == Decimal("30000")
+
+
+async def test_a_new_day_moves_a_bill_even_after_it_was_recorded(world):
+    from app.modules.transactions.schemas import RecurringTransactionUpdate
+    rule = await _reminder(world, start=date(2026, 10, 5))
+    rule_id = str(rule.id)
+    await world["svc"].confirm_reminder(rule_id, world["user_id"], date(2026, 10, 5))
+    await world["svc"].update_recurring_transaction(
+        rule_id, world["user_id"], RecurringTransactionUpdate(start_date=date(2026, 11, 20)))
+    rule = await world["svc"].recurring_repo.get_by_id(rule_id, world["user_id"])
+    assert rule.next_occurrence == date(2026, 11, 20)
+
+
+async def test_a_self_posting_rule_with_history_does_not_rewind(world):
+    """It would backfill every month back to the new date as real rows."""
+    from app.modules.transactions.schemas import RecurringTransactionUpdate
+    rule = await _reminder(world, start=date(2026, 10, 5), auto_create=True)
+    rule_id = str(rule.id)
+    await world["svc"].process_due_transactions(max_date=date(2026, 10, 5))
+    await world["svc"].update_recurring_transaction(
+        rule_id, world["user_id"], RecurringTransactionUpdate(start_date=date(2026, 1, 5)))
+    rule = await world["svc"].recurring_repo.get_by_id(rule_id, world["user_id"])
+    assert rule.next_occurrence == date(2026, 11, 5)

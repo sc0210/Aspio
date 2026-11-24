@@ -1964,15 +1964,20 @@ class RecurringTransactionService:
                 await self.transaction_service._checked_detail(category_id, detail) if detail else None
             )
 
-        # A new start date is a new day for the bill: the next one moves to it,
-        # and later ones keep its day of the month (the anchor).
-        if data.get("start_date"):
-            data["next_occurrence"] = data["start_date"]
-        elif "frequency" in data or "interval" in data:
+        if data.get("start_date") or "frequency" in data or "interval" in data:
             recurring = await self.recurring_repo.get_by_id(recurring_id, user_id)
-            # Only reset the next occurrence if none has been processed yet
-            if recurring and recurring.occurrence_count == 0:
-                data["next_occurrence"] = recurring.start_date
+            if recurring is None:
+                return None
+            reminder = not recurring.auto_create and recurring.split_connection_id is None
+            if data.get("start_date") and reminder:
+                # A new day for a bill: the next reminder moves to it, and later
+                # ones keep its day of the month. Nothing posts a reminder, so an
+                # earlier date only shows it as due.
+                data["next_occurrence"] = data["start_date"]
+            elif recurring.occurrence_count == 0:
+                # A rule that posts itself would backfill every missed date, so
+                # its next occurrence only moves before the first one ran.
+                data["next_occurrence"] = data.get("start_date") or recurring.start_date
 
         recurring = await self.recurring_repo.update(recurring_id, user_id, data)
 
@@ -2043,6 +2048,9 @@ class RecurringTransactionService:
         that varies is prefilled with what it last was. Returns the transaction,
         or None when the rule isn't the user's.
         """
+        # The claim commits before the create. A process that dies between the
+        # two loses this occurrence (the bill moves on, unrecorded); the user
+        # still sees the next one, which beats ever recording one twice.
         claimed = await self._claim(recurring_id, user_id, occurrence)
         if claimed is None:
             return None
@@ -2058,9 +2066,16 @@ class RecurringTransactionService:
             await self.recurring_repo.db.rollback()
             await self.recurring_repo.undo_advance(claimed["id"], occurrence)
             raise
-        if amount is not None and amount != claimed["template"]["amount"]:
-            await self.recurring_repo.update(str(claimed["id"]), user_id, {"amount": amount})
-        await self._retire_if_finished(claimed)
+        # The bill is recorded; what follows is bookkeeping on the rule. A
+        # failure there must not turn a saved bill into an error the user
+        # retries (and gets "already recorded" for).
+        try:
+            if amount is not None and amount != claimed["template"]["amount"]:
+                await self.recurring_repo.update(str(claimed["id"]), user_id, {"amount": amount})
+            await self._retire_if_finished(claimed)
+        except Exception:
+            await self.recurring_repo.db.rollback()
+            logger.exception(f"Recorded reminder {recurring_id} but could not update the rule")
         return created["transaction"]
 
     async def skip_reminder(self, recurring_id: str, user_id: str, occurrence: date) -> bool:
