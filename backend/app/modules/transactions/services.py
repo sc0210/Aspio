@@ -1973,6 +1973,9 @@ class RecurringTransactionService:
                 # it as due. A rule that posts itself would backfill every date.
                 if recurring.auto_create or recurring.split_connection_id is not None:
                     raise ValueError("Only a bill you record yourself can move its next date")
+                end = data.get("end_date", recurring.end_date)
+                if end and data["next_occurrence"] > end:
+                    raise ValueError("The next date is after the bill ends")
             elif recurring.occurrence_count == 0:
                 # Before the first occurrence, the next one follows the start.
                 data["next_occurrence"] = data.get("start_date") or recurring.start_date

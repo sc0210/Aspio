@@ -287,3 +287,11 @@ async def test_a_saved_bill_stays_saved_when_the_rule_update_fails(world, monkey
     assert transaction_id == str(row.id)
     rule = await world["svc"].recurring_repo.get_by_id(rule_id, world["user_id"])
     assert (rule.next_occurrence, rule.amount) == (date(2026, 12, 5), Decimal("526"))
+
+
+async def test_a_bill_cannot_move_past_its_end(world):
+    from app.modules.transactions.schemas import RecurringTransactionUpdate
+    rule = await _reminder(world, start=date(2026, 11, 5), end_date=date(2026, 12, 31))
+    with pytest.raises(ValueError):
+        await world["svc"].update_recurring_transaction(str(rule.id), world["user_id"],
+            RecurringTransactionUpdate(next_occurrence=date(2027, 1, 5)))
