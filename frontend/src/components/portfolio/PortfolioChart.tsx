@@ -13,7 +13,7 @@ import {
 import { ChartBarIcon, ExclamationTriangleIcon } from '@heroicons/react/24/outline';
 import { useTheme } from '@/contexts/ThemeContext';
 import { cn } from '@/utils/cn';
-import { formatMoney } from '@/utils/formatters';
+import { formatMoney, toTWD } from '@/utils/formatters';
 import { PortfolioHolding, MarketType } from '@/shared/types';
 import { portfolioService } from '@/services/portfolioService';
 import { chartChrome, SERIES } from '@/lib/charts/palette';
@@ -212,7 +212,9 @@ export const PortfolioChart = memo(function PortfolioChart({ holdings, baseCurre
       return historicalData;
     }
 
-    const totalValue = holdings.reduce((sum, holding) => sum + holding.totalValue, 0);
+    // totalValue is in each holding's own currency: weigh them in TWD.
+    const valueTWD = (h: PortfolioHolding) => toTWD(h.totalValue, h.currency || 'TWD');
+    const totalValue = holdings.reduce((sum, holding) => sum + valueTWD(holding), 0);
 
     if (chartType === 'allocation') {
       const marketData = holdings.reduce((acc, holding) => {
@@ -220,7 +222,7 @@ export const PortfolioChart = memo(function PortfolioChart({ holdings, baseCurre
         if (!acc[mkt]) {
           acc[mkt] = { value: 0, count: 0 };
         }
-        acc[mkt].value += holding.totalValue;
+        acc[mkt].value += valueTWD(holding);
         acc[mkt].count += 1;
         return acc;
       }, {} as Record<MarketType, { value: number; count: number }>);

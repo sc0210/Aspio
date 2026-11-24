@@ -1179,8 +1179,7 @@ class PortfolioService {
       if (!allocation[mkt]) {
         allocation[mkt] = { value: 0, percentage: 0, count: 0 };
       }
-      // Convert to base currency using exchange rate
-      const valueInBaseCurrency = holding.totalValue;
+      const valueInBaseCurrency = toTWD(holding.totalValue, holding.currency || 'TWD');
       allocation[mkt].value += valueInBaseCurrency;
       allocation[mkt].count += 1;
       totalInBaseCurrency += valueInBaseCurrency;
@@ -1305,15 +1304,14 @@ class PortfolioService {
             bySector: Object.entries(portfolio.holdings.reduce((acc, holding) => {
               const sector = holding.sector || 'Unknown';
               if (!acc[sector]) acc[sector] = { value: 0, count: 0 };
-              // Convert to base currency (TWD) using exchange rate
-              const valueInBaseCurrency = holding.totalValue;
+              const valueInBaseCurrency = toTWD(holding.totalValue, holding.currency || 'TWD');
               acc[sector].value += valueInBaseCurrency;
               acc[sector].count += 1;
               return acc;
             }, {} as Record<string, { value: number; count: number }>)).map(([sector, data], index) => {
               // Calculate total in base currency for accurate percentages
               const totalInBaseCurrency = portfolio.holdings.reduce((sum, h) =>
-                sum + h.totalValue, 0);
+                sum + toTWD(h.totalValue, h.currency || 'TWD'), 0);
               return {
                 sector,
                 value: data.value,
@@ -1324,15 +1322,14 @@ class PortfolioService {
             byRegion: Object.entries(portfolio.holdings.reduce((acc, holding) => {
               const region = holding.region || 'Unknown';
               if (!acc[region]) acc[region] = { value: 0, count: 0 };
-              // Convert to base currency (TWD) using exchange rate
-              const valueInBaseCurrency = holding.totalValue;
+              const valueInBaseCurrency = toTWD(holding.totalValue, holding.currency || 'TWD');
               acc[region].value += valueInBaseCurrency;
               acc[region].count += 1;
               return acc;
             }, {} as Record<string, { value: number; count: number }>)).map(([region, data], index) => {
               // Calculate total in base currency for accurate percentages
               const totalInBaseCurrency = portfolio.holdings.reduce((sum, h) =>
-                sum + h.totalValue, 0);
+                sum + toTWD(h.totalValue, h.currency || 'TWD'), 0);
               return {
                 region,
                 value: data.value,
