@@ -1969,7 +1969,7 @@ class RecurringTransactionService:
             if recurring is None:
                 return None
             reminder = not recurring.auto_create and recurring.split_connection_id is None
-            if data.get("start_date") and reminder:
+            if data.get("start_date") and data["start_date"] != recurring.start_date and reminder:
                 # A new day for a bill: the next reminder moves to it, and later
                 # ones keep its day of the month. Nothing posts a reminder, so an
                 # earlier date only shows it as due.
@@ -2045,8 +2045,8 @@ class RecurringTransactionService:
         """Record one occurrence of a reminder as a transaction.
 
         `amount` (default: the rule's) also becomes the rule's amount, so a bill
-        that varies is prefilled with what it last was. Returns the transaction,
-        or None when the rule isn't the user's.
+        that varies is prefilled with what it last was. Returns the new
+        transaction's id, or None when the rule isn't the user's.
         """
         # The claim commits before the create. A process that dies between the
         # two loses this occurrence (the bill moves on, unrecorded); the user
@@ -2066,6 +2066,8 @@ class RecurringTransactionService:
             await self.recurring_repo.db.rollback()
             await self.recurring_repo.undo_advance(claimed["id"], occurrence)
             raise
+        # Read now: a rollback below would expire the row.
+        transaction_id = str(created["transaction"].id)
         # The bill is recorded; what follows is bookkeeping on the rule. A
         # failure there must not turn a saved bill into an error the user
         # retries (and gets "already recorded" for).
@@ -2076,7 +2078,7 @@ class RecurringTransactionService:
         except Exception:
             await self.recurring_repo.db.rollback()
             logger.exception(f"Recorded reminder {recurring_id} but could not update the rule")
-        return created["transaction"]
+        return transaction_id
 
     async def skip_reminder(self, recurring_id: str, user_id: str, occurrence: date) -> bool:
         """Move a reminder past `occurrence` without recording anything."""

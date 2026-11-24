@@ -230,3 +230,29 @@ async def test_a_self_posting_rule_with_history_does_not_rewind(world):
         rule_id, world["user_id"], RecurringTransactionUpdate(start_date=date(2026, 1, 5)))
     rule = await world["svc"].recurring_repo.get_by_id(rule_id, world["user_id"])
     assert rule.next_occurrence == date(2026, 11, 5)
+
+
+async def test_resending_the_same_start_date_does_not_bring_back_paid_months(world):
+    from app.modules.transactions.schemas import RecurringTransactionUpdate
+    rule = await _reminder(world, start=date(2026, 10, 5))
+    rule_id = str(rule.id)
+    await world["svc"].confirm_reminder(rule_id, world["user_id"], date(2026, 10, 5))
+    await world["svc"].update_recurring_transaction(
+        rule_id, world["user_id"],
+        RecurringTransactionUpdate(start_date=date(2026, 10, 5), amount=Decimal("600")))
+    rule = await world["svc"].recurring_repo.get_by_id(rule_id, world["user_id"])
+    assert rule.next_occurrence == date(2026, 11, 5)
+
+
+async def test_a_saved_bill_stays_saved_when_the_rule_update_fails(world, monkeypatch):
+    rule = await _reminder(world, start=date(2026, 11, 5))
+    rule_id = str(rule.id)
+
+    async def broken(*a, **k):
+        raise RuntimeError("db hiccup")
+    monkeypatch.setattr(world["svc"].recurring_repo, "update", broken)
+
+    transaction_id = await world["svc"].confirm_reminder(
+        rule_id, world["user_id"], date(2026, 11, 5), amount=Decimal("600"))
+    [row] = await _rows(world)
+    assert transaction_id == str(row.id)
