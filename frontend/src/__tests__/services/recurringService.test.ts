@@ -52,3 +52,59 @@ describe('isPassThrough', () => {
     expect(isPassThrough({})).toBe(false);
   });
 });
+
+describe('recurringService: the rest of the bill calls', () => {
+  beforeEach(() => jest.clearAllMocks());
+
+  it('asks for bills due by a date, and maps them', async () => {
+    (apiClient.get as jest.Mock).mockResolvedValue({ data: [rule({ split_connection_id: 'conn' })] });
+    const due = await recurringService.dueBills('2026-11-30');
+    expect(apiClient.get).toHaveBeenCalledWith('/transactions/recurring/due?until=2026-11-30');
+    expect(due[0]).toMatchObject({ id: 'r1', isSplit: true });
+  });
+
+  it('treats a missing list as empty', async () => {
+    (apiClient.get as jest.Mock).mockResolvedValue({ data: null });
+    expect(await recurringService.dueBills('2026-11-30')).toEqual([]);
+  });
+
+  it('maps suggestions, numbers included', async () => {
+    (apiClient.get as jest.Mock).mockResolvedValue({ data: [{
+      description: '新竹瓦斯', category_id: 'c2', category: 'Utilities', subcategory: null, amount: '238.00',
+      currency: 'TWD', payment_method: null, day_of_month: 20, months_seen: 4, last_date: '2026-11-20',
+    }] });
+    expect(await recurringService.suggestions()).toEqual([{
+      description: '新竹瓦斯', categoryId: 'c2', category: 'Utilities', subcategory: null, amount: 238,
+      currency: 'TWD', paymentMethod: null, dayOfMonth: 20, monthsSeen: 4, lastDate: '2026-11-20',
+    }]);
+  });
+
+  it('creates a bill as a reminder, never one that posts itself', async () => {
+    await recurringService.createBill({
+      description: 'AI工具-Claude', amount: 526, currency: 'TWD', categoryId: 'c1',
+      subcategory: '', frequency: 'monthly', startDate: '2026-12-03',
+    });
+    expect(apiClient.post).toHaveBeenCalledWith('/transactions/recurring', expect.objectContaining({
+      auto_create: false, subcategory: null, payment_method: null, start_date: '2026-12-03', interval: 1,
+    }));
+  });
+
+  it('sends only the fields that changed', async () => {
+    await recurringService.updateBill('r1', { amount: 600 });
+    expect(apiClient.put).toHaveBeenLastCalledWith('/transactions/recurring/r1', { amount: 600 });
+    await recurringService.updateBill('r1', {
+      description: 'Claude Max', startDate: '2026-12-10', nextOccurrence: '2026-12-10', isPaused: true, isActive: false,
+    });
+    expect(apiClient.put).toHaveBeenLastCalledWith('/transactions/recurring/r1', {
+      description: 'Claude Max', start_date: '2026-12-10', next_occurrence: '2026-12-10', is_paused: true, is_active: false,
+    });
+  });
+
+  it('records with the day it was paid, and skips an occurrence', async () => {
+    await recurringService.recordBill('r1', '2026-12-03', 526, '2026-11-24');
+    expect(apiClient.post).toHaveBeenLastCalledWith('/transactions/recurring/r1/confirm',
+      { occurrence: '2026-12-03', amount: 526, transaction_date: '2026-11-24' });
+    await recurringService.skipBill('r1', '2026-12-03');
+    expect(apiClient.post).toHaveBeenLastCalledWith('/transactions/recurring/r1/skip', { occurrence: '2026-12-03' });
+  });
+});
