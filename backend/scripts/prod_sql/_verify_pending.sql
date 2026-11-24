@@ -267,3 +267,8 @@ SELECT t AS what,
 FROM unnest(ARRAY['chat_messages', 'chat_sessions', 'transaction_attachments', 'user_data_exports',
                   'user_security_logs', 'user_preference_history', 'password_reset_tokens',
                   'notification_templates', 'market_data']) AS t;
+-- 2026_11_24_pass_through_recurring_detail: expect 2 (both new columns exist).
+SELECT 'pass_through + recurring subcategory columns' AS what, count(*)::text AS value
+FROM information_schema.columns
+WHERE (table_name, column_name) IN (('transactions', 'pass_through'),
+                                    ('recurring_transactions', 'subcategory'));

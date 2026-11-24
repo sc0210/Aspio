@@ -121,6 +121,14 @@ function TransactionRowBase({
                       {t('transactions:splitBadge', 'Split')}
                     </Link>
                   )}
+                  {transaction.passThrough && (
+                    <span
+                      title={t('transactions:passThrough.badgeTitle', 'Not your own money: left out of spending and income figures')}
+                      className="flex-shrink-0 px-1.5 py-0.5 rounded-full font-medium whitespace-nowrap bg-gray-100 text-gray-700 dark:bg-gray-700 dark:text-gray-300"
+                    >
+                      {t('transactions:passThrough.badge', 'Not mine')}
+                    </span>
+                  )}
                   {/* Wallet Type Badge - Always visible */}
                   <>
                     <span className={cn(
@@ -165,7 +173,7 @@ function TransactionRowBase({
                       'text-sm font-semibold whitespace-nowrap',
                       // A transfer leg is an expense/income row, never type 'transfer';
                       // neutral so moving money between wallets doesn't read as spending.
-                      isWalletTransfer(transaction)
+                      isWalletTransfer(transaction) || transaction.passThrough
                         ? 'text-gray-600 dark:text-gray-400'
                         : transaction.type === 'income'
                         ? 'text-success-700 dark:text-success-400'

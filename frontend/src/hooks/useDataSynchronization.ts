@@ -49,6 +49,9 @@ export const QUERY_KEYS = {
   REVIEW_GOALS: 'review-goals',
   REVIEW_CONTEXT: 'review-context',
   REVIEW_TOP_EXPENSES: 'review-top-expenses',
+  // Repeating bills: recording one writes a transaction, and the suggestions
+  // are read off the ledger.
+  RECURRING_BILLS: 'recurring-bills',
 
   // Portfolio analytics — derived from holdings and their prices.
   PORTFOLIO_ANALYTICS: 'portfolio-analytics',
@@ -136,6 +139,7 @@ const LEDGER_DERIVED: readonly QueryKeyValue[] = [
   QUERY_KEYS.REVIEW_GOALS,
   QUERY_KEYS.REVIEW_CONTEXT,
   QUERY_KEYS.REVIEW_TOP_EXPENSES,
+  QUERY_KEYS.RECURRING_BILLS,
   QUERY_KEYS.PORTFOLIO_ANALYTICS,
   QUERY_KEYS.PORTFOLIO_DAILY_PERFORMANCE,
   QUERY_KEYS.PORTFOLIO_RISK_METRICS,

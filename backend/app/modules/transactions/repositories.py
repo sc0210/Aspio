@@ -288,7 +288,9 @@ class TransactionRepository:
         conditions = []
 
         if filters.exclude_transfers:
+            # "Only my own money": wallet moves and pass-through money both go.
             conditions.append(~TransactionRepository.transfer_leg())
+            conditions.append(Transaction.pass_through == False)  # noqa: E712
 
         if filters.type == TransactionType.TRANSFER:
             # create_transfer writes an income leg and an expense leg, never a
@@ -938,6 +940,9 @@ class TransactionRepository:
                                 Transaction.type == TransactionType.EXPENSE,
                                 Transaction.holding_id.is_(None),
                                 ~TransactionRepository.transfer_leg(),
+                                # Not the user's own spending (a deposit, a
+                                # purchase for someone else).
+                                Transaction.pass_through == False,  # noqa: E712
                             ),
                             amount_twd,
                         ),
@@ -1821,6 +1826,70 @@ class RecurringTransactionRepository:
         result = await self.db.execute(stmt)
         await self.db.commit()
         return result.rowcount != 0
+
+    async def get_due_reminders(self, user_id, until: date) -> List[RecurringTransaction]:
+        """The user's reminder rules (no auto_create, not a split bill) due by `until`."""
+        user_id_uuid = uuid_module.UUID(user_id) if isinstance(user_id, str) else user_id
+        stmt = (
+            select(RecurringTransaction)
+            .options(joinedload(RecurringTransaction.category))
+            .where(
+                and_(
+                    RecurringTransaction.user_id == user_id_uuid,
+                    RecurringTransaction.is_active == True,  # noqa: E712
+                    RecurringTransaction.is_paused == False,  # noqa: E712
+                    RecurringTransaction.auto_create == False,  # noqa: E712
+                    RecurringTransaction.split_connection_id.is_(None),
+                    RecurringTransaction.next_occurrence <= until,
+                )
+            )
+            .order_by(RecurringTransaction.next_occurrence, RecurringTransaction.description)
+        )
+        return list((await self.db.execute(stmt)).scalars().all())
+
+    async def undo_advance(self, recurring_id, occurrence: date) -> None:
+        """Put a rule back on `occurrence` after a claimed occurrence failed to post."""
+        await self.db.execute(
+            update(RecurringTransaction)
+            .where(RecurringTransaction.id == recurring_id)
+            .values(
+                next_occurrence=occurrence,
+                occurrence_count=func.greatest(RecurringTransaction.occurrence_count - 1, 0),
+                updated_at=datetime.now(timezone.utc),
+            )
+        )
+        await self.db.commit()
+
+    async def plain_expenses_since(self, user_id, since: date) -> list:
+        """The user's own everyday expenses since `since`, for spotting repeating
+        bills: no transfer, holding, loan, goal, split or pass-through rows, and
+        none a rule already posted."""
+        user_id_uuid = uuid_module.UUID(user_id) if isinstance(user_id, str) else user_id
+        stmt = (
+            select(
+                Transaction.description, Transaction.category_id, Transaction.subcategory,
+                Transaction.amount, Transaction.currency, Transaction.payment_method,
+                Transaction.transaction_date, TransactionCategory.name.label("category_name"),
+            )
+            .join(TransactionCategory, TransactionCategory.id == Transaction.category_id)
+            .where(
+                and_(
+                    Transaction.user_id == user_id_uuid,
+                    Transaction.type == TransactionType.EXPENSE,
+                    Transaction.is_deleted == False,  # noqa: E712
+                    Transaction.transaction_date >= since,
+                    Transaction.holding_id.is_(None),
+                    Transaction.loan_id.is_(None),
+                    Transaction.goal_id.is_(None),
+                    Transaction.peer_split_share_id.is_(None),
+                    Transaction.recurring_transaction_id.is_(None),
+                    Transaction.pass_through == False,  # noqa: E712
+                    ~TransactionRepository.transfer_leg(),
+                )
+            )
+            .order_by(Transaction.transaction_date)
+        )
+        return list((await self.db.execute(stmt)).all())
 
     async def get_all_by_user(self, user_id: str) -> List[RecurringTransaction]:
         """Get all recurring transactions for a user"""

@@ -108,6 +108,10 @@ export interface Transaction {
   loanId?: string; // The loan this expense pays down; unset for ordinary spending
   holdingId?: string; // The portfolio holding this row is the cash leg of
   peerSplitShareId?: string; // Your share of a bill split with a partner
+  /** Money that passed through you (a deposit, a purchase for a friend, a bill
+   *  paid for family, the repayment): moves the wallet, left out of spending
+   *  and earning figures. */
+  passThrough?: boolean;
   holdingSolePurchase?: boolean; // Single reads only: this row is its holding's only purchase leg, so a holding edit rewrites it
   createdAt: Date;
   updatedAt: Date;

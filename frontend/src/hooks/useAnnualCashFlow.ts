@@ -3,7 +3,7 @@
 import { useMemo } from 'react';
 import { useTransactions } from './useTransactions';
 import { toTWD } from '@/utils/formatters';
-import { getExpenseGroupKey, isEarnedIncome, isWalletTransfer } from '@/utils/expenseGroups';
+import { getExpenseGroupKey, isEarnedIncome, isPassThrough, isWalletTransfer } from '@/utils/expenseGroups';
 
 /**
  * Trailing 12-month average of monthly EARNED income and real living expenses,
@@ -28,6 +28,7 @@ interface TxLite {
     type?: string;
     category?: string;
     transferGroupId?: string | null;
+    passThrough?: boolean;
 }
 
 interface AnnualCashFlow {
@@ -82,7 +83,7 @@ export function useAnnualCashFlow(): AnnualCashFlow {
             // Both legs of a wallet transfer, before anything else: the expense leg
             // is not spending and the income leg is not earnings, so a Life →
             // Emergency top-up must not count as either (nor widen the divisor).
-            if (isWalletTransfer(t)) continue;
+            if (isWalletTransfer(t) || isPassThrough(t)) continue;
             const twd = toTWD(Number(t.amount) || 0, t.currency || 'TWD');
             if (twd <= 0) continue;
 

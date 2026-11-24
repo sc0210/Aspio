@@ -679,7 +679,8 @@
     "groupDetail": "群組",
     "xpProgress": "經驗值進度",
     "mainLandmark": "主選單",
-    "tabBarLandmark": "分頁"
+    "tabBarLandmark": "分頁",
+    "bills": "定期帳單"
   },
   "notFoundPage": {
     "description": "您要找的頁面不存在或已被移動。",

@@ -45,6 +45,7 @@ from .dependencies import (
 )
 from .attachment_service import ReceiptImageTooLargeError
 from .demo_service import demo_transaction_service
+from .services import ReminderConflict
 from app.utils.fx_sql import twd_rates_for
 from .schemas import (
     TransactionCreate,
@@ -57,6 +58,8 @@ from .schemas import (
     RecurringTransactionCreate,
     RecurringTransactionUpdate,
     RecurringTransactionResponse,
+    RecurringSuggestion,
+    ReminderAction,
     DayOrderRequest,
     DayOrderResponse,
 )
@@ -639,7 +642,8 @@ async def get_transaction_page_stats(
         description=(
             "Leave both legs of a wallet transfer out of the totals. One move between "
             "the user's own wallets is stored as a matching income and expense row, so "
-            "counting it raises both totals by the same amount."
+            "counting it raises both totals by the same amount. Pass-through rows "
+            "(a deposit, a purchase for someone else) are left out too."
         ),
     ),
 ):
@@ -801,6 +805,10 @@ async def get_monthly_summary(
                     "month": month_key,
                     **empty_buckets(),
                     "transfer": 0.0,
+                    # Pass-through money (a deposit, a purchase for a friend) is
+                    # in no bucket and not in total or income; it is reported
+                    # here only so the page can say what it left out.
+                    "pass_through": 0.0,
                     "total": 0.0,
                     "income": 0.0,
                 }
@@ -809,7 +817,7 @@ async def get_monthly_summary(
             # arriving from their other wallet, so it never counted as earnings — it
             # used to spike this line by the size of the month's top-up.
             for txn in income_transactions:
-                if TransactionRepository.is_transfer_leg(txn):
+                if TransactionRepository.is_transfer_leg(txn) or txn.pass_through:
                     continue
                 month_key = f"{year}-{txn.transaction_date.month:02d}"
                 raw = float(txn.amount)
@@ -844,6 +852,9 @@ async def get_monthly_summary(
                 if TransactionRepository.is_transfer_leg(txn):
                     monthly_summaries[month_key]["transfer"] += amount
                     monthly_summaries[month_key]["total"] += amount
+                    continue
+                if txn.pass_through:
+                    monthly_summaries[month_key]["pass_through"] += amount
                     continue
 
                 # loan_id set means the user tied this expense to a debt account,
@@ -962,6 +973,79 @@ async def get_recurring_transactions(
         raise HTTPException(
             status_code=500, detail="Failed to retrieve recurring transactions"
         )
+
+
+# Reminders: rules the user records by hand, one occurrence at a time. These
+# literal paths come before /recurring/{recurring_id}, which would match them.
+@router.get("/recurring/due", response_model=ApiResponse[List[RecurringTransactionResponse]])
+async def get_due_reminders(
+    recurring_service: RecurringServiceDepends,
+    current_user: User = Depends(get_current_user),
+    until: Optional[date] = Query(None, description="Due on or before this date; default: end of this month"),
+):
+    """Reminders due by `until`, oldest first."""
+    rules = await recurring_service.due_reminders(current_user.id, until)
+    return ApiResponse.success_response(
+        data=[RecurringTransactionResponse.model_validate(r) for r in rules]
+    )
+
+
+@router.get("/recurring/suggestions", response_model=ApiResponse[List[RecurringSuggestion]])
+async def get_recurring_suggestions(
+    recurring_service: RecurringServiceDepends,
+    current_user: User = Depends(get_current_user),
+):
+    """Expenses from the user's history that look like a monthly bill."""
+    return ApiResponse.success_response(data=await recurring_service.suggestions(current_user.id))
+
+
+def _reminder_conflict() -> HTTPException:
+    return HTTPException(
+        status_code=status.HTTP_409_CONFLICT,
+        detail="This bill was already recorded or skipped",
+    )
+
+
+@router.post("/recurring/{recurring_id}/confirm", status_code=status.HTTP_201_CREATED)
+async def confirm_reminder(
+    recurring_service: RecurringServiceDepends,
+    current_user: User = Depends(get_current_user),
+    recurring_id: str = Path(..., description="Recurring transaction ID"),
+    action: ReminderAction = Body(...),
+):
+    """Record one occurrence of a reminder as a transaction."""
+    try:
+        transaction_id = await recurring_service.confirm_reminder(
+            recurring_id, current_user.id, action.occurrence, action.amount, action.transaction_date
+        )
+    except ReminderConflict:
+        raise _reminder_conflict()
+    except (HTTPException, AspiroException):
+        raise
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e))
+    if transaction_id is None:
+        raise HTTPException(status_code=404, detail="Recurring transaction not found")
+    return ApiResponse.success_response(data={"id": transaction_id})
+
+
+@router.post("/recurring/{recurring_id}/skip")
+async def skip_reminder(
+    recurring_service: RecurringServiceDepends,
+    current_user: User = Depends(get_current_user),
+    recurring_id: str = Path(..., description="Recurring transaction ID"),
+    action: ReminderAction = Body(...),
+):
+    """Move a reminder past one occurrence without recording it."""
+    try:
+        found = await recurring_service.skip_reminder(recurring_id, current_user.id, action.occurrence)
+    except ReminderConflict:
+        raise _reminder_conflict()
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e))
+    if not found:
+        raise HTTPException(status_code=404, detail="Recurring transaction not found")
+    return ApiResponse.success_response(data=None)
 
 
 @router.get("/recurring/{recurring_id}", response_model=RecurringTransactionResponse)
