@@ -36,7 +36,6 @@ ALTER TABLE public.line_groups                 ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.line_group_members          ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.line_user_links             ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.line_link_tokens            ENABLE ROW LEVEL SECURITY;
-ALTER TABLE public.line_bot_activities         ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.expense_splits              ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.shared_expenses             ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.shared_goals                ENABLE ROW LEVEL SECURITY;
