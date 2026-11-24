@@ -163,8 +163,11 @@ class RecurringTransactionUpdate(BaseModel):
     subcategory: Optional[str] = Field(None, max_length=100)
     payment_method: Optional[PaymentMethod] = None
     frequency: Optional[RecurringFrequency] = None
-    # Changes the day the bill comes round; next_occurrence moves with it.
+    # The anchor: later occurrences keep its day of the month.
     start_date: Optional[date] = None
+    # Moves a reminder's next date (back to one skipped by mistake, or on to a
+    # new day). Refused for a rule that posts itself: it would backfill.
+    next_occurrence: Optional[date] = None
     interval: Optional[int] = Field(None, gt=0)
     end_date: Optional[date] = None
     max_occurrences: Optional[int] = Field(None, gt=0)

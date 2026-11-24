@@ -274,7 +274,11 @@ function DueRow({ bill, today }: { bill: Bill; today: string }) {
           disabled={!valid || busy}
           // mutateAsync, not mutate's callbacks: recording refetches the due list,
           // which unmounts this row, and an unmounted row's callbacks never run.
-          onClick={() => record.mutateAsync({ id: bill.id, occurrence: bill.nextOccurrence, amount: value }).then(
+          onClick={() => record.mutateAsync({
+            id: bill.id, occurrence: bill.nextOccurrence, amount: value,
+            // Paid ahead of the due date: record it on the day it was paid.
+            date: bill.nextOccurrence > localDateString() ? localDateString() : undefined,
+          }).then(
             () => toast.success(t('bills.recorded', 'Recorded {{name}}', { name: bill.description })),
             onError,
           )}
@@ -493,7 +497,7 @@ function EditBill({ bill, onClose }: { bill: Bill; onClose: () => void }) {
   const changes = useMemo(() => ({
     ...(description.trim() !== bill.description ? { description: description.trim() } : {}),
     ...(value !== bill.amount ? { amount: value } : {}),
-    ...(nextDue !== bill.nextOccurrence ? { startDate: nextDue } : {}),
+    ...(nextDue !== bill.nextOccurrence ? { startDate: nextDue, nextOccurrence: nextDue } : {}),
   }), [description, value, nextDue, bill]);
 
   const save = async () => {

@@ -214,10 +214,39 @@ async def test_a_new_day_moves_a_bill_even_after_it_was_recorded(world):
     rule = await _reminder(world, start=date(2026, 10, 5))
     rule_id = str(rule.id)
     await world["svc"].confirm_reminder(rule_id, world["user_id"], date(2026, 10, 5))
-    await world["svc"].update_recurring_transaction(
-        rule_id, world["user_id"], RecurringTransactionUpdate(start_date=date(2026, 11, 20)))
+    await world["svc"].update_recurring_transaction(rule_id, world["user_id"], RecurringTransactionUpdate(
+        start_date=date(2026, 11, 20), next_occurrence=date(2026, 11, 20)))
     rule = await world["svc"].recurring_repo.get_by_id(rule_id, world["user_id"])
     assert rule.next_occurrence == date(2026, 11, 20)
+
+
+async def test_a_month_skipped_by_mistake_can_be_brought_back(world):
+    from app.modules.transactions.schemas import RecurringTransactionUpdate
+    rule = await _reminder(world, start=date(2026, 11, 3))
+    rule_id = str(rule.id)
+    await world["svc"].skip_reminder(rule_id, world["user_id"], date(2026, 11, 3))
+    await world["svc"].update_recurring_transaction(rule_id, world["user_id"], RecurringTransactionUpdate(
+        start_date=date(2026, 11, 3), next_occurrence=date(2026, 11, 3)))
+    rule = await world["svc"].recurring_repo.get_by_id(rule_id, world["user_id"])
+    assert rule.next_occurrence == date(2026, 11, 3)
+
+
+async def test_a_self_posting_rule_cannot_move_its_next_date(world):
+    from app.modules.transactions.schemas import RecurringTransactionUpdate
+    rule = await _reminder(world, start=date(2026, 10, 5), auto_create=True)
+    with pytest.raises(ValueError):
+        await world["svc"].update_recurring_transaction(str(rule.id), world["user_id"],
+            RecurringTransactionUpdate(next_occurrence=date(2026, 1, 5)))
+
+
+async def test_a_removed_bill_is_not_suggested_again(world):
+    s = world["session"]
+    for n in range(4):
+        s.add(_expense(world, "AI工具-Claude", 526, _months_ago(n, 3)))
+    await s.commit()
+    rule = await _reminder(world, start=business_today() + timedelta(days=3))
+    await world["svc"].recurring_repo.deactivate(rule.id)
+    assert await world["svc"].suggestions(world["user_id"]) == []
 
 
 async def test_a_self_posting_rule_with_history_does_not_rewind(world):
@@ -256,3 +285,5 @@ async def test_a_saved_bill_stays_saved_when_the_rule_update_fails(world, monkey
         rule_id, world["user_id"], date(2026, 11, 5), amount=Decimal("600"))
     [row] = await _rows(world)
     assert transaction_id == str(row.id)
+    rule = await world["svc"].recurring_repo.get_by_id(rule_id, world["user_id"])
+    assert (rule.next_occurrence, rule.amount) == (date(2026, 12, 5), Decimal("526"))

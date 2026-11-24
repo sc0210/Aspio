@@ -1964,20 +1964,20 @@ class RecurringTransactionService:
                 await self.transaction_service._checked_detail(category_id, detail) if detail else None
             )
 
-        if data.get("start_date") or "frequency" in data or "interval" in data:
+        if data.get("next_occurrence") or data.get("start_date") or "frequency" in data or "interval" in data:
             recurring = await self.recurring_repo.get_by_id(recurring_id, user_id)
             if recurring is None:
                 return None
-            reminder = not recurring.auto_create and recurring.split_connection_id is None
-            if data.get("start_date") and data["start_date"] != recurring.start_date and reminder:
-                # A new day for a bill: the next reminder moves to it, and later
-                # ones keep its day of the month. Nothing posts a reminder, so an
-                # earlier date only shows it as due.
-                data["next_occurrence"] = data["start_date"]
+            if data.get("next_occurrence"):
+                # Only a reminder: nothing posts it, so an earlier date just shows
+                # it as due. A rule that posts itself would backfill every date.
+                if recurring.auto_create or recurring.split_connection_id is not None:
+                    raise ValueError("Only a bill you record yourself can move its next date")
             elif recurring.occurrence_count == 0:
-                # A rule that posts itself would backfill every missed date, so
-                # its next occurrence only moves before the first one ran.
+                # Before the first occurrence, the next one follows the start.
                 data["next_occurrence"] = data.get("start_date") or recurring.start_date
+            else:
+                data.pop("next_occurrence", None)
 
         recurring = await self.recurring_repo.update(recurring_id, user_id, data)
 
@@ -2085,7 +2085,11 @@ class RecurringTransactionService:
         claimed = await self._claim(recurring_id, user_id, occurrence)
         if claimed is None:
             return False
-        await self._retire_if_finished(claimed)
+        try:
+            await self._retire_if_finished(claimed)
+        except Exception:
+            await self.recurring_repo.db.rollback()
+            logger.exception(f"Skipped reminder {recurring_id} but could not retire the rule")
         return True
 
     # How far back suggestions look, and how many months a bill must show up in.
@@ -2107,8 +2111,8 @@ class RecurringTransactionService:
         rows = await self.recurring_repo.plain_expenses_since(user_id, since)
         ruled = {
             (r.description or "").strip().lower()
+            # Removed ones too: removing a bill says it isn't one to suggest.
             for r in await self.recurring_repo.get_all_by_user(user_id)
-            if r.is_active
         }
 
         groups: Dict[str, list] = {}

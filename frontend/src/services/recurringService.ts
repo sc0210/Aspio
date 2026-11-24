@@ -135,15 +135,18 @@ export const recurringService = {
     });
   },
 
-  /** Amount, description, or a new day (startDate moves the next one to it). */
+  /** Amount, description, or a new day: startDate is the anchor later dates keep, nextOccurrence the one now due. */
   async updateBill(
     id: string,
-    changes: Partial<{ amount: number; description: string; startDate: string; isPaused: boolean; isActive: boolean }>,
+    changes: Partial<{
+      amount: number; description: string; startDate: string; nextOccurrence: string; isPaused: boolean; isActive: boolean;
+    }>,
   ): Promise<void> {
     const body: Record<string, unknown> = {};
     if (changes.amount !== undefined) body.amount = changes.amount;
     if (changes.description !== undefined) body.description = changes.description;
     if (changes.startDate !== undefined) body.start_date = changes.startDate;
+    if (changes.nextOccurrence !== undefined) body.next_occurrence = changes.nextOccurrence;
     if (changes.isPaused !== undefined) body.is_paused = changes.isPaused;
     if (changes.isActive !== undefined) body.is_active = changes.isActive;
     await apiClient.put(`/transactions/recurring/${id}`, body);

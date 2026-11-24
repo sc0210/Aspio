@@ -99,7 +99,7 @@ def _portfolio_credited_goal_id(goals):
 
 
 # The category-breakdown slice for pass-through rows (Transaction.pass_through).
-# The web app translates this name; keep the two in step.
+# Shown as-is, like the category names beside it.
 PASS_THROUGH_SLICE = "Pass-through"
 PASS_THROUGH_COLOR = "#94a3b8"
 

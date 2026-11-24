@@ -396,7 +396,7 @@
     "transfer": "Transfer",
     "debt": "Debt",
     "movedBetweenWallets": "Moved between your wallets: {{amount}} (not spending)",
-    "passThroughLeftOut": "Not your own money, left out: {{amount}}",
+    "passThroughLeftOut": "Not your own spending, left out: {{amount}}",
     "totalIncludesInvest": "Total Exp includes money invested and moved between your wallets."
   },
   "monthlySummaryShort": "Summary",

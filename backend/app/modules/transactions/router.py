@@ -1044,6 +1044,8 @@ async def skip_reminder(
         found = await recurring_service.skip_reminder(recurring_id, current_user.id, action.occurrence)
     except ReminderConflict:
         raise _reminder_conflict()
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e))
     if not found:
         raise HTTPException(status_code=404, detail="Recurring transaction not found")
     return ApiResponse.success_response(data=None)

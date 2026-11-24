@@ -254,7 +254,7 @@ export default function MonthlySummaryPage() {
                         )}
                         {completeYearlyFinancials.passThrough > 0 && (
                             <p className="mt-1 text-xs text-gray-500 dark:text-gray-400">
-                                {t('transactions:monthlySummaryPage.passThroughLeftOut', 'Not your own money, left out: {{amount}}', {
+                                {t('transactions:monthlySummaryPage.passThroughLeftOut', 'Not your own spending, left out: {{amount}}', {
                                     amount: isValueVisible ? formatTWD(completeYearlyFinancials.passThrough) : '•••••',
                                 })}
                             </p>

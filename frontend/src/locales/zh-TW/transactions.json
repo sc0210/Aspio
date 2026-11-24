@@ -396,7 +396,7 @@
     "transfer": "轉帳",
     "debt": "還債",
     "movedBetweenWallets": "錢包間轉帳：{{amount}}（不計入支出）",
-    "passThroughLeftOut": "經手的錢（押金、代購等）已排除：{{amount}}",
+    "passThroughLeftOut": "經手的支出（押金、代購等）已排除：{{amount}}",
     "totalIncludesInvest": "總支出包含投資金額與錢包之間的轉帳。"
   },
   "monthlySummaryShort": "摘要",

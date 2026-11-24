@@ -181,7 +181,7 @@ Money that only passed through the user: a deposit (押金, 訂金), something b
 - `living_expenses` (emergency-fund cover) and the spending alert, which now compares living expenses rather than every outflow;
 - the trailing averages (`useExpenseBreakdown`, `useAnnualCashFlow`) and the phone's month hero;
 - the Transactions page totals when "Only my own money" is on (`exclude_transfers`).
-The reports (`/review`) still count it, so they reconcile with the wallets, but as its own "Pass-through" slice rather than under its category.
+The reports (`/review`) still count it, so they reconcile with the wallets, but as its own "Pass-through" slice rather than under its category. Its "biggest expenses" list is the exception: it uses the "Only my own money" filter, so a deposit is a slice of the total but never one of your biggest expenses.
 
 ### Bills (`/transactions/recurring`)
 A bill is a recurring rule without `auto_create`: nothing posts it. On its due date it waits on the Bills page, where the user records it at what it really cost (the rule then remembers that amount) or skips it. Recording claims the occurrence first (`next_occurrence` must still be the date the user saw), so a second tap or device gets 409 and one occurrence never records twice. Bills split with a partner are `auto_create` rules managed from Savings and do not appear here. Suggestions come from the user's own expenses: the same description in at least 3 of the last 6 months, about once a month, seen in the last two, Dining and Groceries excluded.

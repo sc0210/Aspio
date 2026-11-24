@@ -429,7 +429,8 @@ class Transaction(BaseModel):
     # Money that passed through you rather than being yours to spend or earn: a
     # deposit, something bought for a friend, a bill paid for family, and the
     # refund or repayment that comes back. Still moves the wallet; kept out of
-    # the spending and earning figures (TransactionRepository.own_money()).
+    # the spending and earning figures wherever transfers are (see
+    # docs/FINANCIAL_TERMINOLOGY.md, "Pass-through money").
     pass_through: Mapped[bool] = mapped_column(
         Boolean, default=False, server_default="false", nullable=False
     )
