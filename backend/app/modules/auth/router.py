@@ -33,27 +33,6 @@ router = APIRouter()
 # ===== Token Validation Endpoints =====
 
 
-@router.get("/me", response_model=ApiResponse[dict])
-async def validate_token(current_user: CurrentUser):
-    """
-    Validate current authentication token.
-
-    This endpoint can be used by frontend applications to verify
-    if the current JWT token is valid and get basic user info.
-    """
-    return ApiResponse.success_response(
-        data={
-            "user_id": str(current_user.id),
-            "email": current_user.email,
-            "is_verified": current_user.is_verified,
-            "role": current_user.role.value,
-            "status": current_user.status.value,
-            "access_tier": current_user.access_tier,
-        },
-        message="Token is valid",
-    )
-
-
 @router.post("/login", response_model=LoginResponse)
 async def login(
     login_data: LoginRequest,
@@ -174,45 +153,6 @@ async def google_oauth_callback(
 
 
 # ===== Health Check Endpoints =====
-
-
-@router.get("/health", response_model=ApiResponse[dict])
-async def auth_health_check():
-    """
-    Detailed health check for authentication service.
-
-    Verifies that JWT configuration and security components
-    are properly configured and operational.
-    """
-    from ..users.security import jwt_manager
-    from ...core.config import get_settings
-
-    settings = get_settings()
-
-    # Test JWT functionality
-    try:
-        test_payload = {"test": "auth_health_check", "sub": "test-user"}
-        test_token = jwt_manager.create_access_token(test_payload)
-        decoded_payload = jwt_manager.verify_token(test_token, "access")
-        jwt_functional = (
-            decoded_payload is not None
-            and decoded_payload.get("test") == "auth_health_check"
-        )
-    except Exception:
-        jwt_functional = False
-
-    overall_status = (
-        "healthy"
-        if (bool(settings.SECRET_KEY) and jwt_functional)
-        else "unhealthy"
-    )
-
-    # Public route: status only. The JWT algorithm and expiries are not the
-    # caller's business.
-    return ApiResponse.success_response(
-        data={"service": "auth", "status": overall_status},
-        message="Authentication service health check completed",
-    )
 
 
 # ===== Email Verification Endpoints =====

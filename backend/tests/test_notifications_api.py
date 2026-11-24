@@ -1,7 +1,7 @@
 """/notifications HTTP surface: auth, scoping, route order, stats, preferences, bulk actions."""
 
 import uuid
-from datetime import datetime, timedelta, timezone
+from datetime import datetime, timezone
 
 import pytest
 
@@ -27,20 +27,10 @@ def data_of(r, code=200):
 
 @pytest.mark.parametrize("method,path", [
     ("get", "/"), ("get", f"/{uuid.uuid4()}"), ("post", "/mark-all-read"),
-    ("get", "/preferences"), ("get", "/stats/summary"),
+    ("get", "/preferences"),
 ])
 async def test_anonymous_callers_are_refused(client, method, path):
     assert getattr(client, method)(f"{BASE}{path}").status_code == 401
-
-
-async def test_stats_never_count_another_users_notifications(client, async_session, test_user):
-    async_session.add(note(uuid.uuid4(), title="someone else's"))
-    await async_session.commit()
-    assert client.get(f"{BASE}/stats/summary").status_code == 401
-
-
-async def test_health_is_public(client):
-    assert data_of(client.get(f"{BASE}/health"))["features"]["sms_notifications"] is False
 
 
 async def test_list_get_and_mark_one_read(authenticated_client, async_session, test_user):
@@ -67,42 +57,10 @@ async def test_read_at_alone_marks_read(authenticated_client, async_session, tes
     assert data_of(r)["status"] == "read"
 
 
-async def test_bulk_mark_read_counts_only_own_notifications(authenticated_client, async_session, test_user):
-    a, b, other = note(test_user.id), note(test_user.id), note(uuid.uuid4())
-    async_session.add_all([a, b, other])
-    await async_session.commit()
-    ids = [str(a.id), str(b.id), str(other.id)]
-    assert data_of(authenticated_client.post(
-        f"{BASE}/bulk-action", json={"notification_ids": ids, "action": "mark_read"}))["updated"] == 2
-    assert authenticated_client.post(
-        f"{BASE}/bulk-action", json={"notification_ids": ids, "action": "delete"}).status_code == 400
-
-
 async def test_mark_all_read(authenticated_client, async_session, test_user):
     async_session.add_all([note(test_user.id), note(test_user.id), note(test_user.id, status=NotificationStatus.READ)])
     await async_session.commit()
     assert data_of(authenticated_client.post(f"{BASE}/mark-all-read"))["updated"] == 2
-
-
-async def test_stats_summarise_only_the_callers_notifications(authenticated_client, async_session, test_user):
-    past = datetime.now(timezone.utc) - timedelta(days=1)
-    async_session.add_all([
-        note(test_user.id),
-        note(test_user.id, status=NotificationStatus.SENT, priority=NotificationPriority.HIGH),
-        note(test_user.id, status=NotificationStatus.READ, expires_at=past),
-        note(test_user.id, status=NotificationStatus.DISMISSED, type_=NotificationType.ACHIEVEMENT_UNLOCKED),
-        note(test_user.id, status=NotificationStatus.FAILED),
-        note(uuid.uuid4()), note(uuid.uuid4(), status=NotificationStatus.READ),
-    ])
-    await async_session.commit()
-
-    s = data_of(authenticated_client.get(f"{BASE}/stats/summary"))
-    assert s["total_notifications"] == 5 and s["unread_notifications"] == 2
-    assert (s["read_notifications"], s["dismissed_notifications"], s["failed_notifications"]) == (1, 1, 1)
-    assert s["expired_notifications"] == 1
-    assert s["notifications_by_type"] == {"system_update": 4, "achievement_unlocked": 1}
-    assert s["notifications_by_priority"] == {"medium": 4, "high": 1}
-    assert len(s["recent_notifications"]) == 5
 
 
 async def test_preferences_round_trip(authenticated_client):

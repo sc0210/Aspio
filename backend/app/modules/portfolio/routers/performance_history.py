@@ -14,7 +14,6 @@ from ._shared import (  # noqa: F401  explicit re-import for underscore-prefixed
     fetch_historical_data_background,
 )
 from app.utils.datetime_helpers import business_today
-from app.utils.datetime_helpers import utc_now
 
 router = APIRouter()
 
@@ -37,59 +36,6 @@ async def _refresh_prices_background(user_id: str) -> None:
             )
     except Exception as e:
         logger.warning(f"Background price refresh failed (non-fatal): {e}")
-
-
-@router.get("/historical")
-async def get_portfolio_historical_data(
-    days: int = Query(
-        365, description="Number of days of historical data", ge=1, le=730
-    ),
-    current_user=Depends(get_optional_current_user),
-    session: AsyncSession = Depends(get_db),
-):
-    """
-    Get portfolio historical performance data.
-
-    Demo mode (unauthenticated): returns mock historical data.
-    Authenticated: currently disabled (503) pending a performance rewrite — see
-    the note at the raise below. The frontend treats 503 as an explicit
-    "unavailable" state. (Live daily values are served by /daily-performance.)
-    """
-
-    if not current_user:
-        # Demo mode: ~50 points sampled off the same value walk the daily
-        # series uses, so this ends at the demo portfolio's NT$2M rather than
-        # around the retired 28,450.75 AAPL/GOOGL fixture.
-        series = demo_value_series(days)
-        step = max(1, len(series) // 50)
-        sampled = series[::-1][::step][::-1]  # keep the latest point
-        historical_data = [
-            {
-                # Naive midnight datetime, the shape this endpoint has always had.
-                "date": datetime.combine(p["date"], datetime.min.time()).isoformat(),
-                "value": p["value"],
-                "holdings": [],
-            }
-            for p in sampled
-        ]
-
-        return ApiResponse.success_response(
-            data=historical_data,
-            message=f"Retrieved {len(historical_data)} historical data points",
-        )
-
-    # Historical portfolio value computation is disabled pending a performance
-    # rewrite. Return 503 so the frontend shows an explicit "unavailable" state
-    # rather than silently rendering estimated or mock charts.
-    #
-    # NOTE: this 503 was previously raised *inside* a try/except whose bare
-    # `except Exception` caught it (HTTPException subclasses Exception) and
-    # returned randomized mock data with HTTP 200 — defeating the intent. The
-    # ~250 lines of unreachable code after the raise were removed at the same time.
-    raise HTTPException(
-        status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
-        detail="Historical portfolio data is temporarily unavailable. Please check back soon.",
-    )
 
 
 @router.get("/daily-performance")

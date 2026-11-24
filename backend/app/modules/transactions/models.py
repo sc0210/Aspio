@@ -500,54 +500,6 @@ class Transaction(BaseModel):
     )
 
 
-class TransactionAttachment(BaseModel):
-    """File attachments for transactions (receipts, invoices, etc.)"""
-
-    __tablename__ = "transaction_attachments"
-
-    id: Mapped[uuid.UUID] = mapped_column(
-        UUID(as_uuid=True), primary_key=True, default=uuid.uuid4
-    )
-    transaction_id: Mapped[uuid.UUID] = mapped_column(
-        UUID(as_uuid=True),
-        ForeignKey("transactions.id", ondelete="CASCADE"),
-        nullable=False,
-    )
-
-    # File information
-    filename: Mapped[str] = mapped_column(String(255), nullable=False)
-    original_filename: Mapped[str] = mapped_column(String(255), nullable=False)
-    file_size: Mapped[int] = mapped_column(Integer, nullable=False)
-    mime_type: Mapped[str] = mapped_column(String(100), nullable=False)
-
-    # Storage information
-    file_path: Mapped[str] = mapped_column(String(500), nullable=False)
-    storage_provider: Mapped[str] = mapped_column(
-        String(50), default="local"
-    )  # local, s3, etc.
-
-    # OCR and processing
-    ocr_text: Mapped[Optional[str]] = mapped_column(Text)
-    processed: Mapped[bool] = mapped_column(Boolean, default=False)
-    processing_error: Mapped[Optional[str]] = mapped_column(Text)
-
-    # Metadata
-    uploaded_by: Mapped[uuid.UUID] = mapped_column(
-        UUID(as_uuid=True), ForeignKey("users.id"), nullable=False
-    )  # user_id
-    is_receipt: Mapped[bool] = mapped_column(Boolean, default=True)
-
-    # Relationships
-    transaction: Mapped[Transaction] = relationship("Transaction")
-
-    # Indexes
-    __table_args__ = (
-        Index("idx_attachments_transaction", "transaction_id"),
-        Index("idx_attachments_uploaded_by", "uploaded_by"),
-        Index("idx_attachments_processed", "processed"),
-    )
-
-
 class TransactionImportBatch(BaseModel):
     """Batch import tracking for bulk transaction imports"""
 

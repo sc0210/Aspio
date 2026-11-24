@@ -190,17 +190,6 @@ class LineAccountRepository:
         self.db.add(activity)
         return activity
 
-    async def get_recent_activities(
-        self, user_id: UUID, limit: int = 20
-    ) -> list[LineBotActivity]:
-        """Most-recent LINE bot activity for a user, newest first."""
-        result = await self.db.execute(
-            select(LineBotActivity)
-            .where(LineBotActivity.user_id == user_id)
-            .order_by(LineBotActivity.created_at.desc())
-            .limit(limit)
-        )
-        return list(result.scalars().all())
 
     # --- LineProcessedEvent (webhook idempotency) -------------------------
 

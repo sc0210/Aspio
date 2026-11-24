@@ -4,7 +4,7 @@ Provides comprehensive REST API for transaction management with Asian market fea
 """
 
 import logging
-from datetime import date, datetime, timezone
+from datetime import date, datetime
 
 logger = logging.getLogger(__name__)
 from typing import Optional, List
@@ -22,7 +22,7 @@ from fastapi import (
 from fastapi.responses import JSONResponse, StreamingResponse
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
-from app.core.database import get_db, get_async_session
+from app.core.database import get_db
 
 from app.core.exceptions import AspiroException, ValidationException
 from app.modules.users.dependencies import (
@@ -53,18 +53,13 @@ from .schemas import (
     TransactionResponse,
     TransactionFilter,
     TransactionAnalytics,
-    BulkTransactionCreate,
-    BulkTransactionResponse,
     TransactionCategoryCreate,
-    TransactionCategoryUpdate,
     TransactionCategoryResponse,
     RecurringTransactionCreate,
     RecurringTransactionUpdate,
     RecurringTransactionResponse,
     RecurringSuggestion,
     ReminderAction,
-    QRPaymentTransaction,
-    TransactionAttachmentResponse,
     DayOrderRequest,
     DayOrderResponse,
 )
@@ -227,21 +222,6 @@ async def _sync_portfolio_on_update(old_transaction_obj, new_transaction_obj) ->
         _logging.getLogger(__name__).warning(f"Portfolio sync (update) failed: {e}")
 
 
-# Health check endpoint (must be first to avoid conflict with /{transaction_id})
-@router.get("/health")
-async def health_check(
-    current_user: Optional[User] = Depends(get_optional_current_user),
-):
-    """Health check endpoint for the transactions module"""
-    return {
-        "status": "healthy",
-        "module": "transactions",
-        "mode": "demo" if current_user is None else "authenticated",
-        "user_id": current_user.id if current_user else None,
-        "timestamp": datetime.now(timezone.utc),
-    }
-
-
 # Transaction CRUD endpoints
 @router.post("/", status_code=status.HTTP_201_CREATED)
 async def create_transaction(
@@ -389,7 +369,6 @@ async def update_wallet_transfer(
     except Exception as e:
         logger.error("Transfer update failed: %s", e, exc_info=True)
         raise HTTPException(status_code=500, detail="An internal error occurred")
-
 
 
 # Registered before PUT /{transaction_id}, which would otherwise take "day-order"
@@ -571,35 +550,6 @@ async def get_transactions(
     except Exception:
         logger.exception("Failed to retrieve transactions")
         raise HTTPException(status_code=500, detail="Failed to retrieve transactions")
-
-
-# Bulk operations
-@router.post(
-    "/bulk", response_model=BulkTransactionResponse, status_code=status.HTTP_201_CREATED
-)
-async def bulk_create_transactions(
-    bulk_data: BulkTransactionCreate,
-    transaction_service: TransactionServiceDepends,
-    current_user: Optional[User] = Depends(get_optional_current_user),
-):
-    """Bulk create transactions (supports both demo and authenticated modes)"""
-    try:
-        if current_user is None:
-            # Demo mode - use demo service
-            result = await demo_transaction_service.bulk_create_transactions(bulk_data)
-            return result
-        else:
-            # Authenticated mode - use real service
-            result = await transaction_service.bulk_create_transactions(
-                bulk_data, current_user.id
-            )
-            return result
-    except (HTTPException, AspiroException):
-        # Let typed errors reach the global handlers with their real status codes
-        raise
-    except Exception:
-        logger.exception("Failed to bulk create transactions")
-        raise HTTPException(status_code=500, detail="Failed to create transactions")
 
 
 # Analytics endpoints
@@ -936,43 +886,6 @@ async def get_monthly_summary(
         raise HTTPException(status_code=500, detail="An internal error occurred")
 
 
-# QR Payment specific endpoint
-@router.post(
-    "/qr-payment",
-    response_model=TransactionResponse,
-    status_code=status.HTTP_201_CREATED,
-)
-async def create_qr_payment_transaction(
-    qr_transaction: QRPaymentTransaction,
-    transaction_service: TransactionServiceDepends,
-    current_user: Optional[User] = Depends(get_optional_current_user),
-):
-    """Create a transaction from QR payment data (supports both demo and authenticated modes)"""
-    try:
-        # Convert QR payment data to regular transaction
-        transaction_data = TransactionCreate(
-            **qr_transaction.model_dump(exclude={"qr_payment_data"}),
-            qr_payment_data=qr_transaction.qr_payment_data.model_dump(),
-        )
-
-        if current_user is None:
-            # Demo mode - use demo service
-            result = await demo_transaction_service.create_transaction(transaction_data)
-            return result.get("transaction", result)
-        else:
-            # Authenticated mode - use real service
-            result = await transaction_service.create_transaction(
-                transaction_data, current_user.id
-            )
-            return result.get("transaction", result)
-    except ValueError as e:
-        raise HTTPException(status_code=400, detail=str(e))
-    except Exception as e:
-        raise HTTPException(
-            status_code=500, detail="Failed to create QR payment transaction"
-        )
-
-
 # Transaction Categories endpoints
 @router.post(
     "/categories",
@@ -1021,61 +934,6 @@ async def get_categories(
             return categories
     except Exception as e:
         raise HTTPException(status_code=500, detail="Failed to retrieve categories")
-
-
-@router.get("/categories/{category_id}", response_model=TransactionCategoryResponse)
-async def get_category(
-    category_repo: CategoryRepoDepends,
-    current_user: User = Depends(get_current_user),
-    category_id: str = Path(..., description="Category ID"),
-):
-    """Get a specific transaction category"""
-    category = await category_repo.get_by_id(category_id)
-
-    if not category:
-        raise HTTPException(status_code=404, detail="Category not found")
-
-    return category
-
-
-@router.put("/categories/{category_id}", response_model=TransactionCategoryResponse)
-async def update_category(
-    category_repo: CategoryRepoDepends,
-    # Categories are shared by every user, so only an admin may change them.
-    current_admin: AdminUser = Depends(require_manage_settings),
-    category_id: str = Path(..., description="Category ID"),
-    category_data: TransactionCategoryUpdate = Body(...),
-):
-    """Update a transaction category"""
-    try:
-        category = await category_repo.update(
-            category_id, category_data.model_dump(exclude_unset=True)
-        )
-
-        if not category:
-            raise HTTPException(status_code=404, detail="Category not found")
-
-        return category
-    except HTTPException:
-        raise
-    except ValueError as e:
-        raise HTTPException(status_code=400, detail=str(e))
-    except Exception as e:
-        raise HTTPException(status_code=500, detail="Failed to update category")
-
-
-@router.delete("/categories/{category_id}", status_code=status.HTTP_204_NO_CONTENT)
-async def delete_category(
-    category_repo: CategoryRepoDepends,
-    # Categories are shared by every user, so only an admin may change them.
-    current_admin: AdminUser = Depends(require_manage_settings),
-    category_id: str = Path(..., description="Category ID"),
-):
-    """Delete a transaction category (soft delete)"""
-    success = await category_repo.delete(category_id)
-
-    if not success:
-        raise HTTPException(status_code=404, detail="Category not found")
 
 
 # Recurring Transactions endpoints
@@ -1160,7 +1018,7 @@ async def confirm_reminder(
 ):
     """Record one occurrence of a reminder as a transaction."""
     try:
-        txn = await recurring_service.confirm_reminder(
+        transaction_id = await recurring_service.confirm_reminder(
             recurring_id, current_user.id, action.occurrence, action.amount, action.transaction_date
         )
     except ReminderConflict:
@@ -1169,9 +1027,9 @@ async def confirm_reminder(
         raise
     except ValueError as e:
         raise HTTPException(status_code=400, detail=str(e))
-    if txn is None:
+    if transaction_id is None:
         raise HTTPException(status_code=404, detail="Recurring transaction not found")
-    return ApiResponse.success_response(data={"id": str(txn.id)})
+    return ApiResponse.success_response(data={"id": transaction_id})
 
 
 @router.post("/recurring/{recurring_id}/skip")
@@ -1252,93 +1110,6 @@ async def delete_recurring_transaction(
         raise HTTPException(status_code=404, detail="Recurring transaction not found")
 
 
-# Process due recurring transactions (admin endpoint)
-@router.post("/recurring/process-due")
-async def process_due_recurring_transactions(
-    recurring_service: RecurringServiceDepends,
-    # Processes every user's schedules, so an ordinary account must not run it.
-    current_admin: AdminUser = Depends(require_manage_settings),
-):
-    """Process recurring transactions that are due (admin only)"""
-    try:
-        result = await recurring_service.process_due_transactions()
-        return JSONResponse(
-            content={
-                "message": "Due recurring transactions processed",
-                "result": result,
-            }
-        )
-    except Exception as e:
-        raise HTTPException(
-            status_code=500, detail="Failed to process recurring transactions"
-        )
-
-
-# File attachment endpoints
-@router.post(
-    "/{transaction_id}/attachments",
-    response_model=TransactionAttachmentResponse,
-    status_code=status.HTTP_201_CREATED,
-)
-async def upload_transaction_attachment(
-    attachment_service: AttachmentServiceDepends,
-    current_user: User = Depends(get_current_user),
-    transaction_id: str = Path(..., description="Transaction ID"),
-    file: UploadFile = File(...),
-    is_receipt: bool = Query(True, description="Is this a receipt?"),
-):
-    """Upload an attachment to a transaction"""
-    try:
-        attachment = await attachment_service.upload_attachment(
-            transaction_id=transaction_id,
-            user_id=current_user.id,
-            file=file,
-            is_receipt=is_receipt,
-        )
-        return attachment
-    except HTTPException:
-        raise
-    except ValueError as e:
-        raise HTTPException(status_code=400, detail=str(e))
-    except Exception as e:
-        logger.error("Attachment upload failed: %s", e, exc_info=True)
-        raise HTTPException(status_code=500, detail="Failed to upload attachment")
-
-
-@router.get(
-    "/{transaction_id}/attachments", response_model=List[TransactionAttachmentResponse]
-)
-async def get_transaction_attachments(
-    attachment_service: AttachmentServiceDepends,
-    current_user: User = Depends(get_current_user),
-    transaction_id: str = Path(..., description="Transaction ID"),
-):
-    """Get attachments for a transaction"""
-    try:
-        attachments = await attachment_service.get_attachments(
-            transaction_id, current_user.id
-        )
-        return attachments
-    except HTTPException:
-        raise
-    except Exception as e:
-        logger.error("Attachment listing failed: %s", e, exc_info=True)
-        raise HTTPException(status_code=500, detail="Failed to retrieve attachments")
-
-
-@router.delete("/attachments/{attachment_id}", status_code=status.HTTP_204_NO_CONTENT)
-async def delete_transaction_attachment(
-    attachment_service: AttachmentServiceDepends,
-    current_user: User = Depends(get_current_user),
-    attachment_id: str = Path(..., description="Attachment ID"),
-):
-    """Delete a transaction attachment"""
-    success = await attachment_service.delete_attachment(attachment_id, current_user.id)
-
-    if not success:
-        raise HTTPException(status_code=404, detail="Attachment not found")
-
-
 # Import/Export endpoints
 @router.post("/upload-import")
 async def bulk_import_transactions(
@@ -1374,42 +1145,6 @@ async def bulk_import_transactions(
                 "errors": result.get("errors", []),
             }
         )
-    except HTTPException:
-        # The service's own refusals (413 too large, 400 not UTF-8) reach the client.
-        raise
-    except Exception as e:
-        logger.error("Import failed: %s", e, exc_info=True)
-        raise HTTPException(status_code=500, detail="An internal error occurred")
-
-
-@router.post("/import/csv")
-async def import_transactions_csv(
-    import_service: ImportExportServiceDepends,
-    current_user: User = Depends(get_current_user),
-    file: UploadFile = File(...),
-    skip_duplicates: bool = Query(True, description="Skip duplicate transactions"),
-    auto_categorize: bool = Query(True, description="Auto-categorize transactions"),
-    default_currency: str = Query(
-        "TWD", description="Default currency for transactions"
-    ),
-    default_category_id: Optional[str] = Query(None, description="Default category ID"),
-):
-    """Import transactions from CSV file (legacy endpoint)"""
-
-    # Validate file type
-    if not file.filename or not file.filename.endswith(".csv"):
-        raise HTTPException(status_code=400, detail="Only CSV files are supported")
-
-    import_settings = {
-        "skip_duplicates": skip_duplicates,
-        "auto_categorize": auto_categorize,
-        "default_currency": default_currency,
-        "default_category_id": default_category_id,
-    }
-
-    try:
-        result = await import_service.import_csv(current_user.id, file, import_settings)
-        return JSONResponse(content=result)
     except HTTPException:
         # The service's own refusals (413 too large, 400 not UTF-8) reach the client.
         raise
@@ -1513,89 +1248,6 @@ async def export_transactions_csv(
     except Exception as e:
         logger.error("Export failed: %s", e, exc_info=True)
         raise HTTPException(status_code=500, detail="An internal error occurred")
-
-
-# Import batch status endpoints
-@router.get("/import/batches")
-async def get_import_batches(
-    db: AsyncSession = Depends(get_async_session),
-    limit: int = Query(20, ge=1, le=200),
-    current_user: User = Depends(get_current_user),
-):
-    """Get import batch history for the user"""
-    from .models import TransactionImportBatch
-    from sqlalchemy import select
-
-    result = await db.execute(
-        select(TransactionImportBatch)
-        .where(TransactionImportBatch.user_id == current_user.id)
-        # id tiebreaker: created_at can tie for batches made in one statement,
-        # making this limited/ordered query otherwise non-deterministic.
-        .order_by(TransactionImportBatch.created_at.desc(), TransactionImportBatch.id.desc())
-        .limit(limit)
-    )
-    batches = result.scalars().all()
-
-    data = [
-        {
-            "id": b.id,
-            "source": b.source,
-            "filename": b.filename,
-            "status": b.status,
-            "total_records": b.total_records,
-            "processed_records": b.processed_records,
-            "successful_imports": b.successful_imports,
-            "failed_imports": b.failed_imports,
-            "processing_started_at": b.processing_started_at.isoformat() if b.processing_started_at else None,
-            "processing_completed_at": b.processing_completed_at.isoformat() if b.processing_completed_at else None,
-            "created_at": b.created_at.isoformat() if b.created_at else None,
-        }
-        for b in batches
-    ]
-    return {"success": True, "data": {"batches": data, "total": len(data)}}
-
-
-@router.get("/import/batches/{batch_id}")
-async def get_import_batch_status(
-    batch_id: str = Path(..., description="Import batch ID"),
-    db: AsyncSession = Depends(get_async_session),
-    current_user: User = Depends(get_current_user),
-):
-    """Get status of a specific import batch"""
-    from .models import TransactionImportBatch
-    from sqlalchemy import select
-
-    result = await db.execute(
-        select(TransactionImportBatch)
-        .where(
-            TransactionImportBatch.id == batch_id,
-            TransactionImportBatch.user_id == current_user.id,
-        )
-    )
-    batch = result.scalar_one_or_none()
-
-    if not batch:
-        raise HTTPException(status_code=404, detail="Import batch not found")
-
-    return {
-        "success": True,
-        "data": {
-            "id": batch.id,
-            "source": batch.source,
-            "filename": batch.filename,
-            "status": batch.status,
-            "total_records": batch.total_records,
-            "processed_records": batch.processed_records,
-            "successful_imports": batch.successful_imports,
-            "failed_imports": batch.failed_imports,
-            "errors": batch.errors or [],
-            "warnings": batch.warnings or [],
-            "import_settings": batch.import_settings or {},
-            "processing_started_at": batch.processing_started_at.isoformat() if batch.processing_started_at else None,
-            "processing_completed_at": batch.processing_completed_at.isoformat() if batch.processing_completed_at else None,
-            "created_at": batch.created_at.isoformat() if batch.created_at else None,
-        },
-    }
 
 
 # Receipt scanning endpoint

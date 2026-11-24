@@ -14,7 +14,6 @@ from ._shared import (  # noqa: F401  explicit re-import for underscore-prefixed
     _price_cache,
     fetch_historical_data_background,
 )
-from app.utils.datetime_helpers import utc_now
 from app.core.config import get_settings
 from app.modules.admin.dependencies import RequirePermission
 from app.modules.admin.models import AdminPermission, AdminUser
@@ -119,126 +118,6 @@ async def get_bulk_prices(
         return ApiResponse.success_response(
             data={"prices": prices, "missing": missing, "cached": False}
         )
-
-
-@router.get("/market-data", response_model=List[MarketDataResponse])
-@rate_limit_market_data
-async def get_market_data(
-    current_user=Depends(get_optional_current_user),
-    symbols: Optional[str] = Query(None, description="Comma-separated list of symbols"),
-    session: AsyncSession = Depends(get_db),
-):
-    """Get market data for specified symbols (Rate limited: 10 requests/minute per user)"""
-
-    # Demo market data for both authenticated and non-authenticated users
-    demo_market_data = [
-        MarketDataResponse(
-            symbol="AAPL",
-            exchange="NASDAQ",
-            price=Decimal("185.50"),
-            open_price=Decimal("183.15"),
-            high_price=Decimal("186.90"),
-            low_price=Decimal("182.50"),
-            previous_close=Decimal("183.15"),
-            volume=Decimal("45678901"),
-            market_cap=Decimal("2850000000000"),
-            currency="USD",
-            data_timestamp=utc_now(),
-            source="demo",
-        ),
-        MarketDataResponse(
-            symbol="GOOGL",
-            exchange="NASDAQ",
-            price=Decimal("275.25"),
-            open_price=Decimal("277.00"),
-            high_price=Decimal("278.50"),
-            low_price=Decimal("274.80"),
-            previous_close=Decimal("277.00"),
-            volume=Decimal("23456789"),
-            market_cap=Decimal("1750000000000"),
-            currency="USD",
-            data_timestamp=utc_now(),
-            source="demo",
-        ),
-        MarketDataResponse(
-            symbol="BTC-USD",
-            exchange="CRYPTO",
-            price=Decimal("48500.00"),
-            open_price=Decimal("47000.00"),
-            high_price=Decimal("49200.00"),
-            low_price=Decimal("46800.00"),
-            previous_close=Decimal("47000.00"),
-            volume=Decimal("1234567890"),
-            market_cap=Decimal("950000000000"),
-            currency="USD",
-            data_timestamp=utc_now(),
-            source="demo",
-        ),
-    ]
-
-    if symbols:
-        symbol_list = [s.strip().upper() for s in symbols.split(",")]
-        filtered_data = [
-            data for data in demo_market_data if data.symbol in symbol_list
-        ]
-        return filtered_data
-
-    return demo_market_data
-
-
-@router.get("/search")
-async def search_instruments(
-    q: str = Query(..., description="Search query"),
-    limit: int = Query(10, ge=1, le=50, description="Number of results"),
-):
-    """Search for financial instruments to add to portfolio"""
-
-    # Demo search results
-    demo_results = [
-        {
-            "symbol": "AAPL",
-            "name": "Apple Inc.",
-            "type": "stock",
-            "exchange": "NASDAQ",
-            "currency": "USD",
-            "sector": "Technology",
-        },
-        {
-            "symbol": "GOOGL",
-            "name": "Alphabet Inc. Class A",
-            "type": "stock",
-            "exchange": "NASDAQ",
-            "currency": "USD",
-            "sector": "Technology",
-        },
-        {
-            "symbol": "MSFT",
-            "name": "Microsoft Corporation",
-            "type": "stock",
-            "exchange": "NASDAQ",
-            "currency": "USD",
-            "sector": "Technology",
-        },
-        {
-            "symbol": "BTC-USD",
-            "name": "Bitcoin",
-            "type": "crypto",
-            "exchange": "CRYPTO",
-            "currency": "USD",
-            "sector": "Cryptocurrency",
-        },
-    ]
-
-    # Filter results based on query
-    filtered_results = [
-        result
-        for result in demo_results
-        if q.lower() in result["symbol"].lower() or q.lower() in result["name"].lower()
-    ][:limit]
-
-    return ApiResponse.success_response(
-        data=filtered_results, message=f"Found {len(filtered_results)} results"
-    )
 
 
 # Health check

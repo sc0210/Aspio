@@ -7,14 +7,11 @@ for long-term investment tracking.
 
 from datetime import datetime, date, timedelta
 from decimal import Decimal
-from typing import List, Dict, Any, Optional, Tuple
+from typing import List, Dict, Any, Optional
 from uuid import UUID
 from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy import select, and_, func
-from collections import defaultdict
 import logging
 
-from app.modules.portfolio.models import PortfolioHolding, PortfolioTransaction
 from app.modules.portfolio.repositories import HoldingRepository, TransactionRepository
 from app.modules.portfolio.historical_price_repository import HistoricalPriceRepository
 from app.modules.portfolio.manual_pricing import is_manually_priced
@@ -330,88 +327,3 @@ class PerformanceTracker:
 
         return points
 
-    async def calculate_holding_periods(
-        self, portfolio_id: UUID, user_id: UUID
-    ) -> Dict[str, Any]:
-        """
-        Calculate average holding periods and categorize investments.
-
-        Useful for understanding investment time horizons.
-        """
-        holdings, _ = await self.holding_repo.get_portfolio_holdings(
-            portfolio_id=portfolio_id, user_id=user_id, limit=1000
-        )
-
-        today = business_today()
-        holding_periods = []
-
-        short_term = []  # < 1 year
-        medium_term = []  # 1-3 years
-        long_term = []  # > 3 years
-
-        for holding in holdings:
-            if not holding.purchase_date:
-                continue
-
-            purchase_date = (
-                holding.purchase_date.date()
-                if isinstance(holding.purchase_date, datetime)
-                else holding.purchase_date
-            )
-            days_held = (today - purchase_date).days
-            years_held = days_held / 365.25
-
-            holding_info = {
-                "symbol": holding.symbol,
-                "days_held": days_held,
-                "years_held": round(years_held, 2),
-                "purchase_date": purchase_date.isoformat(),
-                "quantity": float(holding.quantity),
-                "cost": float(holding.quantity * holding.average_cost),
-                "value": float(holding.quantity * holding.current_price),
-            }
-
-            holding_periods.append(holding_info)
-
-            if years_held < 1:
-                short_term.append(holding_info)
-            elif years_held < 3:
-                medium_term.append(holding_info)
-            else:
-                long_term.append(holding_info)
-
-        # Calculate averages
-        avg_holding_period = (
-            sum(h["days_held"] for h in holding_periods) / len(holding_periods)
-            if holding_periods
-            else 0
-        )
-
-        return {
-            "average_holding_period_days": round(avg_holding_period, 2),
-            "average_holding_period_years": round(avg_holding_period / 365.25, 2),
-            "total_holdings": len(holding_periods),
-            "short_term_count": len(short_term),
-            "medium_term_count": len(medium_term),
-            "long_term_count": len(long_term),
-            "short_term_holdings": short_term,
-            "medium_term_holdings": medium_term,
-            "long_term_holdings": long_term,
-            "categorization": {
-                "short_term_pct": (
-                    round(len(short_term) / len(holding_periods) * 100, 2)
-                    if holding_periods
-                    else 0
-                ),
-                "medium_term_pct": (
-                    round(len(medium_term) / len(holding_periods) * 100, 2)
-                    if holding_periods
-                    else 0
-                ),
-                "long_term_pct": (
-                    round(len(long_term) / len(holding_periods) * 100, 2)
-                    if holding_periods
-                    else 0
-                ),
-            },
-        }

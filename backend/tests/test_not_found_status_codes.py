@@ -35,21 +35,8 @@ async def test_unknown_export_format_is_400(authenticated_client):
     assert r.status_code == 400, r.text[:200]
 
 
-async def test_updating_a_missing_category_is_404(admin_client):
-    r = admin_client.put(f"/api/v1/transactions/categories/{uuid.uuid4()}", json={"name": "x"})
-    assert r.status_code == 404, r.text[:200]
-
-
-async def test_admin_updates_a_category_by_its_id(admin_client, test_category):
-    r = admin_client.put(f"/api/v1/transactions/categories/{test_category.id}", json={"color": "#112233"})
-    assert r.status_code == 200, r.text[:200]
-    assert r.json()["color"] == "#112233"
-
-
 @pytest.mark.parametrize("method,suffix,body", [
     ("post", "", {"name": "Mine", "type": "expense"}),
-    ("put", "/{id}", {"name": "Renamed"}),
-    ("delete", "/{id}", None),
 ])
 async def test_non_admins_cannot_change_shared_categories(authenticated_client, test_category, method, suffix, body):
     url = "/api/v1/transactions/categories" + suffix.format(id=test_category.id)

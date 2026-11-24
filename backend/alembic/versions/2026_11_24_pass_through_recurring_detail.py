@@ -1,7 +1,7 @@
 """Pass-through money on transactions; a detail on recurring rules
 
 Revision ID: 2026_11_24_pass_through_recurring_detail
-Revises: 2026_11_21_tw_market_valuations
+Revises: 2026_11_23_drop_unused_tables
 Create Date: 2026-11-24
 
 transactions.pass_through marks money that passed through the user rather than
@@ -19,7 +19,7 @@ Prod: backend/scripts/prod_sql/2026_11_24_pass_through_recurring_detail.sql
 from alembic import op
 
 revision = "2026_11_24_pass_through_recurring_detail"
-down_revision = "2026_11_21_tw_market_valuations"
+down_revision = "2026_11_23_drop_unused_tables"
 branch_labels = None
 depends_on = None
 

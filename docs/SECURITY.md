@@ -43,7 +43,7 @@ Dangerous surfaces use an explicit opt-in secret instead:
   stranger log the owner out. Login answers every refusal with the same generic 401 until the
   password is right, a locked account included, so neither the lock nor the account's
   existence can be probed.
-- Shared data and all-users actions (global categories, recurring processing, the market cache, the stored exchange rates)
+- Shared data and all-users actions (global categories, the market cache, the stored exchange rates)
   need an admin *permission* (`RequirePermission`), not just an `AdminUser` row: analyst,
   support and moderator are limited roles.
 
