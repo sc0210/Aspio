@@ -237,6 +237,11 @@ const SUBPAGES: Array<NavItem & { parentHref: string }> = [
     icon: TableCellsIcon, iconSolid: TableCellsIcon,
     keywords: ['month', 'budget', 'summary', '月結', '每月摘要'],
   },
+  {
+    nameKey: 'navigation.bills', href: '/transactions/recurring', parentHref: '/transactions',
+    icon: CalendarDaysIcon, iconSolid: CalendarDaysIcon,
+    keywords: ['bill', 'recurring', 'subscription', 'reminder', '帳單', '定期', '訂閱', '提醒'],
+  },
 ];
 
 /** What the ⌘K palette searches: the sidebar's pages, each followed by its sub-pages. */

@@ -127,6 +127,17 @@ export function isWalletTransfer(row: TransferRowFields): boolean {
 }
 
 /**
+ * True for money that only passed through the user (transaction.pass_through): a
+ * deposit, a purchase for a friend, a bill paid for family, and the repayment.
+ * The wallet moved, but it is neither their spending nor their earning, so no
+ * spending or income figure should count it. Reads either spelling, like
+ * `isWalletTransfer`.
+ */
+export function isPassThrough(row: { passThrough?: boolean | null; pass_through?: boolean | null }): boolean {
+    return row.passThrough === true || row.pass_through === true;
+}
+
+/**
  * True only for recurring EARNED income (salary, freelance, business, commission).
  * Everything else — gifts, loans, transfers, refunds, investment sale proceeds /
  * dividends, and one-off "Other" inflows — is excluded so the forecast's monthly

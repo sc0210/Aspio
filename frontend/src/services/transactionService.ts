@@ -69,7 +69,7 @@ class TransactionService {
   // Cache for category name to ID mapping
   private categoryCache: Map<string, string> = new Map();
 
-  private async getCategoryIdByName(categoryName: string): Promise<string | null> {
+  async getCategoryIdByName(categoryName: string): Promise<string | null> {
     // Check cache first
     if (this.categoryCache.has(categoryName)) {
       return this.categoryCache.get(categoryName)!;
@@ -108,6 +108,7 @@ class TransactionService {
       currency: tx.currency as string,
       category: ((tx.category_obj as Record<string, unknown> | undefined)?.name ?? tx.category ?? 'Other') as string,
       subcategory: tx.subcategory as string | undefined,
+      passThrough: tx.pass_through === true,
       description: tx.description as string,
       date: tx.transaction_date as string, // Keep as ISO string from backend; components convert as needed
       paymentMethod: tx.payment_method as string | undefined,
@@ -339,6 +340,7 @@ class TransactionService {
           currency: tx.currency as string,
           category: ((tx.category_obj as Record<string, unknown> | undefined)?.name ?? tx.category ?? 'Other') as string,
           subcategory: tx.subcategory as string | undefined,
+          passThrough: tx.pass_through === true,
           description: tx.description as string,
           // The day as sent (a bare date); a Date would be UTC midnight, a day early west of UTC.
           date: tx.transaction_date as string,
@@ -411,7 +413,8 @@ class TransactionService {
         location: transaction.location,
         notes: null,
         tax_deductible: false,
-        business_expense: false
+        business_expense: false,
+        pass_through: transaction.passThrough === true
       };
 
       // Always send category_name as a resilient fallback, plus category_id when
@@ -444,6 +447,7 @@ class TransactionService {
           currency: tx.currency as string,
           category: ((tx.category_obj as Record<string, unknown> | undefined)?.name ?? transaction.category ?? 'Other') as string,
           subcategory: tx.subcategory as string | undefined,
+          passThrough: tx.pass_through === true,
           description: tx.description as string,
           date: new Date(tx.transaction_date as string),
           paymentMethod: tx.payment_method as string | undefined,
@@ -546,6 +550,7 @@ class TransactionService {
         }
       }
       if (updates.subcategory !== undefined) backendUpdates.subcategory = updates.subcategory;
+      if (updates.passThrough !== undefined) backendUpdates.pass_through = updates.passThrough;
       if (updates.paymentMethod !== undefined) backendUpdates.payment_method = updates.paymentMethod;
       if (updates.walletType !== undefined) backendUpdates.wallet_type = updates.walletType;
       if (updates.tags !== undefined) backendUpdates.tags = updates.tags;
@@ -564,6 +569,7 @@ class TransactionService {
           currency: tx.currency as string,
           category: ((tx.category_obj as Record<string, unknown> | undefined)?.name ?? tx.category ?? 'Other') as string,
           subcategory: tx.subcategory as string | undefined,
+          passThrough: tx.pass_through === true,
           description: tx.description as string,
           date: new Date(tx.transaction_date as string),
           paymentMethod: tx.payment_method as string | undefined,
@@ -723,16 +729,6 @@ class TransactionService {
       log.apiError('PUT', `/transactions/transfer/${groupId}`, error);
       throw error;
     }
-  }
-
-  async getRecurringTransactions(): Promise<ApiResponse<Transaction[]>> {
-    return apiClient.get('/transactions/recurring');
-  }
-
-  async createRecurringTransaction(
-    transaction: Omit<Transaction, 'id' | 'userId' | 'createdAt' | 'updatedAt'>
-  ): Promise<ApiResponse<Transaction>> {
-    return apiClient.post('/transactions/', { ...transaction, is_recurring: true });
   }
 
   async scanReceipt(file: File): Promise<ApiResponse<Partial<Transaction>>> {

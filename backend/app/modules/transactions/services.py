@@ -1695,6 +1695,11 @@ class CategorizationService:
         return suggestions
 
 
+class ReminderConflict(Exception):
+    """The reminder is no longer on that occurrence: it was recorded or skipped
+    (another tap, another device), paused, or stopped."""
+
+
 class RecurringTransactionService:
     """Service for recurring transaction management"""
 
@@ -1711,6 +1716,10 @@ class RecurringTransactionService:
 
         # Set initial next occurrence
         recurring_data["next_occurrence"] = recurring_data["start_date"]
+        if recurring_data.get("subcategory"):
+            recurring_data["subcategory"] = await self.transaction_service._checked_detail(
+                recurring_data.get("category_id"), recurring_data["subcategory"]
+            )
 
         recurring = await self.recurring_repo.create(recurring_data, user_id)
 
@@ -1783,6 +1792,7 @@ class RecurringTransactionService:
                 description=recurring.description,
                 # TransactionCreate takes these ids as strings; the ORM gives UUIDs.
                 category_id=str(recurring.category_id) if recurring.category_id else None,
+                subcategory=recurring.subcategory,
                 payment_method=recurring.payment_method,
                 recurring_transaction_id=str(recurring.id),
                 tags=recurring.tags,
@@ -1944,17 +1954,25 @@ class RecurringTransactionService:
         """Update a recurring transaction"""
         data = update_data.model_dump(exclude_unset=True)
 
-        # Recalculate next occurrence if frequency or interval changed
-        if "frequency" in data or "interval" in data or "start_date" in data:
-            recurring = await self.recurring_repo.get_by_id(recurring_id, user_id)
-            if recurring:
-                frequency = data.get("frequency", recurring.frequency)
-                interval = data.get("interval", recurring.interval)
-                start_date = data.get("start_date", recurring.start_date)
+        if "subcategory" in data or "category_id" in data:
+            current = await self.recurring_repo.get_by_id(recurring_id, user_id)
+            if current is None:
+                return None
+            detail = data.get("subcategory", current.subcategory)
+            category_id = data.get("category_id") or str(current.category_id)
+            data["subcategory"] = (
+                await self.transaction_service._checked_detail(category_id, detail) if detail else None
+            )
 
-                # Only update next occurrence if it hasn't been processed yet
-                if recurring.occurrence_count == 0:
-                    data["next_occurrence"] = start_date
+        # A new start date is a new day for the bill: the next one moves to it,
+        # and later ones keep its day of the month (the anchor).
+        if data.get("start_date"):
+            data["next_occurrence"] = data["start_date"]
+        elif "frequency" in data or "interval" in data:
+            recurring = await self.recurring_repo.get_by_id(recurring_id, user_id)
+            # Only reset the next occurrence if none has been processed yet
+            if recurring and recurring.occurrence_count == 0:
+                data["next_occurrence"] = recurring.start_date
 
         recurring = await self.recurring_repo.update(recurring_id, user_id, data)
 
@@ -1964,6 +1982,148 @@ class RecurringTransactionService:
             )
 
         return recurring
+
+    # ------------------------------------------------------------------
+    # Reminders: rules without auto_create. Nothing posts them; the user
+    # records each occurrence (adjusting the amount) or skips it.
+    # ------------------------------------------------------------------
+
+    async def due_reminders(self, user_id: str, until: Optional[date] = None):
+        """Reminder rules due by `until` (default: the end of this month)."""
+        if until is None:
+            today = business_today()
+            until = date(today.year, today.month, self._get_days_in_month(today.year, today.month))
+        return await self.recurring_repo.get_due_reminders(user_id, until)
+
+    async def _claim(self, recurring_id: str, user_id: str, occurrence: date):
+        """Advance a reminder past `occurrence`, the one the user saw. The
+        conditional update is the claim: a second tap or device finds the rule
+        moved on and gets ReminderConflict, so one occurrence records once.
+
+        Returns what the caller needs, read before the update (which may sync
+        the loaded row), or None when the rule isn't the user's.
+        """
+        rule = await self.recurring_repo.get_by_id(recurring_id, user_id)
+        if rule is None:
+            return None
+        if (not rule.is_active or rule.is_paused or rule.auto_create
+                or rule.split_connection_id is not None or rule.next_occurrence != occurrence):
+            raise ReminderConflict()
+        claimed = dict(
+            id=rule.id,
+            template=self._rule_snapshot(rule)["template"],
+            count=(rule.occurrence_count or 0) + 1,
+            next_date=self._calculate_next_occurrence(
+                occurrence, rule.frequency, rule.interval or 1,
+                rule.start_date.day if rule.start_date else None,
+            ),
+            end_date=rule.end_date,
+            max_occurrences=rule.max_occurrences,
+        )
+        if not await self.recurring_repo.update_next_occurrence(
+            claimed["id"], claimed["next_date"], expected_current=occurrence
+        ):
+            raise ReminderConflict()
+        return claimed
+
+    async def _retire_if_finished(self, claimed: Dict[str, Any]) -> None:
+        """Stop a rule once the occurrence just handled was its last."""
+        if (claimed["end_date"] and claimed["next_date"] > claimed["end_date"]) or (
+            claimed["max_occurrences"] and claimed["count"] >= claimed["max_occurrences"]
+        ):
+            await self.recurring_repo.deactivate(claimed["id"])
+
+    async def confirm_reminder(
+        self, recurring_id: str, user_id: str, occurrence: date,
+        amount: Optional[Decimal] = None, transaction_date: Optional[date] = None,
+    ):
+        """Record one occurrence of a reminder as a transaction.
+
+        `amount` (default: the rule's) also becomes the rule's amount, so a bill
+        that varies is prefilled with what it last was. Returns the transaction,
+        or None when the rule isn't the user's.
+        """
+        claimed = await self._claim(recurring_id, user_id, occurrence)
+        if claimed is None:
+            return None
+        template = dict(claimed["template"])
+        if amount is not None:
+            template["amount"] = amount
+        try:
+            created = await self.transaction_service.create_transaction(
+                TransactionCreate(**template, transaction_date=transaction_date or occurrence),
+                user_id,
+            )
+        except Exception:
+            await self.recurring_repo.db.rollback()
+            await self.recurring_repo.undo_advance(claimed["id"], occurrence)
+            raise
+        if amount is not None and amount != claimed["template"]["amount"]:
+            await self.recurring_repo.update(str(claimed["id"]), user_id, {"amount": amount})
+        await self._retire_if_finished(claimed)
+        return created["transaction"]
+
+    async def skip_reminder(self, recurring_id: str, user_id: str, occurrence: date) -> bool:
+        """Move a reminder past `occurrence` without recording anything."""
+        claimed = await self._claim(recurring_id, user_id, occurrence)
+        if claimed is None:
+            return False
+        await self._retire_if_finished(claimed)
+        return True
+
+    # How far back suggestions look, and how many months a bill must show up in.
+    SUGGEST_MONTHS = 6
+    SUGGEST_MIN_MONTHS = 3
+    # A favourite restaurant once a month is a habit, not a bill.
+    SUGGEST_SKIP_CATEGORIES = frozenset({"dining", "groceries"})
+
+    async def suggestions(self, user_id: str) -> List[Dict[str, Any]]:
+        """Expenses that look like a bill: the same description in at least three
+        of the last six months, about once a month, seen in the last two months,
+        and not already a rule. Frequent spending (fuel, groceries) shows up
+        several times a month and is left out."""
+        from dateutil.relativedelta import relativedelta
+
+        today = business_today()
+        since = (today.replace(day=1) - relativedelta(months=self.SUGGEST_MONTHS - 1))
+        recent = today.replace(day=1) - relativedelta(months=1)
+        rows = await self.recurring_repo.plain_expenses_since(user_id, since)
+        ruled = {
+            (r.description or "").strip().lower()
+            for r in await self.recurring_repo.get_all_by_user(user_id)
+            if r.is_active
+        }
+
+        groups: Dict[str, list] = {}
+        for row in rows:
+            key = (row.description or "").strip().lower()
+            if (row.category_name or "").strip().lower() in self.SUGGEST_SKIP_CATEGORIES:
+                continue
+            if key and key not in ruled:
+                groups.setdefault(key, []).append(row)
+
+        out = []
+        for items in groups.values():
+            months = {(r.transaction_date.year, r.transaction_date.month) for r in items}
+            last = items[-1]  # rows come oldest first
+            if (len(months) < self.SUGGEST_MIN_MONTHS
+                    or len(items) > len(months) + 1
+                    or last.transaction_date < recent):
+                continue
+            out.append({
+                "description": last.description.strip(),
+                "category_id": str(last.category_id),
+                "category": last.category_name,
+                "subcategory": last.subcategory,
+                "amount": last.amount,
+                "currency": last.currency or "TWD",
+                "payment_method": last.payment_method,
+                "day_of_month": last.transaction_date.day,
+                "months_seen": len(months),
+                "last_date": last.transaction_date,
+            })
+        out.sort(key=lambda s: (-s["months_seen"], s["description"]))
+        return out[:10]
 
     async def delete_recurring_transaction(
         self, recurring_id: str, user_id: str

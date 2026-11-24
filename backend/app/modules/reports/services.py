@@ -98,6 +98,12 @@ def _portfolio_credited_goal_id(goals):
     return max(pool, key=lambda goal: (float(goal.target_amount), str(goal.id))).id
 
 
+# The category-breakdown slice for pass-through rows (Transaction.pass_through).
+# The web app translates this name; keep the two in step.
+PASS_THROUGH_SLICE = "Pass-through"
+PASS_THROUGH_COLOR = "#94a3b8"
+
+
 class ReportsService:
     """Service for generating financial reports"""
 
@@ -257,16 +263,21 @@ class ReportsService:
 
         for txn in transactions:
             if txn.type == kind:
-                category_name = (
-                    txn.category_obj.name if txn.category_obj else "Uncategorized"
-                )
+                # Pass-through money still counts (the totals must match the
+                # wallets) but as its own slice, so a deposit doesn't read as
+                # a month of Housing.
+                if getattr(txn, "pass_through", False) is True:
+                    category_name, color = PASS_THROUGH_SLICE, PASS_THROUGH_COLOR
+                else:
+                    category_name = (
+                        txn.category_obj.name if txn.category_obj else "Uncategorized"
+                    )
+                    color = txn.category_obj.color if txn.category_obj else "#6B7280"
                 if category_name not in category_totals:
                     category_totals[category_name] = {
                         "amount": 0,
                         "count": 0,
-                        "color": (
-                            txn.category_obj.color if txn.category_obj else "#6B7280"
-                        ),
+                        "color": color,
                     }
                 category_totals[category_name]["amount"] += amounts[txn.id]
                 category_totals[category_name]["count"] += 1

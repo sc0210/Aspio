@@ -212,6 +212,7 @@ class RecurringTransaction(BaseModel):
     category: Mapped[TransactionCategory] = relationship("TransactionCategory")
 
     description: Mapped[str] = mapped_column(String(500), nullable=False)
+    subcategory: Mapped[Optional[str]] = mapped_column(String(100))
     payment_method: Mapped[Optional[PaymentMethod]] = mapped_column(Enum(PaymentMethod))
 
     # Recurring rules
@@ -425,6 +426,13 @@ class Transaction(BaseModel):
     )  # QR payment details
     tax_deductible: Mapped[bool] = mapped_column(Boolean, default=False)
     business_expense: Mapped[bool] = mapped_column(Boolean, default=False)
+    # Money that passed through you rather than being yours to spend or earn: a
+    # deposit, something bought for a friend, a bill paid for family, and the
+    # refund or repayment that comes back. Still moves the wallet; kept out of
+    # the spending and earning figures (TransactionRepository.own_money()).
+    pass_through: Mapped[bool] = mapped_column(
+        Boolean, default=False, server_default="false", nullable=False
+    )
 
     # The user's own order inside one day (1 = first), set by dragging rows in the
     # list (PUT /transactions/day-order). NULL until a day is reordered, and such

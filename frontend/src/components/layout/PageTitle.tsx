@@ -40,6 +40,7 @@ const SUBROUTES: Record<string, SubRoute> = {
   '/transactions/add': { titleKey: 'navigation.addTransaction', parentHref: '/transactions' },
   '/transactions/scan': { titleKey: 'navigation.scanReceipt', parentHref: '/transactions' },
   '/transactions/monthly-summary': { titleKey: 'navigation.monthlySummary', parentHref: '/transactions' },
+  '/transactions/recurring': { titleKey: 'navigation.bills', parentHref: '/transactions' },
   '/portfolio/add': { titleKey: 'navigation.addInvestment', parentHref: '/portfolio' },
   '/portfolio/trend': { titleKey: 'navigation.trend', parentHref: '/portfolio' },
 };

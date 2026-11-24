@@ -21,6 +21,8 @@ interface MobileMonthlySummaryProps {
     income: number;
     /** Every outflow, transfer legs included, as the desktop table totals it. */
     expenses: number;
+    /** Pass-through money the summary left out (see MonthlySummaryRow.pass_through). */
+    passThrough?: number;
     totals: Record<SummaryBucketKey, number>;
 }
 
@@ -30,7 +32,7 @@ interface MobileMonthlySummaryProps {
  * went and a month list that opens to its buckets — no chart library and no
  * eight-column table that scrolls sideways.
  */
-export function MobileMonthlySummary({ year, yearOptions, onYearChange, months, income, expenses, totals }: MobileMonthlySummaryProps) {
+export function MobileMonthlySummary({ year, yearOptions, onYearChange, months, income, expenses, passThrough = 0, totals }: MobileMonthlySummaryProps) {
     const { t, i18n } = useTranslation(['transactions', 'dashboard']);
     const { isValueVisible } = usePrivacy();
     const hide = (s: string) => (isValueVisible ? s : '•••••');
@@ -111,6 +113,14 @@ export function MobileMonthlySummary({ year, yearOptions, onYearChange, months, 
                                     {t('transactions:monthlySummaryPage.movedBetweenWallets', {
                                         amount: hide(formatTWD(moved)),
                                         defaultValue: 'Moved between your wallets: {{amount}} (not spending)',
+                                    })}
+                                </p>
+                            )}
+                            {passThrough > 0 && (
+                                <p className="mt-1 text-xs font-semibold text-gray-500 dark:text-gray-400">
+                                    {t('transactions:monthlySummaryPage.passThroughLeftOut', {
+                                        amount: hide(formatTWD(passThrough)),
+                                        defaultValue: 'Not your own money, left out: {{amount}}',
                                     })}
                                 </p>
                             )}

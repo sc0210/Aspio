@@ -109,6 +109,7 @@ export default function EditTransactionPage() {
     tags: [] as string[],
     loanId: '',
     goalId: '',
+    passThrough: false,
   });
   const [loaded, setLoaded] = useState<LoadedRow | null>(null);
   const [activeLoans, setActiveLoans] = useState<{ id: string; name: string; current_balance: number; currency: string }[]>([]);
@@ -255,6 +256,7 @@ export default function EditTransactionPage() {
               tags: txn.tags || [],
               loanId: '',
               goalId: '',
+              passThrough: false,
             });
           } else if (txn.category === INVESTMENT_SALE) {
             setIsSaleMode(true);
@@ -309,6 +311,7 @@ export default function EditTransactionPage() {
                 tags: txn.tags || [],
                 loanId: '',
                 goalId: '',
+                passThrough: false,
               });
             } else {
               // Demo mode, or a legacy/unlinked transfer leg (predates the
@@ -339,6 +342,7 @@ export default function EditTransactionPage() {
                 tags: txn.tags || [],
                 loanId: '',
                 goalId: '',
+                passThrough: false,
               });
             }
           } else {
@@ -385,6 +389,7 @@ export default function EditTransactionPage() {
               loanId: txnLoanId ?? '',
               // …and the goal whose reserved cash paid it.
               goalId: txnGoalId ?? '',
+              passThrough: txn.passThrough === true,
             };
             setFormData(initial);
             setBaseline(initial);
@@ -627,6 +632,7 @@ export default function EditTransactionPage() {
           paymentMethod: (formData.paymentMethod || null) as string | undefined,
           walletType: formData.walletType as 'life' | 'emergency',
           tags: formData.tags,
+          passThrough: formData.passThrough,
           // Link/unlink the loan (expenses only). Sending null unlinks and
           // restores the loan balance; the backend re-syncs on any change.
           ...(formData.type === 'expense' ? { loan_id: formData.loanId || null } : {}),
@@ -1031,6 +1037,7 @@ export default function EditTransactionPage() {
                 errors={errors}
                 onChange={handleInputChange}
                 onTagsChange={(tags) => setFormData(prev => ({ ...prev, tags }))}
+                onPassThroughChange={(passThrough) => setFormData(prev => ({ ...prev, passThrough }))}
                 activeLoans={activeLoans}
                 loansAvailable={isPremium}
                 goals={payableGoals(allGoals, formData.goalId)}

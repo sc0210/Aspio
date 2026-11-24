@@ -19,6 +19,10 @@ export interface MonthlySummaryRow {
     others: number;
     /** Every outflow, transfer legs included (see `transfer`). */
     total: number;
+    /** Money that only passed through the user (a deposit, a purchase for a
+     *  friend): in no bucket and not in `total` or `income`; reported so the page
+     *  can say what it left out. Absent on an older response. */
+    pass_through?: number;
     income: number;
 }
 

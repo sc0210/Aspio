@@ -983,7 +983,8 @@ def _due_rule():
     return MagicMock(
         id=uuid4(), user_id=uuid4(), next_occurrence=business_today(), occurrence_count=0,
         type=TransactionType.EXPENSE, amount=Decimal("100"), currency="TWD",
-        description="Rent", category_id=uuid4(), payment_method=None, tags=None, notes=None,
+        description="Rent", category_id=uuid4(), subcategory=None, payment_method=None,
+        tags=None, notes=None,
         # An ordinary rule: an unset MagicMock attribute is truthy, so leaving
         # this out made every rule look split with a partner.
         split_connection_id=None,
@@ -1053,6 +1054,7 @@ class TestRecurringTransactionService:
         mock_recurring.description = "Monthly subscription"
         mock_recurring.category_id = str(uuid4())
         mock_recurring.payment_method = None
+        mock_recurring.subcategory = None
         mock_recurring.tags = None
         mock_recurring.notes = None
         mock_recurring.recurring_transaction_id = None

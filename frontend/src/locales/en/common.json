@@ -679,7 +679,8 @@
     "groupDetail": "Group",
     "xpProgress": "XP progress",
     "mainLandmark": "Main",
-    "tabBarLandmark": "Tabs"
+    "tabBarLandmark": "Tabs",
+    "bills": "Bills"
   },
   "notFoundPage": {
     "description": "The page you're looking for doesn't exist or has been moved.",

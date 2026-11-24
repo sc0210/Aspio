@@ -175,6 +175,17 @@ Savings Rate = (Total Income - Total Expenses) / Total Income × 100%
 - Expenses: NT$70,000/month
 - **Savings Rate = 30%**
 
+### Pass-through money (`transactions.pass_through`, "Not my own spending")
+Money that only passed through the user: a deposit (押金, 訂金), something bought for a friend (代購), a bill paid for family, and the refund or repayment that comes back. The wallet still moves, so every balance counts it. The figures that answer "what did I spend or earn" leave it out, the same places a wallet transfer is left out:
+- the Monthly Summary (no bucket, not in `total` or `income`; the page says how much it left out);
+- `living_expenses` (emergency-fund cover) and the spending alert, which now compares living expenses rather than every outflow;
+- the trailing averages (`useExpenseBreakdown`, `useAnnualCashFlow`) and the phone's month hero;
+- the Transactions page totals when "Only my own money" is on (`exclude_transfers`).
+The reports (`/review`) still count it, so they reconcile with the wallets, but as its own "Pass-through" slice rather than under its category.
+
+### Bills (`/transactions/recurring`)
+A bill is a recurring rule without `auto_create`: nothing posts it. On its due date it waits on the Bills page, where the user records it at what it really cost (the rule then remembers that amount) or skips it. Recording claims the occurrence first (`next_occurrence` must still be the date the user saw), so a second tap or device gets 409 and one occurrence never records twice. Bills split with a partner are `auto_create` rules managed from Savings and do not appear here. Suggestions come from the user's own expenses: the same description in at least 3 of the last 6 months, about once a month, seen in the last two, Dining and Groceries excluded.
+
 ---
 
 ### Shared bills with a partner (`/savings`, Shared spending)

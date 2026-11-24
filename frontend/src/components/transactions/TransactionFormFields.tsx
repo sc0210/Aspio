@@ -211,6 +211,8 @@ export interface CashFormData {
   loanId: string;
   /** The goal whose reserved cash pays this Life expense ('' or absent: none). */
   goalId?: string;
+  /** Not the user's own spending or earning (transaction.pass_through). */
+  passThrough?: boolean;
 }
 
 /** A goal an expense can be paid from (holds Life cash, or this row already uses it). */
@@ -420,13 +422,15 @@ interface CashFieldsProps {
    *  phone keyboard over a form the user may only want to re-categorise. */
   autoFocusAmount?: boolean;
   onTagsChange: (tags: string[]) => void;
+  /** Shows the "not my spending" switch under More options. */
+  onPassThroughChange?: (passThrough: boolean) => void;
 }
 
 /**
  * The entry panel (amount, description) first, then the category, then the
  * settings list: date, wallet, and More options (loan link, payment method, tags).
  */
-export function CashFields({ idPrefix: p, formData, errors, onChange, onTagsChange, activeLoans, loansAvailable = true, goals: goalOptions = [], lifeCash = null, showInvestmentHint = false, autoFocusAmount = false }: CashFieldsProps) {
+export function CashFields({ idPrefix: p, formData, errors, onChange, onTagsChange, onPassThroughChange, activeLoans, loansAvailable = true, goals: goalOptions = [], lifeCash = null, showInvestmentHint = false, autoFocusAmount = false }: CashFieldsProps) {
   const { t } = useTranslation(['transactions', 'goals']);
   const categories = formData.type === 'transfer' ? [] : CATEGORIES[formData.type as keyof typeof CATEGORIES] || [];
   const tone = TYPE_TONE[formData.type] ?? TYPE_TONE.expense;
@@ -491,12 +495,13 @@ export function CashFields({ idPrefix: p, formData, errors, onChange, onTagsChan
   // mounts this only once the transaction has loaded).
   const [moreOpen, setMoreOpen] = useState(
     () => !!formData.paymentMethod || formData.tags.length > 0 || (!!formData.loanId && formData.category !== LOAN_CATEGORY)
-      || !!formData.goalId
+      || !!formData.goalId || !!formData.passThrough
   );
   const moreSummary = [
     ...(payment ? [t(`transactions:form.paymentMethods.${payment.value}`, payment.label)] : []),
     ...(linkedLoan && !loanInline ? [linkedLoan.name] : []),
     ...(linkedGoal && goalEligible ? [`🎯 ${linkedGoal.title}`] : []),
+    ...(formData.passThrough ? [t('transactions:passThrough.chip', 'Not my spending')] : []),
     ...formData.tags.map((tag) => `#${tag}`),
   ];
 
@@ -933,6 +938,15 @@ export function CashFields({ idPrefix: p, formData, errors, onChange, onTagsChan
                 </div>
 
                 <TagsField idPrefix={p} tags={formData.tags} onChange={onTagsChange} />
+
+                {onPassThroughChange && (
+                  <PassThroughSwitch
+                    idPrefix={p}
+                    checked={!!formData.passThrough}
+                    income={formData.type === 'income'}
+                    onChange={onPassThroughChange}
+                  />
+                )}
               </div>
             </div>
           )}
@@ -940,6 +954,53 @@ export function CashFields({ idPrefix: p, formData, errors, onChange, onTagsChan
         {errors.transfer && <p id={`${p}-transfer-error`} role="alert" className={ERROR_TEXT}>{errors.transfer}</p>}
       </div>
     </>
+  );
+}
+
+/**
+ * Money that passed through the user: a deposit, something bought for a friend,
+ * a bill paid for family, and the repayment that comes back. The wallet still
+ * moves; the spending (or earning) figures leave it out.
+ */
+function PassThroughSwitch({ idPrefix: p, checked, income, onChange }: {
+  idPrefix: string; checked: boolean; income: boolean; onChange: (v: boolean) => void;
+}) {
+  const { t } = useTranslation('transactions');
+  return (
+    <div className="flex items-start gap-3">
+      <button
+        id={`${p}-pass-through`}
+        type="button"
+        role="switch"
+        aria-checked={checked}
+        aria-describedby={`${p}-pass-through-hint`}
+        onClick={() => onChange(!checked)}
+        className="mt-0.5 inline-flex shrink-0 rounded-full focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-500 focus-visible:ring-offset-2 dark:focus-visible:ring-offset-gray-800"
+      >
+        <span className="sr-only">{t('passThrough.label', 'Not my own spending')}</span>
+        <span
+          aria-hidden="true"
+          className={cn(
+            'inline-flex h-6 w-11 items-center rounded-full transition-colors motion-reduce:transition-none',
+            checked ? 'bg-primary-500' : 'bg-gray-300 dark:bg-gray-600',
+          )}
+        >
+          <span className={cn('h-5 w-5 rounded-full bg-white shadow transition-transform motion-reduce:transition-none', checked ? 'translate-x-5' : 'translate-x-0.5')} />
+        </span>
+      </button>
+      <label htmlFor={`${p}-pass-through`} className="min-w-0 cursor-pointer">
+        <span className="block text-sm font-medium text-gray-700 dark:text-gray-300">
+          {income
+            ? t('passThrough.labelIncome', 'Not my own income')
+            : t('passThrough.label', 'Not my own spending')}
+        </span>
+        <span id={`${p}-pass-through-hint`} className="block text-xs text-gray-500 dark:text-gray-400">
+          {income
+            ? t('passThrough.hintIncome', 'A deposit returned, or someone paying you back. Your wallet still goes up; your income figures leave it out.')
+            : t('passThrough.hint', 'A deposit, something bought for a friend, or a bill paid for family. Your wallet still pays it; your spending figures leave it out.')}
+        </span>
+      </label>
+    </div>
   );
 }
 

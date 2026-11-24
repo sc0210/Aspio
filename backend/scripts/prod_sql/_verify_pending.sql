@@ -246,3 +246,8 @@ FROM transaction_categories WHERE name = 'Insurance' AND type = 'EXPENSE'::categ
 -- after the apply; ~250 once the first daily sync has backfilled from 2005.
 SELECT 'tw_market_valuations months' AS what, count(*)::text AS value
 FROM tw_market_valuations;
+-- 2026_11_24_pass_through_recurring_detail: expect 2 (both new columns exist).
+SELECT 'pass_through + recurring subcategory columns' AS what, count(*)::text AS value
+FROM information_schema.columns
+WHERE (table_name, column_name) IN (('transactions', 'pass_through'),
+                                    ('recurring_transactions', 'subcategory'));
