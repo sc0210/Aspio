@@ -8,7 +8,7 @@
 #
 # Export writes four files, all mode 600 (they hold real financial data):
 #   aspiro_<stamp>.sql.gz          pg_dump --no-owner --no-privileges, gzip-verified
-#   aspiro_<stamp>.uploads.tar.gz  receipt attachments; the DB only points at them
+#   aspiro_<stamp>.uploads.tar.gz  the uploads volume (receipt-scan scratch space)
 #   aspiro_<stamp>.counts          row count per table + alembic version, for --check
 #   aspiro_<stamp>.sha256          checksums of the three above
 #
