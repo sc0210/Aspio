@@ -1680,32 +1680,6 @@ def _parse_settle(text: str) -> Optional[tuple[str, Optional[Decimal]]]:
 
 
 # ---------------------------------------------------------------------------
-# Activity logging
-# ---------------------------------------------------------------------------
-
-
-async def _log_activity(
-    db: AsyncSession,
-    user_id: UUID,
-    event_type: str,
-    description: str,
-    amount: Decimal | None = None,
-    currency: str | None = None,
-) -> None:
-    """Append an activity record for this user. Never raises — log failures are non-fatal."""
-    try:
-        LineAccountRepository(db).add_activity(
-            user_id=user_id,
-            event_type=event_type,
-            description=description,
-            amount=amount,
-            currency=currency,
-        )
-    except Exception:
-        logger.warning("Failed to log LINE bot activity", exc_info=True)
-
-
-# ---------------------------------------------------------------------------
 # DB helpers
 # ---------------------------------------------------------------------------
 
@@ -1891,7 +1865,7 @@ async def _create_shared_expense(
 ) -> tuple[SharedExpense, str]:
     """Core ledger write for a shared expense — shared by the chat /add command
     and the web POST endpoint so both produce identical SharedExpense +
-    ExpenseSplit rows and the same activity log entry.
+    ExpenseSplit rows.
 
     Returns (expense, split_desc). Caller owns flush/commit and presentation.
     Ratios are only applied for 2-member groups; otherwise an equal split runs.
@@ -1933,14 +1907,6 @@ async def _create_shared_expense(
         split_desc = f"split {n} ways — {group.currency} {per_person:,.0f} each"
 
     await db.flush()
-    await _log_activity(
-        db,
-        actor_user_id,
-        "add_expense",
-        f"Added: {description} {group.currency} {amount:,.0f}",
-        amount=amount,
-        currency=group.currency,
-    )
     return expense, split_desc
 
 
@@ -2055,15 +2021,12 @@ async def _settle_debt(
     db: AsyncSession,
     *,
     group: LineGroup,
-    actor_user_id: UUID,
     owed_by: UUID,
     owed_to: UUID,
     amount: Optional[Decimal] = None,
-    activity_suffix: str = "",
 ) -> Optional[Decimal]:
     """Core ledger write for settling a debt — shared by the chat /settle command
-    and the web POST endpoint so both have identical side effects and the same
-    activity log entry.
+    and the web POST endpoint so both have identical side effects.
 
     Marks unsettled splits where *owed_by* owes *owed_to* (i.e. *owed_to* paid)
     as settled. When *amount* is None (chat /settle default), every outstanding
@@ -2081,7 +2044,6 @@ async def _settle_debt(
         return None
 
     now = datetime.now(timezone.utc)
-    currency = group.currency
 
     if amount is None:
         # Settle everything outstanding.
@@ -2107,14 +2069,6 @@ async def _settle_debt(
             return Decimal("0")
 
     await db.flush()
-    await _log_activity(
-        db,
-        actor_user_id,
-        "settle",
-        f"Settled {currency} {total:,.0f}{activity_suffix}",
-        amount=total,
-        currency=currency,
-    )
     return total
 
 
@@ -2167,10 +2121,8 @@ async def handle_settle_command(
     total = await _settle_debt(
         db,
         group=group,
-        actor_user_id=link.user_id,
         owed_by=link.user_id,
         owed_to=target_link.user_id,
-        activity_suffix=f" with @{target_display}",
     )
 
     if total is None:
@@ -2497,7 +2449,6 @@ async def handle_history_command(
         await _reply_flex(reply_token, "Link your Aspiro account", _flex_not_linked())
         return
 
-    await _log_activity(db, link.user_id, "history", "Viewed transaction history")
 
     # --- Group context ---
     if line_group_id:
@@ -2582,7 +2533,6 @@ async def handle_undo_command(
     await expense_repo.delete_expense(last)
     await db.flush()
 
-    await _log_activity(db, link.user_id, "undo_expense", f"Removed: {desc} {currency} {amount:,.0f}", amount=amount, currency=currency)
     flex = _flex_undo_confirm(desc, currency, amount)
     await _reply_flex(reply_token, f"Removed: {desc} {currency} {amount:,.0f}", flex, GROUP_QR)
 
@@ -2715,7 +2665,6 @@ async def handle_txn_command(
     await db.flush()
 
     cat_label = category.name
-    await _log_activity(db, link.user_id, "txn", f"Logged: {description} {currency} {amount:,.0f}", amount=amount, currency=currency)
     flex = _flex_txn_confirm(description, amount, currency, cat_label)
     await _reply_flex(
         reply_token,
@@ -2864,11 +2813,6 @@ async def handle_quick_log(
     db.add(txn)
     await db.flush()
 
-    kind = "Income" if entry.is_income else "Logged"
-    await _log_activity(
-        db, link.user_id, "txn", f"{kind}: {entry.description} {currency} {_money_text(entry.amount)}",
-        amount=entry.amount, currency=currency,
-    )
     favorites = [] if entry.is_income else await _quick_favorites(db, link.user_id)
     sign = "+" if entry.is_income else ""
     filed_as = f"{category.name} · {subcategory}" if subcategory else category.name
@@ -2910,7 +2854,6 @@ async def handle_quick_undo(db: AsyncSession, line_user_id: str, reply_token: st
     desc, amount, currency = txn.description, txn.amount, txn.currency
     await db.delete(txn)
     await db.flush()
-    await _log_activity(db, link.user_id, "undo_txn", f"Removed: {desc} {currency} {_money_text(amount)}", amount=amount, currency=currency)
     await _reply_flex(reply_token, f"Removed: {desc} {currency} {_money_text(amount)}", _flex_undo_confirm(desc, currency, amount), DM_QR)
 
 
@@ -3104,7 +3047,6 @@ async def handle_dm_balance_command(
     )
 
     month_name = now.strftime("%B %Y")
-    await _log_activity(db, link.user_id, "balance", "Checked wallet balance")
     # get_summary totals in TWD whatever currency the rows were entered in, so
     # the card says TWD. Labelling it with the user's preferred currency put
     # "USD 31,500" on a month of US$1,000.
@@ -3176,7 +3118,6 @@ async def handle_dm_summary_command(
         for r in rows
     ]
 
-    await _log_activity(db, link.user_id, "summary", f"Viewed spending summary — {len(breakdown)} categories")
     chart_url = _category_pie_url(breakdown)
     flex = _flex_dm_summary(month_name, breakdown, "TWD")
     await _send(reply_token, [
@@ -3233,7 +3174,6 @@ async def handle_goals_command(
         for g in goals
     ]
 
-    await _log_activity(db, link.user_id, "goals", f"Viewed goals ({len(goal_rows)} active)")
     flex = _flex_goals(goal_rows, currency)
     await _reply_flex(reply_token, "Your Financial Goals", flex, DM_QR)
 
@@ -3313,7 +3253,6 @@ async def handle_portfolio_command(
     total_value = float(portfolio.total_value)
     total_gain_pct = float(portfolio.total_gain_loss_percentage)
 
-    await _log_activity(db, link.user_id, "portfolio", "Viewed portfolio")
     # Total is denominated in the portfolio's base currency (not the user's display
     # preference) — the bot shows stored values without FX conversion.
     flex = _flex_portfolio(holding_rows, total_value, total_gain_pct, portfolio.currency)
@@ -4654,14 +4593,6 @@ async def web_add_expense(
             expense.note = body.note
         await db.flush()
         await _persist_custom_splits(db, expense, body.splits)
-        await _log_activity(
-            db,
-            user_id,
-            "add_expense",
-            f"Added: {body.description} {group.currency} {body.amount:,.0f}",
-            amount=body.amount,
-            currency=group.currency,
-        )
     else:
         expense, _split_desc = await _create_shared_expense(
             db,
@@ -4763,14 +4694,6 @@ async def web_update_expense(
             split.settled_at = None
         await db.flush()
 
-    await _log_activity(
-        db,
-        user_id,
-        "edit_expense",
-        f"Edited: {expense.description} {group.currency} {expense.amount:,.0f}",
-        amount=expense.amount,
-        currency=group.currency,
-    )
     await db.commit()
     return await _expense_to_out(db, group.id, expense.id)
 
@@ -4789,19 +4712,8 @@ async def web_delete_expense(
     if expense is None:
         raise _http_error(404, "Expense not found")
 
-    desc = expense.description
-    amount = expense.amount
-    currency = expense.currency
     await expense_repo.delete_expense(expense)
     await db.flush()
-    await _log_activity(
-        db,
-        user_id,
-        "delete_expense",
-        f"Removed: {desc} {currency} {amount:,.0f}",
-        amount=amount,
-        currency=currency,
-    )
     await db.commit()
 
 
@@ -4827,7 +4739,6 @@ async def web_settle(
     total = await _settle_debt(
         db,
         group=group,
-        actor_user_id=user_id,
         owed_by=body.owed_by,
         owed_to=body.owed_to,
         amount=body.amount,
