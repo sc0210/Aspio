@@ -29,7 +29,6 @@ async def test_balance_card_is_labelled_twd_even_for_a_usd_preferring_user():
     with patch.object(svc, "_get_link", AsyncMock(return_value=LINK)), \
          patch.object(svc, "_get_user_currency", AsyncMock(return_value="USD")), \
          patch.object(svc, "TransactionRepository", MagicMock(return_value=repo)), \
-         patch.object(svc, "_log_activity", AsyncMock()), \
          patch.object(svc, "_reply_flex", AsyncMock()), \
          patch.object(svc, "_flex_dm_balance", flex):
         await svc.handle_dm_balance_command(MagicMock(), "U1", "reply-token")
@@ -57,7 +56,6 @@ async def test_summary_card_converts_in_sql_and_is_labelled_twd():
     with patch.object(svc, "_get_link", AsyncMock(return_value=LINK)), \
          patch.object(svc, "_get_user_currency", AsyncMock(return_value="USD")), \
          patch.object(svc, "TransactionRepository", repo_cls), \
-         patch.object(svc, "_log_activity", AsyncMock()), \
          patch.object(svc, "_category_pie_url", MagicMock(return_value="https://chart")), \
          patch.object(svc, "_send", AsyncMock()), \
          patch.object(svc, "_flex_dm_summary", flex):

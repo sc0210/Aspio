@@ -203,7 +203,11 @@ WITH checks(sort, object, source_file, present) AS (
           WHERE table_schema = 'public' AND table_name IN (
             'chat_messages', 'chat_sessions', 'transaction_attachments', 'user_data_exports',
             'user_security_logs', 'user_preference_history', 'password_reset_tokens',
-            'notification_templates', 'market_data')))
+            'notification_templates', 'market_data'))),
+
+    -- 2026_11_24_drop_line_bot_activities.sql (present = the table is gone)
+    (44, 'line_bot_activities dropped', '2026_11_24_drop_line_bot_activities.sql',
+        (SELECT to_regclass('public.line_bot_activities') IS NULL))
 )
 SELECT
     CASE WHEN present THEN 'OK     ' ELSE 'MISSING' END AS status,

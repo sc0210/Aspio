@@ -455,7 +455,6 @@ class TransactionFilter(BaseModel):
     tags: Optional[List[str]] = Field(None, max_length=10)
     auto_categorized: Optional[bool] = None
     reviewed_by_user: Optional[bool] = None
-    has_attachments: Optional[bool] = None
     is_recurring: Optional[bool] = None
     search: Optional[str] = Field(None, max_length=200)
     exclude_transfers: bool = Field(

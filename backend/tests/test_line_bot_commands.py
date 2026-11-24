@@ -210,8 +210,7 @@ class TestPortfolio:
             holding(pf, alice, "GONE", "99999", "1", active=False),
         ])
         await async_session.flush()
-        with patch.object(svc, "_log_activity", new=AsyncMock()):
-            await svc.handle_portfolio_command(async_session, "Ualice", RT)
+        await svc.handle_portfolio_command(async_session, "Ualice", RT)
         alt, payload = sent[0]
         assert alt == "Portfolio  TWD 12,345"
         assert "0050" in payload and "TWD 1,200" in payload  # two lots merged
@@ -279,7 +278,7 @@ class TestPersonalMonth:
     async def test_dm_summary(self, async_session, ledger, sent):
         a, b = self.frozen()
         send = AsyncMock()
-        with a, b, patch.object(svc, "_log_activity", new=AsyncMock()), patch.object(svc, "_send", new=send):
+        with a, b, patch.object(svc, "_send", new=send):
             await svc.handle_dm_summary_command(async_session, "Ualice", RT)
         assert sent == [], sent  # not the "no expenses" text reply
         image, card = send.await_args.args[1]
@@ -289,7 +288,7 @@ class TestPersonalMonth:
 
     async def test_dm_balance(self, async_session, ledger, sent):
         a, b = self.frozen()
-        with a, b, patch.object(svc, "_log_activity", new=AsyncMock()):
+        with a, b:
             await svc.handle_dm_balance_command(async_session, "Ualice", RT)
         text = sent[0][0] + sent[0][1]
         assert "November 2026" in text and "250" in text and "999" not in text

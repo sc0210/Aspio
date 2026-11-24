@@ -434,7 +434,6 @@ async def get_transactions(
     reviewed_by_user: Optional[bool] = Query(
         None, description="Filter by user reviewed"
     ),
-    has_attachments: Optional[bool] = Query(None, description="Filter by attachments"),
     is_recurring: Optional[bool] = Query(None, description="Filter by recurring"),
     search: Optional[str] = Query(None, description="General search term"),
 ):
@@ -489,7 +488,6 @@ async def get_transactions(
             tags=parse_csv(tags),
             auto_categorized=auto_categorized,
             reviewed_by_user=reviewed_by_user,
-            has_attachments=has_attachments,
             is_recurring=is_recurring,
             search=search,
         )
@@ -511,7 +509,6 @@ async def get_transactions(
                 tags,
                 auto_categorized is not None,
                 reviewed_by_user is not None,
-                has_attachments is not None,
                 is_recurring is not None,
                 search,
             ]
