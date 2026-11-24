@@ -2,7 +2,7 @@
 --
 -- Flow (`scripts/aspiro update` runs the Alembic migration itself; this is the
 -- manual fallback):
---   1. After 2026_11_21_tw_market_valuations.sql, run:
+--   1. After 2026_11_23_drop_unused_tables.sql, run:
 --        docker exec -i aspiro-postgres psql -U aspiro_user -d aspiro_db -f - \
 --          < backend/scripts/prod_sql/2026_11_24_pass_through_recurring_detail.sql
 --   2. On the backend: alembic stamp head
