@@ -110,8 +110,8 @@ async def test_recent_activity(authenticated_client, world):
 
 
 @pytest.mark.parametrize("path,params", [
-    ("/health", {}), ("/monthly-trend", {"months": 3}), ("/upcoming-events", {"days_ahead": 60}),
-    ("/overview", {}), ("/goals-overview", {}),
+    ("/monthly-trend", {"months": 3}), ("/upcoming-events", {"days_ahead": 60}),
+    ("/overview", {}),
 ])
 async def test_static_endpoints_respond(authenticated_client, world, path, params):
     assert authenticated_client.get(f"{BASE}{path}", params=params).status_code == 200

@@ -4,10 +4,9 @@ Pure methods are tested directly; methods with DB access are tested with mocked 
 """
 
 import pytest
-from datetime import date, timedelta, datetime, timezone
+from datetime import date
 from decimal import Decimal
 from unittest.mock import AsyncMock, MagicMock, patch
-from uuid import uuid4
 
 from app.modules.dashboard.services import DashboardService
 from app.modules.dashboard.schemas import PeriodEnum
@@ -36,48 +35,6 @@ def make_service(db=None):
 
 
 # ─── DashboardService._get_relative_time ─────────────────────────────────────
-
-class TestGetRelativeTime:
-    """Tests for the pure _get_relative_time helper."""
-
-    def setup_method(self):
-        self.svc = make_service()
-
-    def test_today(self):
-        assert self.svc._get_relative_time(business_today()) == "Today"
-
-    def test_yesterday(self):
-        assert self.svc._get_relative_time(business_today() - timedelta(days=1)) == "Yesterday"
-
-    def test_3_days_ago(self):
-        assert self.svc._get_relative_time(business_today() - timedelta(days=3)) == "3 days ago"
-
-    def test_6_days_ago(self):
-        assert self.svc._get_relative_time(business_today() - timedelta(days=6)) == "6 days ago"
-
-    def test_1_week_ago(self):
-        result = self.svc._get_relative_time(business_today() - timedelta(days=7))
-        assert result == "1 week ago"
-
-    def test_2_weeks_ago(self):
-        result = self.svc._get_relative_time(business_today() - timedelta(days=14))
-        assert result == "2 weeks ago"
-
-    def test_1_month_ago(self):
-        result = self.svc._get_relative_time(business_today() - timedelta(days=30))
-        assert result == "1 month ago"
-
-    def test_3_months_ago(self):
-        result = self.svc._get_relative_time(business_today() - timedelta(days=90))
-        assert result == "3 months ago"
-
-    def test_1_year_ago(self):
-        result = self.svc._get_relative_time(business_today() - timedelta(days=365))
-        assert result == "1 year ago"
-
-    def test_2_years_ago(self):
-        result = self.svc._get_relative_time(business_today() - timedelta(days=730))
-        assert result == "2 years ago"
 
 
 # ─── DashboardService._get_date_range ────────────────────────────────────────
@@ -111,62 +68,6 @@ class TestGetDateRange:
         today = business_today()
         assert date_to == today
         assert (today - date_from).days >= 89
-
-
-# ─── DashboardService.get_recent_activity ────────────────────────────────────
-
-class TestGetRecentActivity:
-
-    def _make_tx(self, desc="Coffee", amount=Decimal("10"), days_ago=0):
-        tx = MagicMock()
-        tx.id = uuid4()
-        tx.description = desc
-        tx.amount = amount
-        tx.currency = "USD"
-        tx.type = MagicMock()
-        tx.type.value = "expense"
-        tx.category_obj = None
-        tx.transaction_date = business_today() - timedelta(days=days_ago)
-        tx.created_at = datetime.now(timezone.utc)
-        return tx
-
-    @pytest.mark.asyncio
-    async def test_fetches_from_repo_on_cache_miss(self):
-        svc = make_service()
-
-        txs = [self._make_tx("Coffee", Decimal("5"), 0)]
-        svc.transaction_repo.get_all = AsyncMock(return_value=(txs, 1))
-
-        result = await svc.get_recent_activity("user-id", limit=10)
-
-        assert len(result) == 1
-
-    @pytest.mark.asyncio
-    async def test_returns_empty_on_repo_error(self):
-        svc = make_service()
-        svc.transaction_repo.get_all = AsyncMock(side_effect=Exception("DB error"))
-
-        result = await svc.get_recent_activity("user-id")
-
-        assert result == []
-
-    @pytest.mark.asyncio
-    async def test_relative_time_shown_correctly(self):
-        svc = make_service()
-
-        txs = [
-            self._make_tx("Today's coffee", days_ago=0),
-            self._make_tx("Yesterday's lunch", days_ago=1),
-            self._make_tx("Last week's dinner", days_ago=8),
-        ]
-        svc.transaction_repo.get_all = AsyncMock(return_value=(txs, 3))
-
-        result = await svc.get_recent_activity("user-id")
-
-        times = [r.time for r in result]
-        assert "Today" in times
-        assert "Yesterday" in times
-        assert any("week" in t for t in times)
 
 
 # ─── DashboardService.get_monthly_trends ─────────────────────────────────────

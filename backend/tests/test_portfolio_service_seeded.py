@@ -95,47 +95,6 @@ class TestUpdateTotals:
         await get_portfolio_service(async_session)._update_portfolio_totals(uuid4(), test_user.id)
 
 
-class TestAssetAllocation:
-    async def test_no_portfolio(self, async_session, test_user):
-        out = await AnalyticsService(async_session).get_asset_allocation(test_user.id)
-        assert out["by_type"] == [] and out["base_currency"] == "TWD"
-
-    async def test_groups_by_type_sector_and_region_in_twd(self, async_session, test_user, pf):
-        async_session.add_all([
-            make_holding(pf, test_user, "0050", value="600", cost="500", type_="etf", sector="Broad", region="TW"),
-            make_holding(pf, test_user, "2330", value="200", cost="100", type_="stock", sector="Tech", region="TW"),
-            make_holding(pf, test_user, "VT", value="5", cost="4", currency="USD", type_="etf", sector="Broad", region="Global"),
-            make_holding(pf, test_user, "OLD", value="999", cost="1", active=False),
-            make_holding(pf, test_user, "ZERO", value="0", cost="0"),
-        ])
-        await async_session.commit()
-        fx = MagicMock(get_exchange_rate=AsyncMock(return_value=D("40")))
-        with patch("app.utils.exchange_rate_service.get_exchange_rate_service", return_value=fx):
-            out = await AnalyticsService(async_session).get_asset_allocation(test_user.id)
-        by_type = {r["type"]: r for r in out["by_type"]}
-        assert by_type["Etf"]["value"] == 800.0  # 600 + 5 USD * 40
-        assert by_type["Stock"]["percentage"] == pytest.approx(20.0)
-        assert sum(r["percentage"] for r in out["by_type"]) == pytest.approx(100.0)
-        assert {r["type"]: r["value"] for r in out["by_region"]} == {"TW": 800.0, "Global": 200.0}
-        assert {r["type"] for r in out["by_sector"]} == {"Broad", "Tech"}
-        assert out["exchange_rate"] == 40.0
-
-    async def test_other_currency_is_converted_through_its_own_rate(self, async_session, test_user, pf):
-        async_session.add(make_holding(pf, test_user, "NK", value="1000", cost="900", currency="JPY"))
-        await async_session.commit()
-        rates = {("USD", "TWD"): D("40"), ("JPY", "TWD"): D("0.2")}
-        fx = MagicMock(get_exchange_rate=AsyncMock(side_effect=lambda f, t: rates[(f, t)]))
-        with patch("app.utils.exchange_rate_service.get_exchange_rate_service", return_value=fx):
-            out = await AnalyticsService(async_session).get_asset_allocation(test_user.id)
-        assert out["by_type"][0]["value"] == 200.0
-        fx.get_exchange_rate.assert_any_await("JPY", "TWD")
-
-    async def test_empty_portfolio_has_no_slices(self, async_session, test_user, pf):
-        with patch("app.utils.exchange_rate_service.get_exchange_rate_service", return_value=fake_fx(D("32"))):
-            out = await AnalyticsService(async_session).get_asset_allocation(test_user.id)
-        assert out["by_type"] == []
-
-
 class TestDividends:
     def dividend(self, user, days_ago, amount, symbol="0056"):
         return Dividend(
@@ -200,9 +159,6 @@ class TestUserScoping:
         async_session.add(make_holding(pf, test_user, "0050", value="100", cost="50", sector="Broad", region="TW"))
         await async_session.commit()
         analytics = AnalyticsService(async_session)
-        with patch("app.utils.exchange_rate_service.get_exchange_rate_service", return_value=fake_fx(D("32"))):
-            alloc = await analytics.get_asset_allocation(test_user.id)
-        assert [r["value"] for r in alloc["by_type"]] == [100.0] and [r["type"] for r in alloc["by_region"]] == ["TW"]
         divs = await analytics.get_dividend_data(test_user.id)
         assert divs["payments"] == [] and divs["total_dividends"] is None
 

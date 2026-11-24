@@ -55,33 +55,6 @@ def _demo_allocation_slices(as_float: bool = False) -> Dict[str, List[Dict[str, 
     }
 
 
-@router.get("/allocation")
-async def get_asset_allocation(
-    current_user=Depends(get_optional_current_user),
-    session: AsyncSession = Depends(get_db),
-):
-    """Get asset allocation breakdown"""
-
-    # Demo allocation, derived from DEMO_HOLDINGS. This described the retired
-    # AAPL/GOOGL/BTC account (Stock/Crypto/negative Cash, NT$21K) beside a
-    # NT$2M portfolio of two ETFs.
-    demo_allocation = {
-        key: [AssetAllocation(**slice_) for slice_ in slices]
-        for key, slices in _demo_allocation_slices().items()
-    }
-
-    if not current_user:
-        return ApiResponse.success_response(data=demo_allocation)
-
-    try:
-        allocation = await AnalyticsService(session).get_asset_allocation(current_user.id)
-        return ApiResponse.success_response(data=allocation)
-
-    except Exception as e:
-        # Return demo data on error
-        return ApiResponse.success_response(data=demo_allocation)
-
-
 @router.get("/analytics")
 @rate_limit_analytics
 async def get_portfolio_analytics(
@@ -422,59 +395,6 @@ async def get_fx_accumulation(
         raise  # keep 404s etc. instead of masking them as 500
     except Exception as e:
         logger.error(f"Failed to get FX accumulation: {str(e)}", exc_info=True)
-        raise HTTPException(
-            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail="An internal error occurred",
-        )
-
-
-@router.get(
-    "/rebalancing/alerts",
-    summary="Get rebalancing alerts",
-    description="Get active rebalancing alerts for portfolio maintenance",
-)
-async def get_rebalancing_alerts(
-    current_user: CurrentUser,
-    portfolio_id: Optional[UUID] = Query(
-        None, description="Portfolio ID (default portfolio if not specified)"
-    ),
-    session: AsyncSession = Depends(get_db),
-):
-    """
-    Get active rebalancing alerts.
-
-    Returns alerts for:
-    - Portfolio rebalancing requirements
-    - FX conversion triggers
-    - Low cash warnings
-    - Asset allocation deviations
-    """
-    try:
-        from ..rebalancing_service import get_rebalancing_service
-
-        rebalancing_service = get_rebalancing_service(session)
-        alerts = await rebalancing_service.get_rebalancing_alerts(
-            user_id=current_user.id, portfolio_id=portfolio_id
-        )
-
-        logger.info(
-            f"Rebalancing alerts retrieved for user {current_user.id}: {len(alerts)} alerts"
-        )
-
-        return ApiResponse.success_response(
-            data={
-                "alerts": [alert.model_dump() for alert in alerts],
-                "total_alerts": len(alerts),
-                "critical_alerts": sum(1 for a in alerts if a.severity == "error"),
-                "last_checked": datetime.now(timezone.utc),
-            },
-            message="Rebalancing alerts retrieved successfully",
-        )
-
-    except AspiroException:
-        raise  # keep 404s etc. instead of masking them as 500
-    except Exception as e:
-        logger.error(f"Failed to get rebalancing alerts: {str(e)}", exc_info=True)
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail="An internal error occurred",

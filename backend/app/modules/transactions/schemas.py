@@ -94,22 +94,6 @@ class TransactionCategoryCreate(TransactionCategoryBase):
     pass
 
 
-class TransactionCategoryUpdate(BaseModel):
-    """Schema for updating transaction categories"""
-
-    name: Optional[str] = Field(None, min_length=1, max_length=100)
-    name_en: Optional[str] = Field(None, max_length=100)
-    name_zh: Optional[str] = Field(None, max_length=100)
-    name_ms: Optional[str] = Field(None, max_length=100)
-    name_th: Optional[str] = Field(None, max_length=100)
-    color: Optional[str] = Field(None, pattern=r"^#[0-9A-Fa-f]{6}$")
-    icon: Optional[str] = Field(None, max_length=50)
-    parent_id: Optional[str] = Field(None, max_length=36)
-    description: Optional[str] = None
-    keywords: Optional[List[str]] = None
-    is_active: Optional[bool] = None
-
-
 class TransactionCategoryResponse(TransactionCategoryBase, TimestampMixin):
     """Schema for transaction category responses"""
 
@@ -551,52 +535,6 @@ class TransactionAnalytics(BaseModel):
     payment_method_breakdown: List[PaymentMethodAnalytics]
     top_merchants: List[Dict[str, Union[str, Decimal, int]]]
     currency_breakdown: List[Dict[str, Union[str, Decimal, int]]]
-
-
-# QR Payment specific schemas
-class QRPaymentData(BaseModel):
-    """Schema for QR payment data"""
-
-    qr_code: str = Field(..., max_length=500)
-    payment_provider: PaymentMethod = Field(..., alias="payment_method")
-    merchant_id: Optional[str] = Field(None, max_length=100)
-    merchant_name: Optional[str] = Field(None, max_length=200)
-    terminal_id: Optional[str] = Field(None, max_length=50)
-    transaction_ref: Optional[str] = Field(None, max_length=100)
-
-    model_config = ConfigDict(populate_by_name=True)
-
-
-class QRPaymentTransaction(TransactionCreate):
-    """Schema for QR payment transactions"""
-
-    qr_payment_data: QRPaymentData
-
-
-# Attachment schemas
-class TransactionAttachmentBase(BaseModel):
-    """Base transaction attachment schema"""
-
-    filename: str = Field(..., max_length=255)
-    file_size: int = Field(..., gt=0)
-    mime_type: str = Field(..., max_length=100)
-    is_receipt: bool = True
-
-
-class TransactionAttachmentResponse(TransactionAttachmentBase, TimestampMixin):
-    """Schema for transaction attachment responses"""
-
-    # UUIDs, as the model stores them (str rejected every row); JSON is unchanged.
-    id: uuid.UUID
-    transaction_id: uuid.UUID
-    original_filename: str
-    file_path: str
-    storage_provider: str
-    ocr_text: Optional[str] = None
-    processed: bool
-    processing_error: Optional[str] = None
-    uploaded_by: uuid.UUID
-    model_config = ConfigDict(from_attributes=True)
 
 
 # Categorization schemas

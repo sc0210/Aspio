@@ -3,10 +3,9 @@ Demo transaction service for unauthenticated users in the Aspiro personal financ
 Provides demo transactions data and temporary storage for demo mode operations.
 """
 
-import asyncio
-from datetime import datetime, date, timedelta
+from datetime import date, timedelta
 from decimal import Decimal
-from typing import Optional, List, Dict, Any, Tuple
+from typing import Optional, List, Dict, Any
 import uuid
 import logging
 
@@ -23,8 +22,6 @@ from .schemas import (
     MonthlyTrend,
     PaymentMethodAnalytics,
     TransactionCategoryResponse,
-    BulkTransactionCreate,
-    BulkTransactionResponse,
 )
 from app.utils.datetime_helpers import business_today
 from app.utils.datetime_helpers import utc_now
@@ -628,46 +625,6 @@ class DemoTransactionService:
 
         return False
 
-    async def bulk_create_transactions(
-        self, bulk_data: BulkTransactionCreate
-    ) -> BulkTransactionResponse:
-        """Bulk create demo transactions"""
-
-        created_transactions = []
-        errors = []
-        skipped = 0
-
-        for i, transaction_data in enumerate(bulk_data.transactions):
-            try:
-                # Check for duplicates if enabled
-                if bulk_data.skip_duplicates:
-                    is_duplicate = self._check_duplicate_transaction(transaction_data)
-                    if is_duplicate:
-                        skipped += 1
-                        continue
-
-                # Create transaction
-                result = await self.create_transaction(transaction_data)
-                created_transactions.append(result["transaction"])
-
-            except Exception as e:
-                logger.error(f"Error creating demo transaction {i}: {str(e)}")
-                errors.append(
-                    {
-                        "index": i,
-                        "error": str(e),
-                        "transaction_data": transaction_data.model_dump(),
-                    }
-                )
-
-        return BulkTransactionResponse(
-            total_requested=len(bulk_data.transactions),
-            successful=len(created_transactions),
-            failed=len(errors),
-            skipped=skipped,
-            created_transactions=created_transactions,
-            errors=errors,
-        )
 
     async def get_analytics(
         self, date_from: Optional[date] = None, date_to: Optional[date] = None

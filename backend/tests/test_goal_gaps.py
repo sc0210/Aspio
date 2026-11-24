@@ -398,8 +398,6 @@ async def test_an_emergency_fund_with_old_progress_rows_follows_only_the_wallet(
 
     edited = await goals.update_goal(goal, user, GoalUpdate(title="Half a year"))
     assert edited.status == GoalStatus.ACTIVE          # the rows do not complete it
-    summary = await goals.get_summary(user)
-    assert summary.completed_goals == 0
 
 
 async def test_a_resend_of_an_untouched_cost_books_the_stored_one(async_session, test_user, test_category):
@@ -467,7 +465,8 @@ async def test_status_readers_see_an_emergency_fund_reopen(async_session, test_u
     goals = GoalService(async_session)
     goal = (await goals.create_goal(user, GoalCreate(
         title="Six months", category="emergency_fund", target_amount=D("180000")))).id
-    assert (await goals.get_summary(user)).completed_goals == 1
+    completed, _ = await goals.list_goals(user, status="completed")   # stores the completion
+    assert [g.id for g in completed] == [goal]
 
     async_session.add(Transaction(
         user_id=user, type=TransactionType.EXPENSE, wallet_type=TransactionWalletType.EMERGENCY,

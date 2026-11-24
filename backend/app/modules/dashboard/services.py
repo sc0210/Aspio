@@ -6,7 +6,7 @@ Handles dashboard data aggregation, analytics, and caching for optimal performan
 import logging
 from datetime import datetime, date, timedelta, timezone
 from decimal import Decimal
-from typing import Optional, List, Dict, Any, Tuple
+from typing import Optional, Dict, Any, Tuple
 from uuid import UUID
 
 from app.modules.transactions.repositories import (
@@ -22,7 +22,6 @@ from app.utils.date_utils import DateRangeCalculator
 from .schemas import (
     PeriodEnum,
     DashboardStatsResponse,
-    RecentActivityResponse,
     MonthlyTrendResponse,
     MonthlyTrendDataPoint,
     HistoricalTrendResponse,
@@ -30,7 +29,6 @@ from .schemas import (
     WalletTrendResponse,
     WalletTrendDataPoint,
 )
-from app.utils.datetime_helpers import business_today
 
 logger = logging.getLogger(__name__)
 
@@ -348,62 +346,6 @@ class DashboardService:
             logger.exception(f"Error fetching dashboard stats for user {user_id}")
             raise
 
-    async def get_recent_activity(
-        self, user_id: str, limit: int = 10, force_refresh: bool = False
-    ) -> List[RecentActivityResponse]:
-        """Get recent user activities"""
-
-        logger.info(f"Fetching recent activity for user {user_id}, limit {limit}")
-
-        try:
-            activities = []
-
-            # Get recent transactions
-            transactions, _ = await self.transaction_repo.get_all(
-                user_id=user_id,
-                page=1,
-                limit=limit,
-                sort_by="transaction_date",
-                sort_order="desc",
-            )
-
-            for transaction in transactions:
-                amount = (
-                    transaction.amount
-                    if transaction.type == TransactionType.INCOME
-                    else -transaction.amount
-                )
-                time_ago = self._get_relative_time(transaction.transaction_date)
-
-                activities.append(
-                    RecentActivityResponse(
-                        id=str(transaction.id),
-                        type="transaction",
-                        title=transaction.description,
-                        amount=amount,
-                        time=time_ago,
-                        category=(
-                            transaction.category_obj.name
-                            if transaction.category_obj
-                            else None
-                        ),
-                        description=f"{transaction.type.value.title()} - {transaction.description}",
-                        created_at=transaction.created_at,
-                    )
-                )
-
-            # Sort by creation time
-            activities.sort(key=lambda x: x.created_at, reverse=True)
-            activities = activities[:limit]
-
-            logger.info(
-                f"Successfully fetched {len(activities)} recent activities for user {user_id}"
-            )
-            return activities
-
-        except Exception as e:
-            logger.error(f"Error fetching recent activity for user {user_id}: {str(e)}")
-            return []
 
     async def get_monthly_trends(
         self, user_id: str, months: int = 6, force_refresh: bool = False
@@ -468,26 +410,6 @@ class DashboardService:
         """
         return DateRangeCalculator.get_range_for_dashboard_period(period.value)
 
-    def _get_relative_time(self, transaction_date: date) -> str:
-        """Convert date to relative time string"""
-        today = business_today()
-        delta = today - transaction_date
-
-        if delta.days == 0:
-            return "Today"
-        elif delta.days == 1:
-            return "Yesterday"
-        elif delta.days < 7:
-            return f"{delta.days} days ago"
-        elif delta.days < 30:
-            weeks = delta.days // 7
-            return f"{weeks} week{'s' if weeks > 1 else ''} ago"
-        elif delta.days < 365:
-            months = delta.days // 30
-            return f"{months} month{'s' if months > 1 else ''} ago"
-        else:
-            years = delta.days // 365
-            return f"{years} year{'s' if years > 1 else ''} ago"
 
     def _calc_emergency_fund_months(
         self,

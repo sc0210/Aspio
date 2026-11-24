@@ -18,8 +18,6 @@ import aiofiles.os
 from fastapi import UploadFile, HTTPException
 
 from .repositories import TransactionRepository
-from .models import TransactionAttachment
-from .schemas import TransactionAttachmentResponse
 from .subcategories import imported_detail
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -61,120 +59,6 @@ class AttachmentService:
         # Ensure upload directory exists
         self.upload_path.mkdir(parents=True, exist_ok=True)
 
-    async def upload_attachment(
-        self,
-        transaction_id: str,
-        user_id: str,
-        file: UploadFile,
-        is_receipt: bool = True
-    ) -> TransactionAttachmentResponse:
-        """Store a transaction attachment. Does not read it — see scan_receipt."""
-        
-        # Verify transaction exists and belongs to user
-        transaction = await self.transaction_repo.get_by_id(transaction_id, user_id)
-        if not transaction:
-            raise HTTPException(status_code=404, detail="Transaction not found")
-        
-        # Validate file
-        await self._validate_file(file)
-        
-        # Generate unique filename
-        file_ext = Path(file.filename or '').suffix
-        unique_filename = f"{uuid.uuid4()}{file_ext}"
-        # str(): callers pass the user's UUID, and Path / UUID is a TypeError.
-        file_path = self.upload_path / str(user_id) / unique_filename
-        
-        # Ensure user directory exists
-        file_path.parent.mkdir(parents=True, exist_ok=True)
-        
-        # Save file
-        await self._save_file(file, file_path)
-        
-        # Create attachment record
-        attachment_data = {
-            'transaction_id': transaction.id,
-            'filename': unique_filename,
-            'original_filename': file.filename or 'unknown',
-            'file_size': file.size or 0,
-            'mime_type': file.content_type or 'application/octet-stream',
-            'file_path': str(file_path),
-            'storage_provider': 'local',
-            'uploaded_by': user_id,
-            'is_receipt': is_receipt,
-            'processed': False
-        }
-        
-        attachment = TransactionAttachment(**attachment_data)
-        self.db.add(attachment)
-        await self.db.commit()
-        await self.db.refresh(attachment)
-        
-        # Deliberately no processing here. This used to run a placeholder that
-        # stamped "Sample Store" onto the user's transaction, and then, briefly, real
-        # tesseract OCR on the request path of a Pi 4 with no timeout. The attachment
-        # stays `processed=False`, which is honest: nothing has read it. Extraction is
-        # POST /scan-receipt, which returns the parse for the user to confirm.
-
-        logger.info(f"Attachment uploaded: {attachment.id} for transaction: {transaction_id}")
-        
-        return TransactionAttachmentResponse.model_validate(attachment)
-
-    async def get_attachments(self, transaction_id: str, user_id: str) -> List[TransactionAttachmentResponse]:
-        """Get all attachments for a transaction"""
-        
-        # Verify transaction exists and belongs to user
-        transaction = await self.transaction_repo.get_by_id(transaction_id, user_id)
-        if not transaction:
-            raise HTTPException(status_code=404, detail="Transaction not found")
-        
-        # Query attachments
-        from sqlalchemy import select
-        stmt = select(TransactionAttachment).where(
-            TransactionAttachment.transaction_id == transaction.id
-        ).order_by(TransactionAttachment.created_at.desc(), TransactionAttachment.id.desc())
-        
-        result = await self.db.execute(stmt)
-        attachments = result.scalars().all()
-        
-        return [TransactionAttachmentResponse.model_validate(att) for att in attachments]
-
-    async def delete_attachment(self, attachment_id: str, user_id: str) -> bool:
-        """Delete an attachment"""
-        
-        # Get attachment
-        from sqlalchemy import select, and_
-        try:
-            attachment_uuid = uuid.UUID(str(attachment_id))
-        except ValueError:
-            return False
-        stmt = select(TransactionAttachment).where(
-            and_(
-                TransactionAttachment.id == attachment_uuid,
-                TransactionAttachment.uploaded_by == user_id
-            )
-        )
-        
-        result = await self.db.execute(stmt)
-        attachment = result.scalar_one_or_none()
-        
-        if not attachment:
-            return False
-        
-        # Delete physical file
-        try:
-            file_path = Path(attachment.file_path)
-            if file_path.exists():
-                await aiofiles.os.remove(file_path)
-        except Exception as e:
-            logger.error(f"Failed to delete file {attachment.file_path}: {str(e)}")
-        
-        # Delete database record
-        await self.db.delete(attachment)
-        await self.db.commit()
-        
-        logger.info(f"Attachment deleted: {attachment_id}")
-        
-        return True
 
     async def scan_receipt(self, file: UploadFile, user_id: str) -> Dict[str, Any]:
         """Scan a receipt file and extract transaction data"""

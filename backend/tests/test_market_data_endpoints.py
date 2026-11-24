@@ -79,15 +79,7 @@ class TestBulkPrices:
 
 
 class TestDemoCatalogues:
-    async def test_market_data_filters_by_symbol(self, client):
-        rows = client.get(f"{BASE}/market-data", params={"symbols": "aapl, btc-usd"}).json()
-        assert [r["symbol"] for r in rows] == ["AAPL", "BTC-USD"]
-        assert len(client.get(f"{BASE}/market-data").json()) == 3
 
-    async def test_search_matches_symbol_or_name(self, client):
-        data = client.get(f"{BASE}/search", params={"q": "bitcoin"}).json()["data"]
-        assert [r["symbol"] for r in data] == ["BTC-USD"]
-        assert len(client.get(f"{BASE}/search", params={"q": "o", "limit": 2}).json()["data"]) == 2
 
     @pytest.mark.parametrize("market,expected", [("TW", {"0050"}), ("CRYPTO", {"BTC-USD"}), ("US", {"VOO"})])
     async def test_popular_symbols_by_market(self, client, market, expected):
