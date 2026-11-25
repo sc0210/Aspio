@@ -14,6 +14,7 @@ from ._shared import (  # noqa: F401  explicit re-import for underscore-prefixed
     fetch_historical_data_background,
 )
 from app.utils.datetime_helpers import business_today
+from app.utils.fx_sql import to_twd, twd_rates_for
 
 router = APIRouter()
 
@@ -124,10 +125,12 @@ async def get_risk_metrics(
 
         hhi: Optional[float] = None
         if holdings:
-            total_val = sum(float(h.total_value or 0) for h in holdings)
+            # Weights in TWD: holdings keep their own currency.
+            rates = await twd_rates_for(session, {h.currency for h in holdings})
+            values = [float(to_twd(h.total_value or 0, h.currency, rates)) for h in holdings]
+            total_val = sum(values)
             if total_val > 0:
-                weights = [float(h.total_value or 0) / total_val for h in holdings]
-                hhi = _mc.compute_hhi(weights)
+                hhi = _mc.compute_hhi([v / total_val for v in values])
 
         cagr_raw = float(perf.annualized_return) / 100 if perf.annualized_return is not None else None
         vol_raw = float(perf.volatility) / 100 if perf.volatility is not None else None

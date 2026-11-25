@@ -17,6 +17,7 @@ from ..symbols import canonical_symbol
 from app.utils.datetime_helpers import business_today
 from app.utils.market_sessions import session_closed
 from app.core.exceptions import AspiroException
+from app.utils.fx_sql import to_twd, twd_rates_for
 
 router = APIRouter()
 
@@ -133,8 +134,13 @@ async def get_portfolio_analytics(
         # ⚡ PERFORMANCE FIX: Calculate everything in-memory from single query result
         active_holdings = [h for h in holdings if h.is_active and h.total_value > 0]
 
+        # Holdings keep their own currency: weigh each in TWD, or a US$10,000
+        # position counts as NT$10,000 beside NT$300,000 of Taiwan stocks.
+        rates = await twd_rates_for(session, {h.currency for h in active_holdings})
+        value_twd = {h.id: to_twd(h.total_value, h.currency, rates) for h in active_holdings}
+
         # Calculate allocation
-        total_value = sum(h.total_value for h in active_holdings) or Decimal("1")
+        total_value = sum(value_twd.values()) or Decimal("1")
         colors = ["#3B82F6", "#EF4444", "#F59E0B", "#10B981", "#8B5CF6", "#F97316"]
 
         # By type
@@ -146,19 +152,19 @@ async def get_portfolio_analytics(
             # By type
             h_type = (holding.type or "Unknown").replace("_", " ").title()
             type_dict[h_type] = (
-                type_dict.get(h_type, Decimal("0")) + holding.total_value
+                type_dict.get(h_type, Decimal("0")) + value_twd[holding.id]
             )
 
             # By sector
             sector = holding.sector or "Unknown"
             sector_dict[sector] = (
-                sector_dict.get(sector, Decimal("0")) + holding.total_value
+                sector_dict.get(sector, Decimal("0")) + value_twd[holding.id]
             )
 
             # By region
             region = holding.region or "Unknown"
             region_dict[region] = (
-                region_dict.get(region, Decimal("0")) + holding.total_value
+                region_dict.get(region, Decimal("0")) + value_twd[holding.id]
             )
 
         # Calculate performance from current total gain/loss
