@@ -15,7 +15,7 @@ from datetime import date, datetime, timedelta, timezone
 from decimal import Decimal
 from typing import List, Optional, Dict, Any
 
-from sqlalchemy import select, and_, func
+from sqlalchemy import select, and_
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.dialects.postgresql import insert
 
@@ -243,75 +243,6 @@ class HistoricalPriceRepository:
         )
         result = await self.session.execute(stmt)
         return result.scalar_one_or_none()
-
-    async def get_latest_prices_for_symbols(
-        self, symbols: List[str]
-    ) -> Dict[str, Optional[Dict[str, Any]]]:
-        """
-        Get the most recent price for multiple symbols in a single query.
-
-        Returns a mapping of SYMBOL -> price-dict (or None if not found).
-        Uses a window function (ROW_NUMBER OVER PARTITION BY symbol ORDER BY date DESC)
-        to select the latest row per symbol efficiently.
-        """
-        if not symbols:
-            return {}
-
-        symbols_upper = [s.upper() for s in symbols]
-
-        # Build a subquery that ranks rows per symbol by date desc
-        rn = (
-            func.row_number()
-            .over(
-                partition_by=HistoricalPrice.symbol,
-                order_by=HistoricalPrice.date.desc(),
-            )
-            .label("rn")
-        )
-
-        subq = (
-            select(
-                HistoricalPrice.symbol.label("symbol"),
-                HistoricalPrice.date.label("date"),
-                HistoricalPrice.close.label("close"),
-                HistoricalPrice.open.label("open"),
-                HistoricalPrice.high.label("high"),
-                HistoricalPrice.low.label("low"),
-                HistoricalPrice.volume.label("volume"),
-                HistoricalPrice.currency.label("currency"),
-                HistoricalPrice.source.label("source"),
-                HistoricalPrice.exchange.label("exchange"),
-                rn,
-            ).where(HistoricalPrice.symbol.in_(symbols_upper))
-        ).subquery()
-
-        stmt = select(subq).where(subq.c.rn == 1)
-
-        result = await self.session.execute(stmt)
-        rows = result.fetchall()
-
-        out: Dict[str, Optional[Dict[str, Any]]] = {}
-        for row in rows:
-            sym = row.symbol
-            out[sym] = {
-                "symbol": row.symbol,
-                "date": row.date.isoformat() if row.date else None,
-                "close": float(row.close) if row.close is not None else None,
-                "open": float(row.open) if row.open is not None else None,
-                "high": float(row.high) if row.high is not None else None,
-                "low": float(row.low) if row.low is not None else None,
-                "volume": row.volume,
-                "currency": row.currency,
-                "source": row.source,
-                "exchange": row.exchange,
-            }
-
-        # Ensure all requested symbols have an entry (None if missing)
-        for s in symbols_upper:
-            if s not in out:
-                out[s] = None
-
-        return out
 
     async def bulk_upsert_prices(self, price_data: List[Dict[str, Any]]) -> int:
         """

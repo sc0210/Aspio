@@ -76,42 +76,11 @@ from ..historical_price_service import get_historical_price_service
 from ....utils.exchange_rate_service import ExchangeRateService
 from ..historical_price_repository import HistoricalPriceRepository
 from .. import metrics_calculator as _mc
-import threading as _threading
 from app.utils.datetime_helpers import business_today
 from app.utils.datetime_helpers import utc_now
-from app.utils.ttl_cache import ttl_get, ttl_set
 
 
 logger = logging.getLogger(__name__)
-class _PriceCache:
-    """Thread-safe in-process TTL cache for market prices."""
-
-    def __init__(self):
-        self._store: dict = {}
-        self._lock = _threading.Lock()
-
-    def get(self, key: str):
-        with self._lock:
-            return ttl_get(self._store, key)
-
-    def set(self, key: str, value, ttl: int) -> None:
-        with self._lock:
-            ttl_set(self._store, key, value, ttl)
-
-    def clear(self) -> None:
-        with self._lock:
-            self._store.clear()
-
-
-_price_cache = _PriceCache()
-
-
-def _lp_cache_get(key: str):
-    return _price_cache.get(key)
-
-
-def _lp_cache_set(key: str, value, ttl: int) -> None:
-    _price_cache.set(key, value, ttl)
 
 logger = logging.getLogger(__name__)
 
@@ -650,11 +619,6 @@ __all__ = [
     "ExchangeRateService",
     "HistoricalPriceRepository",
     "_mc",
-    "_threading",
-    "_PriceCache",
-    "_price_cache",
-    "_lp_cache_get",
-    "_lp_cache_set",
     "logger",
     "safe_float",
     "DEMO_PORTFOLIO",

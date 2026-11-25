@@ -35,10 +35,6 @@ from .routers._shared import (  # noqa: F401
     DEMO_REBALANCING_DASHBOARD,
     _get_sort_key,
     fetch_historical_data_background,
-    _PriceCache,
-    _price_cache,
-    _lp_cache_get,
-    _lp_cache_set,
     logger,
 )
 from .routers.allocation_analytics import (  # noqa: F401
