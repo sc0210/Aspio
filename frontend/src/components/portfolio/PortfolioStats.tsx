@@ -317,7 +317,7 @@ export function PortfolioStats({ portfolio, isValueVisible, apiStatus: _apiStatu
                       onClick={onTodayChangeClick}
                       aria-label={t('portfolio:stats.viewDailyTooltip')}
                       aria-describedby={todayFiguresId}
-                      className="absolute inset-0 z-[5] rounded-xl focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-primary-500"
+                      className="absolute inset-0 z-[5] rounded-xl focus-visible:outline-none focus-visible:outline-offset-[-2px] focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-primary-500"
                     />
                   )}
                   {/* View Trend quick link */}
