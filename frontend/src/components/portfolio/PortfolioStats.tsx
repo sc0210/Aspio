@@ -300,16 +300,27 @@ export function PortfolioStats({ portfolio, isValueVisible, apiStatus: _apiStatu
             <div>
               <Tooltip content={t('portfolio:stats.todayChangeTooltip')}>
                 <div
-                  onClick={onTodayChangeClick}
                   className={cn(
                     "w-full relative overflow-hidden rounded-xl p-4 border shadow-sm transition-all duration-300 group min-h-[110px]",
                     onTodayChangeClick ? "cursor-pointer hover:shadow-lg hover:scale-[1.02] active:scale-[0.98]" : "cursor-help hover:shadow-md",
                     tone('bg-gradient-to-br from-rise-50 via-white to-rise-50/30 dark:from-rise-900/10 dark:via-gray-800/50 dark:to-rise-900/5 border-rise-200/50 dark:border-rise-800/30', 'bg-gradient-to-br from-fall-50 via-white to-fall-50/30 dark:from-fall-900/10 dark:via-gray-800/50 dark:to-fall-900/5 border-fall-200/50 dark:border-fall-800/30', 'bg-gradient-to-br from-gray-50 via-white to-gray-50/30 dark:from-gray-800/40 dark:via-gray-800/50 dark:to-gray-800/20 border-gray-200 dark:border-gray-700')
                   )}>
+                  {/* The whole card opens the daily chart. A sibling button over the
+                      card, not the card itself, so the Trend button is not nested
+                      inside another button; it sits above this one (z-10). */}
+                  {onTodayChangeClick && (
+                    <button
+                      type="button"
+                      onClick={onTodayChangeClick}
+                      aria-label={t('portfolio:stats.viewDailyTooltip')}
+                      className="absolute inset-0 z-[5] rounded-xl focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-primary-500"
+                    />
+                  )}
                   {/* View Trend quick link */}
                   {onViewTrendClick && (
                     <button
-                      onClick={(e) => { e.stopPropagation(); onViewTrendClick(); }}
+                      type="button"
+                      onClick={onViewTrendClick}
                       className={cn(
                         'absolute top-2.5 right-2.5 z-10 flex items-center gap-1 px-2 py-1 rounded-lg text-xs sm:text-xs font-semibold',
                         // Always visible: hover-only, touch and keyboard users never found it.
