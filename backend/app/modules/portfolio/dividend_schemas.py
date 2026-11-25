@@ -30,6 +30,8 @@ class DividendCreate(DividendBase):
     """Schema for creating a dividend"""
 
     holding_id: Optional[UUID4] = None
+    # Left out: the linked holding's currency, else TWD (create_dividend).
+    currency: Optional[str] = Field(default=None, min_length=3, max_length=3)
 
 
 class DividendResponse(DividendBase):

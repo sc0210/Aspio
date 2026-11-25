@@ -7,14 +7,14 @@ GET /portfolio/dividends?period= (AnalyticsService.get_dividend_data) is what
 the frontend reads. Net amount defaults to total minus tax withheld.
 """
 
-from datetime import timedelta
+from datetime import datetime, timedelta, timezone
 from decimal import Decimal
 from uuid import uuid4
 
 import pytest
 import pytest_asyncio
 
-from app.modules.portfolio.models import Portfolio
+from app.modules.portfolio.models import HoldingWalletType, Portfolio, PortfolioHolding
 from app.modules.users.models import User, UserRole, UserStatus
 from app.utils.datetime_helpers import business_today
 
@@ -79,6 +79,28 @@ def test_a_payment_with_no_currency_is_twd(authenticated_client, default_portfol
     assert r.json()["data"]["currency"] == "TWD"
     data = authenticated_client.get(BASE, params={"period": "1y"}).json()["data"]
     assert data["total_dividends"] == pytest.approx(1500)
+
+
+@pytest_asyncio.fixture
+async def usd_holding(async_session, test_user, default_portfolio):
+    vt = PortfolioHolding(
+        id=uuid4(), portfolio_id=default_portfolio.id, user_id=test_user.id, symbol="VT", name="VT",
+        type="etf", exchange="NYSEARCA", currency="USD", market="US",
+        wallet_type=HoldingWalletType.PORTFOLIO, quantity=Decimal("10"), average_cost=Decimal("100"),
+        current_price=Decimal("100"), total_cost=Decimal("1000"), total_value=Decimal("1000"),
+        gain_loss=Decimal("0"), gain_loss_percentage=Decimal("0"), is_active=True,
+        purchase_date=datetime(2026, 1, 2, tzinfo=timezone.utc))
+    async_session.add(vt)
+    await async_session.commit()
+    return vt
+
+
+def test_a_payment_with_no_currency_takes_its_holdings(authenticated_client, usd_holding):
+    body = _dividend(symbol="VT", holding_id=str(usd_holding.id), total_amount="10", tax_withheld="0")
+    del body["currency"]
+    r = authenticated_client.post(BASE, json=body)
+    assert r.status_code == 201, r.text
+    assert r.json()["data"]["currency"] == "USD"
 
 
 def test_an_explicit_net_amount_is_kept(authenticated_client, default_portfolio):
