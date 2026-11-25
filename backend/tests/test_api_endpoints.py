@@ -205,7 +205,6 @@ class TestDashboardEndpoints:
         assert "data" in data
         assert isinstance(data["data"], list)
 
-
     def test_dashboard_spending_by_category_demo_mode(self):
         """Test dashboard spending by category endpoint in demo mode."""
         client = TestClient(app)

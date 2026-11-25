@@ -109,13 +109,13 @@ async def test_recent_activity(authenticated_client, world):
     get(authenticated_client, "/recent-activity", limit=5)
 
 
-
 @pytest.mark.parametrize("method,path", [
     ("get", "/overview"), ("get", "/upcoming-events"), ("get", "/monthly-trend"), ("post", "/refresh"),
 ])
-async def test_the_demo_only_routes_are_gone(authenticated_client, world, method, path):
+async def test_the_demo_only_routes_are_gone(authenticated_client, method, path):
     """They served fixtures to everyone and nothing called them."""
-    assert getattr(authenticated_client, method)(f"{BASE}{path}").status_code in (404, 405)
+    assert getattr(authenticated_client, method)(f"{BASE}{path}").status_code == 404
+
 
 async def test_wallet_trends_include_all_three_wallets(authenticated_client, world):
     points = {p["date"][:10]: p for p in get(authenticated_client, "/wallet-trends", period="14d")["dataPoints"]}

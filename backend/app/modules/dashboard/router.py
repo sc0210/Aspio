@@ -1,6 +1,7 @@
-"""
-Simple FastAPI router for dashboard endpoints - works without database
-Provides basic REST API for dashboard data to test API integration.
+"""Dashboard endpoints: stats, trends and category breakdowns.
+
+Signed-in users get figures read from the database; a visitor in demo mode gets
+the demo fixtures.
 """
 
 import math
@@ -30,7 +31,7 @@ DEMO_CARD_BALANCE = demo_fixtures.DEMO_CARD_BALANCE
 DEMO_TOTAL_DEBT = demo_fixtures.DEMO_TOTAL_DEBT
 DEMO_MORTGAGE_SHARE = demo_fixtures.DEMO_MORTGAGE_SHARE
 
-# Mock dashboard data for demo mode only
+
 def build_stats_payload(
     *,
     life_wallet: float,
@@ -230,8 +231,6 @@ def demo_category_breakdown(mock: list, period: str) -> list:
     for c in categories:
         c["percentage"] = round(c["amount"] / total * 100, 2) if total > 0 else 0
     return categories
-
-
 
 
 router = APIRouter(tags=["dashboard"])
@@ -996,5 +995,3 @@ async def get_historical_trends(
                 "message": "Demo mode - use mock data",
             },
         )
-
-
