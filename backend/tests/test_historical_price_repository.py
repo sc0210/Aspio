@@ -234,10 +234,9 @@ def test_expired_cache_entry_is_evicted(monkeypatch):
 def test_entries_nobody_reads_again_are_swept(monkeypatch):
     """A key that is never read again (price history keyed by today's date) is
     dropped by a later write, not kept until the process restarts."""
-    monkeypatch.setattr(ttl_cache, "_last_sweep", {})
     _hist_cache.clear()
     _hcache_set("yesterday", "series", ttl=10)
     now = ttl_cache.time.time()
-    monkeypatch.setattr(ttl_cache.time, "time", lambda: now + 61)
+    monkeypatch.setattr(ttl_cache.time, "time", lambda: now + 11)
     _hcache_set("today", "series", ttl=10)
     assert set(_hist_cache) == {"today"}

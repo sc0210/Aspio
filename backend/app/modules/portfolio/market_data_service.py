@@ -38,6 +38,8 @@ FINLAB_CACHE_NAMESPACE = "finlab_market_data"
 # Structure: key -> {"value": ..., "expires_at": float}
 # ---------------------------------------------------------------------------
 
+from app.utils.ttl_cache import ttl_get, ttl_set  # noqa: E402
+
 _symbol_cache: dict = {}
 
 
@@ -126,7 +128,6 @@ DEFAULT_FINLAB_WINDOW_DAYS = 400
 # also decides which one gets stored.
 from .symbols import _TW_SUFFIXES, to_bare_tw_symbol, to_yahoo_tw_symbol
 from app.utils.datetime_helpers import business_now, business_today
-from app.utils.ttl_cache import ttl_get, ttl_set
 from app.utils.datetime_helpers import utc_now
 
 

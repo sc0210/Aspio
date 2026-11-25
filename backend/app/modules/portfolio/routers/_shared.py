@@ -76,7 +76,6 @@ from ..historical_price_service import get_historical_price_service
 from ....utils.exchange_rate_service import ExchangeRateService
 from ..historical_price_repository import HistoricalPriceRepository
 from .. import metrics_calculator as _mc
-import time as _router_time
 import threading as _threading
 from app.utils.datetime_helpers import business_today
 from app.utils.datetime_helpers import utc_now
@@ -671,7 +670,6 @@ __all__ = [
     "ExchangeRateService",
     "HistoricalPriceRepository",
     "_mc",
-    "_router_time",
     "_threading",
     "_PriceCache",
     "_price_cache",

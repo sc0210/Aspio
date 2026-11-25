@@ -147,7 +147,7 @@ class HistoricalPriceRepository:
         # Check in-memory cache first
         cache_key = f"{HIST_PRICE_CACHE_NAMESPACE}:batch:{','.join(sorted(symbols_upper))}:{start_date}:{end_date}"
         cached = _hcache_get(cache_key)
-        if cached:
+        if cached is not None:
             logger.debug(
                 f"✅ Cache HIT for batch price history ({len(symbols)} symbols)"
             )
