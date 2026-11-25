@@ -305,7 +305,7 @@ describe('refreshPortfolioPrices', () => {
 
 describe('getPortfolioAnalytics', () => {
   it('returns the backend analytics as-is when the call succeeds', async () => {
-    const analytics = { diversificationScore: 80, riskScore: 30 };
+    const analytics = { allocation: { byType: [], bySector: [], byRegion: [] } };
     api.get.mockResolvedValue({ success: true, data: analytics });
 
     await expect(portfolioService.getPortfolioAnalytics()).resolves.toEqual({

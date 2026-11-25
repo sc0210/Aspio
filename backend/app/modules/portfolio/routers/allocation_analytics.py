@@ -18,6 +18,7 @@ from app.utils.datetime_helpers import business_today
 from app.utils.market_sessions import session_closed
 from app.core.exceptions import AspiroException
 from app.utils.fx_sql import to_twd, twd_rates_for
+from ..models import HoldingWalletType
 
 router = APIRouter()
 
@@ -63,8 +64,9 @@ async def get_portfolio_analytics(
     session: AsyncSession = Depends(get_db),
 ):
     """
-    Allocation slices, top and worst performers, and diversification and risk scores.
-    Optimized: Uses single database query + in-memory calculations for speed.
+    The Portfolio wallet's allocation by type, sector and region, weighed in TWD.
+
+    Emergency-wallet holdings are left out, as on the page's holdings list.
     Rate limited: 5 requests/minute per user
     """
     # Demo analytics data
@@ -85,19 +87,6 @@ async def get_portfolio_analytics(
                 for a in _demo_allocation_slices(as_float=True)["by_region"]
             ],
         },
-        # Ranked, not sliced. `[:3]` and `[-2:]` returned the same two rows once
-        # the demo portfolio held two holdings, so "Worst Performers" listed the
-        # same ETFs as "Top Performers".
-        "topPerformers": sorted(
-            DEMO_HOLDINGS, key=lambda h: h["gain_loss_percentage"], reverse=True
-        )[:1],
-        "worstPerformers": sorted(
-            DEMO_HOLDINGS, key=lambda h: h["gain_loss_percentage"]
-        )[:1],
-        "diversificationScore": 75,
-        "riskScore": 45,
-        "sharpeRatio": 1.12,
-        "beta": 0.94,
     }
 
     if not current_user:
@@ -105,15 +94,7 @@ async def get_portfolio_analytics(
 
     # A signed-in user is never shown the demo portfolio: with nothing to
     # analyse they get empty slices, and a failure is an error, not demo data.
-    nothing_yet = {
-        "allocation": {"byType": [], "bySector": [], "byRegion": []},
-        "topPerformers": [],
-        "worstPerformers": [],
-        "diversificationScore": 0,
-        "riskScore": 0,
-        "sharpeRatio": None,
-        "beta": None,
-    }
+    nothing_yet = {"allocation": {"byType": [], "bySector": [], "byRegion": []}}
 
     try:
         # ⚡ PERFORMANCE FIX: Single optimized query instead of 2 separate queries
@@ -125,9 +106,11 @@ async def get_portfolio_analytics(
             logger.warning(f"No default portfolio found for user {current_user.id}")
             return ApiResponse.success_response(data=nothing_yet)
 
-        # Get holdings in a single query
+        # Every lot, Portfolio wallet only: the holdings list shows the same set,
+        # and a lot past the old limit of 100 was silently missing from the slices.
         holdings, _ = await portfolio_service.holding_repo.get_portfolio_holdings(
-            portfolio.id, current_user.id, limit=100
+            portfolio.id, current_user.id, limit=None,
+            wallet_type=HoldingWalletType.PORTFOLIO,
         )
 
         if not holdings:
@@ -172,19 +155,6 @@ async def get_portfolio_analytics(
                 region_dict.get(region, Decimal("0")) + value_twd[holding.id]
             )
 
-        # Sharpe and beta come from /portfolio/risk-metrics, not from here: this
-        # endpoint's own calculation called a function it never imported, so it
-        # always returned null. The keys stay for the frontend's fallback read.
-
-        # Sort holdings for top/worst performers
-        sorted_by_performance = sorted(
-            active_holdings,
-            key=lambda h: (
-                float(h.gain_loss_percentage) if h.gain_loss_percentage else 0
-            ),
-            reverse=True,
-        )
-
         # Build response
         analytics_data = {
             "allocation": {
@@ -216,41 +186,6 @@ async def get_portfolio_analytics(
                     for i, (region, value) in enumerate(region_dict.items())
                 ],
             },
-            "topPerformers": [
-                {
-                    "symbol": h.symbol,
-                    "name": h.name,
-                    "gainLossPercentage": (
-                        float(h.gain_loss_percentage) if h.gain_loss_percentage else 0
-                    ),
-                    "totalValue": float(h.total_value),
-                }
-                for h in sorted_by_performance[:5]
-            ],
-            "worstPerformers": [
-                {
-                    "symbol": h.symbol,
-                    "name": h.name,
-                    "gainLossPercentage": (
-                        float(h.gain_loss_percentage) if h.gain_loss_percentage else 0
-                    ),
-                    "totalValue": float(h.total_value),
-                }
-                for h in sorted_by_performance[-5:]
-            ],
-            "diversificationScore": min(
-                100,
-                len(set(h.type for h in active_holdings)) * 20
-                + len(set(h.sector for h in active_holdings if h.sector)) * 10
-                + len(set(h.market for h in active_holdings)) * 15,
-            ),
-            "riskScore": min(
-                100,
-                max([float((v / total_value) * 100) for v in type_dict.values()] or [0])
-                + 20,
-            ),
-            "sharpeRatio": None,
-            "beta": None,
         }
 
         return ApiResponse.success_response(data=analytics_data)
