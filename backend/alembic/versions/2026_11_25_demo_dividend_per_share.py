@@ -25,21 +25,18 @@ depends_on = None
 _ROWS = (("AAPL", "10.42", "1.04"), ("VOO", "26.78", "6.63"), ("2330", "1656.00", "16.56"))
 
 
-def _set(old_index: int, new_index: int) -> None:
-    for row in _ROWS:
+def upgrade() -> None:
+    for symbol, yearly_total, per_share in _ROWS:
         op.execute(
             f"""
-            UPDATE portfolio_holdings h SET annual_dividend = {row[new_index]}
+            UPDATE portfolio_holdings h SET annual_dividend = {per_share}
             FROM users u
             WHERE u.id = h.user_id AND u.email = 'demo@aspiro.dev'
-              AND h.symbol = '{row[0]}' AND h.annual_dividend = {row[old_index]}
+              AND h.symbol = '{symbol}' AND h.annual_dividend = {yearly_total}
             """
         )
 
 
-def upgrade() -> None:
-    _set(1, 2)
-
-
 def downgrade() -> None:
-    _set(2, 1)
+    # A data fix: reverting it would also break rows the fixed seed wrote.
+    pass

@@ -1491,7 +1491,7 @@ class AnalyticsService:
         ]
 
         return {
-            "total_dividends": round(total_dividends, 2) if total_dividends else None,
+            "total_dividends": round(total_dividends, 2) if dividend_records else None,
             "dividend_yield": round(dividend_yield, 4) if dividend_yield is not None else None,
             "projected_annual": round(projected_annual, 2) if projected_annual is not None else None,
             "yield_on_cost": round(yield_on_cost, 4) if yield_on_cost is not None else None,
