@@ -113,18 +113,6 @@ def test_the_series_never_starts_before_the_demo_account_opened():
     assert demo_value_series(9999)[0]["date"] >= DEMO_SERIES_START
 
 
-@pytest.mark.parametrize("today", [date(2026, 10, 12), date(2026, 10, 14)])  # Mon, Wed
-def test_one_day_return_moves_against_the_previous_trading_day(monkeypatch, today):
-    """On a Monday the 1-day window held only Monday, so oneDay read 0.00% every week."""
-    from app.modules.portfolio.routers import _shared
-
-    monkeypatch.setattr(_shared, "business_today", lambda: today)
-    series = demo_value_series(10, end=today)
-    prev, last = series[-2]["value"], series[-1]["value"]
-    assert prev != last  # the fixture series moves day to day
-    assert _shared.demo_period_return_pct(1) == round((last / prev - 1) * 100, 2)
-
-
 def test_a_caller_cannot_corrupt_the_cached_series():
     demo_value_series(30)[-1]["holdings"]["0050"] = 0
     assert demo_value_series(30)[-1]["holdings"]["0050"] == 1_500_000.0

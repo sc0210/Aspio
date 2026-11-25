@@ -6,14 +6,6 @@ import type { PortfolioViewState } from '@/hooks/portfolio/usePortfolioViewState
 import type { Portfolio } from '@/shared/types';
 
 interface PortfolioAnalyticsData {
-  performance: {
-    oneDay: number;
-    oneWeek: number;
-    oneMonth: number;
-    threeMonths: number;
-    sixMonths: number;
-    oneYear: number;
-  };
   allocation: {
     byType: Array<{ type: string; value: number; percentage: number; color: string }>;
     bySector: Array<{ sector: string; value: number; percentage: number; color: string }>;
@@ -121,14 +113,6 @@ export function PortfolioStatsSection({
           todayGainLoss: portfolioData?.todayGainLoss || 0,
           todayGainLossPercentage: portfolioData?.todayGainLossPercentage || 0,
           holdings: portfolioData?.holdings,
-        }}
-        performance={analyticsData?.performance || {
-          oneDay: 0,
-          oneWeek: 0,
-          oneMonth: 0,
-          threeMonths: 0,
-          sixMonths: 0,
-          oneYear: portfolioData?.totalGainLossPercentage || 0,
         }}
 
         isValueVisible={isValueVisible}

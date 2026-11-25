@@ -32,10 +32,6 @@ interface AnalyticsData {
     baseCurrency?: string;
     exchangeRate?: number;
   };
-  performance: {
-    oneDay: number; oneWeek: number; oneMonth: number;
-    threeMonths: number; sixMonths: number; oneYear: number;
-  };
   diversificationScore: number;
   riskScore: number;
   sharpeRatio?: number | null;

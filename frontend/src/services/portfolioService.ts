@@ -1207,38 +1207,7 @@ class PortfolioService {
       .slice(0, limit);
   }
 
-  calculatePerformanceMetrics(portfolio: Portfolio): {
-    oneDay: number;
-    oneWeek: number;
-    oneMonth: number;
-    threeMonths: number;
-    sixMonths: number;
-    oneYear: number;
-  } {
-    // Calculate estimated performance based on current total gain/loss
-    // This distributes the total gain/loss across time periods
-    // More accurate than random data, but still an estimation without historical prices
-    const basePerformance = portfolio.totalGainLossPercentage;
-
-    return {
-      oneDay: basePerformance * 0.003,     // ~0.3% of yearly performance
-      oneWeek: basePerformance * 0.02,     // ~2% of yearly performance
-      oneMonth: basePerformance * 0.08,    // ~8% of yearly performance
-      threeMonths: basePerformance * 0.25, // 25% of yearly performance
-      sixMonths: basePerformance * 0.50,   // 50% of yearly performance
-      oneYear: basePerformance,            // Total current performance
-    };
-  }
-
   async getPortfolioAnalytics(): Promise<ApiResponse<{
-    performance: {
-      oneDay: number;
-      oneWeek: number;
-      oneMonth: number;
-      threeMonths: number;
-      sixMonths: number;
-      oneYear: number;
-    };
     allocation: {
       byType: Array<{ type: string; value: number; percentage: number; color: string }>;
       bySector: Array<{ sector: string; value: number; percentage: number; color: string }>;
@@ -1275,7 +1244,6 @@ class PortfolioService {
       }
 
       const portfolio = portfolioResponse.data;
-      const performance = this.calculatePerformanceMetrics(portfolio);
       const allocation = this.getMarketAllocation(portfolio);
       const topPerformers = this.getTopPerformers(portfolio);
       const worstPerformers = this.getWorstPerformers(portfolio);
@@ -1293,7 +1261,6 @@ class PortfolioService {
       return {
         success: true,
         data: {
-          performance,
           allocation: {
             byType: Object.entries(allocation).map(([market, data], index) => ({
               type: market,

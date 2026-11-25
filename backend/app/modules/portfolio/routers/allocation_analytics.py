@@ -63,23 +63,14 @@ async def get_portfolio_analytics(
     session: AsyncSession = Depends(get_db),
 ):
     """
-    Get comprehensive portfolio analytics including performance and allocation data.
+    Allocation slices, top and worst performers, and diversification and risk scores.
     Optimized: Uses single database query + in-memory calculations for speed.
     Rate limited: 5 requests/minute per user
     """
     # Demo analytics data
     demo_analytics = {
-        # Period returns off the same value walk /daily-performance serves, and
-        # allocations off DEMO_HOLDINGS. Both described the retired
-        # AAPL/GOOGL/BTC account: an 11.1% year and a negative cash slice.
-        "performance": {
-            "oneDay": demo_period_return_pct(1),
-            "oneWeek": demo_period_return_pct(7),
-            "oneMonth": demo_period_return_pct(30),
-            "threeMonths": demo_period_return_pct(91),
-            "sixMonths": demo_period_return_pct(182),
-            "oneYear": demo_period_return_pct(365),
-        },
+        # Allocations off DEMO_HOLDINGS (they described the retired AAPL/GOOGL/BTC
+        # account once, with a negative cash slice).
         "allocation": {
             "byType": [
                 {"type": a["type"], "percentage": a["percentage"], "value": a["value"], "color": a["color"]}
@@ -112,6 +103,18 @@ async def get_portfolio_analytics(
     if not current_user:
         return ApiResponse.success_response(data=demo_analytics)
 
+    # A signed-in user is never shown the demo portfolio: with nothing to
+    # analyse they get empty slices, and a failure is an error, not demo data.
+    nothing_yet = {
+        "allocation": {"byType": [], "bySector": [], "byRegion": []},
+        "topPerformers": [],
+        "worstPerformers": [],
+        "diversificationScore": 0,
+        "riskScore": 0,
+        "sharpeRatio": None,
+        "beta": None,
+    }
+
     try:
         # ⚡ PERFORMANCE FIX: Single optimized query instead of 2 separate queries
         portfolio_service = get_portfolio_service(session)
@@ -120,7 +123,7 @@ async def get_portfolio_analytics(
         portfolio = await portfolio_service.get_default_portfolio(current_user.id)
         if not portfolio:
             logger.warning(f"No default portfolio found for user {current_user.id}")
-            return ApiResponse.success_response(data=demo_analytics)
+            return ApiResponse.success_response(data=nothing_yet)
 
         # Get holdings in a single query
         holdings, _ = await portfolio_service.holding_repo.get_portfolio_holdings(
@@ -129,7 +132,7 @@ async def get_portfolio_analytics(
 
         if not holdings:
             logger.info(f"No holdings found for portfolio {portfolio.id}")
-            return ApiResponse.success_response(data=demo_analytics)
+            return ApiResponse.success_response(data=nothing_yet)
 
         # ⚡ PERFORMANCE FIX: Calculate everything in-memory from single query result
         active_holdings = [h for h in holdings if h.is_active and h.total_value > 0]
@@ -167,13 +170,6 @@ async def get_portfolio_analytics(
                 region_dict.get(region, Decimal("0")) + value_twd[holding.id]
             )
 
-        # Calculate performance from current total gain/loss
-        total_gain_loss_pct = (
-            float(portfolio.total_gain_loss_percentage)
-            if portfolio.total_gain_loss_percentage
-            else 0
-        )
-
         # Sharpe and beta come from /portfolio/risk-metrics, not from here: this
         # endpoint's own calculation called a function it never imported, so it
         # always returned null. The keys stay for the frontend's fallback read.
@@ -189,14 +185,6 @@ async def get_portfolio_analytics(
 
         # Build response
         analytics_data = {
-            "performance": {
-                "oneDay": total_gain_loss_pct * 0.003,
-                "oneWeek": total_gain_loss_pct * 0.02,
-                "oneMonth": total_gain_loss_pct * 0.08,
-                "threeMonths": total_gain_loss_pct * 0.25,
-                "sixMonths": total_gain_loss_pct * 0.50,
-                "oneYear": total_gain_loss_pct,
-            },
             "allocation": {
                 "byType": [
                     {
@@ -267,8 +255,7 @@ async def get_portfolio_analytics(
 
     except Exception as e:
         logger.error(f"Error getting portfolio analytics: {str(e)}", exc_info=True)
-        # Return demo data on error
-        return ApiResponse.success_response(data=demo_analytics)
+        raise HTTPException(status_code=500, detail="Failed to load portfolio analytics")
 
 
 @router.get(

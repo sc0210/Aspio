@@ -350,24 +350,6 @@ def demo_value_series(
     ]
 
 
-def demo_period_return_pct(days: int) -> float:
-    """Percent change of the demo portfolio over the last ``days`` days.
-
-    The base is the value as of the window's start: the last weekday on or
-    before it, not the first point inside it. On a Monday a 1-day window holds
-    only Monday, so the inside-the-window base read 0.00% every week.
-    """
-    end = _last_weekday(business_today())
-    window_start = end - timedelta(days=max(days, 0))
-    series = _demo_full_series(end)
-    base = next((p for p in reversed(series) if p["date"] <= window_start), None)
-    if base is None and series:
-        base = series[0]  # window reaches back past the demo's first point
-    if base is None or not base["value"] or base is series[-1]:
-        return 0.0
-    return round((series[-1]["value"] / base["value"] - 1) * 100, 2)
-
-
 # Demo rebalancing dashboard data
 # Rebalancing, described against the same two holdings the portfolio serves.
 #
@@ -604,8 +586,6 @@ async def fetch_historical_data_background(symbol: str, market: str, days: int =
         logger.error(f"Background: Critical error for {symbol}: {str(e)}")
 
 
-
-
 __all__ = [
     "asyncio",
     "logging",
@@ -687,7 +667,6 @@ __all__ = [
     "DEMO_HOLDINGS",
     "DEMO_SERIES_START",
     "demo_value_series",
-    "demo_period_return_pct",
     "DEMO_REBALANCING_DASHBOARD",
     "_get_sort_key",
     "fetch_historical_data_background",
