@@ -19,16 +19,6 @@ jest.mock('@/lib/api-client', () => ({
   },
 }));
 
-jest.mock('@/services/marketDataService', () => ({
-  marketDataService: {
-    getMultipleMarketData: jest.fn().mockResolvedValue({ success: false, data: [] }),
-  },
-}));
-
-jest.mock('@/services/priceService', () => ({
-  priceService: { getLatestPricesBulk: jest.fn() },
-}));
-
 jest.mock('next-auth/react', () => ({
   getSession: jest.fn().mockResolvedValue(null),
 }));

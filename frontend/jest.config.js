@@ -40,10 +40,10 @@ const customJestConfig = {
     },
     // Critical paths; both now clear 60 on every metric — keep them there.
     './src/services/': {
-      statements: 77,
-      branches: 67,
-      functions: 83,
-      lines: 78,
+      statements: 83,
+      branches: 74,
+      functions: 88,
+      lines: 84,
     },
     './src/hooks/': {
       statements: 80,
