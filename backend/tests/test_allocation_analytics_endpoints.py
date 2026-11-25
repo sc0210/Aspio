@@ -61,9 +61,20 @@ class TestAnalytics:
         data = client.get(f"{BASE}/analytics").json()["data"]
         assert data["diversificationScore"] == 75
 
-    async def test_user_without_portfolio_gets_demo(self, authenticated_client):
+    async def test_user_without_portfolio_gets_empty_slices_not_the_demo(self, authenticated_client):
         data = authenticated_client.get(f"{BASE}/analytics").json()["data"]
-        assert data["diversificationScore"] == 75
+        assert data["allocation"] == {"byType": [], "bySector": [], "byRegion": []}
+        assert data["topPerformers"] == [] and data["diversificationScore"] == 0
+
+    async def test_a_failure_is_an_error_not_the_demo_portfolio(
+        self, authenticated_client, holdings, monkeypatch
+    ):
+        monkeypatch.setattr(
+            allocation_analytics, "twd_rates_for", AsyncMock(side_effect=RuntimeError("fx down"))
+        )
+        response = authenticated_client.get(f"{BASE}/analytics")
+        assert response.status_code == 500
+        assert "diversificationScore" not in response.text
 
     async def test_allocation_and_scores_from_holdings(self, authenticated_client, holdings):
         data = authenticated_client.get(f"{BASE}/analytics").json()["data"]

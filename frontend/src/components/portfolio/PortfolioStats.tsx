@@ -17,7 +17,6 @@ import { areRatesLive, formatCurrency, getUnconvertedCurrencies } from '@/utils/
 import { lastSessionWeekday } from '@/utils/marketStatus';
 import type { PortfolioHolding } from '@/shared/types';
 import { useSidebar } from '@/contexts/SidebarContext';
-import { Card } from '@/components/ui/Card';
 
 interface PortfolioStatsProps {
   portfolio: {
@@ -32,17 +31,8 @@ interface PortfolioStatsProps {
     /** For the day-change label: "today" only when it is today's session. */
     holdings?: PortfolioHolding[];
   };
-  performance: {
-    oneDay: number;
-    oneWeek: number;
-    oneMonth: number;
-    threeMonths: number;
-    sixMonths: number;
-    oneYear: number;
-  };
   isValueVisible: boolean;
   apiStatus?: 'connected' | 'disconnected' | 'loading';
-  showPerformancePeriods?: boolean;
   onTodayChangeClick?: () => void;
   onViewTrendClick?: () => void;
   isLoading?: boolean;
@@ -145,7 +135,7 @@ const toneOf = (d: Direction) => (up: string, down: string, flat: string) =>
 /** A percentage line takes its own sign as shown (2 dp), not its money figure's. */
 const pctTone = (pct: number) => toneOf(direction(asShown(pct, 2)));
 
-export function PortfolioStats({ portfolio, performance, isValueVisible, apiStatus: _apiStatus = 'connected', showPerformancePeriods = false, onTodayChangeClick, onViewTrendClick, isLoading = false, riskMetrics, dividendIncome, realizedPnl }: PortfolioStatsProps) {
+export function PortfolioStats({ portfolio, isValueVisible, apiStatus: _apiStatus = 'connected', onTodayChangeClick, onViewTrendClick, isLoading = false, riskMetrics, dividendIncome, realizedPnl }: PortfolioStatsProps) {
   // Get sidebar state to determine if we should show compact numbers
   const { sidebarCollapsed: _sidebarCollapsed } = useSidebar();
   const { t, i18n } = useTranslation(['portfolio']);
@@ -178,8 +168,7 @@ export function PortfolioStats({ portfolio, performance, isValueVisible, apiStat
   const hasAnalysis =
     hasRiskMetrics || hasDrawdown || hasVolatility || hasAlpha || hasDividendIncome || hasRealizedPnl;
 
-  // Calculate today's P/L (use performance.oneDay if todayGainLoss not provided)
-  const todayChange = portfolio.todayGainLoss ?? (portfolio.totalValue * (performance.oneDay / 100));
+  const todayChange = portfolio.todayGainLoss ?? 0;
   const todayShown = asShown(todayChange);
   const todayDir = direction(todayShown);
   const tone = toneOf(todayDir);
@@ -189,42 +178,8 @@ export function PortfolioStats({ portfolio, performance, isValueVisible, apiStat
   const realizedShown = asShown(realizedPnl?.realizedGainLoss ?? 0);
   const realizedDir = direction(realizedShown);
   const realizedTone = toneOf(realizedDir);
-  const todayChangePercent = portfolio.todayGainLossPercentage ?? performance.oneDay;
-  const _hasTodayData = todayChange !== 0 || todayChangePercent !== 0;
+  const todayChangePercent = portfolio.todayGainLossPercentage ?? 0;
 
-  // Time period performance metrics - Calculate actual dollar values
-  const performancePeriods = [
-    {
-      label: '7D',
-      percentValue: performance.oneWeek,
-      dollarValue: (portfolio.totalValue * performance.oneWeek) / 100,
-      key: 'oneWeek'
-    },
-    {
-      label: '30D',
-      percentValue: performance.oneMonth,
-      dollarValue: (portfolio.totalValue * performance.oneMonth) / 100,
-      key: 'oneMonth'
-    },
-    {
-      label: '90D',
-      percentValue: performance.threeMonths,
-      dollarValue: (portfolio.totalValue * performance.threeMonths) / 100,
-      key: 'threeMonths'
-    },
-    {
-      label: '6M',
-      percentValue: performance.sixMonths,
-      dollarValue: (portfolio.totalValue * performance.sixMonths) / 100,
-      key: 'sixMonths'
-    },
-    {
-      label: '1Y',
-      percentValue: performance.oneYear,
-      dollarValue: (portfolio.totalValue * performance.oneYear) / 100,
-      key: 'oneYear'
-    }
-  ];
 
   return (
     <div className="space-y-3 relative">
@@ -238,40 +193,6 @@ export function PortfolioStats({ portfolio, performance, isValueVisible, apiStat
         </div>
       )}
 
-      {/* Time Period Performance - Only show when prop is true */}
-      {showPerformancePeriods && (
-        <Card padding="md" radius="xl" className="hover:shadow-md transition-all duration-200">
-          <h4 className="text-sm font-semibold text-gray-700 dark:text-gray-300 mb-4">
-            Performance by Period
-          </h4>
-          <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-5 gap-2 sm:gap-3">
-            {performancePeriods.map((period) => (
-              <Tooltip key={period.key} content={formatPercentage(period.percentValue)}>
-                <div className="text-center p-3 rounded-lg bg-gray-50 dark:bg-gray-700/50 hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors cursor-help">
-                  <p className="text-xs font-medium text-gray-500 dark:text-gray-400 mb-2">
-                    {period.label}
-                  </p>
-                  <p
-                    className={cn(
-                      "text-base font-bold tabular-nums transition-all duration-200",
-                      toneOf(direction(asShown(period.dollarValue, 2)))('text-rise-700 dark:text-rise-400', 'text-fall-700 dark:text-fall-400', 'text-gray-500 dark:text-gray-400')
-                    )}
-                  >
-                    {isValueVisible ? (
-                      <>
-                        {asShown(period.dollarValue, 2) > 0 ? '+' : ''}
-                        {formatCurrency(asShown(period.dollarValue, 2), portfolio.currency)}
-                      </>
-                    ) : (
-                      '•••••'
-                    )}
-                  </p>
-                </div>
-              </Tooltip>
-            ))}
-          </div>
-        </Card>
-      )}
 
       {/* The three that are read every visit. */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">

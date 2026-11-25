@@ -313,39 +313,18 @@ describe('getPortfolioAnalytics', () => {
     });
   });
 
-  it('computes allocation locally when the backend declines', async () => {
-    const holding = (id: string, sector: string, market: string, value: number) => ({
-      id, symbol: id, name: id, type: 'stock', quantity: 1, average_cost: value,
-      current_price: value, total_value: value, total_cost: value, currency: 'TWD',
-      market, sector, region: market === 'TW' ? 'Asia Pacific' : 'North America',
-    });
-    api.get.mockImplementation(async (url: string) => {
-      if (url === '/portfolio/analytics') return { success: false };
-      return {
-        success: true,
-        data: {
-          id: 'p', name: 'P', currency: 'TWD', total_value: 400, total_cost: 400,
-          holdings: [holding('A', 'Tech', 'TW', 300), holding('B', 'Bonds', 'US', 100)],
-        },
-      };
-    });
+  // No local estimate: a rejection lets the query keep its last good data and
+  // show an error, where a guessed allocation or a quiet null read as real.
+  it('rejects when the backend declines', async () => {
+    api.get.mockResolvedValue({ success: false, message: 'nope' });
 
-    const result = await portfolioService.getPortfolioAnalytics();
-
-    expect(result.success).toBe(true);
-    const bySector = Object.fromEntries(result.data!.allocation.bySector.map((s) => [s.sector, s.percentage]));
-    expect(bySector).toEqual({ Tech: 75, Bonds: 25 });
-    const byRegion = Object.fromEntries(result.data!.allocation.byRegion.map((r) => [r.region, r.percentage]));
-    expect(byRegion).toEqual({ 'Asia Pacific': 75, 'North America': 25 });
-    expect(result.data!.topPerformers.length).toBe(2);
-    expect(result.data!.diversificationScore).toBeGreaterThan(0);
-    expect(result.data!.diversificationScore).toBeLessThanOrEqual(100);
+    await expect(portfolioService.getPortfolioAnalytics()).rejects.toThrow('nope');
   });
 
-  it('reports failure instead of throwing when nothing is reachable', async () => {
+  it('rejects when nothing is reachable', async () => {
     api.get.mockRejectedValue(new Error('down'));
 
-    await expect(portfolioService.getPortfolioAnalytics()).resolves.toMatchObject({ success: false });
+    await expect(portfolioService.getPortfolioAnalytics()).rejects.toThrow('down');
   });
 });
 

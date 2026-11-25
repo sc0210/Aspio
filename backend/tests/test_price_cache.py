@@ -29,6 +29,15 @@ class TestPriceCache:
         time.sleep(0.01)
         assert self.cache.get("AAPL") is None
 
+    def test_a_write_drops_other_expired_entries_and_keeps_live_ones(self):
+        """A key nobody reads again is dropped by the next write, not kept for good."""
+        self.cache.set("GONE", 1.0, ttl=0)
+        self.cache.set("LIVE", 2.0, ttl=60)
+        time.sleep(0.01)
+        self.cache.set("NEW", 3.0, ttl=60)
+        assert set(self.cache._store) == {"LIVE", "NEW"}
+        assert self.cache.get("LIVE") == 2.0
+
     def test_expired_entry_is_evicted(self):
         self.cache.set("AAPL", 180.5, ttl=0)
         time.sleep(0.01)

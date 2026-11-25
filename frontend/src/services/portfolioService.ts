@@ -1168,77 +1168,7 @@ class PortfolioService {
     };
   }
 
-  getMarketAllocation(portfolio: Portfolio): Record<MarketType, { value: number; percentage: number; count: number }> {
-    const allocation: Record<string, { value: number; percentage: number; count: number }> = {};
-
-    // Calculate total in base currency (TWD) for accurate percentages
-    let totalInBaseCurrency = 0;
-
-    portfolio.holdings.forEach(holding => {
-      const mkt = holding.market ?? 'US';
-      if (!allocation[mkt]) {
-        allocation[mkt] = { value: 0, percentage: 0, count: 0 };
-      }
-      const valueInBaseCurrency = toTWD(holding.totalValue, holding.currency || 'TWD');
-      allocation[mkt].value += valueInBaseCurrency;
-      allocation[mkt].count += 1;
-      totalInBaseCurrency += valueInBaseCurrency;
-    });
-
-    // Calculate percentages based on base currency total
-    Object.keys(allocation).forEach(market => {
-      allocation[market].percentage = totalInBaseCurrency > 0
-        ? (allocation[market].value / totalInBaseCurrency) * 100
-        : 0;
-    });
-
-    return allocation as Record<MarketType, { value: number; percentage: number; count: number }>;
-  }
-
-  getTopPerformers(portfolio: Portfolio, limit: number = 5): PortfolioHolding[] {
-    return [...portfolio.holdings]
-      .sort((a, b) => b.gainLossPercentage - a.gainLossPercentage)
-      .slice(0, limit);
-  }
-
-  getWorstPerformers(portfolio: Portfolio, limit: number = 5): PortfolioHolding[] {
-    return [...portfolio.holdings]
-      .sort((a, b) => a.gainLossPercentage - b.gainLossPercentage)
-      .slice(0, limit);
-  }
-
-  calculatePerformanceMetrics(portfolio: Portfolio): {
-    oneDay: number;
-    oneWeek: number;
-    oneMonth: number;
-    threeMonths: number;
-    sixMonths: number;
-    oneYear: number;
-  } {
-    // Calculate estimated performance based on current total gain/loss
-    // This distributes the total gain/loss across time periods
-    // More accurate than random data, but still an estimation without historical prices
-    const basePerformance = portfolio.totalGainLossPercentage;
-
-    return {
-      oneDay: basePerformance * 0.003,     // ~0.3% of yearly performance
-      oneWeek: basePerformance * 0.02,     // ~2% of yearly performance
-      oneMonth: basePerformance * 0.08,    // ~8% of yearly performance
-      threeMonths: basePerformance * 0.25, // 25% of yearly performance
-      sixMonths: basePerformance * 0.50,   // 50% of yearly performance
-      oneYear: basePerformance,            // Total current performance
-    };
-  }
-
   async getPortfolioAnalytics(): Promise<ApiResponse<{
-    performance: {
-      oneDay: number;
-      oneWeek: number;
-      oneMonth: number;
-      threeMonths: number;
-      sixMonths: number;
-      oneYear: number;
-    };
     allocation: {
       byType: Array<{ type: string; value: number; percentage: number; color: string }>;
       bySector: Array<{ sector: string; value: number; percentage: number; color: string }>;
@@ -1253,106 +1183,18 @@ class PortfolioService {
     sharpeRatio?: number | null;
     beta?: number | null;
   }>> {
-    try {
-      // Try to fetch analytics from backend API
-      const response = await apiClient.get('/portfolio/analytics');
-
-      if (response && response.success !== false) {
-        log.debug('Portfolio analytics fetched from backend', response, 'PortfolioService');
-        type AnalyticsData = NonNullable<Awaited<ReturnType<typeof this.getPortfolioAnalytics>>['data']>;
-        return {
-          success: true,
-          data: (response.data || response) as AnalyticsData,
-          message: 'Analytics retrieved successfully'
-        };
-      }
-
-      // Fallback: calculate locally if backend fails
-      log.debug('Backend analytics failed, calculating locally', undefined, 'PortfolioService');
-      const portfolioResponse = await this.getPortfolio();
-      if (!portfolioResponse.success || !portfolioResponse.data) {
-        throw new Error('Failed to get portfolio data');
-      }
-
-      const portfolio = portfolioResponse.data;
-      const performance = this.calculatePerformanceMetrics(portfolio);
-      const allocation = this.getMarketAllocation(portfolio);
-      const topPerformers = this.getTopPerformers(portfolio);
-      const worstPerformers = this.getWorstPerformers(portfolio);
-
-      // Calculate diversification score (0-100)
-      const uniqueTypes = new Set(portfolio.holdings.map(h => h.type)).size;
-      const uniqueSectors = new Set(portfolio.holdings.map(h => h.sector)).size;
-      const uniqueMarkets = new Set(portfolio.holdings.map(h => h.market)).size;
-      const diversificationScore = Math.min(100, (uniqueTypes * 20 + uniqueSectors * 15 + uniqueMarkets * 25));
-
-      // Calculate risk score based on volatility and concentration (0-100)
-      const marketConcentration = Math.max(...Object.values(allocation).map(a => a.percentage));
-      const riskScore = Math.min(100, marketConcentration + 20);
-
-      return {
-        success: true,
-        data: {
-          performance,
-          allocation: {
-            byType: Object.entries(allocation).map(([market, data], index) => ({
-              type: market,
-              value: data.value,
-              percentage: data.percentage,
-              color: ['#3B82F6', '#EF4444', '#F59E0B', '#10B981', '#8B5CF6', '#F97316'][index % 6]
-            })),
-            bySector: Object.entries(portfolio.holdings.reduce((acc, holding) => {
-              const sector = holding.sector || 'Unknown';
-              if (!acc[sector]) acc[sector] = { value: 0, count: 0 };
-              const valueInBaseCurrency = toTWD(holding.totalValue, holding.currency || 'TWD');
-              acc[sector].value += valueInBaseCurrency;
-              acc[sector].count += 1;
-              return acc;
-            }, {} as Record<string, { value: number; count: number }>)).map(([sector, data], index) => {
-              // Calculate total in base currency for accurate percentages
-              const totalInBaseCurrency = portfolio.holdings.reduce((sum, h) =>
-                sum + toTWD(h.totalValue, h.currency || 'TWD'), 0);
-              return {
-                sector,
-                value: data.value,
-                percentage: totalInBaseCurrency > 0 ? (data.value / totalInBaseCurrency) * 100 : 0,
-                color: ['#3B82F6', '#EF4444', '#F59E0B', '#10B981', '#8B5CF6', '#F97316'][index % 6]
-              };
-            }),
-            byRegion: Object.entries(portfolio.holdings.reduce((acc, holding) => {
-              const region = holding.region || 'Unknown';
-              if (!acc[region]) acc[region] = { value: 0, count: 0 };
-              const valueInBaseCurrency = toTWD(holding.totalValue, holding.currency || 'TWD');
-              acc[region].value += valueInBaseCurrency;
-              acc[region].count += 1;
-              return acc;
-            }, {} as Record<string, { value: number; count: number }>)).map(([region, data], index) => {
-              // Calculate total in base currency for accurate percentages
-              const totalInBaseCurrency = portfolio.holdings.reduce((sum, h) =>
-                sum + toTWD(h.totalValue, h.currency || 'TWD'), 0);
-              return {
-                region,
-                value: data.value,
-                percentage: totalInBaseCurrency > 0 ? (data.value / totalInBaseCurrency) * 100 : 0,
-                color: ['#3B82F6', '#EF4444', '#F59E0B', '#10B981', '#8B5CF6', '#F97316'][index % 6]
-              };
-            })
-          },
-          topPerformers,
-          worstPerformers,
-          diversificationScore,
-          riskScore
-        }
-      };
-    } catch (error) {
-      log.error('Portfolio analytics error', error, 'PortfolioService');
-
-      // Last resort: return empty analytics
-      return {
-        success: false,
-        message: 'Failed to calculate portfolio analytics'
-      };
+    // Throws on failure, so the query keeps its last good data and reports the
+    // error. There is no local estimate: a wrong allocation is worse than none.
+    const response = await apiClient.get('/portfolio/analytics');
+    if (!response || response.success === false) {
+      throw new Error(response?.message || 'Failed to load portfolio analytics');
     }
+    type AnalyticsData = NonNullable<Awaited<ReturnType<typeof this.getPortfolioAnalytics>>['data']>;
+    return {
+      success: true,
+      data: (response.data || response) as AnalyticsData,
+      message: 'Analytics retrieved successfully'
+    };
   }
 
   async getHolding(holdingId: string): Promise<ApiResponse<PortfolioHolding>> {
