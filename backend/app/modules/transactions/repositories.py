@@ -1835,7 +1835,9 @@ class RecurringTransactionRepository:
             )
         )
 
-        result = await self.db.execute(stmt)
+        # "fetch" syncs only the rows the database matched: a refused claim
+        # (0 rows) must not move an in-memory rule the database never moved.
+        result = await self.db.execute(stmt.execution_options(synchronize_session="fetch"))
         await self.db.commit()
         return result.rowcount != 0
 
@@ -1860,19 +1862,20 @@ class RecurringTransactionRepository:
         return list((await self.db.execute(stmt)).scalars().all())
 
     async def undo_advance(self, recurring_id, occurrence: date, advanced_to: date) -> None:
-        """Put a rule back on `occurrence` after a claimed occurrence failed to post.
+        """Take back a claimed occurrence that failed to post.
 
-        Only while it still sits where the claim moved it (`advanced_to`): an
-        edit made in between is kept rather than overwritten.
+        The count always drops by the one the claim added. The date goes back to
+        `occurrence` only while the rule still sits where the claim moved it
+        (`advanced_to`): an edit made in between is kept rather than overwritten.
         """
         await self.db.execute(
             update(RecurringTransaction)
-            .where(
-                RecurringTransaction.id == recurring_id,
-                RecurringTransaction.next_occurrence == advanced_to,
-            )
+            .where(RecurringTransaction.id == recurring_id)
             .values(
-                next_occurrence=occurrence,
+                next_occurrence=case(
+                    (RecurringTransaction.next_occurrence == advanced_to, occurrence),
+                    else_=RecurringTransaction.next_occurrence,
+                ),
                 occurrence_count=case(
                     (RecurringTransaction.occurrence_count > 0, RecurringTransaction.occurrence_count - 1),
                     else_=0,

@@ -355,4 +355,5 @@ async def test_putting_a_bill_back_keeps_an_edit_made_meanwhile(world, monkeypat
         await world["svc"].confirm_reminder(rule_id, world["user_id"], date(2026, 11, 5))
     repo.db.expire_all()
     rule = await repo.get_by_id(rule_id, world["user_id"])
-    assert rule.next_occurrence == date(2026, 12, 20)
+    # The edit stays, and the count still drops: nothing was recorded.
+    assert (rule.next_occurrence, rule.occurrence_count) == (date(2026, 12, 20), 0)
