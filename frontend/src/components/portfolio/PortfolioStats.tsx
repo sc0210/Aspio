@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useId, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import {
   ArrowTrendingUpIcon,
@@ -76,6 +76,8 @@ function Tooltip({ content, children }: { content: string; children: React.React
       <div
         onMouseEnter={() => setIsVisible(true)}
         onMouseLeave={() => setIsVisible(false)}
+        onFocus={() => setIsVisible(true)}
+        onBlur={() => setIsVisible(false)}
       >
         {children}
       </div>
@@ -139,6 +141,7 @@ export function PortfolioStats({ portfolio, isValueVisible, apiStatus: _apiStatu
   // Get sidebar state to determine if we should show compact numbers
   const { sidebarCollapsed: _sidebarCollapsed } = useSidebar();
   const { t, i18n } = useTranslation(['portfolio']);
+  const todayFiguresId = useId();
   // On a Saturday the move shown is Friday's: say so instead of "today".
   const lastSessionDay = lastSessionWeekday(portfolio.holdings ?? [], i18n?.language || 'en');
   const conversionNote = useConversionNote(t);
@@ -313,6 +316,7 @@ export function PortfolioStats({ portfolio, isValueVisible, apiStatus: _apiStatu
                       type="button"
                       onClick={onTodayChangeClick}
                       aria-label={t('portfolio:stats.viewDailyTooltip')}
+                      aria-describedby={todayFiguresId}
                       className="absolute inset-0 z-[5] rounded-xl focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-primary-500"
                     />
                   )}
@@ -348,7 +352,7 @@ export function PortfolioStats({ portfolio, isValueVisible, apiStatus: _apiStatu
                         tone('text-rise-700 dark:text-rise-400', 'text-fall-700 dark:text-fall-400', 'text-gray-500 dark:text-gray-400')
                       )} />
                     </div>
-                    <div className="flex-1 min-w-0">
+                    <div id={todayFiguresId} className="flex-1 min-w-0">
                       {/* Only the label line clears the always-visible Trend pill (top-right). */}
                       <p className={cn(
                         "text-xs md:text-sm font-semibold mb-1 uppercase tracking-wider",

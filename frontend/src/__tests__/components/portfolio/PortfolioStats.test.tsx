@@ -9,7 +9,7 @@
  */
 
 import React from 'react';
-import { render, screen, within } from '@testing-library/react';
+import { act, render, screen, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import '@testing-library/jest-dom';
 import i18next from 'i18next';
@@ -192,7 +192,11 @@ describe('PortfolioStats', () => {
         show({ onTodayChangeClick, onViewTrendClick });
 
         const daily = screen.getByRole('button', { name: 'View daily change chart' });
-        daily.focus();
+        // Its figures are read with it, not only the generic label.
+        expect(daily).toHaveAccessibleDescription(/1,200/);
+        act(() => daily.focus());
+        // The explanation opens for keyboard focus as it does for a hover.
+        expect(screen.getByText(en.stats.todayChangeTooltip).className).toContain('opacity-100');
         await user.keyboard('{Enter}');
         expect(onTodayChangeClick).toHaveBeenCalledTimes(1);
 
