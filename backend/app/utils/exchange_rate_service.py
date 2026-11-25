@@ -12,7 +12,6 @@ unchanged and continues to provide persistence.
 import asyncio
 import contextlib
 import logging
-import time
 from datetime import datetime, timezone
 from decimal import ROUND_HALF_UP, Decimal
 from typing import Dict, Optional
@@ -21,6 +20,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import and_, or_, select
 
 from app.core.config import settings
+from app.utils.ttl_cache import ttl_get, ttl_set
 
 logger = logging.getLogger(__name__)
 
@@ -36,16 +36,11 @@ _ESTIMATE_TTL = 600
 
 
 def _mem_get(key: str) -> Optional[Decimal]:
-    entry = _cache.get(key)
-    if entry and time.time() < entry["expires_at"]:
-        return entry["value"]
-    if key in _cache:
-        del _cache[key]
-    return None
+    return ttl_get(_cache, key)
 
 
 def _mem_set(key: str, value: Decimal, ttl: int = _MEM_CACHE_TTL) -> None:
-    _cache[key] = {"value": value, "expires_at": time.time() + ttl}
+    ttl_set(_cache, key, value, ttl)
 
 
 # ---------------------------------------------------------------------------

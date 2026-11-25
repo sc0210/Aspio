@@ -13,7 +13,6 @@ import pytest
 import pytest_asyncio
 from sqlalchemy.dialects import postgresql
 
-from app.modules.portfolio import historical_price_repository as repo_module
 from app.modules.portfolio.historical_price_repository import (
     HistoricalPriceRepository,
     _hcache_get,
@@ -21,6 +20,7 @@ from app.modules.portfolio.historical_price_repository import (
     _hist_cache,
 )
 from app.modules.portfolio.models import HistoricalPrice
+from app.utils import ttl_cache
 
 
 @pytest.fixture(autouse=True)
@@ -224,7 +224,20 @@ class TestBulkUpsert:
 @pytest.mark.unit
 def test_expired_cache_entry_is_evicted(monkeypatch):
     _hcache_set("k", "v", ttl=10)
-    now = repo_module._time.time()
-    monkeypatch.setattr(repo_module._time, "time", lambda: now + 11)
+    now = ttl_cache.time.time()
+    monkeypatch.setattr(ttl_cache.time, "time", lambda: now + 11)
     assert _hcache_get("k") is None
     assert "k" not in _hist_cache
+
+
+@pytest.mark.unit
+def test_entries_nobody_reads_again_are_swept(monkeypatch):
+    """A key that is never read again (price history keyed by today's date) is
+    dropped by a later write, not kept until the process restarts."""
+    monkeypatch.setattr(ttl_cache, "_last_sweep", {})
+    _hist_cache.clear()
+    _hcache_set("yesterday", "series", ttl=10)
+    now = ttl_cache.time.time()
+    monkeypatch.setattr(ttl_cache.time, "time", lambda: now + 61)
+    _hcache_set("today", "series", ttl=10)
+    assert set(_hist_cache) == {"today"}

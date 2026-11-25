@@ -37,22 +37,16 @@ FINLAB_CACHE_NAMESPACE = "finlab_market_data"
 # Module-level in-memory TTL cache replacing Redis symbol-level caching.
 # Structure: key -> {"value": ..., "expires_at": float}
 # ---------------------------------------------------------------------------
-import time as _time
 
 _symbol_cache: dict = {}
 
 
 def _sym_cache_get(key: str):
-    entry = _symbol_cache.get(key)
-    if entry and _time.time() < entry["expires_at"]:
-        return entry["value"]
-    if key in _symbol_cache:
-        del _symbol_cache[key]
-    return None
+    return ttl_get(_symbol_cache, key)
 
 
 def _sym_cache_set(key: str, value, ttl: int) -> None:
-    _symbol_cache[key] = {"value": value, "expires_at": _time.time() + ttl}
+    ttl_set(_symbol_cache, key, value, ttl)
 
 
 # Yahoo's exchange codes for US listings, folded into the two the holding form
@@ -132,6 +126,7 @@ DEFAULT_FINLAB_WINDOW_DAYS = 400
 # also decides which one gets stored.
 from .symbols import _TW_SUFFIXES, to_bare_tw_symbol, to_yahoo_tw_symbol
 from app.utils.datetime_helpers import business_now, business_today
+from app.utils.ttl_cache import ttl_get, ttl_set
 from app.utils.datetime_helpers import utc_now
 
 
