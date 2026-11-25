@@ -69,6 +69,18 @@ def test_create_nets_out_tax_and_shows_in_the_analytics(authenticated_client, de
     assert [p["symbol"] for p in data["payments"]] == ["0056"]
 
 
+def test_a_payment_with_no_currency_is_twd(authenticated_client, default_portfolio):
+    # It defaulted to USD, so a 0056 payment of 1,500 was counted as US$1,500
+    # once the totals converted to TWD.
+    body = _dividend(tax_withheld="0")
+    del body["currency"]
+    r = authenticated_client.post(BASE, json=body)
+    assert r.status_code == 201, r.text
+    assert r.json()["data"]["currency"] == "TWD"
+    data = authenticated_client.get(BASE, params={"period": "1y"}).json()["data"]
+    assert data["total_dividends"] == pytest.approx(1500)
+
+
 def test_an_explicit_net_amount_is_kept(authenticated_client, default_portfolio):
     r = authenticated_client.post(BASE, json=_dividend(net_amount="1400"))
     assert Decimal(str(r.json()["data"]["net_amount"])) == Decimal("1400")

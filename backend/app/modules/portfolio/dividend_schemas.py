@@ -19,7 +19,7 @@ class DividendBase(BaseModel):
     amount_per_share: Decimal = Field(..., gt=0)
     shares_owned: Decimal = Field(..., gt=0)
     total_amount: Decimal
-    currency: str = Field(default="USD", min_length=3, max_length=3)
+    currency: str = Field(default="TWD", min_length=3, max_length=3)
     tax_withheld: Decimal = Field(default=Decimal("0.00"), ge=0)
     net_amount: Optional[Decimal] = None
     status: str = Field(default="received")  # received, pending, estimated
