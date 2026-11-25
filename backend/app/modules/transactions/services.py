@@ -2029,7 +2029,7 @@ class RecurringTransactionService:
             max_occurrences=rule.max_occurrences,
         )
         if not await self.recurring_repo.update_next_occurrence(
-            claimed["id"], claimed["next_date"], expected_current=occurrence
+            claimed["id"], claimed["next_date"], expected_current=occurrence, reminder_only=True
         ):
             raise ReminderConflict()
         return claimed

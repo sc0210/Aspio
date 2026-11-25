@@ -11,7 +11,7 @@ from decimal import Decimal
 
 import pytest
 import pytest_asyncio
-from sqlalchemy import select
+from sqlalchemy import select, update
 
 from app.modules.transactions.models import (
     CategoryType, RecurringFrequency, RecurringTransaction, Transaction, TransactionCategory,
@@ -103,6 +103,30 @@ async def test_a_second_tap_on_the_same_occurrence_is_refused(world):
     with pytest.raises(ReminderConflict):
         await world["svc"].confirm_reminder(rule_id, world["user_id"], date(2026, 11, 5))
     assert len(await _rows(world)) == 1
+
+
+async def test_a_bill_paused_elsewhere_after_the_read_is_not_recorded(world, monkeypatch):
+    """Device A reads the rule, device B pauses it, then A's claim must fail:
+    the guard is in the UPDATE, not only in the read before it."""
+    rule = await _reminder(world, start=date(2026, 11, 5))
+    rule_id = str(rule.id)
+    repo = world["svc"].recurring_repo
+    read = repo.get_by_id
+
+    async def read_then_pause(rid, uid):
+        loaded = await read(rid, uid)
+        # The other device's write: straight to the row, leaving this read as it was.
+        await repo.db.execute(
+            update(RecurringTransaction).where(RecurringTransaction.id == loaded.id)
+            .values(is_paused=True).execution_options(synchronize_session=False)
+        )
+        await repo.db.commit()
+        return loaded
+
+    monkeypatch.setattr(repo, "get_by_id", read_then_pause)
+    with pytest.raises(ReminderConflict):
+        await world["svc"].confirm_reminder(rule_id, world["user_id"], date(2026, 11, 5))
+    assert await _rows(world) == []
 
 
 async def test_skip_moves_on_without_recording(world):
