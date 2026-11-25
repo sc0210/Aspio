@@ -1,8 +1,8 @@
 """Shared imports, constants, and helpers for portfolio sub-routers.
 
-This module centralizes the original module-level imports, the in-process
-price cache, demo fixtures, and helper functions so that each sub-router can
-import them without duplication or circular imports.
+This module centralizes the original module-level imports, demo fixtures,
+and helper functions so that each sub-router can import them without
+duplication or circular imports.
 """
 
 import asyncio
@@ -79,8 +79,6 @@ from .. import metrics_calculator as _mc
 from app.utils.datetime_helpers import business_today
 from app.utils.datetime_helpers import utc_now
 
-
-logger = logging.getLogger(__name__)
 
 logger = logging.getLogger(__name__)
 

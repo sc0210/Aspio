@@ -7,7 +7,6 @@ Handles database operations for historical price data caching.
 1. Batch queries for multiple symbols (single DB round-trip)
 2. In-memory dict caching for frequently accessed date ranges
 3. Efficient UPSERT operations with PostgreSQL ON CONFLICT
-4. Window functions for latest price lookups
 """
 
 import logging
@@ -342,8 +341,8 @@ class HistoricalPriceRepository:
             logger.info(f"Bulk upserted {len(prepared_data)} historical price records")
 
             # Invalidate ALL cached entries that mention any updated symbol.
-            # This covers both the per-symbol "latest" entries and the batch
-            # price-history entries that the daily-performance endpoint caches.
+            # That is the batch price-history entries the daily-performance
+            # endpoint caches.
             # Without this, a historical sync would not be reflected for up to 1 hour.
             try:
                 affected_symbols = {rec["symbol"] for rec in prepared_data}
