@@ -2029,7 +2029,7 @@ class RecurringTransactionService:
             max_occurrences=rule.max_occurrences,
         )
         if not await self.recurring_repo.update_next_occurrence(
-            claimed["id"], claimed["next_date"], expected_current=occurrence
+            claimed["id"], claimed["next_date"], expected_current=occurrence, reminder_only=True
         ):
             raise ReminderConflict()
         return claimed
@@ -2067,7 +2067,11 @@ class RecurringTransactionService:
             )
         except Exception:
             await self.recurring_repo.db.rollback()
-            await self.recurring_repo.undo_advance(claimed["id"], occurrence)
+            try:
+                await self.recurring_repo.undo_advance(claimed["id"], occurrence, claimed["next_date"])
+            except Exception:
+                # Report the failure that broke the record, not the undo's.
+                logger.exception(f"Could not put reminder {recurring_id} back on {occurrence}")
             raise
         # Read now: a rollback below would expire the row.
         transaction_id = str(created["transaction"].id)

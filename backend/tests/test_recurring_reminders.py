@@ -11,7 +11,7 @@ from decimal import Decimal
 
 import pytest
 import pytest_asyncio
-from sqlalchemy import select
+from sqlalchemy import select, update
 
 from app.modules.transactions.models import (
     CategoryType, RecurringFrequency, RecurringTransaction, Transaction, TransactionCategory,
@@ -103,6 +103,30 @@ async def test_a_second_tap_on_the_same_occurrence_is_refused(world):
     with pytest.raises(ReminderConflict):
         await world["svc"].confirm_reminder(rule_id, world["user_id"], date(2026, 11, 5))
     assert len(await _rows(world)) == 1
+
+
+async def test_a_bill_paused_elsewhere_after_the_read_is_not_recorded(world, monkeypatch):
+    """Device A reads the rule, device B pauses it, then A's claim must fail:
+    the guard is in the UPDATE, not only in the read before it."""
+    rule = await _reminder(world, start=date(2026, 11, 5))
+    rule_id = str(rule.id)
+    repo = world["svc"].recurring_repo
+    read = repo.get_by_id
+
+    async def read_then_pause(rid, uid):
+        loaded = await read(rid, uid)
+        # The other device's write: straight to the row, leaving this read as it was.
+        await repo.db.execute(
+            update(RecurringTransaction).where(RecurringTransaction.id == loaded.id)
+            .values(is_paused=True).execution_options(synchronize_session=False)
+        )
+        await repo.db.commit()
+        return loaded
+
+    monkeypatch.setattr(repo, "get_by_id", read_then_pause)
+    with pytest.raises(ReminderConflict):
+        await world["svc"].confirm_reminder(rule_id, world["user_id"], date(2026, 11, 5))
+    assert await _rows(world) == []
 
 
 async def test_skip_moves_on_without_recording(world):
@@ -295,3 +319,41 @@ async def test_a_bill_cannot_move_past_its_end(world):
     with pytest.raises(ValueError):
         await world["svc"].update_recurring_transaction(str(rule.id), world["user_id"],
             RecurringTransactionUpdate(next_occurrence=date(2027, 1, 5)))
+
+
+async def test_a_failed_record_puts_the_bill_back(world, monkeypatch):
+    rule = await _reminder(world, start=date(2026, 11, 5))
+    rule_id = str(rule.id)
+
+    async def fails(*a, **k):
+        raise RuntimeError("could not record")
+
+    monkeypatch.setattr(world["svc"].transaction_service, "create_transaction", fails)
+    with pytest.raises(RuntimeError):
+        await world["svc"].confirm_reminder(rule_id, world["user_id"], date(2026, 11, 5))
+    rule = await world["svc"].recurring_repo.get_by_id(rule_id, world["user_id"])
+    assert (rule.next_occurrence, rule.occurrence_count) == (date(2026, 11, 5), 0)
+
+
+async def test_putting_a_bill_back_keeps_an_edit_made_meanwhile(world, monkeypatch):
+    """The undo is compare-and-set: a next date set on another device while the
+    record was failing is kept, not overwritten with the claimed one."""
+    rule = await _reminder(world, start=date(2026, 11, 5))
+    rule_id = str(rule.id)
+    repo = world["svc"].recurring_repo
+
+    async def edited_then_fails(*a, **k):
+        await repo.db.execute(
+            update(RecurringTransaction).where(RecurringTransaction.id == rule.id)
+            .values(next_occurrence=date(2026, 12, 20)).execution_options(synchronize_session=False)
+        )
+        await repo.db.commit()
+        raise RuntimeError("could not record")
+
+    monkeypatch.setattr(world["svc"].transaction_service, "create_transaction", edited_then_fails)
+    with pytest.raises(RuntimeError):
+        await world["svc"].confirm_reminder(rule_id, world["user_id"], date(2026, 11, 5))
+    repo.db.expire_all()
+    rule = await repo.get_by_id(rule_id, world["user_id"])
+    # The edit stays, and the count still drops: nothing was recorded.
+    assert (rule.next_occurrence, rule.occurrence_count) == (date(2026, 12, 20), 0)

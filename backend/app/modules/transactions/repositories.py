@@ -1795,13 +1795,17 @@ class RecurringTransactionRepository:
         return (await self.db.execute(stmt)).first() is not None
 
     async def update_next_occurrence(
-        self, recurring_id: str, next_date: date, expected_current: Optional[date] = None
+        self, recurring_id: str, next_date: date, expected_current: Optional[date] = None,
+        reminder_only: bool = False,
     ) -> bool:
         """Advance the rule to next_date (and count one occurrence).
 
         With expected_current, only advances while the rule still sits on that
         date, and returns False when another run already moved it, so a
-        concurrent run can't count the same occurrence twice.
+        concurrent run can't count the same occurrence twice. With
+        reminder_only, also only while it is still an active, unpaused reminder:
+        a pause or removal from another device between the read and this write
+        then refuses the claim instead of recording a bill the user stopped.
         """
         # Convert string UUID to UUID object
         recurring_id_uuid = (
@@ -1813,6 +1817,14 @@ class RecurringTransactionRepository:
         conditions = [RecurringTransaction.id == recurring_id_uuid]
         if expected_current is not None:
             conditions.append(RecurringTransaction.next_occurrence == expected_current)
+        if reminder_only:
+            # Same reading as _claim's check: a NULL flag counts as unset.
+            conditions += [
+                RecurringTransaction.is_active.is_(True),
+                RecurringTransaction.is_paused.is_not(True),
+                RecurringTransaction.auto_create.is_not(True),
+                RecurringTransaction.split_connection_id.is_(None),
+            ]
         stmt = (
             update(RecurringTransaction)
             .where(and_(*conditions))
@@ -1823,7 +1835,9 @@ class RecurringTransactionRepository:
             )
         )
 
-        result = await self.db.execute(stmt)
+        # "fetch" syncs only the rows the database matched: a refused claim
+        # (0 rows) must not move an in-memory rule the database never moved.
+        result = await self.db.execute(stmt.execution_options(synchronize_session="fetch"))
         await self.db.commit()
         return result.rowcount != 0
 
@@ -1847,14 +1861,25 @@ class RecurringTransactionRepository:
         )
         return list((await self.db.execute(stmt)).scalars().all())
 
-    async def undo_advance(self, recurring_id, occurrence: date) -> None:
-        """Put a rule back on `occurrence` after a claimed occurrence failed to post."""
+    async def undo_advance(self, recurring_id, occurrence: date, advanced_to: date) -> None:
+        """Take back a claimed occurrence that failed to post.
+
+        The count always drops by the one the claim added. The date goes back to
+        `occurrence` only while the rule still sits where the claim moved it
+        (`advanced_to`): an edit made in between is kept rather than overwritten.
+        """
         await self.db.execute(
             update(RecurringTransaction)
             .where(RecurringTransaction.id == recurring_id)
             .values(
-                next_occurrence=occurrence,
-                occurrence_count=func.greatest(RecurringTransaction.occurrence_count - 1, 0),
+                next_occurrence=case(
+                    (RecurringTransaction.next_occurrence == advanced_to, occurrence),
+                    else_=RecurringTransaction.next_occurrence,
+                ),
+                occurrence_count=case(
+                    (RecurringTransaction.occurrence_count > 0, RecurringTransaction.occurrence_count - 1),
+                    else_=0,
+                ),
                 updated_at=datetime.now(timezone.utc),
             )
         )
