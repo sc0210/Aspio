@@ -76,10 +76,10 @@ from ..historical_price_service import get_historical_price_service
 from ....utils.exchange_rate_service import ExchangeRateService
 from ..historical_price_repository import HistoricalPriceRepository
 from .. import metrics_calculator as _mc
-import time as _router_time
 import threading as _threading
 from app.utils.datetime_helpers import business_today
 from app.utils.datetime_helpers import utc_now
+from app.utils.ttl_cache import ttl_get, ttl_set
 
 
 logger = logging.getLogger(__name__)
@@ -92,16 +92,11 @@ class _PriceCache:
 
     def get(self, key: str):
         with self._lock:
-            entry = self._store.get(key)
-            if entry and _router_time.time() < entry["expires_at"]:
-                return entry["value"]
-            if key in self._store:
-                del self._store[key]
-            return None
+            return ttl_get(self._store, key)
 
     def set(self, key: str, value, ttl: int) -> None:
         with self._lock:
-            self._store[key] = {"value": value, "expires_at": _router_time.time() + ttl}
+            ttl_set(self._store, key, value, ttl)
 
     def clear(self) -> None:
         with self._lock:
@@ -675,7 +670,6 @@ __all__ = [
     "ExchangeRateService",
     "HistoricalPriceRepository",
     "_mc",
-    "_router_time",
     "_threading",
     "_PriceCache",
     "_price_cache",

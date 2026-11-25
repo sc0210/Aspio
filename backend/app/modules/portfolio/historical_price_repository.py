@@ -11,7 +11,6 @@ Handles database operations for historical price data caching.
 """
 
 import logging
-import time as _time
 from datetime import date, datetime, timedelta, timezone
 from decimal import Decimal
 from typing import List, Optional, Dict, Any
@@ -23,6 +22,7 @@ from sqlalchemy.dialects.postgresql import insert
 from .models import HistoricalPrice
 from .symbols import canonical_symbol
 from app.utils.datetime_helpers import business_today
+from app.utils.ttl_cache import ttl_get, ttl_set
 
 logger = logging.getLogger(__name__)
 
@@ -38,16 +38,11 @@ _hist_cache: dict = {}
 
 
 def _hcache_get(key: str):
-    entry = _hist_cache.get(key)
-    if entry and _time.time() < entry["expires_at"]:
-        return entry["value"]
-    if key in _hist_cache:
-        del _hist_cache[key]
-    return None
+    return ttl_get(_hist_cache, key)
 
 
 def _hcache_set(key: str, value, ttl: int) -> None:
-    _hist_cache[key] = {"value": value, "expires_at": _time.time() + ttl}
+    ttl_set(_hist_cache, key, value, ttl)
 
 
 def _hcache_delete(key: str) -> None:
@@ -152,7 +147,7 @@ class HistoricalPriceRepository:
         # Check in-memory cache first
         cache_key = f"{HIST_PRICE_CACHE_NAMESPACE}:batch:{','.join(sorted(symbols_upper))}:{start_date}:{end_date}"
         cached = _hcache_get(cache_key)
-        if cached:
+        if cached is not None:
             logger.debug(
                 f"✅ Cache HIT for batch price history ({len(symbols)} symbols)"
             )
