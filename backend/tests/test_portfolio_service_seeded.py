@@ -96,11 +96,11 @@ class TestUpdateTotals:
 
 
 class TestDividends:
-    def dividend(self, user, days_ago, amount, symbol="0056"):
+    def dividend(self, user, days_ago, amount, symbol="0056", currency="TWD"):
         return Dividend(
             id=uuid4(), user_id=user.id, symbol=symbol, payment_date=business_today() - timedelta(days=days_ago),
             amount_per_share=D("1"), shares_owned=D(amount), total_amount=D(amount), net_amount=D(amount),
-            currency="TWD")
+            currency=currency)
 
     async def test_no_portfolio_returns_nulls(self, async_session, test_user):
         out = await AnalyticsService(async_session).get_dividend_data(test_user.id)
@@ -131,6 +131,39 @@ class TestDividends:
         await async_session.commit()
         out = await AnalyticsService(async_session).get_dividend_data(test_user.id)
         assert out["projected_annual"] == 100.0 and out["dividend_yield"] == pytest.approx(10.0)
+
+    async def test_projection_is_in_twd(self, async_session, test_user, pf):
+        # A US$1 dividend on 10 shares is US$10 = NT$300, not NT$10 beside a TWD one.
+        pf.total_cost, pf.total_value = D("4000"), D("4000")
+        async_session.add_all([
+            make_holding(pf, test_user, "0056", value="1", cost="1", annual_dividend=D("2"), qty="50"),
+            make_holding(pf, test_user, "AAPL", value="1", cost="1", currency="USD",
+                         annual_dividend=D("1"), qty="10")])
+        await async_session.commit()
+        with patch("app.utils.fx_sql.get_exchange_rate_service", return_value=fake_fx(D("30"))):
+            out = await AnalyticsService(async_session).get_dividend_data(test_user.id)
+        assert out["projected_annual"] == 400.0 and out["yield_on_cost"] == pytest.approx(10.0)
+
+    async def test_payments_received_are_in_twd(self, async_session, test_user, pf):
+        pf.total_cost, pf.total_value = D("10000"), D("10000")
+        async_session.add_all([
+            self.dividend(test_user, 10, "100"), self.dividend(test_user, 20, "5", "AAPL", "USD"),
+            make_holding(pf, test_user, "0056", value="1", cost="1")])
+        await async_session.commit()
+        with patch("app.utils.fx_sql.get_exchange_rate_service", return_value=fake_fx(D("30"))):
+            out = await AnalyticsService(async_session).get_dividend_data(test_user.id)
+        # NT$100 + US$5 × 30; the trailing-year fallback converts the same way.
+        assert out["total_dividends"] == 250.0 and out["projected_annual"] == 250.0
+
+    async def test_projection_counts_every_lot(self, async_session, test_user, pf):
+        # The holdings read stopped at 100 lots, so the 101st paid nothing.
+        pf.total_cost, pf.total_value = D("1000"), D("1000")
+        async_session.add_all([
+            make_holding(pf, test_user, f"S{i:03d}", value="1", cost="1", annual_dividend=D("1"), qty="1")
+            for i in range(101)])
+        await async_session.commit()
+        out = await AnalyticsService(async_session).get_dividend_data(test_user.id)
+        assert out["projected_annual"] == 101.0
 
     async def test_nothing_to_project_yields_nulls(self, async_session, test_user, pf):
         out = await AnalyticsService(async_session).get_dividend_data(test_user.id)

@@ -46,6 +46,7 @@ from app.utils.datetime_helpers import (
     business_today,
     utc_now,
 )
+from app.utils.fx_sql import to_twd, twd_rates_for
 
 
 logger = logging.getLogger(__name__)
@@ -1210,9 +1211,9 @@ class AnalyticsService:
         total_return = portfolio.total_gain_loss
         total_return_percentage = portfolio.total_gain_loss_percentage
 
-        # Fetch active holdings
+        # Fetch active holdings: all of them, or lots past the 100th drop out of the benchmark weights
         holdings, _ = await self.holding_repo.get_portfolio_holdings(
-            portfolio_id, user_id, limit=100
+            portfolio_id, user_id, limit=None
         )
 
         # --- Annual return: the time-weighted return since inception ---
@@ -1415,10 +1416,6 @@ class AnalyticsService:
         result = await self.session.execute(stmt)
         dividend_records = result.scalars().all()
 
-        total_dividends = sum(
-            float(d.net_amount or d.total_amount or 0) for d in dividend_records
-        )
-
         # For annualised fallback: sum last 12 months of actual payments
         ttm_stmt = (
             select(Dividend)
@@ -1431,18 +1428,30 @@ class AnalyticsService:
         )
         ttm_result = await self.session.execute(ttm_stmt)
         ttm_records = ttm_result.scalars().all()
-        ttm_income = sum(float(d.net_amount or d.total_amount or 0) for d in ttm_records)
 
         # --- Projected annual income from holdings ---
         holdings, _ = await self.holding_repo.get_portfolio_holdings(
-            portfolio.id, user_id, limit=100
+            portfolio.id, user_id, limit=None
         )
         active = [h for h in holdings if h.is_active]
+
+        # Each payment and holding is in its own currency, and the yields below
+        # divide by TWD totals: a US$100 dividend added raw read as NT$100.
+        rates = await twd_rates_for(
+            self.session,
+            {d.currency for d in (*dividend_records, *ttm_records)} | {h.currency for h in active},
+        )
+
+        def paid_twd(records) -> float:
+            return sum(to_twd(float(d.net_amount or d.total_amount or 0), d.currency, rates) for d in records)
+
+        total_dividends = paid_twd(dividend_records)
+        ttm_income = paid_twd(ttm_records)
 
         projected_from_holdings: Optional[float] = None
         if active:
             income_parts = [
-                float(h.annual_dividend) * float(h.quantity)
+                to_twd(float(h.annual_dividend) * float(h.quantity), h.currency, rates)
                 for h in active
                 if h.annual_dividend is not None and float(h.annual_dividend) > 0
             ]
