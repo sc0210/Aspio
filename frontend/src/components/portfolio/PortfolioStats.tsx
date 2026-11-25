@@ -179,7 +179,6 @@ export function PortfolioStats({ portfolio, isValueVisible, apiStatus: _apiStatu
   const realizedDir = direction(realizedShown);
   const realizedTone = toneOf(realizedDir);
   const todayChangePercent = portfolio.todayGainLossPercentage ?? 0;
-  const _hasTodayData = todayChange !== 0 || todayChangePercent !== 0;
 
 
   return (

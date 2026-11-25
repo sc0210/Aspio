@@ -136,6 +136,8 @@ async def get_portfolio_analytics(
 
         # ⚡ PERFORMANCE FIX: Calculate everything in-memory from single query result
         active_holdings = [h for h in holdings if h.is_active and h.total_value > 0]
+        if not active_holdings:
+            return ApiResponse.success_response(data=nothing_yet)
 
         # Holdings keep their own currency: weigh each in TWD, or a US$10,000
         # position counts as NT$10,000 beside NT$300,000 of Taiwan stocks.
@@ -253,6 +255,8 @@ async def get_portfolio_analytics(
 
         return ApiResponse.success_response(data=analytics_data)
 
+    except (AspiroException, HTTPException):
+        raise
     except Exception as e:
         logger.error(f"Error getting portfolio analytics: {str(e)}", exc_info=True)
         raise HTTPException(status_code=500, detail="Failed to load portfolio analytics")

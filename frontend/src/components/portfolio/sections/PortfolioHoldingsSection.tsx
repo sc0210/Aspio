@@ -24,6 +24,7 @@ import type { PortfolioEditState } from '@/hooks/portfolio/usePortfolioEdit';
 import type { PortfolioModalsState } from '@/hooks/portfolio/usePortfolioModals';
 
 import { Card } from '@/components/ui/Card';
+import { QueryErrorCard } from '@/components/ui/QueryErrorCard';
 interface AnalyticsData {
   allocation: {
     byType: Array<{ type: string; value: number; percentage: number; color: string }>;
@@ -47,6 +48,10 @@ interface PortfolioHoldingsSectionProps {
   rawHoldings?: Holding[];
   /** Analytics data for allocation view */
   analyticsData?: AnalyticsData | null;
+  /** The analytics request failed (shown when there is no earlier data to keep) */
+  analyticsFailed?: boolean;
+  /** Retry the analytics request */
+  onRetryAnalytics?: () => void;
   /** Filters state from usePortfolioFilters */
   filters: PortfolioFiltersState;
   /** Edit state from usePortfolioEdit */
@@ -107,6 +112,8 @@ export function PortfolioHoldingsSection({
   holdings,
   rawHoldings,
   analyticsData,
+  analyticsFailed = false,
+  onRetryAnalytics,
   filters,
   editState,
   modals,
@@ -255,6 +262,9 @@ export function PortfolioHoldingsSection({
         )}
 
         {/* Allocation View */}
+        {viewType === 'allocation' && !analyticsData?.allocation && analyticsFailed && (
+          <QueryErrorCard onRetry={() => onRetryAnalytics?.()} />
+        )}
         {viewType === 'allocation' && analyticsData?.allocation && (
           <Suspense fallback={<AllocationSkeleton />}>
             <PortfolioAllocation
