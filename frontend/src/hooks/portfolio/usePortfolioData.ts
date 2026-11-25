@@ -121,15 +121,9 @@ export function usePortfolioData(filters: PortfolioFilters) {
         ? portfolioData.lastPriceUpdateAt.toISOString()
         : portfolioData?.holdings?.length,
     ],
-    queryFn: async () => {
-      try {
-        const response = await portfolioService.getPortfolioAnalytics();
-        return response.success ? response.data : null;
-      } catch (error) {
-        log.warn('Failed to fetch analytics', error, 'Portfolio');
-        return null;
-      }
-    },
+    // Rejects on failure: TanStack then keeps the last good allocation and sets
+    // `error`, where resolving to null wiped it and looked like "nothing to show".
+    queryFn: async () => (await portfolioService.getPortfolioAnalytics()).data ?? null,
     enabled: !!portfolioData && portfolioData.holdings?.length > 0,
     staleTime: 2 * 60 * 1000,
     retry: false,

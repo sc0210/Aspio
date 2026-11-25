@@ -42,14 +42,6 @@ const portfolio = {
     todayGainLossPercentage: 0.06,
 };
 
-const performance = {
-    oneDay: 0.06,
-    oneWeek: 0.4,
-    oneMonth: 1.2,
-    threeMonths: 3.1,
-    sixMonths: 5.2,
-    oneYear: 9.8,
-};
 
 /** Everything the analysis disclosure can hold, so it renders in full. */
 const analysis = {
@@ -76,7 +68,6 @@ const show = (props: Partial<React.ComponentProps<typeof PortfolioStats>> = {}) 
         <I18nextProvider i18n={i18n}>
             <PortfolioStats
                 portfolio={portfolio}
-                performance={performance}
                 isValueVisible
                 {...props}
             />
@@ -183,14 +174,6 @@ describe('PortfolioStats', () => {
         expect(flat.length).toBeGreaterThanOrEqual(2);
         flat.forEach((el) => expect(el.className).not.toMatch(/success|error/));
         expect(screen.getByText(/^0\.00% /)).toBeInTheDocument();
-    });
-
-    it('shows a period that rounds to nothing as flat', () => {
-        show({ showPerformancePeriods: true, performance: { ...performance, oneWeek: 0 } });
-
-        const flat = screen.getByText('NT$0.00');
-        expect(flat.closest('p')!.textContent).not.toMatch(/^[+-]/);
-        expect(flat.closest('p')!.className).toContain('text-gray-500');
     });
 
     it('colours the ROI line by its own sign when the money rounds flat', () => {

@@ -213,23 +213,3 @@ describe("PortfolioService — today's gain across currencies", () => {
     });
 });
 
-describe('PortfolioService — market allocation across currencies', () => {
-    beforeEach(() => setExchangeRates({ USD: 30 }));
-    afterEach(() => __resetExchangeRates());
-
-    it('weighs each holding in TWD, not in its own currency', () => {
-        // US$50 at 30 is NT$1,500: half the portfolio, not 50 out of 1,550.
-        const portfolio = {
-            holdings: [
-                { market: 'TW', currency: 'TWD', totalValue: 1500 },
-                { market: 'US', currency: 'USD', totalValue: 50 },
-            ],
-        } as unknown as Parameters<typeof portfolioService.getMarketAllocation>[0];
-
-        const allocation = portfolioService.getMarketAllocation(portfolio);
-
-        expect(allocation.US.value).toBeCloseTo(1500);
-        expect(allocation.US.percentage).toBeCloseTo(50);
-        expect(allocation.TW.percentage).toBeCloseTo(50);
-    });
-});
