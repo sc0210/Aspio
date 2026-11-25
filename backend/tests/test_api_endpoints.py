@@ -205,15 +205,6 @@ class TestDashboardEndpoints:
         assert "data" in data
         assert isinstance(data["data"], list)
 
-    def test_dashboard_overview_demo_mode(self):
-        """Test dashboard overview endpoint in demo mode."""
-        client = TestClient(app)
-        response = client.get("/api/v1/dashboard/overview")
-
-        assert response.status_code == 200
-        data = response.json()
-        assert data["success"] is True
-        assert "data" in data
 
     def test_dashboard_spending_by_category_demo_mode(self):
         """Test dashboard spending by category endpoint in demo mode."""
@@ -225,25 +216,6 @@ class TestDashboardEndpoints:
         assert data["success"] is True
         assert "data" in data
         assert isinstance(data["data"], list)
-
-    def test_dashboard_monthly_trend_demo_mode(self):
-        """Test dashboard monthly trend endpoint in demo mode."""
-        client = TestClient(app)
-        response = client.get("/api/v1/dashboard/monthly-trend")
-
-        assert response.status_code == 200
-        data = response.json()
-        assert data["success"] is True
-        assert "data" in data
-
-    def test_dashboard_refresh_demo_mode(self):
-        """Test dashboard refresh endpoint in demo mode."""
-        client = TestClient(app)
-        response = client.post("/api/v1/dashboard/refresh")
-
-        assert response.status_code == 200
-        data = response.json()
-        assert data["success"] is True
 
 
 class TestPortfolioEndpoints:

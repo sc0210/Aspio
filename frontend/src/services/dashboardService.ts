@@ -34,24 +34,6 @@ interface RecentActivity {
   color?: string;
 }
 
-interface DashboardData {
-  stats: DashboardStats;
-  recentActivities: RecentActivity[];
-  upcomingEvents: {
-    id: string;
-    title: string;
-    date: Date;
-    type: 'bill_due' | 'investment_maturity';
-    amount?: number;
-  }[];
-  monthlyTrend: {
-    month: string;
-    income: number;
-    expenses: number;
-    savings: number;
-  }[];
-}
-
 class DashboardService {
   async getDashboardStats(period: '7d' | '14d' | 'month' | '30d' | '90d' | '6m' | '1y' | 'ytd' = 'month'): Promise<ApiResponse<DashboardStats>> {
     return apiClient.get(`/dashboard/stats?period=${period}`);
@@ -59,29 +41,6 @@ class DashboardService {
 
   async getRecentActivity(limit: number = 10): Promise<ApiResponse<RecentActivity[]>> {
     return apiClient.get(`/dashboard/recent-activity?limit=${limit}`);
-  }
-
-  async getDashboardData(): Promise<ApiResponse<DashboardData>> {
-    return apiClient.get('/dashboard/overview');
-  }
-
-  async getUpcomingEvents(): Promise<ApiResponse<{
-    id: string;
-    title: string;
-    date: Date;
-    type: 'bill_due' | 'investment_maturity';
-    amount?: number;
-  }[]>> {
-    return apiClient.get('/dashboard/upcoming-events');
-  }
-
-  async getMonthlyTrend(months: number = 12): Promise<ApiResponse<{
-    month: string;
-    income: number;
-    expenses: number;
-    savings: number;
-  }[]>> {
-    return apiClient.get(`/dashboard/monthly-trend?months=${months}`);
   }
 
   // Period vocabulary matches getDashboardStats/getWalletTrends exactly — the
@@ -110,11 +69,6 @@ class DashboardService {
   }
 
 
-
-  // Utility method for refreshing dashboard data
-  async refreshDashboard(): Promise<ApiResponse<boolean>> {
-    return apiClient.post('/dashboard/refresh');
-  }
 
   async getHistoricalTrends(period: '7d' | '14d' | 'month' | '30d' | '90d' | '6m' | '1y' | 'ytd' = '30d'): Promise<ApiResponse<{
     dataPoints: {
