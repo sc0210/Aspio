@@ -79,10 +79,7 @@ export function usePortfolioData(filters: PortfolioFilters) {
     queryFn: async () => {
       log.debug('Fetching portfolio data with filters', filters, 'Portfolio');
 
-      // Backend handles smart price updates automatically
-      const response = await portfolioService.getPortfolio(filters, {
-        updatePrices: false,
-      });
+      const response = await portfolioService.getPortfolio(filters);
 
       if (!response.success) {
         throw new Error(response.message || 'Failed to fetch portfolio data');
