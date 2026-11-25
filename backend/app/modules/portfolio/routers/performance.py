@@ -15,6 +15,7 @@ from ._shared import (  # noqa: F401  explicit re-import for underscore-prefixed
 )
 from app.utils.datetime_helpers import business_today
 from app.utils.fx_sql import to_twd, twd_rates_for
+from ..models import HoldingWalletType
 
 router = APIRouter()
 
@@ -117,10 +118,11 @@ async def get_risk_metrics(
             portfolio_id, current_user.id
         )
 
-        # Compute HHI from current holdings weights
+        # HHI over the same lots as the allocation: every Portfolio-wallet lot.
         holding_repo = HoldingRepository(session)
         holdings, _ = await holding_repo.get_portfolio_holdings(
-            portfolio_id, current_user.id, limit=100
+            portfolio_id, current_user.id, limit=None,
+            wallet_type=HoldingWalletType.PORTFOLIO,
         )
 
         hhi: Optional[float] = None

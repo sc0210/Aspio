@@ -144,7 +144,7 @@ class TestAnalytics:
 
 
 class TestRiskMetricsConcentration:
-    async def test_hhi_weighs_each_holding_in_twd(
+    async def test_hhi_weighs_each_portfolio_lot_in_twd(
         self, authenticated_client, async_session, test_user, monkeypatch
     ):
         from app.modules.portfolio.routers import performance
@@ -158,6 +158,12 @@ class TestRiskMetricsConcentration:
         async_session.add_all([
             _holding(pf, test_user, "0050", "etf", "TW", "Broad", "Asia", "1500", "0"),
             _holding(pf, test_user, "AAPL", "stock", "US", "Tech", "Americas", "50", "0", currency="USD"),
+            # Emergency wallet: not on the page's list or in the allocation, so not
+            # in the concentration either (it would make it 3,750).
+            _holding(
+                pf, test_user, "CASH", "etf", "TW", "Cash", "Asia", "3000", "0",
+                wallet=HoldingWalletType.EMERGENCY,
+            ),
         ])
         await async_session.commit()
         monkeypatch.setattr(

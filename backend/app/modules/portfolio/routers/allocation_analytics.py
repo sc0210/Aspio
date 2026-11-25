@@ -64,10 +64,10 @@ async def get_portfolio_analytics(
     session: AsyncSession = Depends(get_db),
 ):
     """
-    The Portfolio wallet's allocation by type, sector and region, weighed in TWD.
+    The whole Portfolio wallet's allocation by type, sector and region, in TWD.
 
-    Emergency-wallet holdings are left out, as on the page's holdings list.
-    Rate limited: 5 requests/minute per user
+    Emergency-wallet holdings are left out, as from the page's holdings list; the
+    list's type filter is not applied. Rate limited by ``rate_limit_analytics``.
     """
     # Demo analytics data
     demo_analytics = {
@@ -97,7 +97,6 @@ async def get_portfolio_analytics(
     nothing_yet = {"allocation": {"byType": [], "bySector": [], "byRegion": []}}
 
     try:
-        # ⚡ PERFORMANCE FIX: Single optimized query instead of 2 separate queries
         portfolio_service = get_portfolio_service(session)
 
         # Get default portfolio (cached)
@@ -117,7 +116,6 @@ async def get_portfolio_analytics(
             logger.info(f"No holdings found for portfolio {portfolio.id}")
             return ApiResponse.success_response(data=nothing_yet)
 
-        # ⚡ PERFORMANCE FIX: Calculate everything in-memory from single query result
         active_holdings = [h for h in holdings if h.is_active and h.total_value > 0]
         if not active_holdings:
             return ApiResponse.success_response(data=nothing_yet)
