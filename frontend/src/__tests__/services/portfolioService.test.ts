@@ -132,5 +132,28 @@ describe("PortfolioService — today's gain across currencies", () => {
         // (NT$410,000): the stored total is not the base of a day's move.
         expect(result.data!.todayGainLossPercentage).toBeCloseTo((31_000 / 410_000) * 100, 4);
     });
+
+    it('converts every total when a demo edit recomputes them', async () => {
+        // The demo add/edit/delete paths total the holdings in the browser. A raw
+        // sum would count US$11,000 as NT$11,000 and flatter every percentage.
+        mockApiClient.get.mockResolvedValue({ success: true, data: mixedPortfolio });
+        const loaded = (await portfolioService.getPortfolio()).data!;
+        const holdings = loaded.holdings.map(h => ({ ...h, id: `demo-holding-${h.id}` }));
+        localStorage.setItem('aspiro_demo_holdings', JSON.stringify(holdings));
+        localStorage.setItem('aspiro_demo_portfolio', JSON.stringify({ ...loaded, holdings }));
+        mockApiClient.put.mockRejectedValue(new Error('offline'));
+
+        await portfolioService.updateHolding({ id: 'demo-holding-tw', currentPrice: 111 } as never);
+        const saved = JSON.parse(localStorage.getItem('aspiro_demo_portfolio')!);
+
+        // 1,000 × 111 = NT$111,000, plus 100 × US$110 = US$11,000 → NT$330,000.
+        expect(saved.totalValue).toBeCloseTo(441_000);
+        // 1,000 × 100 = NT$100,000, plus 100 × US$100 = US$10,000 → NT$300,000.
+        expect(saved.totalCost).toBeCloseTo(400_000);
+        expect(saved.totalGainLossPercentage).toBeCloseTo(10.25, 4);
+        expect(saved.todayGainLoss).toBeCloseTo(31_000);
+        expect(saved.todayGainLossPercentage).toBeCloseTo((31_000 / 410_000) * 100, 4);
+        localStorage.clear();
+    });
 });
 
