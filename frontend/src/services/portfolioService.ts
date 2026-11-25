@@ -1061,12 +1061,6 @@ class PortfolioService {
       baseCurrency?: string;
       exchangeRate?: number;
     };
-    topPerformers: PortfolioHolding[];
-    worstPerformers: PortfolioHolding[];
-    diversificationScore: number;
-    riskScore: number;
-    sharpeRatio?: number | null;
-    beta?: number | null;
   }>> {
     // Throws on failure, so the query keeps its last good data and reports the
     // error. There is no local estimate: a wrong allocation is worse than none.
