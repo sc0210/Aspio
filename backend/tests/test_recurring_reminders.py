@@ -319,3 +319,40 @@ async def test_a_bill_cannot_move_past_its_end(world):
     with pytest.raises(ValueError):
         await world["svc"].update_recurring_transaction(str(rule.id), world["user_id"],
             RecurringTransactionUpdate(next_occurrence=date(2027, 1, 5)))
+
+
+async def test_a_failed_record_puts_the_bill_back(world, monkeypatch):
+    rule = await _reminder(world, start=date(2026, 11, 5))
+    rule_id = str(rule.id)
+
+    async def fails(*a, **k):
+        raise RuntimeError("could not record")
+
+    monkeypatch.setattr(world["svc"].transaction_service, "create_transaction", fails)
+    with pytest.raises(RuntimeError):
+        await world["svc"].confirm_reminder(rule_id, world["user_id"], date(2026, 11, 5))
+    rule = await world["svc"].recurring_repo.get_by_id(rule_id, world["user_id"])
+    assert (rule.next_occurrence, rule.occurrence_count) == (date(2026, 11, 5), 0)
+
+
+async def test_putting_a_bill_back_keeps_an_edit_made_meanwhile(world, monkeypatch):
+    """The undo is compare-and-set: a next date set on another device while the
+    record was failing is kept, not overwritten with the claimed one."""
+    rule = await _reminder(world, start=date(2026, 11, 5))
+    rule_id = str(rule.id)
+    repo = world["svc"].recurring_repo
+
+    async def edited_then_fails(*a, **k):
+        await repo.db.execute(
+            update(RecurringTransaction).where(RecurringTransaction.id == rule.id)
+            .values(next_occurrence=date(2026, 12, 20)).execution_options(synchronize_session=False)
+        )
+        await repo.db.commit()
+        raise RuntimeError("could not record")
+
+    monkeypatch.setattr(world["svc"].transaction_service, "create_transaction", edited_then_fails)
+    with pytest.raises(RuntimeError):
+        await world["svc"].confirm_reminder(rule_id, world["user_id"], date(2026, 11, 5))
+    repo.db.expire_all()
+    rule = await repo.get_by_id(rule_id, world["user_id"])
+    assert rule.next_occurrence == date(2026, 12, 20)

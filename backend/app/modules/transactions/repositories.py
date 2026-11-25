@@ -1818,10 +1818,11 @@ class RecurringTransactionRepository:
         if expected_current is not None:
             conditions.append(RecurringTransaction.next_occurrence == expected_current)
         if reminder_only:
+            # Same reading as _claim's check: a NULL flag counts as unset.
             conditions += [
-                RecurringTransaction.is_active == True,  # noqa: E712
-                RecurringTransaction.is_paused == False,  # noqa: E712
-                RecurringTransaction.auto_create == False,  # noqa: E712
+                RecurringTransaction.is_active.is_(True),
+                RecurringTransaction.is_paused.is_not(True),
+                RecurringTransaction.auto_create.is_not(True),
                 RecurringTransaction.split_connection_id.is_(None),
             ]
         stmt = (
@@ -1858,14 +1859,24 @@ class RecurringTransactionRepository:
         )
         return list((await self.db.execute(stmt)).scalars().all())
 
-    async def undo_advance(self, recurring_id, occurrence: date) -> None:
-        """Put a rule back on `occurrence` after a claimed occurrence failed to post."""
+    async def undo_advance(self, recurring_id, occurrence: date, advanced_to: date) -> None:
+        """Put a rule back on `occurrence` after a claimed occurrence failed to post.
+
+        Only while it still sits where the claim moved it (`advanced_to`): an
+        edit made in between is kept rather than overwritten.
+        """
         await self.db.execute(
             update(RecurringTransaction)
-            .where(RecurringTransaction.id == recurring_id)
+            .where(
+                RecurringTransaction.id == recurring_id,
+                RecurringTransaction.next_occurrence == advanced_to,
+            )
             .values(
                 next_occurrence=occurrence,
-                occurrence_count=func.greatest(RecurringTransaction.occurrence_count - 1, 0),
+                occurrence_count=case(
+                    (RecurringTransaction.occurrence_count > 0, RecurringTransaction.occurrence_count - 1),
+                    else_=0,
+                ),
                 updated_at=datetime.now(timezone.utc),
             )
         )

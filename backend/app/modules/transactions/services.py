@@ -2067,7 +2067,7 @@ class RecurringTransactionService:
             )
         except Exception:
             await self.recurring_repo.db.rollback()
-            await self.recurring_repo.undo_advance(claimed["id"], occurrence)
+            await self.recurring_repo.undo_advance(claimed["id"], occurrence, claimed["next_date"])
             raise
         # Read now: a rollback below would expire the row.
         transaction_id = str(created["transaction"].id)
