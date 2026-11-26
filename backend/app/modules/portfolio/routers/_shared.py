@@ -222,10 +222,10 @@ DEMO_PORTFOLIO = {
 
 
 # ── Demo value history ───────────────────────────────────────────────────────
-# Every demo time series (/daily-performance, /historical, /performance,
-# /performance/historical, the analytics period returns) is read off this one
-# walk, so the dashboard chart, /portfolio/trend and the stats strip describe
-# the same account. They used to start from 28,450.75 — the retired AAPL/GOOGL
+# Every demo time series (/daily-performance, /historical, /performance, the
+# analytics period returns) is read off this one walk, so the dashboard chart,
+# /portfolio/trend and the stats strip describe the same account. They used to
+# start from 28,450.75 — the retired AAPL/GOOGL
 # portfolio — and drew a NT$24K chart beside a NT$2M wallet.
 #
 # The demo account opened on 2024-01-01 (createdAt in the frontend's

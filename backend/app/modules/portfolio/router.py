@@ -14,7 +14,7 @@ public import in ``app/main.py`` continues to work unchanged::
     from app.modules.portfolio.router import router as portfolio_router
 
 Every sub-router's route paths already carry their full sub-path (e.g.
-``/holdings``, ``/performance/historical``), so they are mounted with NO extra
+``/holdings``, ``/performance/time-weighted-return``), so they are mounted with NO extra
 prefix. The application-level prefix (``/api/v1/portfolio``) is applied in
 ``app/main.py`` exactly as before, keeping every final path byte-for-byte
 identical.
