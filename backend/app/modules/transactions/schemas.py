@@ -94,22 +94,6 @@ class TransactionCategoryCreate(TransactionCategoryBase):
     pass
 
 
-class TransactionCategoryUpdate(BaseModel):
-    """Schema for updating transaction categories"""
-
-    name: Optional[str] = Field(None, min_length=1, max_length=100)
-    name_en: Optional[str] = Field(None, max_length=100)
-    name_zh: Optional[str] = Field(None, max_length=100)
-    name_ms: Optional[str] = Field(None, max_length=100)
-    name_th: Optional[str] = Field(None, max_length=100)
-    color: Optional[str] = Field(None, pattern=r"^#[0-9A-Fa-f]{6}$")
-    icon: Optional[str] = Field(None, max_length=50)
-    parent_id: Optional[str] = Field(None, max_length=36)
-    description: Optional[str] = None
-    keywords: Optional[List[str]] = None
-    is_active: Optional[bool] = None
-
-
 class TransactionCategoryResponse(TransactionCategoryBase, TimestampMixin):
     """Schema for transaction category responses"""
 
@@ -143,6 +127,7 @@ class RecurringTransactionBase(BaseModel):
     currency: str = Field(..., min_length=3, max_length=3)
     category_id: str = Field(..., min_length=36, max_length=36)
     description: str = Field(..., min_length=1, max_length=500)
+    subcategory: Optional[str] = Field(None, max_length=100)
     payment_method: Optional[PaymentMethod] = None
     frequency: RecurringFrequency
     interval: int = Field(1, gt=0)
@@ -175,8 +160,14 @@ class RecurringTransactionUpdate(BaseModel):
     currency: Optional[str] = Field(None, min_length=3, max_length=3)
     category_id: Optional[str] = Field(None, min_length=36, max_length=36)
     description: Optional[str] = Field(None, min_length=1, max_length=500)
+    subcategory: Optional[str] = Field(None, max_length=100)
     payment_method: Optional[PaymentMethod] = None
     frequency: Optional[RecurringFrequency] = None
+    # The anchor: later occurrences keep its day of the month.
+    start_date: Optional[date] = None
+    # Moves a reminder's next date (back to one skipped by mistake, or on to a
+    # new day). Refused for a rule that posts itself: it would backfill.
+    next_occurrence: Optional[date] = None
     interval: Optional[int] = Field(None, gt=0)
     end_date: Optional[date] = None
     max_occurrences: Optional[int] = Field(None, gt=0)
@@ -198,6 +189,8 @@ class RecurringTransactionResponse(RecurringTransactionBase, TimestampMixin):
     is_active: bool
     is_paused: bool
     category: Optional[TransactionCategoryResponse] = None
+    # Set on a bill split with a partner; those are managed from Savings.
+    split_connection_id: Optional[str] = None
     model_config = ConfigDict(from_attributes=True)
 
     @model_validator(mode="before")
@@ -225,10 +218,37 @@ class RecurringTransactionResponse(RecurringTransactionBase, TimestampMixin):
             data["category"] = columns(category, sa_inspect(category))
         return data
 
-    @field_validator("id", "user_id", "category_id", mode="before")
+    @field_validator("id", "user_id", "category_id", "split_connection_id", mode="before")
     @classmethod
     def _uuid_to_str(cls, v):
         return str(v) if hasattr(v, "hex") else v
+
+
+class ReminderAction(BaseModel):
+    """Record or skip one occurrence of a reminder.
+
+    `occurrence` is the due date the user was shown; if the reminder has moved
+    on since (recorded on another device, a double tap) the request gets 409.
+    """
+
+    occurrence: date
+    amount: Optional[Decimal] = Field(None, gt=0, decimal_places=2)
+    transaction_date: Optional[date] = None
+
+
+class RecurringSuggestion(BaseModel):
+    """An expense that looks like a monthly bill, from the user's own history."""
+
+    description: str
+    category_id: str
+    category: str
+    subcategory: Optional[str] = None
+    amount: Decimal
+    currency: str
+    payment_method: Optional[PaymentMethod] = None
+    day_of_month: int
+    months_seen: int
+    last_date: date
 
 
 # Transaction schemas
@@ -261,6 +281,9 @@ class TransactionBase(BaseModel):
     notes: Optional[str] = Field(None, max_length=10000)
     tax_deductible: bool = False
     business_expense: bool = False
+    # Not the user's own spending or earning (a deposit, a purchase for a friend,
+    # a bill paid for family, the repayment): the wallet moves, the figures skip it.
+    pass_through: bool = False
 
     @field_validator("tags")
     @classmethod
@@ -321,6 +344,7 @@ class TransactionUpdate(BaseModel):
     tax_deductible: Optional[bool] = None
     business_expense: Optional[bool] = None
     reviewed_by_user: Optional[bool] = None
+    pass_through: Optional[bool] = None
     # Link/unlink this expense to a loan. Changing it (or the amount) re-syncs the
     # loan balance in update_transaction. Empty string is treated as "unlink".
     loan_id: Optional[str] = Field(
@@ -471,7 +495,6 @@ class TransactionFilter(BaseModel):
     tags: Optional[List[str]] = Field(None, max_length=10)
     auto_categorized: Optional[bool] = None
     reviewed_by_user: Optional[bool] = None
-    has_attachments: Optional[bool] = None
     is_recurring: Optional[bool] = None
     search: Optional[str] = Field(None, max_length=200)
     exclude_transfers: bool = Field(
@@ -479,7 +502,8 @@ class TransactionFilter(BaseModel):
         description=(
             "Leave both legs of a wallet transfer out. A transfer is one move stored "
             "as a matching income and expense row, so counting it inflates the income "
-            "and spending totals by the same amount while the net stays right."
+            "and spending totals by the same amount while the net stays right. "
+            "Pass-through rows (pass_through) go too: not the user's own money either."
         ),
     )
 
@@ -551,52 +575,6 @@ class TransactionAnalytics(BaseModel):
     payment_method_breakdown: List[PaymentMethodAnalytics]
     top_merchants: List[Dict[str, Union[str, Decimal, int]]]
     currency_breakdown: List[Dict[str, Union[str, Decimal, int]]]
-
-
-# QR Payment specific schemas
-class QRPaymentData(BaseModel):
-    """Schema for QR payment data"""
-
-    qr_code: str = Field(..., max_length=500)
-    payment_provider: PaymentMethod = Field(..., alias="payment_method")
-    merchant_id: Optional[str] = Field(None, max_length=100)
-    merchant_name: Optional[str] = Field(None, max_length=200)
-    terminal_id: Optional[str] = Field(None, max_length=50)
-    transaction_ref: Optional[str] = Field(None, max_length=100)
-
-    model_config = ConfigDict(populate_by_name=True)
-
-
-class QRPaymentTransaction(TransactionCreate):
-    """Schema for QR payment transactions"""
-
-    qr_payment_data: QRPaymentData
-
-
-# Attachment schemas
-class TransactionAttachmentBase(BaseModel):
-    """Base transaction attachment schema"""
-
-    filename: str = Field(..., max_length=255)
-    file_size: int = Field(..., gt=0)
-    mime_type: str = Field(..., max_length=100)
-    is_receipt: bool = True
-
-
-class TransactionAttachmentResponse(TransactionAttachmentBase, TimestampMixin):
-    """Schema for transaction attachment responses"""
-
-    # UUIDs, as the model stores them (str rejected every row); JSON is unchanged.
-    id: uuid.UUID
-    transaction_id: uuid.UUID
-    original_filename: str
-    file_path: str
-    storage_provider: str
-    ocr_text: Optional[str] = None
-    processed: bool
-    processing_error: Optional[str] = None
-    uploaded_by: uuid.UUID
-    model_config = ConfigDict(from_attributes=True)
 
 
 # Categorization schemas

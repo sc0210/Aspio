@@ -11,7 +11,7 @@ ExpenseSplit     — per-member share of a SharedExpense.
 
 import enum
 import uuid
-from datetime import datetime, timezone
+from datetime import datetime
 from decimal import Decimal
 from typing import Optional
 
@@ -222,30 +222,6 @@ class ExpenseSplit(BaseModel):
             f"<ExpenseSplit(expense={self.expense_id}, user={self.user_id}, "
             f"amount={self.amount}, settled={self.settled})>"
         )
-
-
-class LineBotActivity(BaseModel):
-    """Audit log of user interactions with the LINE bot."""
-
-    __tablename__ = "line_bot_activities"
-
-    id: Mapped[uuid.UUID] = mapped_column(
-        UUID(as_uuid=True), primary_key=True, default=uuid.uuid4
-    )
-    user_id: Mapped[uuid.UUID] = mapped_column(
-        UUID(as_uuid=True), ForeignKey("users.id", ondelete="CASCADE"), nullable=False
-    )
-    event_type: Mapped[str] = mapped_column(String(40), nullable=False)
-    description: Mapped[str] = mapped_column(String(200), nullable=False)
-    amount: Mapped[Optional[Decimal]] = mapped_column(Numeric(15, 2), nullable=True)
-    currency: Mapped[Optional[str]] = mapped_column(String(10), nullable=True)
-    created_at: Mapped[datetime] = mapped_column(
-        DateTime(timezone=True), nullable=False, default=lambda: datetime.now(timezone.utc)
-    )
-
-    __table_args__ = (
-        Index("idx_line_bot_activities_user_created", "user_id", "created_at"),
-    )
 
 
 class LineProcessedEvent(BaseModel):

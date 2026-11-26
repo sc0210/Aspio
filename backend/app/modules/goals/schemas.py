@@ -209,19 +209,6 @@ class GoalResponse(GoalBase):
         return str(value) if value else value
 
 
-class GoalSummary(BaseModel):
-    """Goal summary for dashboard"""
-
-    total_goals: int = Field(serialization_alias="totalGoals")
-    active_goals: int = Field(serialization_alias="activeGoals")
-    completed_goals: int = Field(serialization_alias="completedGoals")
-    total_target_amount: Decimal = Field(serialization_alias="totalTargetAmount")
-    total_current_amount: Decimal = Field(serialization_alias="totalCurrentAmount")
-    overall_progress: Decimal = Field(serialization_alias="overallProgress")
-
-    model_config = ConfigDict(populate_by_name=True)
-
-
 class GoalContributionCreate(BaseModel):
     """Reserve (or release) Life Wallet cash for a goal."""
 

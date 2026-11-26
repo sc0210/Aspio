@@ -109,16 +109,12 @@ async def test_recent_activity(authenticated_client, world):
     get(authenticated_client, "/recent-activity", limit=5)
 
 
-@pytest.mark.parametrize("path,params", [
-    ("/health", {}), ("/monthly-trend", {"months": 3}), ("/upcoming-events", {"days_ahead": 60}),
-    ("/overview", {}), ("/goals-overview", {}),
+@pytest.mark.parametrize("method,path", [
+    ("get", "/overview"), ("get", "/upcoming-events"), ("get", "/monthly-trend"), ("post", "/refresh"),
 ])
-async def test_static_endpoints_respond(authenticated_client, world, path, params):
-    assert authenticated_client.get(f"{BASE}{path}", params=params).status_code == 200
-
-
-async def test_refresh(authenticated_client, world):
-    assert authenticated_client.post(f"{BASE}/refresh").status_code == 200
+async def test_the_demo_only_routes_are_gone(authenticated_client, method, path):
+    """They served fixtures to everyone and nothing called them."""
+    assert getattr(authenticated_client, method)(f"{BASE}{path}").status_code == 404
 
 
 async def test_wallet_trends_include_all_three_wallets(authenticated_client, world):

@@ -1,6 +1,6 @@
-"""/portfolio/performance/{time-weighted-return,historical,holding-periods} on seeded lots and prices."""
+"""/portfolio/performance/time-weighted-return on seeded lots and prices."""
 
-from datetime import date, datetime, time, timedelta, timezone
+from datetime import date, datetime, time, timezone
 from decimal import Decimal
 from unittest.mock import AsyncMock, MagicMock, patch
 from uuid import uuid4
@@ -12,7 +12,6 @@ from app.modules.portfolio import historical_price_repository
 from app.modules.portfolio.models import (
     HistoricalPrice, HoldingWalletType, Portfolio, PortfolioHolding, PortfolioTransaction,
 )
-from app.utils.datetime_helpers import business_today
 
 pytestmark = [pytest.mark.asyncio, pytest.mark.database]
 
@@ -138,72 +137,6 @@ class TestTimeWeightedReturn:
         assert "twr" in d
 
 
-class TestHistorical:
-    async def test_points_value_each_lot_from_its_purchase_day(
-            self, authenticated_client, async_session, pf, test_user):
-        today = business_today()
-        d0 = today - timedelta(days=61)
-        a = lot(pf, test_user, "0050", "10", "100", d0, price="150")
-        b = lot(pf, test_user, "2330", "1", "500", d0 + timedelta(days=45), price="600")
-        async_session.add_all([a, b, close("0050", d0 + timedelta(days=30), "120")])
-        await async_session.commit()
-
-        pts = data_of(authenticated_client.get(f"{BASE}/historical", params={"interval": "monthly"}))
-        assert [p["date"] for p in pts] == [
-            (d0 + timedelta(days=n)).isoformat() for n in (0, 30, 60)] + [today.isoformat()]
-        # Before the first stored close, the lot's current price stands in.
-        assert (pts[0]["value"], pts[0]["cost"]) == (1500, 1000)
-        assert pts[0]["gain_loss"] == 500 and pts[0]["gain_loss_percentage"] == pytest.approx(50)
-        assert pts[1]["value"] == 1200 and pts[1]["topHoldings"][0]["closePrice"] == 120
-        # The second lot joins once bought, valued at its current price (no history).
-        assert (pts[2]["value"], pts[2]["cost"]) == (1200 + 600, 1500)
-        assert [h["symbol"] for h in pts[2]["topHoldings"]] == ["0050", "2330"]
-
-    @pytest.mark.parametrize("interval,step", [("daily", 1), ("weekly", 7), ("yearly", 365), ("bogus", 30)])
-    async def test_interval_spacing(self, authenticated_client, async_session, pf, test_user, interval, step):
-        today = business_today()
-        async_session.add(lot(pf, test_user, "0050", "1", "1", today - timedelta(days=20)))
-        await async_session.commit()
-
-        pts = data_of(authenticated_client.get(f"{BASE}/historical", params={"interval": interval}))
-        dates = [date.fromisoformat(p["date"]) for p in pts]
-        assert dates[0] == today - timedelta(days=20) and dates[-1] == today
-        if len(dates) > 2:
-            assert dates[1] - dates[0] == timedelta(days=step)
-
-    async def test_no_holdings_is_an_empty_series(self, authenticated_client, pf):
-        assert data_of(authenticated_client.get(f"{BASE}/historical")) == []
-
-    async def test_demo_caller_gets_twelve_points(self, client):
-        assert len(data_of(client.get(f"{BASE}/historical"))) == 12
-
-
-class TestHoldingPeriods:
-    async def test_buckets_by_years_held(self, authenticated_client, async_session, pf, test_user):
-        today = business_today()
-        async_session.add_all([
-            lot(pf, test_user, "A", "2", "10", today - timedelta(days=100), price="15"),
-            lot(pf, test_user, "B", "1", "10", today - timedelta(days=800)),
-            lot(pf, test_user, "C", "1", "10", today - timedelta(days=1500)),
-        ])
-        await async_session.commit()
-
-        d = data_of(authenticated_client.get(f"{BASE}/holding-periods"))
-        assert d["total_holdings"] == 3
-        assert (d["short_term_count"], d["medium_term_count"], d["long_term_count"]) == (1, 1, 1)
-        assert d["average_holding_period_days"] == pytest.approx(800)
-        assert d["average_holding_period_years"] == pytest.approx(round(800 / 365.25, 2))
-        assert d["categorization"]["short_term_pct"] == pytest.approx(33.33)
-        short = d["short_term_holdings"][0]
-        assert (short["symbol"], short["days_held"], short["cost"], short["value"]) == ("A", 100, 20, 30)
-
-    async def test_no_holdings(self, authenticated_client, pf):
-        d = data_of(authenticated_client.get(f"{BASE}/holding-periods"))
-        assert d["total_holdings"] == 0 and d["average_holding_period_days"] == 0
-        assert d["categorization"] == {"short_term_pct": 0, "medium_term_pct": 0, "long_term_pct": 0}
-
-
-@pytest.mark.parametrize("path", ["time-weighted-return", "historical", "holding-periods"])
-async def test_user_without_a_portfolio_gets_404(authenticated_client, path):
-    r = authenticated_client.get(f"{BASE}/{path}")
+async def test_user_without_a_portfolio_gets_404(authenticated_client):
+    r = authenticated_client.get(f"{BASE}/time-weighted-return")
     assert r.status_code == 404, r.text[:200]

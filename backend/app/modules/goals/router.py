@@ -16,7 +16,6 @@ from .schemas import (
     GoalCreate,
     GoalUpdate,
     GoalResponse,
-    GoalSummary,
     GoalContributionCreate,
     GoalContributionResponse,
     LifeCashResponse,
@@ -88,32 +87,6 @@ async def list_goals(
         message=f"Retrieved {len(goals)} goals",
         meta=PaginationMeta.create(page=skip // limit + 1, limit=limit, total=total),
     )
-
-
-@router.get("/summary", response_model=ApiResponse[GoalSummary])
-async def get_goals_summary(
-    current_user: OptionalCurrentUser,
-    session: AsyncSession = Depends(get_db),
-):
-    """Get goals summary for dashboard"""
-    if not current_user:
-        # Return demo data
-        return ApiResponse.success_response(
-            data=GoalSummary(
-                total_goals=3,
-                active_goals=2,
-                completed_goals=1,
-                total_target_amount=144000,
-                total_current_amount=43200,
-                overall_progress=30.00,
-            ),
-            message="Demo mode - summary",
-        )
-
-    goal_service = get_goal_service(session)
-    summary = await goal_service.get_summary(current_user.id)
-
-    return ApiResponse.success_response(data=summary, message="Goals summary retrieved")
 
 
 @router.get("/life-cash", response_model=ApiResponse[LifeCashResponse])

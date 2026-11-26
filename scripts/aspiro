@@ -626,10 +626,11 @@ cmd_backup() {
   mv "$file.partial" "$file"
   chmod 600 "$file"
 
-  # Receipt attachments live on the backend_uploads volume, and the database only
-  # points at them: a restore from the dump alone left every attachment a 404.
+  # The backend_uploads volume: once receipt attachments, now only transient
+  # receipt-scan files. Archived so a backup taken before the attachment tables
+  # were dropped still restores whole.
   local uploads="$dir/aspiro_$stamp.uploads.tar.gz"
-  log "archiving uploaded attachments to $uploads"
+  log "archiving the uploads volume to $uploads"
   compose exec -T backend tar -C /app/uploads -czf - . > "$uploads.partial" \
     || { rm -f "$uploads.partial"; die "archiving /app/uploads failed; nothing was encrypted or uploaded (local dump: $file)"; }
   gzip -t "$uploads.partial" \
@@ -638,7 +639,7 @@ cmd_backup() {
   chmod 600 "$uploads"
 
   # Both files exist locally before either is encrypted or sent offsite, so a run
-  # never stores a dump offsite without its matching attachments.
+  # never stores a dump offsite without its matching uploads archive.
   aspiro_backup_seal "$file"
   aspiro_backup_seal "$uploads"
 

@@ -218,11 +218,6 @@ class User(BaseModel):
     #     back_populates="user",
     #     cascade="all, delete-orphan"
     # )
-    # chat_sessions: Mapped[List["ChatSession"]] = relationship(
-    #     "ChatSession",
-    #     back_populates="user",
-    #     cascade="all, delete-orphan"
-    # )
     # notifications: Mapped[List["Notification"]] = relationship(
     #     "Notification",
     #     back_populates="user",
@@ -435,35 +430,6 @@ class EmailVerificationToken(BaseModel):
         return datetime.now(timezone.utc) > _utc_aware(self.expires_at)
 
 
-class PasswordResetToken(BaseModel):
-    """Password reset token model"""
-
-    __tablename__ = "password_reset_tokens"
-
-    id: Mapped[uuid.UUID] = mapped_column(
-        UUID(as_uuid=True), primary_key=True, default=uuid.uuid4
-    )
-    user_id: Mapped[uuid.UUID] = mapped_column(
-        UUID(as_uuid=True), ForeignKey("users.id"), nullable=False, index=True
-    )
-    token_hash: Mapped[str] = mapped_column(
-        String(255), nullable=False, unique=True, index=True
-    )
-    expires_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)
-    is_used: Mapped[bool] = mapped_column(Boolean, default=False, nullable=False)
-
-    # Relationship
-    user: Mapped["User"] = relationship("User")
-
-    def __repr__(self):
-        return f"<PasswordResetToken(id={self.id}, user_id={self.user_id}, used={self.is_used})>"
-
-    @property
-    def is_expired(self) -> bool:
-        """Check if token is expired"""
-        return datetime.now(timezone.utc) > _utc_aware(self.expires_at)
-
-
 class AchievementType(enum.Enum):
     """Achievement type enumeration for Asian market gamification"""
 
@@ -573,100 +539,3 @@ class UserActivityLog(BaseModel):
         return f"<UserActivityLog(id={self.id}, user_id={self.user_id}, type={self.activity_type})>"
 
 
-class UserDataExport(BaseModel):
-    """User data export requests for GDPR compliance"""
-
-    __tablename__ = "user_data_exports"
-
-    id: Mapped[uuid.UUID] = mapped_column(
-        UUID(as_uuid=True), primary_key=True, default=uuid.uuid4
-    )
-    user_id: Mapped[uuid.UUID] = mapped_column(
-        UUID(as_uuid=True), ForeignKey("users.id"), nullable=False, index=True
-    )
-    request_type: Mapped[str] = mapped_column(
-        String(50),
-        nullable=False,
-        default="full_export",  # full_export, data_portability, gdpr_request
-    )
-    status: Mapped[str] = mapped_column(
-        String(50),
-        nullable=False,
-        default="pending",  # pending, processing, completed, failed
-    )
-    file_path: Mapped[Optional[str]] = mapped_column(String(500), nullable=True)
-    file_size: Mapped[Optional[int]] = mapped_column(Integer, nullable=True)  # in bytes
-    expires_at: Mapped[Optional[datetime]] = mapped_column(DateTime(timezone=True), nullable=True)
-    completed_at: Mapped[Optional[datetime]] = mapped_column(DateTime(timezone=True), nullable=True)
-    download_count: Mapped[int] = mapped_column(Integer, default=0, nullable=False)
-
-    # Relationship
-    user: Mapped["User"] = relationship("User")
-
-    def __repr__(self):
-        return f"<UserDataExport(id={self.id}, user_id={self.user_id}, status={self.status})>"
-
-    @property
-    def is_expired(self) -> bool:
-        """Check if export file is expired"""
-        if self.expires_at is None:
-            return False
-        return datetime.now(timezone.utc) > _utc_aware(self.expires_at)
-
-
-class UserSecurityLog(BaseModel):
-    """Security event logging for audit and compliance"""
-
-    __tablename__ = "user_security_logs"
-
-    id: Mapped[uuid.UUID] = mapped_column(
-        UUID(as_uuid=True), primary_key=True, default=uuid.uuid4
-    )
-    user_id: Mapped[Optional[uuid.UUID]] = mapped_column(
-        UUID(as_uuid=True),
-        ForeignKey("users.id"),
-        nullable=True,  # Can be null for failed login attempts
-        index=True,
-    )
-    event_type: Mapped[str] = mapped_column(String(100), nullable=False, index=True)
-    event_description: Mapped[str] = mapped_column(Text, nullable=False)
-    ip_address: Mapped[Optional[str]] = mapped_column(String(45), nullable=True)
-    user_agent: Mapped[Optional[str]] = mapped_column(Text, nullable=True)
-    risk_level: Mapped[str] = mapped_column(
-        String(20), nullable=False, default="low"  # low, medium, high, critical
-    )
-    event_metadata: Mapped[Optional[Dict[str, Any]]] = mapped_column(
-        JSON, nullable=True
-    )
-
-    # Relationship
-    user: Mapped[Optional["User"]] = relationship("User")
-
-    def __repr__(self):
-        return f"<UserSecurityLog(id={self.id}, user_id={self.user_id}, event={self.event_type})>"
-
-
-class UserPreferenceHistory(BaseModel):
-    """Track user preference changes for analytics and compliance"""
-
-    __tablename__ = "user_preference_history"
-
-    id: Mapped[uuid.UUID] = mapped_column(
-        UUID(as_uuid=True), primary_key=True, default=uuid.uuid4
-    )
-    user_id: Mapped[uuid.UUID] = mapped_column(
-        UUID(as_uuid=True), ForeignKey("users.id"), nullable=False, index=True
-    )
-    preference_key: Mapped[str] = mapped_column(String(100), nullable=False)
-    old_value: Mapped[Optional[str]] = mapped_column(Text, nullable=True)
-    new_value: Mapped[str] = mapped_column(Text, nullable=False)
-    changed_by: Mapped[str] = mapped_column(
-        String(20), nullable=False, default="user"  # user, admin, system
-    )
-    reason: Mapped[Optional[str]] = mapped_column(String(255), nullable=True)
-
-    # Relationship
-    user: Mapped["User"] = relationship("User")
-
-    def __repr__(self):
-        return f"<UserPreferenceHistory(id={self.id}, user_id={self.user_id}, key={self.preference_key})>"

@@ -31,7 +31,6 @@ from .schemas import (
     GoalUpdate,
     GoalMilestoneCreate,
     GoalContributionCreate,
-    GoalSummary,
 )
 
 logger = logging.getLogger(__name__)
@@ -520,26 +519,6 @@ class GoalService:
             if not milestone.is_completed and goal.current_amount >= milestone.amount:
                 milestone.is_completed = True
                 milestone.completed_at = datetime.now(timezone.utc)
-
-    async def get_summary(self, user_id: UUID) -> GoalSummary:
-        """Get goals summary using a single DB aggregation query (was: load all + Python loops)."""
-        await self.settle_emergency_goals(user_id)
-        row = await self.repository.get_summary_row(user_id)
-
-        total_target = Decimal(str(row.total_target)) if row else Decimal("0")
-        total_current = Decimal(str(row.total_current)) if row else Decimal("0")
-        overall_progress = Decimal("0.00")
-        if total_target > 0:
-            overall_progress = (total_current / total_target * 100).quantize(Decimal("0.01"))
-
-        return GoalSummary(
-            total_goals=int(row.total) if row else 0,
-            active_goals=int(row.active) if row else 0,
-            completed_goals=int(row.completed) if row else 0,
-            total_target_amount=total_target,
-            total_current_amount=total_current,
-            overall_progress=overall_progress,
-        )
 
 
 def get_goal_service(session: AsyncSession) -> GoalService:

@@ -6,11 +6,8 @@ Behavior is preserved exactly; paths remain identical.
 
 from ._shared import *  # noqa: F401,F403  (shared imports/constants/helpers)
 from ._shared import (  # noqa: F401  explicit re-import for underscore-prefixed names
-    _lp_cache_get,
-    _lp_cache_set,
     _get_sort_key,
     _mc,
-    _price_cache,
     fetch_historical_data_background,
 )
 
@@ -128,6 +125,7 @@ async def create_dividend(
 
     try:
         # Verify holding exists if holding_id provided
+        holding = None
         if dividend.holding_id:
             stmt = select(PortfolioHolding).where(
                 PortfolioHolding.id == dividend.holding_id,
@@ -158,7 +156,7 @@ async def create_dividend(
             amount_per_share=dividend.amount_per_share,
             shares_owned=dividend.shares_owned,
             total_amount=dividend.total_amount,
-            currency=dividend.currency,
+            currency=(dividend.currency or (holding.currency if holding else None) or "TWD").upper(),
             tax_withheld=dividend.tax_withheld,
             net_amount=net_amount,
             status=dividend.status,

@@ -43,17 +43,6 @@ class TestModeIsolation:
 
     # ===== DEMO MODE TESTS =====
 
-    def test_demo_mode_transactions_health(self, client):
-        """Test transactions health endpoint in demo mode."""
-        response = client.get("/api/v1/transactions/health")
-
-        assert response.status_code == 200
-        data = response.json()
-        assert data["status"] == "healthy"
-        assert data["module"] == "transactions"
-        assert data["mode"] == "demo"
-        assert data["user_id"] is None
-
     def test_demo_mode_transactions_list(self, client):
         """Test transactions list endpoint in demo mode."""
         response = client.get("/api/v1/transactions/")
@@ -106,17 +95,6 @@ class TestModeIsolation:
 
     # ===== AUTHENTICATED MODE TESTS =====
 
-    def test_authenticated_mode_transactions_health(self, client, valid_jwt_token):
-        """Test transactions health endpoint in authenticated mode."""
-        headers = {"Authorization": f"Bearer {valid_jwt_token}"}
-        response = client.get("/api/v1/transactions/health", headers=headers)
-
-        assert response.status_code == 200
-        data = response.json()
-        assert data["status"] == "healthy"
-        assert data["module"] == "transactions"
-        # Mode depends on whether the test JWT resolves to a valid DB user
-        assert data["mode"] in ("authenticated", "demo")
 
     def test_authenticated_mode_transactions_list_empty(self, client, valid_jwt_token):
         """Test transactions list endpoint in authenticated mode (new user)."""
@@ -171,7 +149,6 @@ class TestModeIsolation:
 
         # Test various endpoints with invalid token
         endpoints = [
-            "/api/v1/transactions/health",
             "/api/v1/transactions/",
             "/api/v1/dashboard/stats",
             "/api/v1/portfolio/holdings"
@@ -291,68 +268,17 @@ class TestModeIsolation:
         assert demo_data["total"] >= 0  # Demo has data or zero
         assert auth_data["total"] >= 0  # Could be demo fallback or no data
 
-    def test_mode_switching(self, client, valid_jwt_token):
-        """Test switching between modes in the same session."""
-        # Start with demo mode
-        demo_response1 = client.get("/api/v1/transactions/health")
-        assert demo_response1.status_code == 200
-        demo1_data = demo_response1.json()
-        assert demo1_data["mode"] == "demo"
 
-        # Try authenticated mode (may fall back to demo)
-        headers = {"Authorization": f"Bearer {valid_jwt_token}"}
-        auth_response = client.get("/api/v1/transactions/health", headers=headers)
-        assert auth_response.status_code == 200
-        auth_data = auth_response.json()
-        assert auth_data["mode"] in ["demo", "authenticated"]
-
-        # Switch back to demo mode
-        demo_response2 = client.get("/api/v1/transactions/health")
-        assert demo_response2.status_code == 200
-        demo2_data = demo_response2.json()
-        assert demo2_data["mode"] == "demo"
-
-        # Verify consistency
-        assert demo1_data["mode"] == demo2_data["mode"]
-
-
-class TestModeIsolationEdgeCases:
-    """Test edge cases for mode isolation."""
-
-    def test_expired_token_falls_back_to_demo(self, client):
-        """Test that expired tokens fall back to demo mode."""
-        # Use a clearly expired token
-        expired_token = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiJ0ZXN0IiwiZXhwIjoxfQ.invalid"
-        headers = {"Authorization": f"Bearer {expired_token}"}
-
-        response = client.get("/api/v1/transactions/health", headers=headers)
-
-        # Should either return demo mode or 401
-        if response.status_code == 200:
-            data = response.json()
-            if "mode" in data:
-                assert data["mode"] == "demo"
-
-    def test_malformed_token_falls_back_to_demo(self, client):
-        """Test that malformed tokens fall back to demo mode."""
-        headers = {"Authorization": "Bearer malformed.token.here"}
-
-        response = client.get("/api/v1/transactions/health", headers=headers)
-
-        # Should either return demo mode or 401
-        if response.status_code == 200:
-            data = response.json()
-            if "mode" in data:
-                assert data["mode"] == "demo"
-
-    def test_missing_authorization_header_uses_demo(self, client):
-        """Test that missing authorization header uses demo mode."""
-        response = client.get("/api/v1/transactions/health")
-
-        assert response.status_code == 200
-        data = response.json()
-        assert data["mode"] == "demo"
-        assert data["user_id"] is None
+@pytest.mark.parametrize("token", [
+    "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiJ0ZXN0IiwiZXhwIjoxfQ.invalid",  # expired
+    "malformed.token.here",
+])
+def test_a_bad_token_is_refused_not_served_as_demo(client, token):
+    """No token gets the demo list; a token that doesn't verify gets a 401, which is
+    what sends the frontend to refresh or sign out, never someone's data or the demo."""
+    assert client.get("/api/v1/transactions/").status_code == 200
+    r = client.get("/api/v1/transactions/", headers={"Authorization": f"Bearer {token}"})
+    assert r.status_code == 401
 
 
 if __name__ == "__main__":

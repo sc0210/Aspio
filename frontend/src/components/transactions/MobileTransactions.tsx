@@ -5,7 +5,7 @@ import { categoryLabel, subcategoryLabel } from '@/lib/transactions/categoryLabe
 import { useMemo, useState } from 'react';
 import Link from 'next/link';
 import { useTranslation } from 'react-i18next';
-import { CameraIcon, PlusIcon } from '@heroicons/react/24/outline';
+import { CameraIcon, PlusIcon, CalendarDaysIcon } from '@heroicons/react/24/outline';
 import { DashboardLayout } from '@/components/layout/DashboardLayout';
 import { LoadingSpinner } from '@/components/ui/LoadingSpinner';
 import { BiggerScreenHint } from '@/components/dashboard/BiggerScreenHint';
@@ -17,9 +17,10 @@ import { formatTWD, formatTWDCompact, toTWD } from '@/utils/formatters';
 import { cn } from '@/utils/cn';
 import type { Transaction } from '@/shared/types';
 import { Card } from '@/components/ui/Card';
-import { isWalletTransfer } from '@/utils/expenseGroups';
+import { isPassThrough, isWalletTransfer } from '@/utils/expenseGroups';
 import { useAddHref, useEditHref } from '@/lib/transactions/returnTo';
 import { PageHeader } from '@/components/layout/PageHeader';
+import { DueBillsBanner } from '@/components/transactions/DueBillsBanner';
 
 
 function startOfMonth(): Date {
@@ -82,7 +83,7 @@ export function MobileTransactions() {
             // Not `type === 'transfer'`: create_transfer writes the two legs as an
             // ordinary expense and income, so that test never matched and a wallet
             // top-up counted as both earning and spending on this hero.
-            if (isWalletTransfer(tx)) continue;
+            if (isWalletTransfer(tx) || isPassThrough(tx)) continue;
             const d = typeof tx.date === 'string' ? new Date(tx.date) : tx.date;
             if (!(d >= monthStart)) continue;
             const twd = toTWD(tx.amount || 0, tx.currency || 'TWD');
@@ -136,6 +137,10 @@ export function MobileTransactions() {
                 <PageHeader variant="flat"
                     actions={<>
                         <div className="flex items-center gap-2">
+                            <Link href="/transactions/recurring" aria-label={t('transactions:bills.link', 'Bills')}
+                                className="grid place-items-center w-11 h-11 rounded-full bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-400">
+                                <CalendarDaysIcon className="w-5 h-5" />
+                            </Link>
                             {/* The phone is where a receipt gets photographed; the desktop toolbar was its only link. */}
                             <Link href="/transactions/scan" aria-label={t('transactions:scan.title', 'Scan Receipt')}
                                 className="grid place-items-center w-11 h-11 rounded-full bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-400">
@@ -150,6 +155,8 @@ export function MobileTransactions() {
                 />
 
                 <BiggerScreenHint />
+
+                <DueBillsBanner />
 
                 {/* The totals come from the same rows: on a failed fetch they would read NT$0. */}
                 {!(error && rows.length === 0) && (<>
@@ -247,10 +254,11 @@ export function MobileTransactions() {
                                                         <p className="text-xs font-medium text-gray-500 dark:text-gray-400 truncate">
                                                             {isTransfer ? `${categoryLabel(tx.category, t)} · ${t(`transactions:wallet.${wallet}`)}` : categoryLabel(tx.category, t)}
                                                             {!isTransfer && tx.subcategory && ` · ${subcategoryLabel(tx.subcategory, t)}`}
+                                                            {tx.passThrough && ` · ${t('transactions:passThrough.badge', 'Not mine')}`}
                                                         </p>
                                                     </div>
                                                     <p className={cn('text-[14.5px] font-extrabold tabular-nums flex-shrink-0',
-                                                        isTransfer ? 'text-gray-500 dark:text-gray-400' : isIncome ? 'text-prosperity-700 dark:text-prosperity-400' : 'text-gray-900 dark:text-white')}>
+                                                        isTransfer || tx.passThrough ? 'text-gray-500 dark:text-gray-400' : isIncome ? 'text-prosperity-700 dark:text-prosperity-400' : 'text-gray-900 dark:text-white')}>
                                                         {/* Exact, not compact: a ledger row read "−NT$1.2K". */}
                                                         {isIncome ? '+' : '−'}{isValueVisible ? formatTWD(toTWD(tx.amount || 0, tx.currency || 'TWD')) : '•••'}
                                                     </p>

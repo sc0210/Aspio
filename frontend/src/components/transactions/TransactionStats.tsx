@@ -100,7 +100,7 @@ export function TransactionStats({
                 )}
               />
             </span>
-            {t('transactions:stats.hideTransfers', 'Exclude transfers from totals')}
+            {t('transactions:stats.hideTransfers', 'Only my own money in totals')}
           </button>
         </div>
       )}

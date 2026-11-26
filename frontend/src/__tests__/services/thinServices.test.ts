@@ -55,9 +55,6 @@ describe('dashboardService routes', () => {
     ['getDashboardStats default', () => dashboardService.getDashboardStats(), '/dashboard/stats?period=month'],
     ['getDashboardStats', () => dashboardService.getDashboardStats('ytd'), '/dashboard/stats?period=ytd'],
     ['getRecentActivity', () => dashboardService.getRecentActivity(), '/dashboard/recent-activity?limit=10'],
-    ['getDashboardData', () => dashboardService.getDashboardData(), '/dashboard/overview'],
-    ['getUpcomingEvents', () => dashboardService.getUpcomingEvents(), '/dashboard/upcoming-events'],
-    ['getMonthlyTrend', () => dashboardService.getMonthlyTrend(6), '/dashboard/monthly-trend?months=6'],
     ['getSpendingByCategory', () => dashboardService.getSpendingByCategory(), '/dashboard/spending-by-category?period=30d'],
     ['getIncomeByCategory', () => dashboardService.getIncomeByCategory('1y'), '/dashboard/income-by-category?period=1y'],
     ['getHistoricalTrends', () => dashboardService.getHistoricalTrends('90d'), '/dashboard/historical-trends?period=90d'],
@@ -65,11 +62,6 @@ describe('dashboardService routes', () => {
   ] as const)('%s', async (_name, call, url) => {
     await call();
     expect(api.get).toHaveBeenCalledWith(url);
-  });
-
-  it('refreshDashboard posts', async () => {
-    await dashboardService.refreshDashboard();
-    expect(api.post).toHaveBeenCalledWith('/dashboard/refresh');
   });
 });
 

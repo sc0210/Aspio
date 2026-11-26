@@ -152,43 +152,48 @@ describe('usePortfolioData', () => {
 
   // ── Analytics queryKey correctness ────────────────────────────────────────────
 
-  it('uses holdings.length (not null) in analytics queryKey when lastPriceUpdateAt is null', () => {
-    const portfolioData = { holdings: new Array(3).fill({}), lastPriceUpdateAt: null };
-    useQuery
-      .mockReturnValueOnce({ data: portfolioData, isLoading: false, error: null, refetch: jest.fn() }) // 1. portfolio
-      .mockReturnValue({ data: null, isLoading: false, error: null, refetch: jest.fn() });
+  it('keeps one analytics key across price updates and lot counts', () => {
+    // A key that moved with prices started an empty query, so a failed fetch
+    // replaced the last good allocation with the error card.
+    const analyticsKeyFor = (portfolioData: unknown) => {
+      useQuery.mockReset();
+      useQuery
+        .mockReturnValueOnce({ data: portfolioData, isLoading: false, error: null, refetch: jest.fn() }) // 1. portfolio
+        .mockReturnValue({ data: null, isLoading: false, error: null, refetch: jest.fn() });
+      renderHook(() => usePortfolioData(defaultFilters));
+      const call = useQuery.mock.calls
+        .map((args: unknown[]) => args[0] as { queryKey?: unknown[] })
+        .find((o) => Array.isArray(o.queryKey) && o.queryKey[0] === 'portfolio-analytics');
+      return call?.queryKey;
+    };
 
-    renderHook(() => usePortfolioData(defaultFilters));
-
-    const analyticsCalls = useQuery.mock.calls.filter((args: unknown[]) => {
-      const opts = args[0] as { queryKey?: unknown[] };
-      return Array.isArray(opts?.queryKey) && opts.queryKey.includes('portfolio-analytics');
-    });
-
-    if (analyticsCalls.length > 0) {
-      const queryKey: unknown[] = (analyticsCalls[0][0] as { queryKey: unknown[] }).queryKey;
-      expect(queryKey).toContain(3);
-      expect(queryKey).not.toContain(null);
-    }
+    const before = analyticsKeyFor({ holdings: new Array(2).fill({}), lastPriceUpdateAt: new Date('2024-06-15T00:00:00Z') });
+    const after = analyticsKeyFor({ holdings: new Array(3).fill({}), lastPriceUpdateAt: new Date('2024-06-16T00:00:00Z') });
+    expect(before).toEqual(['portfolio-analytics', 'test@test.com']);
+    expect(after).toEqual(before);
   });
 
-  it('uses lastPriceUpdateAt ISO string in analytics queryKey when valid date', () => {
-    const ts = '2024-06-15T00:00:00.000Z';
-    const portfolioData = { holdings: new Array(2).fill({}), lastPriceUpdateAt: new Date(ts) };
-    useQuery
-      .mockReturnValueOnce({ data: portfolioData, isLoading: false, error: null, refetch: jest.fn() }) // 1. portfolio
-      .mockReturnValue({ data: null, isLoading: false, error: null, refetch: jest.fn() });
-
-    renderHook(() => usePortfolioData(defaultFilters));
-
-    const analyticsCalls = useQuery.mock.calls.filter((args: unknown[]) => {
-      const opts = args[0] as { queryKey?: unknown[] };
-      return Array.isArray(opts?.queryKey) && opts.queryKey.includes('portfolio-analytics');
+  it('refetches the allocation when the holdings bring a new price time, not on the first one', () => {
+    const refetchAnalytics = jest.fn();
+    let portfolioData: unknown = undefined; // still loading on the first render
+    useQuery.mockImplementation((opts: { queryKey: unknown[] }) => {
+      if (opts.queryKey[0] === 'portfolio') return { data: portfolioData, isLoading: false, error: null, refetch: jest.fn() };
+      if (opts.queryKey[0] === 'portfolio-analytics') return { data: null, isLoading: false, error: null, refetch: refetchAnalytics };
+      return { data: null, isLoading: false, error: null, refetch: jest.fn() };
     });
 
-    if (analyticsCalls.length > 0) {
-      const queryKey: unknown[] = (analyticsCalls[0][0] as { queryKey: unknown[] }).queryKey;
-      expect(queryKey).toContain(ts);
-    }
+    const { rerender } = renderHook(() => usePortfolioData(defaultFilters));
+    portfolioData = { holdings: [{}], lastPriceUpdateAt: new Date('2024-06-15T00:00:00Z') };
+    rerender();
+    rerender();
+    expect(refetchAnalytics).not.toHaveBeenCalled();
+
+    portfolioData = { holdings: [{}], lastPriceUpdateAt: new Date('2024-06-15T00:05:00Z') };
+    rerender();
+    expect(refetchAnalytics).toHaveBeenCalledTimes(1);
+
+    portfolioData = { holdings: [{}], lastPriceUpdateAt: new Date('2024-06-15T00:05:00Z') };
+    rerender();
+    expect(refetchAnalytics).toHaveBeenCalledTimes(1);
   });
 });

@@ -99,16 +99,14 @@ async def test_preview_counts_only_what_cleanup_would_remove(async_session, worl
 
 async def test_cleanup_deletes_stale_rows_and_spares_everything_else(async_session, world):
     from app.modules.line_bot.service import _profile_cache
-    from app.modules.portfolio.router import _price_cache
 
-    _price_cache.set("k", "v", 60)
     _profile_cache["k"] = ("v", 1)
     stub = PgStub(async_session)
     out = await AdminMonitoringService(stub).run_cleanup()
-    assert _price_cache.get("k") is None and len(_profile_cache) == 0
+    assert len(_profile_cache) == 0
     assert (out["soft_deleted_transactions"], out["soft_deleted_loans"], out["old_notifications"]) == (1, 1, 3)
     assert out["stale_currency_rates"] == 3 and stub.stale_sql == ["DELETE"]
-    assert out["price_cache_cleared"] is True and out["line_profile_cache_cleared"] is True
+    assert out["line_profile_cache_cleared"] is True and "price_cache_cleared" not in out
 
     live = (await async_session.execute(select(Transaction.is_deleted, Transaction.user_id))).all()
     real, demo = world

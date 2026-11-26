@@ -113,39 +113,14 @@ def test_the_series_never_starts_before_the_demo_account_opened():
     assert demo_value_series(9999)[0]["date"] >= DEMO_SERIES_START
 
 
-@pytest.mark.parametrize("today", [date(2026, 10, 12), date(2026, 10, 14)])  # Mon, Wed
-def test_one_day_return_moves_against_the_previous_trading_day(monkeypatch, today):
-    """On a Monday the 1-day window held only Monday, so oneDay read 0.00% every week."""
-    from app.modules.portfolio.routers import _shared
-
-    monkeypatch.setattr(_shared, "business_today", lambda: today)
-    series = demo_value_series(10, end=today)
-    prev, last = series[-2]["value"], series[-1]["value"]
-    assert prev != last  # the fixture series moves day to day
-    assert _shared.demo_period_return_pct(1) == round((last / prev - 1) * 100, 2)
-
-
 def test_a_caller_cannot_corrupt_the_cached_series():
     demo_value_series(30)[-1]["holdings"]["0050"] = 0
     assert demo_value_series(30)[-1]["holdings"]["0050"] == 1_500_000.0
 
 
 @pytest.mark.asyncio
-async def test_historical_demo_ends_at_the_fixture_value():
-    from app.modules.portfolio.routers.performance_history import (
-        get_portfolio_historical_data,
-    )
-
-    response = await get_portfolio_historical_data(days=365, current_user=None, session=None)
-    assert response.data[-1]["value"] == pytest.approx(FIXTURE_PORTFOLIO_VALUE)
-
-
-@pytest.mark.asyncio
-async def test_twr_and_historical_describe_the_fixture():
-    from app.modules.portfolio.routers.performance import (
-        get_historical_performance,
-        get_time_weighted_return,
-    )
+async def test_twr_describes_the_fixture():
+    from app.modules.portfolio.routers.performance import get_time_weighted_return
 
     twr = _body(
         await get_time_weighted_return(
@@ -155,13 +130,6 @@ async def test_twr_and_historical_describe_the_fixture():
     assert twr["current_value"] == FIXTURE_PORTFOLIO_VALUE
     assert twr["total_invested"] == float(DEMO_PORTFOLIO["total_cost"])
     assert twr["twr"] == pytest.approx(float(DEMO_PORTFOLIO["total_gain_loss_percentage"]), abs=0.01)
-
-    hist = _body(
-        await get_historical_performance(interval="monthly", current_user=None, session=None)
-    )["data"]
-    assert len(hist) == 12
-    assert hist[-1]["value"] == pytest.approx(FIXTURE_PORTFOLIO_VALUE)
-    assert hist[-1]["cost"] == float(DEMO_PORTFOLIO["total_cost"])
 
 
 # ── Item 18: dividends and the cash-flow categories ──────────────────────────
@@ -225,21 +193,6 @@ def test_top_income_is_the_fixture_salary():
 
     top = max(MOCK_INCOME_CATEGORIES, key=lambda c: c["amount"])
     assert (top["name"], top["amount"]) == ("Salary", 63_000.0)
-
-
-@pytest.mark.asyncio
-async def test_demo_analytics_allocation_is_the_two_etfs():
-    from app.modules.portfolio.routers.allocation_analytics import router
-
-    # The module defines two `get_asset_allocation`s (the rebalancing one later
-    # shadows this name), so reach the /allocation handler through its route.
-    endpoint = next(r.endpoint for r in router.routes if r.path == "/allocation")
-    data = (await endpoint(current_user=None, session=None)).data
-    assert [(a.type, a.percentage) for a in data["by_region"]] == [
-        ("Taiwan", Decimal("75.0")),
-        ("Global", Decimal("25.0")),
-    ]
-    assert sum(a.value for a in data["by_type"]) == DEMO_PORTFOLIO["total_value"]
 
 
 @pytest.mark.asyncio

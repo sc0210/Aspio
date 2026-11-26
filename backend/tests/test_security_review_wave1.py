@@ -83,7 +83,7 @@ async def test_failed_logins_lock_sign_in_but_not_the_owners_live_session(client
     assert test_user.account_locked_until is not None, "five failures should lock the account"
 
     headers = {"Authorization": f"Bearer {token}"}
-    assert client.get("/api/v1/auth/me", headers=headers).status_code == 200
+    assert client.get("/api/v1/users/me", headers=headers).status_code == 200
     assert client.get("/api/v1/transactions/", headers=headers).status_code == 200
 
     assert _login(client, test_user.email, RIGHT_PASSWORD) == GENERIC_401
@@ -397,9 +397,5 @@ async def test_a_receipt_past_pillows_own_bomb_limit_is_refused_as_too_large(aut
     ocr.assert_not_called()
 
 
-# ── S9: /auth/health reveals no configuration ────────────────────────────────
 
 
-async def test_auth_health_reports_status_only(client):
-    data = client.get("/api/v1/auth/health").json()["data"]
-    assert set(data) == {"service", "status"}

@@ -9,6 +9,7 @@ import {
   XMarkIcon,
   ChartBarIcon,
   ArrowDownTrayIcon,
+  CalendarDaysIcon,
 } from '@heroicons/react/24/outline';
 import { useIsMobile } from '@/hooks/useMediaQuery';
 import { useAccessTier } from '@/hooks/useAccessTier';
@@ -22,6 +23,7 @@ import { DashboardLayout } from '@/components/layout/DashboardLayout';
 import { TOP_BAR_BUTTON, TOP_BAR_PRIMARY } from '@/components/layout/topBarStyles';
 import { PageHeader } from '@/components/layout/PageHeader';
 import { TransactionStats } from '@/components/transactions/TransactionStats';
+import { DueBillsBanner } from '@/components/transactions/DueBillsBanner';
 import dynamic from 'next/dynamic';
 
 const TransactionList = dynamic(
@@ -275,6 +277,14 @@ function DesktopTransactionsPage() {
           <ChartBarIcon className="w-4 h-4" />
           <span className={TOP_BAR_LABEL}>{t('transactions:monthlySummary')}</span>
         </Link>
+        <Link
+          href="/transactions/recurring"
+          title={t('transactions:bills.link', 'Bills')}
+          className={TOP_BAR_BUTTON}
+        >
+          <CalendarDaysIcon className="w-4 h-4" />
+          <span className={TOP_BAR_LABEL}>{t('transactions:bills.link', 'Bills')}</span>
+        </Link>
         {/* Receipt scan — the page existed with no link to it from anywhere. */}
         <Link
           href="/transactions/scan"
@@ -316,6 +326,8 @@ function DesktopTransactionsPage() {
                 </>
             }
         />
+
+        <DueBillsBanner />
 
         {/* Stats Cards */}
         <div

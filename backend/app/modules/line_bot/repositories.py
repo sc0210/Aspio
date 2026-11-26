@@ -31,7 +31,6 @@ from sqlalchemy.orm import selectinload
 
 from app.modules.line_bot.models import (
     ExpenseSplit,
-    LineBotActivity,
     LineGroup,
     LineGroupMember,
     LineLinkToken,
@@ -43,7 +42,7 @@ from app.modules.users.models import User
 
 
 class LineAccountRepository:
-    """Data-access for LINE user links, link tokens and activity logging."""
+    """Data-access for LINE user links and link tokens."""
 
     def __init__(self, db: AsyncSession):
         self.db = db
@@ -168,39 +167,6 @@ class LineAccountRepository:
                 LineLinkToken.line_user_id == line_user_id
             )
         )
-
-    # --- LineBotActivity --------------------------------------------------
-
-    def add_activity(
-        self,
-        user_id: UUID,
-        event_type: str,
-        description: str,
-        amount: Optional[Decimal] = None,
-        currency: Optional[str] = None,
-    ) -> LineBotActivity:
-        """Stage an activity record. Caller owns flush/commit."""
-        activity = LineBotActivity(
-            user_id=user_id,
-            event_type=event_type,
-            description=description,
-            amount=amount,
-            currency=currency,
-        )
-        self.db.add(activity)
-        return activity
-
-    async def get_recent_activities(
-        self, user_id: UUID, limit: int = 20
-    ) -> list[LineBotActivity]:
-        """Most-recent LINE bot activity for a user, newest first."""
-        result = await self.db.execute(
-            select(LineBotActivity)
-            .where(LineBotActivity.user_id == user_id)
-            .order_by(LineBotActivity.created_at.desc())
-            .limit(limit)
-        )
-        return list(result.scalars().all())
 
     # --- LineProcessedEvent (webhook idempotency) -------------------------
 

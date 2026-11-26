@@ -69,6 +69,7 @@ function AddTransactionForm() {
     currency: prefill?.currency ?? 'TWD',
     loanId: '',
     goalId: '',
+    passThrough: false,
   });
 
   // Investment sub-form state
@@ -113,6 +114,7 @@ function AddTransactionForm() {
       tags: [],
       loanId: '',
       goalId: '',
+      passThrough: false,
       fromWallet: 'life',
       toWallet: 'emergency',
     }));
@@ -383,6 +385,7 @@ function AddTransactionForm() {
           paymentMethod: formData.paymentMethod || undefined,
           walletType: formData.walletType as 'life' | 'emergency' | undefined,
           tags: formData.tags,
+          passThrough: formData.passThrough,
           ...(formData.type === 'expense' && formData.loanId ? { loan_id: formData.loanId } : {}),
           // Goal cash is reserved in Life: only a Life expense spends it.
           ...(formData.type === 'expense' && formData.walletType === 'life' && formData.goalId
@@ -793,6 +796,7 @@ function AddTransactionForm() {
                 errors={errors}
                 onChange={handleInputChange}
                 onTagsChange={(tags) => setFormData(prev => ({ ...prev, tags }))}
+                onPassThroughChange={(passThrough) => setFormData(prev => ({ ...prev, passThrough }))}
                 activeLoans={activeLoans}
                 loansAvailable={isPremium}
                 goals={payableGoals(allGoals, formData.goalId)}

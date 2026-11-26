@@ -108,6 +108,10 @@ export interface Transaction {
   loanId?: string; // The loan this expense pays down; unset for ordinary spending
   holdingId?: string; // The portfolio holding this row is the cash leg of
   peerSplitShareId?: string; // Your share of a bill split with a partner
+  /** Money that passed through you (a deposit, a purchase for a friend, a bill
+   *  paid for family, the repayment): moves the wallet, left out of spending
+   *  and earning figures. */
+  passThrough?: boolean;
   holdingSolePurchase?: boolean; // Single reads only: this row is its holding's only purchase leg, so a holding edit rewrites it
   createdAt: Date;
   updatedAt: Date;
@@ -201,71 +205,10 @@ export interface PortfolioHolding {
 
 export type MarketType = 'US' | 'TW' | 'CRYPTO' | 'HK' | 'SG' | 'JP';
 
-export interface MarketData {
-  symbol: string;
-  name: string;
-  price: number;
-  change: number;
-  changePercent: number;
-  volume: number;
-  marketCap?: number;
-  market: MarketType;
-  currency: string;
-  exchange: string;
-  lastUpdated: Date;
-  priceHistory?: PricePoint[];
-}
-
 export interface PricePoint {
   timestamp: Date;
   price: number;
   volume?: number;
-}
-
-export interface MarketDataCache {
-  symbol: string;
-  market: MarketType;
-  data: MarketData;
-  cachedAt: Date;
-  expiresAt: Date;
-}
-
-export interface MarketDataProvider {
-  name: string;
-  type: 'tradingview' | 'finlab' | 'binance' | 'custom';
-  markets: MarketType[];
-  rateLimit: {
-    requestsPerMinute: number;
-    requestsPerHour: number;
-    requestsPerDay: number;
-  };
-  lastRequestAt?: Date;
-  requestCount: {
-    minute: number;
-    hour: number;
-    day: number;
-  };
-}
-
-export interface StockQuote {
-  symbol: string;
-  name: string;
-  price: number;
-  change: number;
-  changePercent: number;
-  volume: number;
-  open: number;
-  high: number;
-  low: number;
-  close: number;
-  previousClose: number;
-  marketCap?: number;
-  pe?: number;
-  dividendYield?: number;
-  market: MarketType;
-  currency: string;
-  exchange: string;
-  lastUpdated: Date;
 }
 
 // Financial Goals types

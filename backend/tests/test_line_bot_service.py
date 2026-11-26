@@ -1041,17 +1041,6 @@ class TestWebAddExpense:
             await svc.web_add_expense(async_session, group.id, link.user_id, body)
         assert exc.value.status_code == 422
 
-    @pytest.mark.asyncio
-    async def test_logs_activity(self, async_session, two_member_group, link, link2):
-        from app.modules.line_bot.models import LineBotActivity
-        from sqlalchemy import select
-        body = ExpenseCreateRequest(amount=Decimal("100"), description="dinner")
-        await svc.web_add_expense(async_session, two_member_group.id, link.user_id, body)
-        acts = (await async_session.execute(
-            select(LineBotActivity).where(LineBotActivity.event_type == "add_expense")
-        )).scalars().all()
-        assert len(acts) == 1
-
 
 class TestWebUpdateExpense:
     @pytest.mark.asyncio

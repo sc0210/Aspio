@@ -263,14 +263,3 @@ class TestLogout:
 
 # ── Health check ──────────────────────────────────────────────────────────────
 
-class TestHealthCheck:
-
-    @pytest.mark.asyncio
-    async def test_users_health_check(self, async_client: AsyncClient):
-        response = await async_client.get("/api/v1/users/health")
-
-        assert response.status_code == 200
-        data = response.json()
-        assert data["success"] is True
-        assert data["data"]["service"] == "users"
-        assert data["data"]["status"] == "healthy"

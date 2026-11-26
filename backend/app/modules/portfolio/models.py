@@ -386,85 +386,6 @@ class PortfolioTransaction(Base):
         return f"<PortfolioTransaction(id={self.id}, type='{self.type}', symbol='{self.symbol}', quantity={self.quantity})>"
 
 
-class MarketData(Base):
-    """Market data model for storing current and historical prices"""
-
-    __tablename__ = "market_data"
-
-    # Primary key
-    id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4, index=True)
-
-    # Security identification
-    symbol = Column(String(20), nullable=False, index=True)
-    exchange = Column(String(10), nullable=False)
-    type = Column(
-        Enum(
-            "stock",
-            "etf",
-            "crypto",
-            "cryptocurrency",
-            "bond",
-            "mutual_fund",
-            "reit",
-            "commodity",
-            "forex",
-            "index",
-            name="market_data_type_enum",
-        ),
-        nullable=False,
-        index=True,
-    )
-
-    # Price data
-    price = Column(Numeric(12, 4), nullable=False, default=0.0)
-    open_price = Column(Numeric(12, 4))
-    high_price = Column(Numeric(12, 4))
-    low_price = Column(Numeric(12, 4))
-    previous_close = Column(Numeric(12, 4))
-
-    # Volume and market data
-    volume = Column(Numeric(20, 0))
-    market_cap = Column(Numeric(20, 2))
-
-    # Currency
-    currency = Column(String(3), nullable=False, default="USD")
-
-    # Data timestamp
-    data_timestamp = Column(DateTime(timezone=True), nullable=False, index=True)
-
-    # Data source and quality
-    source = Column(
-        String(50), nullable=False
-    )  # e.g., "alpha_vantage", "polygon", "manual"
-
-    # Timestamps
-    created_at = Column(
-        DateTime(timezone=True),
-        nullable=False,
-        server_default=text("CURRENT_TIMESTAMP"),
-    )
-    updated_at = Column(
-        DateTime(timezone=True),
-        nullable=False,
-        server_default=text("CURRENT_TIMESTAMP"),
-        onupdate=datetime.utcnow,
-    )
-
-    # Indexes
-    __table_args__ = (
-        Index("idx_market_data_symbol_exchange", "symbol", "exchange"),
-        Index("idx_market_data_timestamp", "data_timestamp"),
-        Index("idx_market_data_updated_at", "updated_at"),
-        Index("idx_market_data_source", "source"),
-        UniqueConstraint(
-            "symbol", "exchange", "data_timestamp", name="uq_market_data_symbol_time"
-        ),
-    )
-
-    def __repr__(self):
-        return f"<MarketData(symbol='{self.symbol}', price={self.price}, timestamp={self.data_timestamp})>"
-
-
 class CurrencyRate(Base):
     """Currency exchange rate model"""
 
@@ -640,7 +561,7 @@ class Dividend(Base):
     amount_per_share = Column(Numeric(12, 4), nullable=False)
     shares_owned = Column(Numeric(18, 8), nullable=False)
     total_amount = Column(Numeric(15, 2), nullable=False)
-    currency = Column(String(3), nullable=False, default="USD")
+    currency = Column(String(3), nullable=False, default="TWD")
 
     # Tax information
     tax_withheld = Column(Numeric(15, 2), default=0.00)
