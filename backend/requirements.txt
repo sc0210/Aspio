@@ -1,5 +1,5 @@
 # FastAPI and ASGI server
-fastapi==0.162.6
+fastapi==0.165.0
 uvicorn[standard]==0.54.0
 
 # Database
@@ -17,7 +17,7 @@ httpx==0.28.1
 PyJWT==2.15.1
 
 # Validation and serialization
-pydantic[email]==2.14.3
+pydantic[email]==2.14.4
 pydantic-settings==2.16.3
 
 # Rate limiting
