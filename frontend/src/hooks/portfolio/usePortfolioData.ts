@@ -1,6 +1,6 @@
 import { useQuery, keepPreviousData } from '@tanstack/react-query';
 import { useSession } from 'next-auth/react';
-import { useMemo, useCallback } from 'react';
+import { useMemo, useCallback, useEffect, useRef } from 'react';
 import { portfolioService } from '@/services/portfolioService';
 import { log } from '@/utils/logger';
 import { aggregateHoldingsBySymbol } from '@/utils/portfolio-aggregation';
@@ -110,8 +110,10 @@ export function usePortfolioData(filters: PortfolioFilters) {
     refetch: refetchAnalytics,
   } = useQuery({
     // A stable key: a failed refetch keeps the last good allocation. A key that
-    // changed with prices or lot count started an empty query, so a failure there
-    // showed the error card instead. Trades, edits and refreshes invalidate it.
+    // changed with prices started an empty query, so a failure there showed the
+    // error card instead. New prices refetch it through the effect below.
+    // No placeholderData: with one key per user it could only show another
+    // account's allocation.
     queryKey: ['portfolio-analytics', session?.user?.email || 'demo'],
     // Rejects on failure: TanStack then keeps the last good allocation and sets
     // `error`, where resolving to null wiped it and looked like "nothing to show".
@@ -121,8 +123,20 @@ export function usePortfolioData(filters: PortfolioFilters) {
     retry: false,
     gcTime: 15 * 60 * 1000,
     refetchOnWindowFocus: true,
-    placeholderData: keepPreviousData,
   });
+
+  // The allocation follows the holdings' prices: refetch when a portfolio
+  // payload brings a new price time, but not on the first one.
+  const priceTime = portfolioData?.lastPriceUpdateAt instanceof Date
+    ? portfolioData.lastPriceUpdateAt.getTime()
+    : undefined;
+  const seenPriceTime = useRef(priceTime);
+  useEffect(() => {
+    if (priceTime === undefined || Number.isNaN(priceTime)) return;
+    const seen = seenPriceTime.current;
+    seenPriceTime.current = priceTime;
+    if (seen !== undefined && seen !== priceTime) void refetchAnalytics();
+  }, [priceTime, refetchAnalytics]);
 
   // ============================================================
   // 4. Risk Metrics (CAGR, Max Drawdown, Volatility, Sharpe, HHI)

@@ -172,4 +172,28 @@ describe('usePortfolioData', () => {
     expect(before).toEqual(['portfolio-analytics', 'test@test.com']);
     expect(after).toEqual(before);
   });
+
+  it('refetches the allocation when the holdings bring a new price time, not on the first one', () => {
+    const refetchAnalytics = jest.fn();
+    let portfolioData: unknown = undefined; // still loading on the first render
+    useQuery.mockImplementation((opts: { queryKey: unknown[] }) => {
+      if (opts.queryKey[0] === 'portfolio') return { data: portfolioData, isLoading: false, error: null, refetch: jest.fn() };
+      if (opts.queryKey[0] === 'portfolio-analytics') return { data: null, isLoading: false, error: null, refetch: refetchAnalytics };
+      return { data: null, isLoading: false, error: null, refetch: jest.fn() };
+    });
+
+    const { rerender } = renderHook(() => usePortfolioData(defaultFilters));
+    portfolioData = { holdings: [{}], lastPriceUpdateAt: new Date('2024-06-15T00:00:00Z') };
+    rerender();
+    rerender();
+    expect(refetchAnalytics).not.toHaveBeenCalled();
+
+    portfolioData = { holdings: [{}], lastPriceUpdateAt: new Date('2024-06-15T00:05:00Z') };
+    rerender();
+    expect(refetchAnalytics).toHaveBeenCalledTimes(1);
+
+    portfolioData = { holdings: [{}], lastPriceUpdateAt: new Date('2024-06-15T00:05:00Z') };
+    rerender();
+    expect(refetchAnalytics).toHaveBeenCalledTimes(1);
+  });
 });
