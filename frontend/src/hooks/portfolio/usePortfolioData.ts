@@ -109,15 +109,10 @@ export function usePortfolioData(filters: PortfolioFilters) {
     error: analyticsError,
     refetch: refetchAnalytics,
   } = useQuery({
-    queryKey: [
-      'portfolio-analytics',
-      session?.user?.email || 'demo',
-      // lastPriceUpdateAt changes on buy/sell/price-refresh — guard against Invalid Date objects
-      // which produce the truthy string "Invalid Date", blocking the holdings.length fallback
-      portfolioData?.lastPriceUpdateAt instanceof Date && !Number.isNaN(portfolioData.lastPriceUpdateAt.getTime())
-        ? portfolioData.lastPriceUpdateAt.toISOString()
-        : portfolioData?.holdings?.length,
-    ],
+    // A stable key: a failed refetch keeps the last good allocation. A key that
+    // changed with prices or lot count started an empty query, so a failure there
+    // showed the error card instead. Trades, edits and refreshes invalidate it.
+    queryKey: ['portfolio-analytics', session?.user?.email || 'demo'],
     // Rejects on failure: TanStack then keeps the last good allocation and sets
     // `error`, where resolving to null wiped it and looked like "nothing to show".
     queryFn: async () => (await portfolioService.getPortfolioAnalytics()).data ?? null,
