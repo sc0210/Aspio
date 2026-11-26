@@ -735,65 +735,6 @@ class PortfolioService {
     }
   }
 
-  async getPortfolioHistoricalData(days: number = 365): Promise<ApiResponse<Array<{
-    date: string;
-    value: number;
-    holdings?: Array<{
-      symbol: string;
-      price: number;
-      value: number;
-    }>;
-  }>>> {
-    try {
-      // Determine interval based on days for optimal data density
-      let interval = 'monthly';
-      if (days <= 30) {
-        interval = 'daily';
-      } else if (days <= 90) {
-        interval = 'weekly';
-      } else if (days <= 365) {
-        interval = 'monthly';
-      } else {
-        interval = 'yearly';
-      }
-
-      log.debug('🔍 Fetching historical data', { days, interval }, 'PortfolioService');
-
-      // Use new performance/historical endpoint
-      const response = await apiClient.get(`/portfolio/performance/historical?interval=${interval}`);
-
-      // Handle various response formats
-      if (response && (response.success === true || response.data)) {
-        const histData = response.data || response;
-
-        if (Array.isArray(histData) && histData.length > 0) {
-          log.debug('✅ Historical data fetched successfully', { dataPoints: histData.length }, 'PortfolioService');
-          return {
-            success: true,
-            data: histData,
-            message: 'Historical data retrieved successfully'
-          };
-        }
-      }
-
-      console.warn('⚠️ [Historical Data] No data available:', response);
-      log.warn('No historical data available from API', undefined, 'PortfolioService');
-      return {
-        success: false,
-        message: 'No historical data available',
-        data: []
-      };
-    } catch (error) {
-      console.error('❌ [Historical Data] Fetch error:', error);
-      log.error('Portfolio historical data error', error, 'PortfolioService');
-      return {
-        success: false,
-        message: 'Failed to fetch portfolio historical data',
-        data: []
-      };
-    }
-  }
-
   private recalculatePortfolioTotals(portfolio: Portfolio): void {
     // Every figure below is TWD, like the ones the backend sends for the same
     // fields. `holdings[]` carries native amounts, so each one converts before it
