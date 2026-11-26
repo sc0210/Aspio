@@ -36,6 +36,7 @@ export interface TrendHoldingsPoint {
 export function buildTrendHoldingRows(
   portfolio: Portfolio | null | undefined,
   trend: TrendHoldingsPoint[],
+  convert: (amount: number, currency: string) => number = toTWD,
 ): HoldingRow[] {
   if (!portfolio?.holdings || portfolio.holdings.length === 0) return [];
   if (trend.length === 0) return [];
@@ -114,8 +115,9 @@ export function buildTrendHoldingRows(
       avgCost: h.averageCost,
       currency: h.currency || currency,
       currentPrice: h.currentPrice,
-      // holdings[] carry their own currency; the table shows the portfolio's.
-    currentValue: toTWD(h.totalValue, h.currency || currency),
+      // holdings[] carry their own currency; the table's values are TWD, like
+      // the trend series it reads start and end from.
+      currentValue: convert(h.totalValue, h.currency || currency),
       startValue,
       endValue,
       periodChange,
@@ -165,15 +167,17 @@ export function buildTrendHoldingRows(
         periodChangePct: pChangePct,
         // partial if either constituent row is partial
         isPartialPeriod: existing.isPartialPeriod || row.isPartialPeriod,
-          lotCount: existing.lotCount + row.lotCount,
+        lotCount: existing.lotCount + row.lotCount,
       });
     }
   }
 
   // Each row's share of the table, cash rows included, so the weights add up
   // to 100%. They were a native amount over the investments-only total: a
-  // US$3,500 lot read 0.6%, and the column summed to ~114%.
+  // US$3,500 lot read 0.6%, and the column summed to ~114%. Overdrawn cash
+  // (negative) weighs 0 rather than shrinking the total under the rest.
   const rows = Array.from(nameMap.values());
-  const tableTotal = rows.reduce((sum, r) => sum + r.currentValue, 0);
-  return rows.map((r) => ({ ...r, weight: tableTotal > 0 ? (r.currentValue / tableTotal) * 100 : 0 }));
+  const held = (r: HoldingRow) => Math.max(0, r.currentValue);
+  const tableTotal = rows.reduce((sum, r) => sum + held(r), 0);
+  return rows.map((r) => ({ ...r, weight: tableTotal > 0 ? (held(r) / tableTotal) * 100 : 0 }));
 }

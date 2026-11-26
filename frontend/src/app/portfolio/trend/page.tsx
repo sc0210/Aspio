@@ -39,10 +39,11 @@ const PortfolioCalendarHeatmap = dynamic(
 import { DateRangePicker, DateRange } from '@/components/portfolio/DateRangePicker';
 import { portfolioService } from '@/services/portfolioService';
 import { buildTrendHoldingRows, type HoldingRow } from '@/lib/portfolio/trendHoldingRows';
+import { useExchangeRates } from '@/hooks/useExchangeRates';
 import { usePrivacy } from '@/contexts/PrivacyContext';
 import { useAppMode } from '@/hooks/useAppMode';
 import { cn } from '@/utils/cn';
-import { formatCurrency, formatMoney } from '@/utils/formatters';
+import { formatCurrency, formatMoney, toTWD } from '@/utils/formatters';
 import toast from 'react-hot-toast';
 import { useTranslation } from 'react-i18next';
 import { formatAssetTypeLabel } from '@/utils/holdingLabels';
@@ -889,10 +890,19 @@ export default function TrendPage() {
 
     // ─── Holdings table data ─────────────────────────────────────────────────────
 
-    const holdingRows = useMemo(
-        () => buildTrendHoldingRows(portfolioData, filteredTrend),
-        [portfolioData, filteredTrend],
-    );
+    // Live rates read straight off their query: toTWD's shared table only takes
+    // them in ExchangeRatesLoader's effect, after this render, so recomputing
+    // through it when they land would keep the fallback figures.
+    const { data: liveRates } = useExchangeRates('TWD', { enabled: false });
+    const holdingRows = useMemo(() => {
+        const live = liveRates?.rates;
+        const convert = (amount: number, currency: string) => {
+            const code = currency.toUpperCase();
+            const rate = live?.[code] ?? (code === 'USDT' ? live?.USD : undefined);
+            return rate && rate > 0 ? amount * rate : toTWD(amount, currency);
+        };
+        return buildTrendHoldingRows(portfolioData, filteredTrend, convert);
+    }, [portfolioData, filteredTrend, liveRates]);
 
     // ─── CSV export ──────────────────────────────────────────────────────────────
 

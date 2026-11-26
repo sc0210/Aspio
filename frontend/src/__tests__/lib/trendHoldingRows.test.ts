@@ -52,6 +52,20 @@ describe('buildTrendHoldingRows', () => {
     expect(cash.avgCost).toBe(1);
   });
 
+  it('weighs overdrawn cash as 0 instead of shrinking the total', () => {
+    const rows = buildTrendHoldingRows(
+      portfolio([
+        lot({ symbol: '2330', totalValue: 100_000 }),
+        lot({ symbol: 'CASH-TWD', name: 'Life Wallet Cash', type: 'cash', totalValue: -40_000 }),
+      ]),
+      trend,
+    );
+    const by = Object.fromEntries(rows.map((r) => [r.symbol, r]));
+    expect(by['2330'].weight).toBe(100);
+    expect(by['CASH-TWD'].weight).toBe(0);
+    expect(by['CASH-TWD'].currentValue).toBe(-40_000);
+  });
+
   it('keeps the average cost in the lot currency', () => {
     const [row] = buildTrendHoldingRows(
       portfolio([lot({ symbol: 'VOO', currency: 'USD', quantity: 5, averageCost: 440, totalCost: 2_200, totalValue: 2_500 })]),
@@ -60,6 +74,15 @@ describe('buildTrendHoldingRows', () => {
     expect(row.currency).toBe('USD');
     expect(row.avgCost).toBe(440);
     expect(row.weight).toBe(100);
+  });
+
+  it('converts with the rates it is given', () => {
+    const [row] = buildTrendHoldingRows(
+      portfolio([lot({ symbol: 'AAPL', currency: 'USD', totalValue: 100 })]),
+      trend,
+      (amount, currency) => (currency === 'USD' ? amount * 32 : amount),
+    );
+    expect(row.currentValue).toBe(3_200);
   });
 
   it('is empty without holdings or trend points', () => {
