@@ -963,34 +963,21 @@ class PortfolioService:
 
             exchange_service = get_exchange_rate_service(self.session)
 
+            rates: dict[str, Decimal] = {}  # one lookup per currency, not per lot
             for holding in holdings:
                 # Convert holding values to portfolio currency
                 if holding.currency != portfolio_currency:
-                    # Try to get exchange rate from database first
-                    rate_record = await self.currency_repo.get_latest_rate(
-                        holding.currency, portfolio_currency
-                    )
-
-                    if rate_record:
-                        conversion_rate = rate_record.rate
-                        logger.debug(
-                            f"Converting holding currency (from DB cache)",
-                            extra={
-                                "symbol": holding.symbol,
-                                "from_currency": holding.currency,
-                                "to_currency": portfolio_currency,
-                                "rate": float(conversion_rate),
-                            },
-                        )
-                    else:
-                        # Fetch from exchange rate service (which uses API + caching)
-                        conversion_rate = await exchange_service.get_exchange_rate(
+                    conversion_rate = rates.get(holding.currency)
+                    if conversion_rate is None:
+                        # Try to get exchange rate from database first
+                        rate_record = await self.currency_repo.get_latest_rate(
                             holding.currency, portfolio_currency
                         )
 
-                        if conversion_rate:
+                        if rate_record:
+                            conversion_rate = rate_record.rate
                             logger.debug(
-                                f"Converting holding currency (from API)",
+                                f"Converting holding currency (from DB cache)",
                                 extra={
                                     "symbol": holding.symbol,
                                     "from_currency": holding.currency,
@@ -999,16 +986,33 @@ class PortfolioService:
                                 },
                             )
                         else:
-                            # Last resort fallback
-                            logger.warning(
-                                f"No exchange rate available, using 1.0",
-                                extra={
-                                    "from_currency": holding.currency,
-                                    "to_currency": portfolio_currency,
-                                    "symbol": holding.symbol,
-                                },
+                            # Fetch from exchange rate service (which uses API + caching)
+                            conversion_rate = await exchange_service.get_exchange_rate(
+                                holding.currency, portfolio_currency
                             )
-                            conversion_rate = Decimal("1.0")
+
+                            if conversion_rate:
+                                logger.debug(
+                                    f"Converting holding currency (from API)",
+                                    extra={
+                                        "symbol": holding.symbol,
+                                        "from_currency": holding.currency,
+                                        "to_currency": portfolio_currency,
+                                        "rate": float(conversion_rate),
+                                    },
+                                )
+                            else:
+                                # Last resort fallback
+                                logger.warning(
+                                    f"No exchange rate available, using 1.0",
+                                    extra={
+                                        "from_currency": holding.currency,
+                                        "to_currency": portfolio_currency,
+                                        "symbol": holding.symbol,
+                                    },
+                                )
+                                conversion_rate = Decimal("1.0")
+                        rates[holding.currency] = conversion_rate
 
                     converted_value = holding.total_value * conversion_rate
                     converted_cost = holding.total_cost * conversion_rate

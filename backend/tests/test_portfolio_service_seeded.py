@@ -75,6 +75,18 @@ class TestUpdateTotals:
         await async_session.refresh(pf)
         assert pf.total_value == D("3200")
 
+    async def test_one_rate_lookup_per_currency(self, async_session, test_user, pf):
+        # Every lot is read now: a lookup per lot was one query per monthly buy.
+        async_session.add_all([
+            make_holding(pf, test_user, f"VT{i}", value="100", cost="80", currency="USD") for i in range(3)])
+        await async_session.commit()
+        fx = fake_fx(D("32"))
+        with patch("app.utils.exchange_rate_service.get_exchange_rate_service", return_value=fx):
+            await get_portfolio_service(async_session)._update_portfolio_totals(pf.id, test_user.id)
+        await async_session.refresh(pf)
+        assert pf.total_value == D("9600")
+        fx.get_exchange_rate.assert_awaited_once()
+
     @pytest.mark.xfail(strict=True, raises=AssertionError, reason="no rate anywhere falls back to 1.0, so 100 USD is stored as NT$100")
     async def test_no_rate_at_all_does_not_treat_usd_as_twd(self, async_session, test_user, pf):
         async_session.add(make_holding(pf, test_user, "VT", value="100", cost="80", currency="USD"))
