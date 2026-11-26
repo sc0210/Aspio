@@ -9,7 +9,8 @@
  */
 
 import React from 'react';
-import { render, screen, within } from '@testing-library/react';
+import { act, render, screen, within } from '@testing-library/react';
+import userEvent from '@testing-library/user-event';
 import '@testing-library/jest-dom';
 import i18next from 'i18next';
 import { I18nextProvider, initReactI18next } from 'react-i18next';
@@ -181,5 +182,31 @@ describe('PortfolioStats', () => {
 
         const roi = screen.getByText(/^\+0\.50% /);
         expect(roi.className).toContain('text-rise-700');
+    });
+
+    it('opens the daily chart from the keyboard, and Trend opens only the trend', async () => {
+        // The card was a clickable <div>: no tab stop, no Enter, no name to read.
+        const user = userEvent.setup();
+        const onTodayChangeClick = jest.fn();
+        const onViewTrendClick = jest.fn();
+        show({ onTodayChangeClick, onViewTrendClick });
+
+        const daily = screen.getByRole('button', { name: 'View daily change chart' });
+        // Its figures are read with it, not only the generic label.
+        expect(daily).toHaveAccessibleDescription(/1,200/);
+        act(() => daily.focus());
+        // The explanation opens for keyboard focus as it does for a hover.
+        expect(screen.getByText(en.stats.todayChangeTooltip).className).toContain('opacity-100');
+        await user.keyboard('{Enter}');
+        expect(onTodayChangeClick).toHaveBeenCalledTimes(1);
+
+        await user.click(screen.getByRole('button', { name: /Trend/ }));
+        expect(onViewTrendClick).toHaveBeenCalledTimes(1);
+        expect(onTodayChangeClick).toHaveBeenCalledTimes(1);
+    });
+
+    it('offers no daily-chart button when there is nothing to open', () => {
+        show();
+        expect(screen.queryByRole('button', { name: 'View daily change chart' })).toBeNull();
     });
 });
