@@ -1377,8 +1377,9 @@ class AnalyticsService:
         - total_dividends: actual dividends received in the requested period
         - projected_annual: projected annual income (from holdings' annual_dividend field,
           or annualised from actual 12-month payments as fallback)
-        - yield_on_cost: projected_annual / total_cost
-        - yield_on_value: projected_annual / total_value
+        - yield_on_cost: projected_annual / the Portfolio-wallet lots' cost (TWD)
+        - yield_on_value: projected_annual / those lots' value (TWD); not
+          portfolio.total_*, which include Emergency lots
         - dividend_yield: same as yield_on_value (portfolio-level %)
         - payments: list of recent individual dividend payment records
         """
@@ -1405,6 +1406,10 @@ class AnalyticsService:
 
         # Portfolio wallet only, like the allocation: an Emergency lot is a
         # cash reserve, so its payouts are not investment income.
+        # shortcut: only a payment linked to its lot (holding_id) can be judged,
+        # by the lot's wallet today; an unlinked one counts. Nothing in the app
+        # writes dividend rows yet (no client calls POST /dividends), so revisit
+        # when one does: link every row and record its wallet at payment time.
         emergency_lot_ids = select(PortfolioHolding.id).where(
             PortfolioHolding.user_id == user_id,
             PortfolioHolding.wallet_type == HoldingWalletType.EMERGENCY,
