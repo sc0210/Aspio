@@ -173,7 +173,7 @@ class RebalancingService:
 
         # Get all holdings
         holdings, _ = await self.holding_repo.get_portfolio_holdings(
-            portfolio.id, user_id, limit=1000
+            portfolio.id, user_id, limit=None
         )
 
         # Calculate total portfolio value

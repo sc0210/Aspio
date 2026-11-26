@@ -481,6 +481,7 @@
     "unconvertedCurrencies": "Excludes live rates for {{currencies}}",
     "underperforming": "Underperforming market",
     "unrealizedGain": "Unrealized Gain/Loss",
+    "viewDailyTooltip": "View daily change chart",
     "viewTrendTooltip": "View asset trend chart",
     "volatility": "Vol (ann.)",
     "yieldOnCost": "YoC",

@@ -272,3 +272,8 @@ SELECT 'pass_through + recurring subcategory columns' AS what, count(*)::text AS
 FROM information_schema.columns
 WHERE (table_name, column_name) IN (('transactions', 'pass_through'),
                                     ('recurring_transactions', 'subcategory'));
+-- 2026_11_25_demo_dividend_per_share: expect 0 (demo rows still carrying a seeded yearly total).
+SELECT 'demo annual dividends still yearly totals' AS what, count(*)::text AS value
+FROM portfolio_holdings h JOIN users u ON u.id = h.user_id
+WHERE u.email = 'demo@aspiro.dev'
+  AND (h.symbol, h.annual_dividend) IN (('AAPL', 10.42), ('VOO', 26.78), ('2330', 1656.00));

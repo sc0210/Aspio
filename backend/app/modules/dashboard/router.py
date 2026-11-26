@@ -1,6 +1,7 @@
-"""
-Simple FastAPI router for dashboard endpoints - works without database
-Provides basic REST API for dashboard data to test API integration.
+"""Dashboard endpoints: stats, trends and category breakdowns.
+
+Signed-in users get figures read from the database; a visitor in demo mode gets
+the demo fixtures.
 """
 
 import math
@@ -30,7 +31,7 @@ DEMO_CARD_BALANCE = demo_fixtures.DEMO_CARD_BALANCE
 DEMO_TOTAL_DEBT = demo_fixtures.DEMO_TOTAL_DEBT
 DEMO_MORTGAGE_SHARE = demo_fixtures.DEMO_MORTGAGE_SHARE
 
-# Mock dashboard data for demo mode only
+
 def build_stats_payload(
     *,
     life_wallet: float,
@@ -232,66 +233,6 @@ def demo_category_breakdown(mock: list, period: str) -> list:
     return categories
 
 
-MOCK_GOALS_OVERVIEW = [
-    {
-        "id": "goal_001",
-        "title": "Emergency Fund",
-        "current": 6800.00,
-        "target": 10000.00,
-        "progress": 68,
-        "color": "#FF6B6B",
-    },
-    {
-        "id": "goal_002",
-        "title": "Vacation Fund",
-        "current": 1250.00,
-        "target": 3000.00,
-        "progress": 42,
-        "color": "#4ECDC4",
-    },
-    {
-        "id": "goal_003",
-        "title": "House Down Payment",
-        "current": 15000.00,
-        "target": 50000.00,
-        "progress": 30,
-        "color": "#45B7D1",
-    },
-]
-
-MOCK_UPCOMING_EVENTS = [
-    {
-        "id": "event_001",
-        "type": "goal_deadline",
-        "title": "Vacation Fund Goal",
-        "description": "Target completion for summer vacation",
-        "date": "2025-06-15",
-        "priority": "medium",
-        "amount": 1750.00,
-        "daysUntil": 126,
-    },
-    {
-        "id": "event_002",
-        "type": "bill_reminder",
-        "title": "Credit Card Payment",
-        "description": "Monthly credit card payment due",
-        "date": "2025-01-25",
-        "priority": "high",
-        "amount": 850.50,
-        "daysUntil": 14,
-    },
-    {
-        "id": "event_003",
-        "type": "investment_review",
-        "title": "Portfolio Rebalancing",
-        "description": "Quarterly portfolio review and rebalancing",
-        "date": "2025-03-31",
-        "priority": "low",
-        "amount": None,
-        "daysUntil": 79,
-    },
-]
-
 router = APIRouter(tags=["dashboard"])
 
 @router.get("/stats", status_code=status.HTTP_200_OK)
@@ -428,72 +369,6 @@ async def get_recent_activity(
 
     return JSONResponse(status_code=200, content={"success": True, "data": activities})
 
-@router.get("/overview", status_code=status.HTTP_200_OK)
-async def get_dashboard_overview():
-    """Get complete dashboard overview"""
-
-    return JSONResponse(
-        status_code=200,
-        content={
-            "success": True,
-            "data": {
-                "stats": DEMO_DASHBOARD_STATS,
-                "recentActivities": MOCK_RECENT_ACTIVITIES[:5],
-                "spendingCategories": demo_category_breakdown(
-                    MOCK_SPENDING_CATEGORIES, "month"
-                ),
-                "goalsOverview": MOCK_GOALS_OVERVIEW,
-                "lastUpdated": datetime.now(timezone.utc).isoformat() + "Z",
-            },
-        },
-    )
-
-@router.get("/upcoming-events", status_code=status.HTTP_200_OK)
-async def get_upcoming_events(
-    days_ahead: int = Query(30, ge=1, le=365, description="Look ahead days"),
-):
-    """Get upcoming events and reminders"""
-
-    # Filter events within the specified timeframe
-    filtered_events = [
-        event for event in MOCK_UPCOMING_EVENTS if event["daysUntil"] <= days_ahead
-    ]
-
-    return JSONResponse(
-        status_code=200, content={"success": True, "data": filtered_events}
-    )
-
-@router.get("/monthly-trend", status_code=status.HTTP_200_OK)
-async def get_monthly_trend(
-    months: int = Query(6, ge=1, le=24, description="Number of months"),
-):
-    """Get monthly spending/income trend data"""
-
-    # Generate mock trend data
-    trends = []
-    base_date = business_today().replace(day=1)
-
-    for i in range(months):
-        month_date = base_date - timedelta(days=30 * i)
-        trends.append(
-            {
-                "date": month_date.strftime("%Y-%m"),
-                "income": 4200 + (i * 50) + ((i % 2) * 200),
-                "expenses": 2850 + (i * 30) + ((i % 3) * 150),
-                "netSavings": 1350 + (i * 20) + ((i % 2) * 50),
-                "month": month_date.strftime("%B %Y"),
-            }
-        )
-
-    trends.reverse()  # Chronological order
-
-    return JSONResponse(
-        status_code=200,
-        content={
-            "success": True,
-            "data": {"trends": trends, "period": f"{months} months"},
-        },
-    )
 
 @router.get("/spending-by-category", status_code=status.HTTP_200_OK)
 async def get_spending_by_category(
@@ -1120,25 +995,3 @@ async def get_historical_trends(
                 "message": "Demo mode - use mock data",
             },
         )
-
-@router.post("/refresh", status_code=status.HTTP_200_OK)
-async def refresh_dashboard():
-    """Refresh dashboard data"""
-
-    return JSONResponse(
-        status_code=200,
-        content={
-            "success": True,
-            "message": "Dashboard data refreshed successfully",
-            "data": {
-                "refreshedAt": datetime.now(timezone.utc).isoformat() + "Z",
-                "componentsRefreshed": [
-                    "stats",
-                    "recent-activity",
-                    "portfolio-overview",
-                    "spending-categories",
-                ],
-            },
-        },
-    )
-

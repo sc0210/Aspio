@@ -6,11 +6,8 @@ Behavior is preserved exactly; paths remain identical.
 
 from ._shared import *  # noqa: F401,F403  (shared imports/constants/helpers)
 from ._shared import (  # noqa: F401  explicit re-import for underscore-prefixed names
-    _lp_cache_get,
-    _lp_cache_set,
     _get_sort_key,
     _mc,
-    _price_cache,
     fetch_historical_data_background,
 )
 from app.core.exceptions import AspiroException

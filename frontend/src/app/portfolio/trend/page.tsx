@@ -38,11 +38,12 @@ const PortfolioCalendarHeatmap = dynamic(
 );
 import { DateRangePicker, DateRange } from '@/components/portfolio/DateRangePicker';
 import { portfolioService } from '@/services/portfolioService';
-import { aggregateHoldingsBySymbol } from '@/utils/portfolio-aggregation';
+import { buildTrendHoldingRows, type HoldingRow } from '@/lib/portfolio/trendHoldingRows';
+import { useExchangeRates } from '@/hooks/useExchangeRates';
 import { usePrivacy } from '@/contexts/PrivacyContext';
 import { useAppMode } from '@/hooks/useAppMode';
 import { cn } from '@/utils/cn';
-import { formatCurrency, formatMoney } from '@/utils/formatters';
+import { formatCurrency, formatMoney, toTWD } from '@/utils/formatters';
 import toast from 'react-hot-toast';
 import { useTranslation } from 'react-i18next';
 import { formatAssetTypeLabel } from '@/utils/holdingLabels';
@@ -66,25 +67,6 @@ type SortKey =
     | 'periodChangePct'
     | 'weight';
 
-interface HoldingRow {
-    symbol: string;
-    name: string;
-    type: string;
-    quantity: number;
-    avgCost: number;
-    currency: string;
-    currentPrice: number;
-    currentValue: number;
-    startValue: number | null;
-    endValue: number | null;
-    periodChange: number | null;
-    periodChangePct: number | null;
-    isPartialPeriod: boolean; // true when asset wasn't held since the period start
-    weight: number;
-    totalCost: number;
-    lotCount: number;
-    sparkline: number[];
-}
 
 // ─── Helpers ─────────────────────────────────────────────────────────────────
 
@@ -908,144 +890,19 @@ export default function TrendPage() {
 
     // ─── Holdings table data ─────────────────────────────────────────────────────
 
-    const holdingRows = useMemo<HoldingRow[]>(() => {
-        if (!portfolioData?.holdings || portfolioData.holdings.length === 0) return [];
-        if (filteredTrend.length === 0) return [];
-
-        const currency = portfolioData.currency || 'TWD';
-
-        // Derive per-holding period changes from topHoldings arrays in the trend data
-        // topHoldings entry: { symbol, change, value } — change is daily P&L, value is holding value that day
-
-        // Map: symbol → { startValue, endValue, cumulativeChange }
-        const firstPoint = filteredTrend[0];
-        const lastPoint = filteredTrend[filteredTrend.length - 1];
-
-        const startHoldings: Record<string, number> = {};
-        const endHoldings: Record<string, number> = {};
-
-        (firstPoint.topHoldings || []).forEach((h) => {
-            startHoldings[h.symbol] = h.value;
-        });
-        (lastPoint.topHoldings || []).forEach((h) => {
-            endHoldings[h.symbol] = h.value;
-        });
-
-        // Accumulate daily P&L changes per symbol across the full period.
-        // This is more reliable than snapshot-diff (ev - sv) because:
-        //  • it naturally handles assets bought mid-period (accumulation starts on purchase day)
-        //  • it isn't affected by stale/missing snapshot values on boundary dates
-        const cumulativeChange: Record<string, number> = {};
-        for (const point of filteredTrend) {
-            for (const h of point.topHoldings || []) {
-                cumulativeChange[h.symbol] = (cumulativeChange[h.symbol] ?? 0) + h.change;
-            }
-        }
-
-        const totalValue = portfolioData.totalValue || 1;
-
-        // First pass: aggregate by symbol+walletType (groups individual lots)
-        const aggregated = aggregateHoldingsBySymbol(portfolioData.holdings);
-
-        // First pass → HoldingRow
-        const firstPassRows: HoldingRow[] = aggregated.map((h) => {
-            const sv = startHoldings[h.symbol];
-            const ev = endHoldings[h.symbol];
-            const cumChange = cumulativeChange[h.symbol]; // sum of daily P&L — undefined if no daily data at all
-
-            const startValue = sv !== undefined ? sv : null;
-            const endValue = ev !== undefined ? ev : null;
-
-            // An asset is "partial" if it has no snapshot at the period start —
-            // meaning it was purchased after the period began.
-            const isPartialPeriod =
-                sv === undefined && (cumChange !== undefined || ev !== undefined);
-
-            // Prefer cumulativeChange (sum of daily P&L) as the canonical period change.
-            // Fall back to snapshot diff only when daily data is fully absent.
-            let periodChange: number | null;
-            if (cumChange !== undefined) {
-                periodChange = cumChange;
-            } else if (startValue !== null && endValue !== null) {
-                periodChange = endValue - startValue;
-            } else {
-                periodChange = null;
-            }
-
-            // % change: only meaningful when the asset was held for the full period
-            // (i.e. a period-start snapshot exists as the reference point).
-            // For partial-period holdings there is no valid baseline, so we leave it null.
-            let periodChangePct: number | null = null;
-            if (periodChange !== null && startValue !== null && startValue > 0) {
-                periodChangePct = (periodChange / startValue) * 100;
-            }
-
-            return {
-                symbol: h.symbol,
-                name: h.name,
-                type: h.type,
-                quantity: h.quantity,
-                avgCost: h.averageCost,
-                currency: h.currency || currency,
-                currentPrice: h.currentPrice,
-                currentValue: h.totalValue,
-                startValue,
-                endValue,
-                periodChange,
-                periodChangePct,
-                isPartialPeriod,
-                weight: totalValue > 0 ? (h.totalValue / totalValue) * 100 : 0,
-                totalCost: h.totalCost ?? h.quantity * h.averageCost,
-                lotCount: (h.metadata?.lotCount as number) ?? 1,
-                sparkline: h.sparklineData ?? [],
-            };
-        });
-
-        // Second pass: merge rows that share the same symbol+name
-        // (handles same-named cash accounts spread across multiple wallet types)
-        const nameMap = new Map<string, HoldingRow>();
-        for (const row of firstPassRows) {
-            const key = `${row.symbol}__${row.name}`;
-            const existing = nameMap.get(key);
-            if (!existing) {
-                nameMap.set(key, { ...row });
-            } else {
-                const combinedQty = existing.quantity + row.quantity;
-                const combinedCost = existing.totalCost + row.totalCost;
-                const combinedValue = existing.currentValue + row.currentValue;
-                const combinedStart =
-                    existing.startValue !== null || row.startValue !== null
-                        ? (existing.startValue ?? 0) + (row.startValue ?? 0)
-                        : null;
-                const combinedEnd =
-                    existing.endValue !== null || row.endValue !== null
-                        ? (existing.endValue ?? 0) + (row.endValue ?? 0)
-                        : null;
-                const pChange = combinedStart !== null && combinedEnd !== null ? combinedEnd - combinedStart : null;
-                const pChangePct =
-                    combinedStart !== null && pChange !== null && combinedStart > 0
-                        ? (pChange / combinedStart) * 100
-                        : null;
-                nameMap.set(key, {
-                    ...existing,
-                    quantity: combinedQty,
-                    avgCost: combinedQty > 0 ? combinedCost / combinedQty : 0,
-                    totalCost: combinedCost,
-                    currentValue: combinedValue,
-                    startValue: combinedStart,
-                    endValue: combinedEnd,
-                    periodChange: pChange,
-                    periodChangePct: pChangePct,
-                    // partial if either constituent row is partial
-                    isPartialPeriod: existing.isPartialPeriod || row.isPartialPeriod,
-                    weight: totalValue > 0 ? (combinedValue / totalValue) * 100 : 0,
-                    lotCount: existing.lotCount + row.lotCount,
-                });
-            }
-        }
-
-        return Array.from(nameMap.values());
-    }, [portfolioData, filteredTrend]);
+    // Live rates read straight off their query: toTWD's shared table only takes
+    // them in ExchangeRatesLoader's effect, after this render, so recomputing
+    // through it when they land would keep the fallback figures.
+    const { data: liveRates } = useExchangeRates('TWD', { enabled: false });
+    const holdingRows = useMemo(() => {
+        const live = liveRates?.rates;
+        const convert = (amount: number, currency: string) => {
+            const code = currency.toUpperCase();
+            const rate = live?.[code] ?? (code === 'USDT' ? live?.USD : undefined);
+            return rate && rate > 0 ? amount * rate : toTWD(amount, currency);
+        };
+        return buildTrendHoldingRows(portfolioData, filteredTrend, convert);
+    }, [portfolioData, filteredTrend, liveRates]);
 
     // ─── CSV export ──────────────────────────────────────────────────────────────
 

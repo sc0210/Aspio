@@ -594,7 +594,7 @@ class AdminMonitoringService:
             "soft_deleted_loans": int(soft_deleted_loans),
             "stale_currency_rates": int(stale_currency_rates),
             "old_notifications": int(old_notifications),
-            "in_process_caches": 2,  # _price_cache + _profile_cache (always clearable)
+            "in_process_caches": 1,  # the LINE _profile_cache (always clearable)
             "demo_user_protected": DEMO_EMAIL,
             "notification_cutoff_days": 30,
         }
@@ -616,13 +616,6 @@ class AdminMonitoringService:
         results: Dict[str, Any] = {}
 
         # 1. Clear in-process caches (safe, no DB changes)
-        try:
-            from app.modules.portfolio.router import _price_cache
-            _price_cache.clear()
-            results["price_cache_cleared"] = True
-        except Exception:
-            results["price_cache_cleared"] = False
-
         try:
             from app.modules.line_bot.service import _profile_cache
             _profile_cache.clear()

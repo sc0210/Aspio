@@ -315,7 +315,6 @@ function DesktopPortfolioPage() {
         <div data-tour="pf-stats">
           <PortfolioStatsSection
             portfolioData={portfolioData}
-            analyticsData={analyticsData}
             riskMetrics={riskMetrics}
             dividendIncome={dividendIncome}
             realizedPnl={realizedPnl}
