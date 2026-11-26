@@ -943,7 +943,7 @@ class PortfolioService:
 
             portfolio_currency = portfolio.currency
             holdings, _ = await self.holding_repo.get_portfolio_holdings(
-                portfolio_id, user_id, limit=PortfolioSettings.MAX_HOLDINGS_PER_QUERY
+                portfolio_id, user_id, limit=None
             )
             logger.debug(
                 f"Processing portfolio holdings",

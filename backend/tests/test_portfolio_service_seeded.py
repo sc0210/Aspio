@@ -84,6 +84,16 @@ class TestUpdateTotals:
         await async_session.refresh(pf)
         assert pf.total_value != D("100")
 
+    async def test_totals_count_every_lot(self, async_session, test_user, pf):
+        # The read stopped at 1,000 lots: monthly buys into 5 ETFs pass that in
+        # about 17 years, and the newest lots dropped out of the headline value.
+        async_session.add_all([
+            make_holding(pf, test_user, f"S{i:04d}", value="2", cost="1") for i in range(1001)])
+        await async_session.commit()
+        await get_portfolio_service(async_session)._update_portfolio_totals(pf.id, test_user.id)
+        await async_session.refresh(pf)
+        assert (pf.total_value, pf.total_cost) == (D("2002"), D("1001"))
+
     async def test_zero_cost_gives_zero_percent(self, async_session, test_user, pf):
         async_session.add(make_holding(pf, test_user, "0050", value="100", cost="0"))
         await async_session.commit()
