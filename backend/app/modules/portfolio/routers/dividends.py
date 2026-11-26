@@ -128,6 +128,7 @@ async def create_dividend(
 
     try:
         # Verify holding exists if holding_id provided
+        holding = None
         if dividend.holding_id:
             stmt = select(PortfolioHolding).where(
                 PortfolioHolding.id == dividend.holding_id,
@@ -158,7 +159,7 @@ async def create_dividend(
             amount_per_share=dividend.amount_per_share,
             shares_owned=dividend.shares_owned,
             total_amount=dividend.total_amount,
-            currency=dividend.currency,
+            currency=(dividend.currency or (holding.currency if holding else None) or "TWD").upper(),
             tax_withheld=dividend.tax_withheld,
             net_amount=net_amount,
             status=dividend.status,
