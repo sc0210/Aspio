@@ -1,4 +1,4 @@
-"""Portfolio router: Performance, risk, and historical performance endpoints.
+"""Portfolio router: performance and risk endpoints.
 
 Split out from the original monolithic ``portfolio/router.py``.
 Behavior is preserved exactly; paths remain identical.

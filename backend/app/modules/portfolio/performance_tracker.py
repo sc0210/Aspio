@@ -1,8 +1,5 @@
 """
-Historical Portfolio Performance Tracker
-
-Calculates time-weighted returns and historical performance metrics
-for long-term investment tracking.
+Portfolio performance tracker: the time-weighted return (and FX_SERIES).
 """
 
 from datetime import date, timedelta
@@ -27,7 +24,7 @@ logger = logging.getLogger(__name__)
 
 
 class PerformanceTracker:
-    """Track and calculate historical portfolio performance metrics"""
+    """The portfolio's time-weighted return."""
 
     def __init__(self, session: AsyncSession):
         self.session = session
