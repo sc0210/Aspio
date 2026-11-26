@@ -9,6 +9,8 @@ import { aggregateHoldingsBySymbol } from '@/utils/portfolio-aggregation';
 import { toTWD } from '@/utils/formatters';
 
 export interface HoldingRow {
+  /** Unique per row (its merge key): one security can have two rows. */
+  id: string;
   symbol: string;
   name: string;
   type: string;
@@ -26,6 +28,8 @@ export interface HoldingRow {
   totalCost: number;
   lotCount: number;
   sparkline: number[];
+  /** A security's Emergency-wallet piece (outside the series); never set on cash. */
+  emergency: boolean;
 }
 
 /** The part of a trend point this table reads. */
@@ -119,7 +123,9 @@ export function buildTrendHoldingRows(
       periodChangePct = (periodChange / startValue) * 100;
     }
 
+    const key = mergeKey(h);
     const row: HoldingRow = {
+      id: key,
       symbol: h.symbol,
       name: h.name,
       type: h.type,
@@ -139,8 +145,9 @@ export function buildTrendHoldingRows(
       totalCost: h.totalCost ?? h.quantity * h.averageCost,
       lotCount: (h.metadata?.lotCount as number) ?? 1,
       sparkline: h.sparklineData ?? [],
+      emergency: !isCash(h) && h.walletType === 'emergency',
     };
-    return { key: mergeKey(h), row };
+    return { key, row };
   });
 
   // Second pass: merge the pieces that share a key (see mergeKey).

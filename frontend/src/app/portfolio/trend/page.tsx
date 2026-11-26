@@ -382,7 +382,7 @@ function HoldingsTable({ rows, currency, isValueVisible, isLoading }: HoldingsTa
                             const hasData = row.periodChange !== null || row.periodChangePct !== null;
                             return (
                                 <tr
-                                    key={`${row.symbol}__${row.name}`}
+                                    key={row.id}
                                     className={cn(
                                         'group transition-colors',
                                         idx % 2 === 0
@@ -428,6 +428,11 @@ function HoldingsTable({ rows, currency, isValueVisible, isLoading }: HoldingsTa
                                         <span className="text-gray-800 dark:text-gray-200 truncate block text-sm font-medium">
                                             {row.name}
                                         </span>
+                                        {row.emergency && (
+                                            <span className="text-[10px] font-medium text-gray-500 dark:text-gray-400">
+                                                {t('portfolio:walletTypes.emergency')}
+                                            </span>
+                                        )}
                                     </td>
                                     {/* Qty */}
                                     <td className="px-4 py-3.5 text-right">
@@ -559,7 +564,7 @@ function HoldingsTable({ rows, currency, isValueVisible, isLoading }: HoldingsTa
                             </tr>
                             {filtered.cash.map((row) => (
                                 <tr
-                                    key={`${row.symbol}__${row.name}`}
+                                    key={row.id}
                                     className="group bg-gray-50/30 dark:bg-gray-800/20 hover:bg-gray-100/50 dark:hover:bg-gray-800/40 transition-colors"
                                 >
                                     {/* Symbol (pinned while the row scrolls) */}

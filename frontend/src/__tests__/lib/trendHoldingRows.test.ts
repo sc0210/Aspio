@@ -93,6 +93,8 @@ describe('buildTrendHoldingRows', () => {
     // The series leaves the Emergency wallet out: no figures to borrow.
     expect([reserve.quantity, reserve.startValue, reserve.endValue, reserve.periodChange]).toEqual([100, null, null, null]);
     expect(reserve.isPartialPeriod).toBe(false);
+    expect([held.emergency, reserve.emergency]).toEqual([false, true]);
+    expect(held.id).not.toBe(reserve.id);
   });
 
   it('weighs overdrawn cash as 0 instead of shrinking the total', () => {
