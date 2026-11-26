@@ -7,11 +7,8 @@ Behavior is preserved exactly; paths remain identical.
 from app.utils.exchange_rate_service import LIVE_SOURCE
 from ._shared import *  # noqa: F401,F403  (shared imports/constants/helpers)
 from ._shared import (  # noqa: F401  explicit re-import for underscore-prefixed names
-    _lp_cache_get,
-    _lp_cache_set,
     _get_sort_key,
     _mc,
-    _price_cache,
     fetch_historical_data_background,
 )
 from app.core.config import get_settings
@@ -32,95 +29,6 @@ def _supported_currency(code: str) -> str:
     return code
 
 
-@router.get("/prices/bulk")
-async def get_bulk_prices(
-    symbols: str = Query(
-        ..., description="Comma-separated list of symbols, e.g. AAPL,2330,0050"
-    ),
-    target_date: Optional[date] = Query(
-        None,
-        description="Optional date (YYYY-MM-DD) to get price on; if omitted returns latest).",
-    ),
-    session: AsyncSession = Depends(get_db),
-    current_user: Optional[CurrentUser] = Depends(get_optional_current_user),
-):
-    """
-    Return latest prices for a list of symbols in a single call.
-
-    - symbols: comma-separated list of symbols
-    - target_date: optional date to fetch price on that date (not optimized for bulk historical lookups)
-    """
-    if not current_user:
-        raise HTTPException(
-            status_code=status.HTTP_401_UNAUTHORIZED, detail="Authentication required"
-        )
-
-    # Parse symbols
-    symbol_list = [s.strip().upper() for s in symbols.split(",") if s.strip()]
-    if not symbol_list:
-        return ApiResponse.success_response(
-            data={"prices": {}, "missing": []}, message="No symbols provided"
-        )
-    if len(symbol_list) > 50:
-        raise HTTPException(
-            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
-            detail=f"Too many symbols: {len(symbol_list)} provided, maximum is 50",
-        )
-
-    repo = HistoricalPriceRepository(session)
-
-    # Use per-symbol cache (namespace 'prices') to allow easy invalidation
-    if not target_date:
-        prices: Dict[str, Any] = {}
-        missing_symbols: List[str] = []
-
-        for sym in symbol_list:
-            cached = _lp_cache_get(f"prices:{sym}:latest")
-            if cached is not None:
-                prices[sym] = cached
-            else:
-                missing_symbols.append(sym)
-
-        if not missing_symbols:
-            return ApiResponse.success_response(data={"prices": prices, "cached": True})
-
-        # Fetch missing symbols in bulk
-        fetched = await repo.get_latest_prices_for_symbols(missing_symbols)
-
-        # Populate cache and response
-        for s, val in fetched.items():
-            _lp_cache_set(f"prices:{s}:latest", val, ttl=60)
-            prices[s] = val
-
-        return ApiResponse.success_response(data={"prices": prices, "cached": False})
-
-    if target_date:
-        # Fallback: per-symbol date lookup (less efficient)
-        prices = {}
-        missing = []
-        for sym in symbol_list:
-            price = await repo.get_price_on_date(sym, target_date)
-            if price:
-                prices[sym] = {
-                    "symbol": price.symbol,
-                    "date": price.date.isoformat(),
-                    "close": safe_float(price.close),
-                    "open": safe_float(price.open),
-                    "high": safe_float(price.high),
-                    "low": safe_float(price.low),
-                    "volume": price.volume,
-                    "currency": price.currency,
-                    "source": price.source,
-                }
-            else:
-                missing.append(sym)
-
-        return ApiResponse.success_response(
-            data={"prices": prices, "missing": missing, "cached": False}
-        )
-
-
-# Health check
 @router.post("/refresh-prices")
 @rate_limit_portfolio_sync
 async def refresh_portfolio_prices(
