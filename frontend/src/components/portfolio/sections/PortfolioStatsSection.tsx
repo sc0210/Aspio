@@ -5,20 +5,6 @@ import { usePrivacy } from '@/contexts/PrivacyContext';
 import type { PortfolioViewState } from '@/hooks/portfolio/usePortfolioViewState';
 import type { Portfolio } from '@/shared/types';
 
-interface PortfolioAnalyticsData {
-  allocation: {
-    byType: Array<{ type: string; value: number; percentage: number; color: string }>;
-    bySector: Array<{ sector: string; value: number; percentage: number; color: string }>;
-    byRegion: Array<{ region: string; value: number; percentage: number; color: string }>;
-    baseCurrency?: string;
-    exchangeRate?: number;
-  };
-  diversificationScore: number;
-  riskScore: number;
-  sharpeRatio?: number | null;
-  beta?: number | null;
-}
-
 interface RiskMetrics {
   cagr: number | null;
   cagrPercentage: number | null;
@@ -51,7 +37,6 @@ interface RealizedPnl {
 
 interface PortfolioStatsSectionProps {
   portfolioData: Portfolio | undefined;
-  analyticsData: PortfolioAnalyticsData | null | undefined;
   riskMetrics?: RiskMetrics | null;
   dividendIncome?: DividendIncome | null;
   realizedPnl?: RealizedPnl | null;
@@ -78,14 +63,12 @@ interface PortfolioStatsSectionProps {
  * ```tsx
  * <PortfolioStatsSection
  *   portfolioData={portfolioData}
- *   analyticsData={analyticsData}
  *   viewState={viewState}
  * />
  * ```
  */
 export function PortfolioStatsSection({
   portfolioData,
-  analyticsData,
   riskMetrics,
   dividendIncome,
   realizedPnl,
@@ -119,8 +102,8 @@ export function PortfolioStatsSection({
         onTodayChangeClick={onTodayChangeClick}
         onViewTrendClick={onViewTrendClick}
         riskMetrics={{
-          sharpeRatio: riskMetrics?.sharpeRatio ?? (typeof analyticsData?.sharpeRatio === 'number' ? analyticsData.sharpeRatio : undefined),
-          beta: riskMetrics?.beta ?? (typeof analyticsData?.beta === 'number' ? analyticsData.beta : undefined),
+          sharpeRatio: riskMetrics?.sharpeRatio ?? undefined,
+          beta: riskMetrics?.beta ?? undefined,
           cagr: riskMetrics?.cagrPercentage ?? undefined,
           maxDrawdown: riskMetrics?.maxDrawdownPercentage ?? undefined,
           annualizedVolatility: riskMetrics?.annualizedVolatilityPercentage ?? undefined,

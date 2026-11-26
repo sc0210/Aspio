@@ -119,11 +119,8 @@ def test_a_caller_cannot_corrupt_the_cached_series():
 
 
 @pytest.mark.asyncio
-async def test_twr_and_historical_describe_the_fixture():
-    from app.modules.portfolio.routers.performance import (
-        get_historical_performance,
-        get_time_weighted_return,
-    )
+async def test_twr_describes_the_fixture():
+    from app.modules.portfolio.routers.performance import get_time_weighted_return
 
     twr = _body(
         await get_time_weighted_return(
@@ -133,13 +130,6 @@ async def test_twr_and_historical_describe_the_fixture():
     assert twr["current_value"] == FIXTURE_PORTFOLIO_VALUE
     assert twr["total_invested"] == float(DEMO_PORTFOLIO["total_cost"])
     assert twr["twr"] == pytest.approx(float(DEMO_PORTFOLIO["total_gain_loss_percentage"]), abs=0.01)
-
-    hist = _body(
-        await get_historical_performance(interval="monthly", current_user=None, session=None)
-    )["data"]
-    assert len(hist) == 12
-    assert hist[-1]["value"] == pytest.approx(FIXTURE_PORTFOLIO_VALUE)
-    assert hist[-1]["cost"] == float(DEMO_PORTFOLIO["total_cost"])
 
 
 # ── Item 18: dividends and the cash-flow categories ──────────────────────────

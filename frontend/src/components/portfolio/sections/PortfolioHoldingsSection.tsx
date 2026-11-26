@@ -33,10 +33,6 @@ interface AnalyticsData {
     baseCurrency?: string;
     exchangeRate?: number;
   };
-  diversificationScore: number;
-  riskScore: number;
-  sharpeRatio?: number | null;
-  beta?: number | null;
 }
 
 interface PortfolioHoldingsSectionProps {

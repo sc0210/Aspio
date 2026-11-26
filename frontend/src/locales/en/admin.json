@@ -10,7 +10,6 @@
     "lineCacheCleared": "LINE profile cache cleared",
     "nothingToClean": "Nothing to clean up — database is already tidy.",
     "preview": "Preview Cleanup",
-    "priceCacheCleared": "Price cache cleared",
     "reset": "Reset",
     "run": "Run Cleanup",
     "runAgain": "Run again",

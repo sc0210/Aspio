@@ -19,16 +19,6 @@ jest.mock('@/lib/api-client', () => ({
   },
 }));
 
-jest.mock('@/services/marketDataService', () => ({
-  marketDataService: {
-    getMultipleMarketData: jest.fn().mockResolvedValue({ success: false, data: [] }),
-  },
-}));
-
-jest.mock('@/services/priceService', () => ({
-  priceService: { getLatestPricesBulk: jest.fn() },
-}));
-
 jest.mock('next-auth/react', () => ({
   getSession: jest.fn().mockResolvedValue(null),
 }));
@@ -305,7 +295,7 @@ describe('refreshPortfolioPrices', () => {
 
 describe('getPortfolioAnalytics', () => {
   it('returns the backend analytics as-is when the call succeeds', async () => {
-    const analytics = { diversificationScore: 80, riskScore: 30 };
+    const analytics = { allocation: { byType: [], bySector: [], byRegion: [] } };
     api.get.mockResolvedValue({ success: true, data: analytics });
 
     await expect(portfolioService.getPortfolioAnalytics()).resolves.toEqual({
