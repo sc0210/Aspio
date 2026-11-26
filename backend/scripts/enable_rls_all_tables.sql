@@ -17,7 +17,6 @@ ALTER TABLE public.portfolio_holdings          ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.portfolio_analytics         ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.portfolio_transactions      ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.transactions                ENABLE ROW LEVEL SECURITY;
-ALTER TABLE public.transaction_attachments     ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.transaction_import_batches  ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.recurring_transactions      ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.goals                       ENABLE ROW LEVEL SECURITY;
@@ -26,13 +25,8 @@ ALTER TABLE public.goal_contributions          ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.dividends                   ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.notifications               ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.notification_preferences    ENABLE ROW LEVEL SECURITY;
-ALTER TABLE public.chat_messages               ENABLE ROW LEVEL SECURITY;
-ALTER TABLE public.chat_sessions               ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.user_gamification_achievements ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.user_activity_logs          ENABLE ROW LEVEL SECURITY;
-ALTER TABLE public.user_data_exports           ENABLE ROW LEVEL SECURITY;
-ALTER TABLE public.user_security_logs          ENABLE ROW LEVEL SECURITY;
-ALTER TABLE public.user_preference_history     ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.debt_accounts               ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.peer_connections            ENABLE ROW LEVEL SECURITY;
 
@@ -42,7 +36,6 @@ ALTER TABLE public.line_groups                 ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.line_group_members          ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.line_user_links             ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.line_link_tokens            ENABLE ROW LEVEL SECURITY;
-ALTER TABLE public.line_bot_activities         ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.expense_splits              ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.shared_expenses             ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.shared_goals                ENABLE ROW LEVEL SECURITY;
@@ -51,7 +44,6 @@ ALTER TABLE public.shared_goals                ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.refresh_tokens              ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.oauth_providers             ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.email_verification_tokens   ENABLE ROW LEVEL SECURITY;
-ALTER TABLE public.password_reset_tokens       ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.user_sessions               ENABLE ROW LEVEL SECURITY;
 
 -- ── Admin / system tables ─────────────────────────────────────────────────────
@@ -64,10 +56,8 @@ ALTER TABLE public.system_settings             ENABLE ROW LEVEL SECURITY;
 -- these static datasets directly if needed.
 ALTER TABLE public.currencies                  ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.transaction_categories      ENABLE ROW LEVEL SECURITY;
-ALTER TABLE public.market_data                 ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.historical_prices           ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.currency_rates              ENABLE ROW LEVEL SECURITY;
-ALTER TABLE public.notification_templates      ENABLE ROW LEVEL SECURITY;
 
 CREATE POLICY "anon_read" ON public.currencies
     FOR SELECT USING (true);
@@ -75,16 +65,10 @@ CREATE POLICY "anon_read" ON public.currencies
 CREATE POLICY "anon_read" ON public.transaction_categories
     FOR SELECT USING (true);
 
-CREATE POLICY "anon_read" ON public.market_data
-    FOR SELECT USING (true);
-
 CREATE POLICY "anon_read" ON public.historical_prices
     FOR SELECT USING (true);
 
 CREATE POLICY "anon_read" ON public.currency_rates
-    FOR SELECT USING (true);
-
-CREATE POLICY "anon_read" ON public.notification_templates
     FOR SELECT USING (true);
 
 

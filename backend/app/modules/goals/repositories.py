@@ -14,7 +14,7 @@ from decimal import Decimal
 from typing import List, Optional
 from uuid import UUID
 
-from sqlalchemy import select, func, and_, case, update
+from sqlalchemy import select, func, and_, update
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
@@ -94,38 +94,6 @@ class GoalRepository:
         """Delete a goal (cascade removes milestones/contributions)."""
         await self.db.delete(goal)
 
-    async def get_summary_row(self, user_id: UUID):
-        """Return a single aggregated summary row for a user's goals."""
-        result = await self.db.execute(
-            select(
-                func.count(Goal.id).label("total"),
-                func.coalesce(
-                    func.sum(case((Goal.status == GoalStatus.ACTIVE, 1), else_=0)), 0
-                ).label("active"),
-                func.coalesce(
-                    func.sum(case((Goal.status == GoalStatus.COMPLETED, 1), else_=0)), 0
-                ).label("completed"),
-                func.coalesce(
-                    func.sum(
-                        case(
-                            (Goal.status == GoalStatus.ACTIVE, Goal.target_amount),
-                            else_=0,
-                        )
-                    ),
-                    0,
-                ).label("total_target"),
-                func.coalesce(
-                    func.sum(
-                        case(
-                            (Goal.status == GoalStatus.ACTIVE, Goal.current_amount),
-                            else_=0,
-                        )
-                    ),
-                    0,
-                ).label("total_current"),
-            ).where(Goal.user_id == user_id)
-        )
-        return result.first()
 
     # ------------------------------------------------------------------
     # Milestones

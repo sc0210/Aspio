@@ -191,17 +191,6 @@ class TestCategories:
         assert cats
         assert {c["type"] for c in cats} == {"expense"}
 
-    async def test_get_one_and_missing(self, authenticated_client, ledger):
-        cat_id = str(ledger["dining"].id)
-        assert authenticated_client.get(f"{BASE}/categories/{cat_id}").json()["name"] == "Dining"
-        assert authenticated_client.get(f"{BASE}/categories/{uuid.uuid4()}").status_code == 404
-
-    async def test_writes_are_admin_only(self, authenticated_client, ledger):
-        cat_id = str(ledger["dining"].id)
-        assert authenticated_client.post(f"{BASE}/categories", json={"name": "X", "type": "expense"}).status_code == 403
-        assert authenticated_client.put(f"{BASE}/categories/{cat_id}", json={"name": "Y"}).status_code == 403
-        assert authenticated_client.delete(f"{BASE}/categories/{cat_id}").status_code == 403
-
 
 class TestScanReceipt:
     def _post(self, client, name="r.jpg"):

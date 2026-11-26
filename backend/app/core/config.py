@@ -238,8 +238,8 @@ class Settings(BaseSettings):
     ALLOW_INSECURE_DEFAULTS: bool = False
 
     # File upload
-    # Default is unchanged (relative to the working dir; /app/uploads/transactions
-    # in the container). Mount a volume at /app/uploads to persist attachments.
+    # Where receipt scans are written while they are read (relative to the working
+    # dir; /app/uploads/transactions in the container).
     UPLOAD_PATH: str = "./uploads/transactions"
     MAX_FILE_SIZE_MB: int = 10
     ALLOWED_FILE_TYPES: List[str] = ["image/jpeg", "image/png", "image/webp"]

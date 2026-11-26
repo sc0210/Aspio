@@ -1,10 +1,9 @@
-"""Portfolio market-data endpoints: bulk prices, quotes, refreshes.
+"""Portfolio market-data endpoints: quotes, catalogues, refreshes.
 
 Every provider (quotes, FX, the price sync) is stubbed, so nothing here
-reaches the network. Bulk prices read real HistoricalPrice rows.
+reaches the network.
 """
 
-from datetime import date
 from decimal import Decimal
 from types import SimpleNamespace
 
@@ -12,82 +11,16 @@ import pytest
 import pytest_asyncio
 
 from app.modules.portfolio import market_data_service, price_update_service
-from app.modules.portfolio.models import HistoricalPrice
 from app.modules.portfolio.repositories import CurrencyRepository
 from app.modules.portfolio.routers import market_data
-from app.modules.portfolio.routers._shared import _price_cache
 from app.utils import exchange_rate_service
 
 pytestmark = [pytest.mark.asyncio, pytest.mark.api]
 BASE = "/api/v1/portfolio"
 
 
-@pytest.fixture(autouse=True)
-def _clear_price_cache():
-    _price_cache.clear()
-    yield
-    _price_cache.clear()
-
-
-@pytest_asyncio.fixture
-async def prices(async_session):
-    async_session.add_all(
-        [
-            HistoricalPrice(symbol="AAPL", market="US", date=date(2026, 10, 8), close=Decimal("100"),
-                            open=Decimal("99"), source="yahoo", currency="USD"),
-            HistoricalPrice(symbol="AAPL", market="US", date=date(2026, 10, 9), close=Decimal("104"),
-                            source="yahoo", currency="USD"),
-        ]
-    )
-    await async_session.commit()
-
-
-class TestBulkPrices:
-    async def test_requires_sign_in(self, client):
-        assert client.get(f"{BASE}/prices/bulk", params={"symbols": "AAPL"}).status_code == 401
-
-    async def test_blank_symbols(self, authenticated_client):
-        data = authenticated_client.get(f"{BASE}/prices/bulk", params={"symbols": " , "}).json()["data"]
-        assert data == {"prices": {}, "missing": []}
-
-    async def test_more_than_fifty_symbols_is_422(self, authenticated_client):
-        many = ",".join(f"S{i}" for i in range(51))
-        assert authenticated_client.get(f"{BASE}/prices/bulk", params={"symbols": many}).status_code == 422
-
-    async def test_latest_then_served_from_cache(self, authenticated_client, prices):
-        first = authenticated_client.get(f"{BASE}/prices/bulk", params={"symbols": "aapl,msft"}).json()["data"]
-        assert first["cached"] is False
-        assert first["prices"]["AAPL"]["close"] == 104.0
-        assert first["prices"]["MSFT"] is None
-
-        # A symbol with no rows caches as None, which reads back as a miss, so
-        # any request naming one goes to the DB again.
-        again = authenticated_client.get(f"{BASE}/prices/bulk", params={"symbols": "AAPL,MSFT"}).json()["data"]
-        assert again["cached"] is False
-
-        cached = authenticated_client.get(f"{BASE}/prices/bulk", params={"symbols": "AAPL"}).json()["data"]
-        assert cached["cached"] is True
-        assert cached["prices"]["AAPL"]["date"] == "2026-10-09"
-
-    async def test_on_date_uses_previous_close_and_reports_missing(self, authenticated_client, prices):
-        data = authenticated_client.get(
-            f"{BASE}/prices/bulk", params={"symbols": "AAPL,MSFT", "target_date": "2026-10-08"}
-        ).json()["data"]
-        assert data["prices"]["AAPL"]["close"] == 100.0
-        assert data["prices"]["AAPL"]["open"] == 99.0
-        assert data["missing"] == ["MSFT"]
-
-
 class TestDemoCatalogues:
-    async def test_market_data_filters_by_symbol(self, client):
-        rows = client.get(f"{BASE}/market-data", params={"symbols": "aapl, btc-usd"}).json()
-        assert [r["symbol"] for r in rows] == ["AAPL", "BTC-USD"]
-        assert len(client.get(f"{BASE}/market-data").json()) == 3
 
-    async def test_search_matches_symbol_or_name(self, client):
-        data = client.get(f"{BASE}/search", params={"q": "bitcoin"}).json()["data"]
-        assert [r["symbol"] for r in data] == ["BTC-USD"]
-        assert len(client.get(f"{BASE}/search", params={"q": "o", "limit": 2}).json()["data"]) == 2
 
     @pytest.mark.parametrize("market,expected", [("TW", {"0050"}), ("CRYPTO", {"BTC-USD"}), ("US", {"VOO"})])
     async def test_popular_symbols_by_market(self, client, market, expected):

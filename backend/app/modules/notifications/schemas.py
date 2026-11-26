@@ -47,13 +47,6 @@ class NotificationUpdateRequest(BaseModel):
     dismissed_at: Optional[datetime] = None
 
 
-class BulkNotificationActionRequest(BaseModel):
-    """Request schema for bulk notification actions"""
-
-    notification_ids: List[UUID] = Field(min_length=1, max_length=100)
-    action: str = Field(pattern="^(mark_read|mark_unread|dismiss|delete)$")
-
-
 class NotificationPreferencesUpdateRequest(BaseModel):
     """Request schema for updating notification preferences"""
 
@@ -148,21 +141,6 @@ class NotificationPreferencesResponse(BaseModel):
     phone_number: Optional[str] = None
     created_at: datetime
     updated_at: datetime
-    model_config = ConfigDict(from_attributes=True)
-
-
-class NotificationStatsResponse(BaseModel):
-    """Response schema for notification statistics"""
-
-    total_notifications: int
-    unread_notifications: int
-    read_notifications: int
-    dismissed_notifications: int
-    expired_notifications: int
-    failed_notifications: int
-    notifications_by_type: Dict[str, int]
-    notifications_by_priority: Dict[str, int]
-    recent_notifications: List[NotificationListResponse]
     model_config = ConfigDict(from_attributes=True)
 
 

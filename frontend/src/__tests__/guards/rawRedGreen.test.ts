@@ -16,7 +16,7 @@
 import fs from 'fs';
 import path from 'path';
 
-const BASELINE = 718;
+const BASELINE = 714;
 const RAW = /\b(?:text|bg|border|from|to|via|ring|fill|stroke|divide|outline|placeholder|shadow|accent|decoration)-(?:green|red|emerald|rose)-\d{2,3}\b/g;
 const SRC = path.join(__dirname, '../..');
 

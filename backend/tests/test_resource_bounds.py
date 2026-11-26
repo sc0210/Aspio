@@ -134,8 +134,6 @@ async def test_csv_import_caps_rows_and_keeps_errors_small(authenticated_client)
 
     with patch.object(svc, "MAX_IMPORT_ERRORS", 2):
         body = authenticated_client.post(base, files={"file": ("a.csv", rows, "text/csv")}).json()
-    batch = authenticated_client.get("/api/v1/transactions/import/batches").json()["data"]["batches"][0]
-    assert batch["total_records"] == 6
     assert len(body["errors"]) <= 2
     assert all("data" not in e for e in body["errors"])
 

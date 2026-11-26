@@ -5,7 +5,6 @@ Simplified users router for Aspiro FastAPI backend.
 import logging
 
 logger = logging.getLogger(__name__)
-from uuid import UUID
 
 from fastapi import APIRouter, Depends, HTTPException, status, Request
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -100,28 +99,3 @@ async def update_current_user_profile(
 # ===== Health Check Endpoints =====
 
 
-@router.get("/health", response_model=ApiResponse[dict])
-async def users_health_check(session: AsyncSession = Depends(get_async_session)):
-    """
-    Health check for users service.
-
-    Verifies database connectivity and service status.
-    """
-    try:
-        # Test database connectivity
-        user_service = get_user_service(session)
-        # Simple query to test DB connection
-        test_user = await user_service.user_repo.get_user_by_id(
-            UUID("00000000-0000-0000-0000-000000000000")
-        )
-
-        return ApiResponse.success_response(
-            data={"service": "users", "status": "healthy", "database": "connected"},
-            message="Users service is operational",
-        )
-    except Exception as e:
-        logger.error("Users service health check failed: %s", e, exc_info=True)
-        raise HTTPException(
-            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
-            detail="Service temporarily unavailable",
-        )

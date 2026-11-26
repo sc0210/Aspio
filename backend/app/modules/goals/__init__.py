@@ -5,7 +5,7 @@ Financial goals tracking and management.
 """
 
 from .models import Goal, GoalMilestone, GoalContribution
-from .schemas import GoalCreate, GoalUpdate, GoalResponse, GoalSummary
+from .schemas import GoalCreate, GoalUpdate, GoalResponse
 from .service import GoalService, get_goal_service
 from .router import router
 
@@ -16,7 +16,6 @@ __all__ = [
     "GoalCreate",
     "GoalUpdate",
     "GoalResponse",
-    "GoalSummary",
     "GoalService",
     "get_goal_service",
     "router",

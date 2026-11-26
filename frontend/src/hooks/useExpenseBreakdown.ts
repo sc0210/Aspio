@@ -8,7 +8,7 @@ import { loanService } from '@/services/loanService';
 import { useAccessTier } from './useAccessTier';
 import { demoLoans } from '@/data/demoData';
 import { toTWD } from '@/utils/formatters';
-import { EXPENSE_GROUPS, getExpenseGroupKey, isEarnedIncome, isWalletTransfer, type ExpenseGroupKey } from '@/utils/expenseGroups';
+import { EXPENSE_GROUPS, getExpenseGroupKey, isEarnedIncome, isPassThrough, isWalletTransfer, type ExpenseGroupKey } from '@/utils/expenseGroups';
 
 /**
  * Builds a realistic monthly expense model from the user's real transactions,
@@ -56,6 +56,7 @@ interface TxLite {
     date?: string;
     transferGroupId?: string | null;
     loanId?: string | null;
+    passThrough?: boolean;
 }
 
 export function useExpenseBreakdown(): ExpenseBreakdown {
@@ -117,7 +118,7 @@ export function useExpenseBreakdown(): ExpenseBreakdown {
             if (monthIdx >= currentMonthIdx) continue; // skip the incomplete current month
             // Wallet transfers are the user's own money changing pocket — neither
             // spending nor income, whichever leg this row is.
-            if (isWalletTransfer(t)) continue;
+            if (isWalletTransfer(t) || isPassThrough(t)) continue;
             const twd = toTWD(Number(t.amount) || 0, t.currency || 'TWD');
             if (twd <= 0) continue;
             if (t?.type === 'income') {

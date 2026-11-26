@@ -44,7 +44,7 @@ updates:
       # next-auth v4→v5 is a breaking rewrite; pin until Auth.js v5 migration
       - dependency-name: "next-auth"
         update-types: ["version-update:semver-major"]
-      # i18next 25→26 needs compatibility review
+      # i18next 26→27 changes the TFunction types (see #189); migrate deliberately
       - dependency-name: "i18next"
         update-types: ["version-update:semver-major"]
       - dependency-name: "react-i18next"

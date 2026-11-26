@@ -177,59 +177,6 @@ class Notification(BaseModel):
         )
 
 
-class NotificationTemplate(BaseModel):
-    """Notification template model for reusable notification content"""
-
-    __tablename__ = "notification_templates"
-
-    id: Mapped[uuid.UUID] = mapped_column(
-        UUID(as_uuid=True), primary_key=True, default=uuid.uuid4
-    )
-
-    template_key: Mapped[str] = mapped_column(String(100), nullable=False, unique=True)
-    name: Mapped[str] = mapped_column(String(100), nullable=False)
-    description: Mapped[Optional[str]] = mapped_column(Text)
-
-    type: Mapped[NotificationType] = mapped_column(
-        SQLEnum(NotificationType), nullable=False
-    )
-    priority: Mapped[NotificationPriority] = mapped_column(
-        SQLEnum(NotificationPriority),
-        nullable=False,
-        default=NotificationPriority.MEDIUM,
-    )
-
-    # Template content with placeholders
-    title_template: Mapped[str] = mapped_column(String(200), nullable=False)
-    message_template: Mapped[str] = mapped_column(Text, nullable=False)
-
-    # Default channels and settings
-    default_channels: Mapped[list] = mapped_column(JSONType, default=list)
-    default_expires_hours: Mapped[Optional[int]] = mapped_column(default=None)
-
-    # Template metadata
-    variables: Mapped[Optional[dict]] = mapped_column(
-        JSONType, default=dict
-    )  # Required template variables
-    category: Mapped[Optional[str]] = mapped_column(String(50), default=None)
-
-    # Localization
-    supported_languages: Mapped[list] = mapped_column(JSONType, default=["en"])
-    localized_content: Mapped[Optional[dict]] = mapped_column(JSONType, default=dict)
-
-    # Template status
-    is_active: Mapped[bool] = mapped_column(Boolean, nullable=False, default=True)
-    usage_count: Mapped[int] = mapped_column(nullable=False, default=0)
-
-    # Action configuration
-    action_url_template: Mapped[Optional[str]] = mapped_column(
-        String(500), default=None
-    )
-    action_label: Mapped[Optional[str]] = mapped_column(String(100), default=None)
-    is_actionable: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False)
-    is_persistent: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False)
-
-
 class NotificationPreference(BaseModel):
     """User notification preferences model"""
 

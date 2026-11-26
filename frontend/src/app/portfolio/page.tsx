@@ -114,6 +114,8 @@ function DesktopPortfolioPage() {
   const {
     portfolioData,
     analyticsData,
+    analyticsError,
+    refetchAnalytics,
     riskMetrics,
     dividendIncome,
     realizedPnl,
@@ -313,7 +315,6 @@ function DesktopPortfolioPage() {
         <div data-tour="pf-stats">
           <PortfolioStatsSection
             portfolioData={portfolioData}
-            analyticsData={analyticsData}
             riskMetrics={riskMetrics}
             dividendIncome={dividendIncome}
             realizedPnl={realizedPnl}
@@ -365,6 +366,8 @@ function DesktopPortfolioPage() {
             holdings={aggregatedHoldings}
             rawHoldings={portfolioData?.holdings || []}
             analyticsData={analyticsData}
+            analyticsFailed={!!analyticsError}
+            onRetryAnalytics={() => { void refetchAnalytics(); }}
             filters={filters}
             editState={editState}
             modals={modals}
