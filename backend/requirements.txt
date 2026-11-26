@@ -1,9 +1,9 @@
 # FastAPI and ASGI server
-fastapi==0.162.6
+fastapi==0.165.0
 uvicorn[standard]==0.54.0
 
 # Database
-sqlalchemy[asyncio]==2.1.8
+sqlalchemy[asyncio]==2.1.9
 asyncpg==0.32.0
 alembic==1.20.1
 psycopg2-binary==2.9.13
@@ -11,13 +11,13 @@ psycopg2-binary==2.9.13
 # Authentication and security
 passlib[bcrypt]==1.7.4
 bcrypt==3.2.2
-python-multipart==0.0.33
+python-multipart==0.0.34
 authlib==1.9.1
 httpx==0.28.1
 PyJWT==2.15.1
 
 # Validation and serialization
-pydantic[email]==2.14.3
+pydantic[email]==2.14.4
 pydantic-settings==2.16.3
 
 # Rate limiting
