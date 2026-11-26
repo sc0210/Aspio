@@ -74,11 +74,23 @@ export function buildTrendHoldingRows(
   // First pass: aggregate by symbol+walletType (groups individual lots)
   const aggregated = aggregateHoldingsBySymbol(portfolio.holdings);
 
+  // The series covers the Portfolio wallet (goal lots included) and no cash, so
+  // a symbol's figures belong to its Portfolio piece only.
+  const isCash = (h: { type?: string }) => (h.type || '').toLowerCase() === 'cash';
+  const inSeries = (h: { type?: string; walletType?: string }) =>
+    !isCash(h) && h.walletType !== 'emergency';
+  // Cash accounts merge by name across wallets; a security's pieces (lots,
+  // goals, whatever each was named) merge by symbol within its wallet, so one
+  // symbol never shows its series figures twice.
+  const mergeKey = (h: { symbol: string; name: string; type?: string; walletType?: string }) =>
+    isCash(h) ? `${h.symbol}__${h.name}` : `${h.symbol}__${h.walletType === 'emergency' ? 'emergency' : 'portfolio'}`;
+
   // First pass → HoldingRow
-  const firstPassRows: HoldingRow[] = aggregated.map((h) => {
-    const sv = startHoldings[h.symbol];
-    const ev = endHoldings[h.symbol];
-    const cumChange = cumulativeChange[h.symbol]; // sum of daily P&L — undefined if no daily data at all
+  const firstPassRows: Array<{ key: string; row: HoldingRow }> = aggregated.map((h) => {
+    const seriesOf = <T,>(m: Record<string, T>) => (inSeries(h) ? m[h.symbol] : undefined);
+    const sv = seriesOf(startHoldings);
+    const ev = seriesOf(endHoldings);
+    const cumChange = seriesOf(cumulativeChange); // sum of daily P&L — undefined if no daily data at all
 
     const startValue = sv !== undefined ? sv : null;
     const endValue = ev !== undefined ? ev : null;
@@ -107,7 +119,7 @@ export function buildTrendHoldingRows(
       periodChangePct = (periodChange / startValue) * 100;
     }
 
-    return {
+    const row: HoldingRow = {
       symbol: h.symbol,
       name: h.name,
       type: h.type,
@@ -128,13 +140,12 @@ export function buildTrendHoldingRows(
       lotCount: (h.metadata?.lotCount as number) ?? 1,
       sparkline: h.sparklineData ?? [],
     };
+    return { key: mergeKey(h), row };
   });
 
-  // Second pass: merge rows that share the same symbol+name
-  // (handles same-named cash accounts spread across multiple wallet types)
+  // Second pass: merge the pieces that share a key (see mergeKey).
   const nameMap = new Map<string, HoldingRow>();
-  for (const row of firstPassRows) {
-    const key = `${row.symbol}__${row.name}`;
+  for (const { key, row } of firstPassRows) {
     const existing = nameMap.get(key);
     if (!existing) {
       nameMap.set(key, { ...row });
@@ -143,8 +154,8 @@ export function buildTrendHoldingRows(
       const combinedCost = existing.totalCost + row.totalCost;
       const combinedValue = existing.currentValue + row.currentValue;
       // Start, end and change come off the trend series by symbol, so every
-      // piece already carries the whole symbol's figures: keep them once.
-      // Adding them counted a symbol split across wallets or goals twice.
+      // piece of a key already carries the same figures: keep them once.
+      // Adding them counted a symbol split across lots or goals twice.
       nameMap.set(key, {
         ...existing,
         quantity: combinedQty,
