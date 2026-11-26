@@ -104,10 +104,9 @@ x-backend-environment: &backend-environment
   # local/prod stacks, which set this to http://quickchart:3400/chart. Set it
   # explicitly (rather than relying on the config default) so the trade-off is visible.
   - QUICKCHART_URL=https://quickchart.io/chart
-  # Receipt attachments. On the backend_uploads named volume (mounted at /app/uploads
-  # below), so they survive container recreation — before this they lived in the
-  # container's writable layer and every deploy, which recreates the container,
-  # discarded them. Set explicitly so it holds whatever the code's default is.
+  # Upload scratch space (receipt scans are written here while they are read). On
+  # the backend_uploads named volume (mounted at /app/uploads below). Set
+  # explicitly so it holds whatever the code's default is.
   - UPLOAD_PATH=/app/uploads/transactions
   # Deliberately NO ALLOW_INSECURE_DEFAULTS here. The backend refuses to start on a
   # placeholder SECRET_KEY or on the database password `aspiro_password`; that check
@@ -322,7 +321,7 @@ services:
   # http://caddy:80) lives in the Cloudflare dashboard, and the token below is all
   # this side needs.
   cloudflared:
-    image: cloudflare/cloudflared:2026.10.7   # Dependabot (docker-compose) bumps it
+    image: cloudflare/cloudflared:2026.11.1   # Dependabot (docker-compose) bumps it
     container_name: aspiro-cloudflared
     # Opt-in, because it cannot start without a token: `tunnel run` with an empty
     # TUNNEL_TOKEN exits immediately ("requires the ID or name of the tunnel"), and
@@ -353,7 +352,7 @@ services:
   # without an auth key it would sit waiting to log in. The key is used once; the
   # node identity then lives in the tailscale_state volume.
   tailscale:
-    image: tailscale/tailscale:v1.104.4   # Dependabot (docker-compose) bumps it
+    image: tailscale/tailscale:v1.104.7   # Dependabot (docker-compose) bumps it
     container_name: aspiro-tailscale
     profiles: ["tailscale"]
     restart: unless-stopped

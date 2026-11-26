@@ -14,15 +14,12 @@ from .schemas import (
     NotificationUpdateRequest,
     NotificationResponse,
     NotificationListResponse,
-    NotificationStatsResponse,
     NotificationFilterParams,
     NotificationSortParams,
-    BulkNotificationActionRequest,
     NotificationPreferencesUpdateRequest,
     NotificationPreferencesResponse,
 )
 from .models import NotificationStatus
-from sqlalchemy import select
 from ...core.database import get_db
 from ...common.schemas import ApiResponse, PaginationMeta, PaginationParams
 from ..users.dependencies import get_optional_current_user
@@ -32,26 +29,6 @@ from typing import Optional
 router = APIRouter()
 
 # ===== Health Check Endpoints =====
-
-
-@router.get("/health", response_model=ApiResponse[dict])
-async def notifications_health_check():
-    """Detailed health check for notifications service"""
-    return ApiResponse.success_response(
-        data={
-            "service": "notifications",
-            "status": "healthy",
-            "features": {
-                "in_app_notifications": True,
-                "email_notifications": True,
-                "push_notifications": True,
-                "sms_notifications": False,  # Not implemented yet
-                "user_preferences": True,
-                "bulk_operations": True,
-            },
-        },
-        message="Notifications service health check completed",
-    )
 
 
 # ===== User Notification Endpoints =====
@@ -85,115 +62,7 @@ async def get_notifications(
     )
 
 
-@router.post("/bulk-action", response_model=ApiResponse[dict])
-async def bulk_notification_action(
-    action_data: BulkNotificationActionRequest,
-    db: AsyncSession = Depends(get_db),
-    current_user: Optional[object] = Depends(get_optional_current_user),
-):
-    """Perform bulk actions on notifications"""
-    if not current_user:
-        raise HTTPException(
-            status_code=status.HTTP_401_UNAUTHORIZED, detail="Authentication required"
-        )
-
-    # For now only support mark_read action for list of ids
-    if action_data.action == "mark_read":
-        svc = get_notifications_service(db)
-        updated = 0
-        for nid in action_data.notification_ids:
-            obj = await svc.mark_notification_read(nid, current_user.id)
-            if obj:
-                updated += 1
-        return ApiResponse.success_response(
-            data={"updated": updated}, message="Bulk action completed"
-        )
-
-    raise HTTPException(
-        status_code=status.HTTP_400_BAD_REQUEST, detail="Unsupported bulk action"
-    )
-
-
 # ===== Statistics and Analytics =====
-
-
-@router.get("/stats/summary", response_model=ApiResponse[NotificationStatsResponse])
-async def get_notification_stats(
-    db: AsyncSession = Depends(get_db),
-    current_user: Optional[object] = Depends(get_optional_current_user),
-):
-    """Get notification statistics and summary"""
-    from sqlalchemy import func
-    from .models import Notification, NotificationStatus
-    from datetime import datetime, timezone
-
-    # Without this an anonymous caller got every user's counts and recent notifications.
-    if not current_user:
-        raise HTTPException(
-            status_code=status.HTTP_401_UNAUTHORIZED, detail="Authentication required"
-        )
-
-    user_filter = Notification.user_id == current_user.id
-
-    # Single query: count by status
-    status_rows = await db.execute(
-        select(Notification.status, func.count().label("cnt"))
-        .where(user_filter)
-        .group_by(Notification.status)
-    )
-    by_status: dict[str, int] = {row.status: row.cnt for row in status_rows}
-
-    # Count by type
-    type_rows = await db.execute(
-        select(Notification.type, func.count().label("cnt"))
-        .where(user_filter)
-        .group_by(Notification.type)
-    )
-    by_type: dict[str, int] = {row.type: row.cnt for row in type_rows}
-
-    # Count by priority
-    priority_rows = await db.execute(
-        select(Notification.priority, func.count().label("cnt"))
-        .where(user_filter)
-        .group_by(Notification.priority)
-    )
-    by_priority: dict[str, int] = {row.priority: row.cnt for row in priority_rows}
-
-    # Count expired (expires_at < now)
-    now = datetime.now(timezone.utc)
-    expired_result = await db.execute(
-        select(func.count())
-        .select_from(Notification)
-        .where(user_filter)
-        .where(Notification.expires_at != None)
-        .where(Notification.expires_at < now)
-    )
-    expired_count = expired_result.scalar_one()
-
-    # Recent 5 notifications
-    recent_result = await db.execute(
-        select(Notification)
-        .where(user_filter)
-        .order_by(Notification.created_at.desc())
-        .limit(5)
-    )
-    recent = recent_result.scalars().all()
-
-    total = sum(by_status.values())
-    unread = by_status.get(NotificationStatus.PENDING, 0) + by_status.get(NotificationStatus.SENT, 0)
-
-    stats = NotificationStatsResponse(
-        total_notifications=total,
-        unread_notifications=unread,
-        read_notifications=by_status.get(NotificationStatus.READ, 0),
-        dismissed_notifications=by_status.get(NotificationStatus.DISMISSED, 0),
-        expired_notifications=expired_count,
-        failed_notifications=by_status.get(NotificationStatus.FAILED, 0),
-        notifications_by_type={k: v for k, v in by_type.items()},
-        notifications_by_priority={k: v for k, v in by_priority.items()},
-        recent_notifications=recent,
-    )
-    return ApiResponse.success_response(data=stats)
 
 
 @router.post("/mark-all-read", response_model=ApiResponse[dict])

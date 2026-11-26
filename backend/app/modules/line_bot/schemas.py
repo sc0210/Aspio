@@ -8,10 +8,10 @@ Covers:
 
 from datetime import datetime
 from decimal import Decimal
-from typing import Any, Dict, List, Optional
+from typing import List, Optional
 from uuid import UUID
 
-from pydantic import BaseModel, ConfigDict, Field
+from pydantic import BaseModel, Field
 
 
 # ---------------------------------------------------------------------------
@@ -167,17 +167,6 @@ class MemberOut(BaseModel):
     user_id: UUID
     display_name: Optional[str]
     line_user_id: str
-
-
-class LineBotActivityOut(BaseModel):
-    id: UUID
-    event_type: str
-    description: str
-    amount: Optional[float] = None
-    currency: Optional[str] = None
-    created_at: datetime
-
-    model_config = ConfigDict(from_attributes=True)
 
 
 # ---------------------------------------------------------------------------

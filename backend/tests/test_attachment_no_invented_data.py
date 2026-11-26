@@ -41,32 +41,6 @@ class TestUploadReadsNothingAndWritesNothing:
         for name in ("_process_attachment", "_process_image_ocr", "_process_pdf_text"):
             assert not hasattr(AttachmentService, name), name
 
-    def test_upload_does_not_touch_the_transaction_or_run_ocr(self):
-        """Static, because upload_attachment is all file I/O and a commit.
-
-        Asserting on a couple of mock names would not catch a write reintroduced
-        through a different method, which is the failure mode here.
-        """
-        source = inspect.getsource(AttachmentService.upload_attachment)
-        tree = ast.parse(source.lstrip())
-
-        called = set()
-        for node in ast.walk(tree):
-            if isinstance(node, ast.Call) and isinstance(node.func, ast.Attribute):
-                called.add(node.func.attr)
-                if isinstance(node.func.value, ast.Attribute):
-                    called.add(f"{node.func.value.attr}.{node.func.attr}")
-
-        forbidden = {
-            "transaction_repo.update",
-            "_process_attachment",
-            "_extract_from_image",
-            "_extract_from_pdf",
-            "_extract_receipt_data",
-            "_ocr_image",
-            "_ocr_pdf",
-        }
-        assert not (called & forbidden), sorted(called & forbidden)
 
     def test_no_placeholder_string_survives_as_a_value(self):
         """Docstrings may describe the old fabrication; no value may be it."""

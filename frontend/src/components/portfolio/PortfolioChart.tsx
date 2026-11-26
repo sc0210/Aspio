@@ -13,7 +13,7 @@ import {
 import { ChartBarIcon, ExclamationTriangleIcon } from '@heroicons/react/24/outline';
 import { useTheme } from '@/contexts/ThemeContext';
 import { cn } from '@/utils/cn';
-import { formatMoney } from '@/utils/formatters';
+import { areRatesLive, formatMoney, toTWD } from '@/utils/formatters';
 import { PortfolioHolding, MarketType } from '@/shared/types';
 import { portfolioService } from '@/services/portfolioService';
 import { chartChrome, SERIES } from '@/lib/charts/palette';
@@ -205,6 +205,8 @@ export const PortfolioChart = memo(function PortfolioChart({ holdings, baseCurre
     });
   }, [rawHistoricalData, targetIRR, monthlyInvestment, showProjection]);
 
+  // toTWD reads rates that load after the first render; recompute once they do.
+  const ratesLive = areRatesLive();
   const chartData = useMemo(() => {
     if (!holdings.length) return [];
 
@@ -212,7 +214,9 @@ export const PortfolioChart = memo(function PortfolioChart({ holdings, baseCurre
       return historicalData;
     }
 
-    const totalValue = holdings.reduce((sum, holding) => sum + holding.totalValue, 0);
+    // totalValue is in each holding's own currency: weigh them in TWD.
+    const valueTWD = (h: PortfolioHolding) => toTWD(h.totalValue, h.currency || 'TWD');
+    const totalValue = holdings.reduce((sum, holding) => sum + valueTWD(holding), 0);
 
     if (chartType === 'allocation') {
       const marketData = holdings.reduce((acc, holding) => {
@@ -220,7 +224,7 @@ export const PortfolioChart = memo(function PortfolioChart({ holdings, baseCurre
         if (!acc[mkt]) {
           acc[mkt] = { value: 0, count: 0 };
         }
-        acc[mkt].value += holding.totalValue;
+        acc[mkt].value += valueTWD(holding);
         acc[mkt].count += 1;
         return acc;
       }, {} as Record<MarketType, { value: number; count: number }>);
@@ -235,7 +239,8 @@ export const PortfolioChart = memo(function PortfolioChart({ holdings, baseCurre
     }
 
     return [];
-  }, [holdings, chartType, historicalData]);
+  // eslint-disable-next-line react-hooks/exhaustive-deps -- ratesLive: see above
+  }, [holdings, chartType, historicalData, ratesLive]);
 
   if (!holdings.length) {
     return (
@@ -530,7 +535,7 @@ export const PortfolioChart = memo(function PortfolioChart({ holdings, baseCurre
               </div>
               <div className="text-right">
                 <div className="text-sm font-bold text-gray-900 dark:text-white">
-                  {formatMoney(item.value, baseCurrency)}
+                  {formatMoney(item.value, 'TWD')}
                 </div>
                 <div className="text-xs font-semibold text-primary-700 dark:text-primary-400">
                   {item.percentage.toFixed(1)}%

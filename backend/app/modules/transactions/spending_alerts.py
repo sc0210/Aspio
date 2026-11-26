@@ -80,8 +80,10 @@ async def generate_spending_alerts(
         if any((n.data or {}).get("month") == month_key for n in existing):
             continue
 
-        mtd = (await repo.get_summary(str(uid), month_start, today))["total_expenses"]
-        prev = (await repo.get_summary(str(uid), prev3_start, prev3_end))["total_expenses"]
+        # Spending, not every outflow: a stock purchase, a move to Emergency or
+        # a deposit (pass-through) is not "spending above your usual".
+        mtd = (await repo.get_summary(str(uid), month_start, today))["living_expenses"]
+        prev = (await repo.get_summary(str(uid), prev3_start, prev3_end))["living_expenses"]
         avg = (prev / 3) if prev else Decimal("0")
         if avg <= 0:
             continue

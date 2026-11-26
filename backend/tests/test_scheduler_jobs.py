@@ -1,9 +1,9 @@
 """
 The in-process scheduler's job list, and the recurring-transaction job.
 
-Recurring rules used to materialise only when an admin hit
-POST /transactions/recurring/process-due; no job ran them, so a user's rule
-never produced a transaction on its own.
+Recurring rules used to materialise only when an admin called an endpoint
+(since removed); no job ran them, so a user's rule never produced a
+transaction on its own.
 """
 
 from contextlib import asynccontextmanager

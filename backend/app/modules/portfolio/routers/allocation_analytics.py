@@ -6,17 +6,16 @@ Behavior is preserved exactly; paths remain identical.
 
 from ._shared import *  # noqa: F401,F403  (shared imports/constants/helpers)
 from ._shared import (  # noqa: F401  explicit re-import for underscore-prefixed names
-    _lp_cache_get,
-    _lp_cache_set,
     _get_sort_key,
     _mc,
-    _price_cache,
     fetch_historical_data_background,
 )
 from ..symbols import canonical_symbol
 from app.utils.datetime_helpers import business_today
 from app.utils.market_sessions import session_closed
 from app.core.exceptions import AspiroException
+from app.utils.fx_sql import to_twd, twd_rates_for
+from ..models import HoldingWalletType
 
 router = APIRouter()
 
@@ -55,33 +54,6 @@ def _demo_allocation_slices(as_float: bool = False) -> Dict[str, List[Dict[str, 
     }
 
 
-@router.get("/allocation")
-async def get_asset_allocation(
-    current_user=Depends(get_optional_current_user),
-    session: AsyncSession = Depends(get_db),
-):
-    """Get asset allocation breakdown"""
-
-    # Demo allocation, derived from DEMO_HOLDINGS. This described the retired
-    # AAPL/GOOGL/BTC account (Stock/Crypto/negative Cash, NT$21K) beside a
-    # NT$2M portfolio of two ETFs.
-    demo_allocation = {
-        key: [AssetAllocation(**slice_) for slice_ in slices]
-        for key, slices in _demo_allocation_slices().items()
-    }
-
-    if not current_user:
-        return ApiResponse.success_response(data=demo_allocation)
-
-    try:
-        allocation = await AnalyticsService(session).get_asset_allocation(current_user.id)
-        return ApiResponse.success_response(data=allocation)
-
-    except Exception as e:
-        # Return demo data on error
-        return ApiResponse.success_response(data=demo_allocation)
-
-
 @router.get("/analytics")
 @rate_limit_analytics
 async def get_portfolio_analytics(
@@ -89,23 +61,15 @@ async def get_portfolio_analytics(
     session: AsyncSession = Depends(get_db),
 ):
     """
-    Get comprehensive portfolio analytics including performance and allocation data.
-    Optimized: Uses single database query + in-memory calculations for speed.
-    Rate limited: 5 requests/minute per user
+    The whole Portfolio wallet's allocation by type, sector and region, in TWD.
+
+    Emergency-wallet holdings are left out, as from the page's holdings list; the
+    list's type filter is not applied. Rate limited by ``rate_limit_analytics``.
     """
     # Demo analytics data
     demo_analytics = {
-        # Period returns off the same value walk /daily-performance serves, and
-        # allocations off DEMO_HOLDINGS. Both described the retired
-        # AAPL/GOOGL/BTC account: an 11.1% year and a negative cash slice.
-        "performance": {
-            "oneDay": demo_period_return_pct(1),
-            "oneWeek": demo_period_return_pct(7),
-            "oneMonth": demo_period_return_pct(30),
-            "threeMonths": demo_period_return_pct(91),
-            "sixMonths": demo_period_return_pct(182),
-            "oneYear": demo_period_return_pct(365),
-        },
+        # Allocations off DEMO_HOLDINGS (they described the retired AAPL/GOOGL/BTC
+        # account once, with a negative cash slice).
         "allocation": {
             "byType": [
                 {"type": a["type"], "percentage": a["percentage"], "value": a["value"], "color": a["color"]}
@@ -120,48 +84,46 @@ async def get_portfolio_analytics(
                 for a in _demo_allocation_slices(as_float=True)["by_region"]
             ],
         },
-        # Ranked, not sliced. `[:3]` and `[-2:]` returned the same two rows once
-        # the demo portfolio held two holdings, so "Worst Performers" listed the
-        # same ETFs as "Top Performers".
-        "topPerformers": sorted(
-            DEMO_HOLDINGS, key=lambda h: h["gain_loss_percentage"], reverse=True
-        )[:1],
-        "worstPerformers": sorted(
-            DEMO_HOLDINGS, key=lambda h: h["gain_loss_percentage"]
-        )[:1],
-        "diversificationScore": 75,
-        "riskScore": 45,
-        "sharpeRatio": 1.12,
-        "beta": 0.94,
     }
 
     if not current_user:
         return ApiResponse.success_response(data=demo_analytics)
 
+    # A signed-in user is never shown the demo portfolio: with nothing to
+    # analyse they get empty slices, and a failure is an error, not demo data.
+    nothing_yet = {"allocation": {"byType": [], "bySector": [], "byRegion": []}}
+
     try:
-        # ⚡ PERFORMANCE FIX: Single optimized query instead of 2 separate queries
         portfolio_service = get_portfolio_service(session)
 
         # Get default portfolio (cached)
         portfolio = await portfolio_service.get_default_portfolio(current_user.id)
         if not portfolio:
             logger.warning(f"No default portfolio found for user {current_user.id}")
-            return ApiResponse.success_response(data=demo_analytics)
+            return ApiResponse.success_response(data=nothing_yet)
 
-        # Get holdings in a single query
+        # Every lot, Portfolio wallet only: the holdings list shows the same set,
+        # and a lot past the old limit of 100 was silently missing from the slices.
         holdings, _ = await portfolio_service.holding_repo.get_portfolio_holdings(
-            portfolio.id, current_user.id, limit=100
+            portfolio.id, current_user.id, limit=None,
+            wallet_type=HoldingWalletType.PORTFOLIO,
         )
 
         if not holdings:
             logger.info(f"No holdings found for portfolio {portfolio.id}")
-            return ApiResponse.success_response(data=demo_analytics)
+            return ApiResponse.success_response(data=nothing_yet)
 
-        # ⚡ PERFORMANCE FIX: Calculate everything in-memory from single query result
         active_holdings = [h for h in holdings if h.is_active and h.total_value > 0]
+        if not active_holdings:
+            return ApiResponse.success_response(data=nothing_yet)
+
+        # Holdings keep their own currency: weigh each in TWD, or a US$10,000
+        # position counts as NT$10,000 beside NT$300,000 of Taiwan stocks.
+        rates = await twd_rates_for(session, {h.currency for h in active_holdings})
+        value_twd = {h.id: to_twd(h.total_value, h.currency, rates) for h in active_holdings}
 
         # Calculate allocation
-        total_value = sum(h.total_value for h in active_holdings) or Decimal("1")
+        total_value = sum(value_twd.values()) or Decimal("1")
         colors = ["#3B82F6", "#EF4444", "#F59E0B", "#10B981", "#8B5CF6", "#F97316"]
 
         # By type
@@ -173,51 +135,23 @@ async def get_portfolio_analytics(
             # By type
             h_type = (holding.type or "Unknown").replace("_", " ").title()
             type_dict[h_type] = (
-                type_dict.get(h_type, Decimal("0")) + holding.total_value
+                type_dict.get(h_type, Decimal("0")) + value_twd[holding.id]
             )
 
             # By sector
             sector = holding.sector or "Unknown"
             sector_dict[sector] = (
-                sector_dict.get(sector, Decimal("0")) + holding.total_value
+                sector_dict.get(sector, Decimal("0")) + value_twd[holding.id]
             )
 
             # By region
             region = holding.region or "Unknown"
             region_dict[region] = (
-                region_dict.get(region, Decimal("0")) + holding.total_value
+                region_dict.get(region, Decimal("0")) + value_twd[holding.id]
             )
-
-        # Calculate performance from current total gain/loss
-        total_gain_loss_pct = (
-            float(portfolio.total_gain_loss_percentage)
-            if portfolio.total_gain_loss_percentage
-            else 0
-        )
-
-        # Sharpe and beta come from /portfolio/risk-metrics, not from here: this
-        # endpoint's own calculation called a function it never imported, so it
-        # always returned null. The keys stay for the frontend's fallback read.
-
-        # Sort holdings for top/worst performers
-        sorted_by_performance = sorted(
-            active_holdings,
-            key=lambda h: (
-                float(h.gain_loss_percentage) if h.gain_loss_percentage else 0
-            ),
-            reverse=True,
-        )
 
         # Build response
         analytics_data = {
-            "performance": {
-                "oneDay": total_gain_loss_pct * 0.003,
-                "oneWeek": total_gain_loss_pct * 0.02,
-                "oneMonth": total_gain_loss_pct * 0.08,
-                "threeMonths": total_gain_loss_pct * 0.25,
-                "sixMonths": total_gain_loss_pct * 0.50,
-                "oneYear": total_gain_loss_pct,
-            },
             "allocation": {
                 "byType": [
                     {
@@ -247,49 +181,15 @@ async def get_portfolio_analytics(
                     for i, (region, value) in enumerate(region_dict.items())
                 ],
             },
-            "topPerformers": [
-                {
-                    "symbol": h.symbol,
-                    "name": h.name,
-                    "gainLossPercentage": (
-                        float(h.gain_loss_percentage) if h.gain_loss_percentage else 0
-                    ),
-                    "totalValue": float(h.total_value),
-                }
-                for h in sorted_by_performance[:5]
-            ],
-            "worstPerformers": [
-                {
-                    "symbol": h.symbol,
-                    "name": h.name,
-                    "gainLossPercentage": (
-                        float(h.gain_loss_percentage) if h.gain_loss_percentage else 0
-                    ),
-                    "totalValue": float(h.total_value),
-                }
-                for h in sorted_by_performance[-5:]
-            ],
-            "diversificationScore": min(
-                100,
-                len(set(h.type for h in active_holdings)) * 20
-                + len(set(h.sector for h in active_holdings if h.sector)) * 10
-                + len(set(h.market for h in active_holdings)) * 15,
-            ),
-            "riskScore": min(
-                100,
-                max([float((v / total_value) * 100) for v in type_dict.values()] or [0])
-                + 20,
-            ),
-            "sharpeRatio": None,
-            "beta": None,
         }
 
         return ApiResponse.success_response(data=analytics_data)
 
+    except (AspiroException, HTTPException):
+        raise
     except Exception as e:
         logger.error(f"Error getting portfolio analytics: {str(e)}", exc_info=True)
-        # Return demo data on error
-        return ApiResponse.success_response(data=demo_analytics)
+        raise HTTPException(status_code=500, detail="Failed to load portfolio analytics")
 
 
 @router.get(
@@ -422,59 +322,6 @@ async def get_fx_accumulation(
         raise  # keep 404s etc. instead of masking them as 500
     except Exception as e:
         logger.error(f"Failed to get FX accumulation: {str(e)}", exc_info=True)
-        raise HTTPException(
-            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail="An internal error occurred",
-        )
-
-
-@router.get(
-    "/rebalancing/alerts",
-    summary="Get rebalancing alerts",
-    description="Get active rebalancing alerts for portfolio maintenance",
-)
-async def get_rebalancing_alerts(
-    current_user: CurrentUser,
-    portfolio_id: Optional[UUID] = Query(
-        None, description="Portfolio ID (default portfolio if not specified)"
-    ),
-    session: AsyncSession = Depends(get_db),
-):
-    """
-    Get active rebalancing alerts.
-
-    Returns alerts for:
-    - Portfolio rebalancing requirements
-    - FX conversion triggers
-    - Low cash warnings
-    - Asset allocation deviations
-    """
-    try:
-        from ..rebalancing_service import get_rebalancing_service
-
-        rebalancing_service = get_rebalancing_service(session)
-        alerts = await rebalancing_service.get_rebalancing_alerts(
-            user_id=current_user.id, portfolio_id=portfolio_id
-        )
-
-        logger.info(
-            f"Rebalancing alerts retrieved for user {current_user.id}: {len(alerts)} alerts"
-        )
-
-        return ApiResponse.success_response(
-            data={
-                "alerts": [alert.model_dump() for alert in alerts],
-                "total_alerts": len(alerts),
-                "critical_alerts": sum(1 for a in alerts if a.severity == "error"),
-                "last_checked": datetime.now(timezone.utc),
-            },
-            message="Rebalancing alerts retrieved successfully",
-        )
-
-    except AspiroException:
-        raise  # keep 404s etc. instead of masking them as 500
-    except Exception as e:
-        logger.error(f"Failed to get rebalancing alerts: {str(e)}", exc_info=True)
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail="An internal error occurred",

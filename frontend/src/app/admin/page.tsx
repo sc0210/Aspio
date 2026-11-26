@@ -1036,7 +1036,6 @@ type CleanupResult = {
   soft_deleted_loans: number;
   stale_currency_rates: number;
   old_notifications: number;
-  price_cache_cleared: boolean;
   line_profile_cache_cleared: boolean;
 };
 
@@ -1250,15 +1249,6 @@ function CleanupPanel() {
                   <span className="text-sm font-bold tabular-nums text-green-900 dark:text-green-200">{value}</span>
                 </div>
               ))}
-              <div className="flex items-center justify-between px-4 py-2.5">
-                <span className="flex items-center gap-2 text-sm text-green-800 dark:text-green-300">
-                  <CheckCircleIcon className="w-4 h-4 shrink-0" />
-                  {t('admin:cleanup.priceCacheCleared')}
-                </span>
-                <span className="text-sm font-bold text-green-900 dark:text-green-200">
-                  {result.price_cache_cleared ? 'Yes' : 'No'}
-                </span>
-              </div>
               <div className="flex items-center justify-between px-4 py-2.5">
                 <span className="flex items-center gap-2 text-sm text-green-800 dark:text-green-300">
                   <CheckCircleIcon className="w-4 h-4 shrink-0" />

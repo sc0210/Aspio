@@ -277,9 +277,8 @@ async def send_spending_alerts():
 async def process_recurring_transactions():
     """Materialise recurring transactions that are due today.
 
-    Nothing called this before: only the admin endpoint
-    POST /transactions/recurring/process-due ran it, so a user's recurring
-    rule never produced a transaction on its own. Idempotent within a day:
+    Where the scheduler is off, scripts/run_recurring_transactions.py runs
+    this from cron instead. Idempotent within a day:
     each processed rule's next_occurrence moves past today, so a second run
     finds nothing. The service commits per transaction.
     """

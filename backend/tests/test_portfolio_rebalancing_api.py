@@ -1,4 +1,4 @@
-"""/portfolio/rebalancing/* and /portfolio/allocation against a seeded portfolio."""
+"""/portfolio/rebalancing/* against a seeded portfolio."""
 
 from datetime import datetime, timezone
 from decimal import Decimal
@@ -57,11 +57,6 @@ async def get(client, path):
     return body["data"]
 
 
-async def test_allocation_breakdown(authenticated_client, seeded):
-    data = await get(authenticated_client, "/allocation")
-    assert data["by_type"]
-
-
 async def test_rebalancing_allocation_flags_overweight_0050(authenticated_client, seeded):
     data = await get(authenticated_client, "/rebalancing/allocation")
     rows = {a["asset_symbol"]: a for a in data["allocations"]}
@@ -86,25 +81,20 @@ async def test_fx_accumulation_uses_the_rate(authenticated_client, seeded):
     assert fx["ready_to_convert"] is True
 
 
-async def test_alerts_include_rebalance_required(authenticated_client, seeded):
-    data = await get(authenticated_client, "/rebalancing/alerts")
-    assert "rebalance_required" in {a["alert_type"] for a in data["alerts"]}
-
-
 async def test_dashboard_bundle(authenticated_client, seeded):
     data = await get(authenticated_client, "/rebalancing/dashboard")
     assert {"metrics", "allocation_summary", "fx_accumulation", "alerts"} <= set(data)
     assert data["rebalancing_plan"] is not None
 
 
-@pytest.mark.parametrize("path", ["allocation", "plan", "alerts", "fx-accumulation", "dashboard"])
+@pytest.mark.parametrize("path", ["allocation", "plan", "fx-accumulation", "dashboard"])
 async def test_unknown_portfolio_id_is_a_404(authenticated_client, seeded, path):
     r = authenticated_client.get(f"{BASE}/rebalancing/{path}", params={"portfolio_id": str(uuid4())})
     # fx-accumulation never reads the portfolio, so it has nothing to 404 on.
     assert r.status_code == (200 if path == "fx-accumulation" else 404)
 
 
-@pytest.mark.parametrize("path", ["allocation", "plan", "alerts", "dashboard"])
+@pytest.mark.parametrize("path", ["allocation", "plan", "dashboard"])
 async def test_fx_outage_is_a_503_not_a_wrong_total(authenticated_client, seeded, offline_fx, path):
     offline_fx.get_exchange_rate.return_value = None
     r = authenticated_client.get(f"{BASE}/rebalancing/{path}")

@@ -157,7 +157,7 @@ in `.aspiro-state/`.
 
 To update on a schedule, run `scripts/aspiro update` from a systemd timer or cron as a user
 in the `docker` group. The pre-update dump is not a backup schedule: keep running
-`aspiro backup` for that, and for the receipt attachments and offsite copy it alone makes.
+`aspiro backup` for that, and for the uploads archive and offsite copy it alone makes.
 
 ### Analytics (optional)
 
@@ -214,9 +214,9 @@ scripts/aspiro backup --keep 14
 ```
 
 Each run writes `backups/db/aspiro_<stamp>.sql.gz` (a `pg_dump`) and
-`aspiro_<stamp>.uploads.tar.gz` (receipt attachments; the database only points at them, so
-a restore needs both), and keeps the newest N of each. Both are mode 600 in a mode 700
-directory.
+`aspiro_<stamp>.uploads.tar.gz` (the backend's upload volume; the app no longer stores
+attachments, so on a new install it is empty), and keeps the newest N of each. Both are
+mode 600 in a mode 700 directory.
 
 | Variable | Effect |
 |---|---|

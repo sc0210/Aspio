@@ -22,6 +22,11 @@ jest.mock('@/components/dashboard/BiggerScreenHint', () => ({
   BiggerScreenHint: () => null,
 }));
 
+// Reads the due bills through React Query; its own concern, not the header's.
+jest.mock('@/components/transactions/DueBillsBanner', () => ({
+  DueBillsBanner: () => null,
+}));
+
 jest.mock('@/components/layout/DashboardLayout', () => ({
   DashboardLayout: ({ children }: { children: React.ReactNode }) => <div>{children}</div>,
 }));
@@ -40,5 +45,6 @@ describe('MobileTransactions header', () => {
 
     expect(screen.getByRole('link', { name: 'Scan Receipt' })).toHaveAttribute('href', '/transactions/scan');
     expect(screen.getByRole('link', { name: 'Add transaction' })).toHaveAttribute('href', '/transactions/add');
+    expect(screen.getByRole('link', { name: 'Bills' })).toHaveAttribute('href', '/transactions/recurring');
   });
 });

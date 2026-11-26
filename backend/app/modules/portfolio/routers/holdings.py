@@ -6,11 +6,8 @@ Behavior is preserved exactly; paths remain identical.
 
 from ._shared import *  # noqa: F401,F403  (shared imports/constants/helpers)
 from ._shared import (  # noqa: F401  explicit re-import for underscore-prefixed names
-    _lp_cache_get,
-    _lp_cache_set,
     _get_sort_key,
     _mc,
-    _price_cache,
     fetch_historical_data_background,
 )
 from sqlalchemy import select, and_, func
@@ -19,7 +16,6 @@ from ..models import PortfolioHolding
 
 from app.core.exceptions import AspiroException
 from app.utils.datetime_helpers import business_day_of, to_utc, utc_now
-
 
 
 def _plain(value: Decimal) -> str:
@@ -233,7 +229,6 @@ async def get_holding(
 
     if not current_user:
         # Demo mode - return a mock holding
-        from uuid import uuid4
 
         demo_holding = HoldingResponse(
             id=str(holding_id),
@@ -301,7 +296,6 @@ async def update_holding(
 
     if not current_user:
         # Demo mode - return a mock updated holding
-        from uuid import uuid4
 
         demo_holding = HoldingResponse(
             id=str(holding_id),
@@ -841,85 +835,6 @@ async def update_holdings_by_symbol(
         raise
     except Exception as e:
         logger.error(f"Error updating holdings by symbol: {str(e)}", exc_info=True)
-        raise HTTPException(
-            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail="An internal error occurred",
-        )
-
-
-@router.get("/holdings/symbol/{symbol}/lots")
-async def get_holding_lots_by_symbol(
-    symbol: str,
-    current_user=Depends(get_optional_current_user),
-    session: AsyncSession = Depends(get_db),
-):
-    """Get all lots for a specific symbol in the user's portfolio"""
-
-    if not current_user:
-        # Demo mode - return empty list
-        return ApiResponse.success_response(data=[], message="No lots in demo mode")
-
-    try:
-        portfolio_service = get_portfolio_service(session)
-        default_portfolio = await portfolio_service.get_default_portfolio(
-            current_user.id
-        )
-
-        if not default_portfolio:
-            return ApiResponse.success_response(data=[], message="No portfolio found")
-
-        holding_repo = get_holding_repository(session)
-        lots = await holding_repo.get_all_lots_by_symbol(
-            portfolio_id=default_portfolio.id, symbol=symbol, user_id=current_user.id
-        )
-
-        # Convert to dict format
-        lots_data = [
-            {
-                "id": str(lot.id),
-                "symbol": lot.symbol,
-                "name": lot.name,
-                "type": lot.type,
-                "exchange": lot.exchange,
-                "currency": lot.currency,
-                "sector": lot.sector,
-                "region": lot.region,
-                "quantity": float(lot.quantity),
-                "averageCost": float(lot.average_cost),
-                "currentPrice": float(lot.current_price),
-                "totalCost": float(lot.total_cost),
-                "totalValue": float(lot.total_value),
-                "gainLoss": float(lot.gain_loss),
-                "gainLossPercentage": float(lot.gain_loss_percentage),
-                "dividendYield": (
-                    float(lot.dividend_yield) if lot.dividend_yield else None
-                ),
-                "annualDividend": (
-                    float(lot.annual_dividend) if lot.annual_dividend else None
-                ),
-                "purchaseDate": (
-                    lot.purchase_date.isoformat() if lot.purchase_date else None
-                ),
-                "notes": lot.notes,
-                "isActive": lot.is_active,
-                "lastPriceUpdateAt": (
-                    lot.last_price_update_at.isoformat()
-                    if lot.last_price_update_at
-                    else None
-                ),
-                "metadata": lot.item_metadata,
-                "createdAt": lot.created_at.isoformat(),
-                "updatedAt": lot.updated_at.isoformat(),
-            }
-            for lot in lots
-        ]
-
-        return ApiResponse.success_response(
-            data=lots_data, message=f"Found {len(lots_data)} lot(s) for {symbol}"
-        )
-
-    except Exception as e:
-        logger.error(f"Failed to retrieve holding lots: {str(e)}")
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail="An internal error occurred",

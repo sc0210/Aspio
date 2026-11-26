@@ -79,7 +79,8 @@ export default function MonthlySummaryPage() {
         const expenses = monthlySummaries?.reduce((sum, m) => sum + spendingOf(m), 0) ?? 0;
         const moved = monthlySummaries?.reduce((sum, m) => sum + (m.transfer || 0), 0) ?? 0;
         const income = monthlySummaries?.reduce((sum, m) => sum + (m.income || 0), 0) ?? 0;
-        return { income, expenses, moved, remaining: income - expenses };
+        const passThrough = monthlySummaries?.reduce((sum, m) => sum + (m.pass_through || 0), 0) ?? 0;
+        return { income, expenses, moved, passThrough, remaining: income - expenses };
     }, [monthlySummaries]);
 
     const yearlyTotals = useMemo(() => {
@@ -172,7 +173,10 @@ export default function MonthlySummaryPage() {
                 onYearChange={setSelectedYear}
                 months={monthlySummaries ?? []}
                 income={completeYearlyFinancials.income}
-                expenses={completeYearlyFinancials.expenses}
+                // Every outflow: the phone view takes transfers off itself.
+                // Passing the spending figure took them off twice.
+                expenses={yearlyTotals.total}
+                passThrough={completeYearlyFinancials.passThrough}
                 totals={yearlyTotals}
             />
         );
@@ -245,6 +249,13 @@ export default function MonthlySummaryPage() {
                             <p className="mt-1 text-xs text-gray-500 dark:text-gray-400">
                                 {t('transactions:monthlySummaryPage.movedBetweenWallets', 'Moved between your wallets: {{amount}} (not spending)', {
                                     amount: isValueVisible ? formatTWD(completeYearlyFinancials.moved) : '•••••',
+                                })}
+                            </p>
+                        )}
+                        {completeYearlyFinancials.passThrough > 0 && (
+                            <p className="mt-1 text-xs text-gray-500 dark:text-gray-400">
+                                {t('transactions:monthlySummaryPage.passThroughLeftOut', 'Not your own spending, left out: {{amount}}', {
+                                    amount: isValueVisible ? formatTWD(completeYearlyFinancials.passThrough) : '•••••',
                                 })}
                             </p>
                         )}

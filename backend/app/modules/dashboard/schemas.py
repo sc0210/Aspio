@@ -172,31 +172,6 @@ class DashboardStatsResponse(BaseModel):
         return data
 
 
-class ActivityType(str, Enum):
-    """Types of dashboard activities"""
-
-    TRANSACTION = "transaction"
-    GOAL_PROGRESS = "goal_progress"
-    INVESTMENT = "investment"
-    ACHIEVEMENT = "achievement"
-    BUDGET_ALERT = "budget_alert"
-
-
-class RecentActivityResponse(BaseModel):
-    """Response model for recent activity items"""
-
-    id: str = Field(..., description="Activity identifier")
-    type: ActivityType = Field(..., description="Type of activity")
-    title: str = Field(..., description="Activity title")
-    amount: Optional[Decimal] = Field(None, description="Associated amount")
-    change: Optional[float] = Field(None, description="Change percentage")
-    progress: Optional[float] = Field(None, description="Progress percentage")
-    time: str = Field(..., description="Relative time (e.g., '2 hours ago')")
-    category: Optional[str] = Field(None, description="Activity category")
-    description: Optional[str] = Field(None, description="Activity description")
-    created_at: datetime = Field(default_factory=datetime.utcnow)
-
-
 class MonthlyTrendDataPoint(BaseModel):
     """Data point for monthly trends"""
 

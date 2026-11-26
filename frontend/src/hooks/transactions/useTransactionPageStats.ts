@@ -25,7 +25,7 @@ export function computeClientPageStats(
   { excludeTransfers = false }: { excludeTransfers?: boolean } = {},
 ): TransactionPageStats {
   if (excludeTransfers) {
-    filteredTransactions = filteredTransactions.filter(t => !isWalletTransfer(t));
+    filteredTransactions = filteredTransactions.filter(t => !isWalletTransfer(t) && !t.passThrough);
   }
   const totalIncome = filteredTransactions
     .filter(t => t.type === 'income')
