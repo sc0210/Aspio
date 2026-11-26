@@ -161,7 +161,7 @@ class PerformanceTracker:
         """
         # Get all holdings
         holdings, _ = await self.holding_repo.get_portfolio_holdings(
-            portfolio_id=portfolio_id, user_id=user_id, limit=1000
+            portfolio_id=portfolio_id, user_id=user_id, limit=None
         )
 
         if not holdings:

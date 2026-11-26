@@ -42,12 +42,6 @@ class PortfolioSettings:
     # Cache TTL
     DEFAULT_CACHE_TTL_SECONDS = 300  # 5 minutes
 
-    # Holdings limits
-    MAX_HOLDINGS_PER_QUERY = 1000
-    MAX_HOLDINGS_DISPLAY = 100
-
-    # Transaction limits
-    MAX_TRANSACTIONS_PER_QUERY = 1000
     HISTORICAL_DATA_MAX_YEARS = 10
 
     # Price update settings
