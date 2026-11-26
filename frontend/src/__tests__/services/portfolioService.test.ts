@@ -1,6 +1,5 @@
 import { portfolioService } from '@/services/portfolioService';
 import { apiClient } from '@/lib/api-client';
-import { priceService } from '@/services/priceService';
 import { setExchangeRates, __resetExchangeRates } from '@/utils/formatters';
 
 jest.mock('@/lib/api-client', () => ({
@@ -12,35 +11,19 @@ jest.mock('@/lib/api-client', () => ({
   },
 }));
 
-jest.mock('@/services/priceService', () => ({
-  priceService: {
-    getLatestPricesBulk: jest.fn(),
-  },
-}));
-
-// Only the backend-cache branch is exercised below; stub the external provider
-// so a miss can never reach the network.
-jest.mock('@/services/marketDataService', () => ({
-  marketDataService: {
-    getMultipleMarketData: jest.fn().mockResolvedValue({ success: false, data: [] }),
-  },
-}));
-
 jest.mock('next-auth/react', () => ({
   getSession: jest.fn().mockResolvedValue(null),
 }));
 
 const mockApiClient = apiClient as jest.Mocked<typeof apiClient>;
-const mockPriceService = priceService as jest.Mocked<typeof priceService>;
 
-describe('PortfolioService — day change on price refresh', () => {
+describe('PortfolioService — day change', () => {
   beforeEach(() => {
     jest.clearAllMocks();
   });
 
   /**
    * Backend shape: previous close 100, price 110 → +10% at load time.
-   * The refresh then reports 121, so the day change has to become +21%.
    */
   const backendPortfolio = {
     id: 'p1',
@@ -77,38 +60,6 @@ describe('PortfolioService — day change on price refresh', () => {
     expect(holding.dayChangePercentage).toBeCloseTo(10);
   });
 
-  it('recomputes day change when a refresh moves the price', async () => {
-    // Regression: updateHoldingsPrices wrote currentPrice/gainLoss but left
-    // dayChange untouched, so the "% today" line kept the value derived from
-    // the price the backend had returned — a fresh price beside a stale
-    // percentage.
-    mockApiClient.get.mockResolvedValue({ success: true, data: backendPortfolio });
-    mockPriceService.getLatestPricesBulk.mockResolvedValue({
-      VT: { close: 121, lastUpdated: '2026-08-14T12:00:00Z' },
-    } as never);
-
-    const result = await portfolioService.getPortfolio({}, { updatePrices: true });
-    const holding = result.data!.holdings[0];
-
-    expect(holding.currentPrice).toBe(121);
-    // (121 - 100) * 10 shares
-    expect(holding.dayChange).toBeCloseTo(210);
-    expect(holding.dayChangePercentage).toBeCloseTo(21);
-  });
-
-  it('rolls the refreshed day change up into the portfolio total', async () => {
-    mockApiClient.get.mockResolvedValue({ success: true, data: backendPortfolio });
-    mockPriceService.getLatestPricesBulk.mockResolvedValue({
-      VT: { close: 121, lastUpdated: '2026-08-14T12:00:00Z' },
-    } as never);
-
-    const result = await portfolioService.getPortfolio({}, { updatePrices: true });
-
-    expect(result.data!.todayGainLoss).toBeCloseTo(210);
-    // 210 on the value at the previous close (1,000), not on today's 1,210.
-    expect(result.data!.todayGainLossPercentage).toBeCloseTo(21, 3);
-  });
-
   it('leaves day change undefined when the backend sends no previous close', async () => {
     // The backend suppresses previous_close when the stored close is too old to
     // be "yesterday" — the row must then show no % rather than a stale one.
@@ -119,14 +70,10 @@ describe('PortfolioService — day change on price refresh', () => {
         holdings: [{ ...backendPortfolio.holdings[0], previousClose: undefined }],
       },
     });
-    mockPriceService.getLatestPricesBulk.mockResolvedValue({
-      VT: { close: 121, lastUpdated: '2026-08-14T12:00:00Z' },
-    } as never);
-
-    const result = await portfolioService.getPortfolio({}, { updatePrices: true });
+    const result = await portfolioService.getPortfolio();
     const holding = result.data!.holdings[0];
 
-    expect(holding.currentPrice).toBe(121);
+    expect(holding.currentPrice).toBe(110);
     expect(holding.dayChange).toBeUndefined();
     expect(holding.dayChangePercentage).toBeUndefined();
   });
@@ -176,32 +123,6 @@ describe("PortfolioService — today's gain across currencies", () => {
         expect(result.data!.todayGainLoss).toBeCloseTo(31_000);
     });
 
-    it('keeps both halves of the percentage in one currency after a price refresh', async () => {
-        // The refresh path recomputes the portfolio totals itself. Converting the
-        // numerator while the denominator stayed a raw mixed-currency sum would put
-        // a TWD gain over a near-USD total and flatter the percentage wildly.
-        mockApiClient.get.mockResolvedValue({ success: true, data: mixedPortfolio });
-        mockPriceService.getLatestPricesBulk.mockResolvedValue({
-            '0050': { close: 111, lastUpdated: '2026-09-21T12:00:00Z' },
-            VT: { close: 110, lastUpdated: '2026-09-21T12:00:00Z' },
-        } as never);
-
-        const result = await portfolioService.getPortfolio({}, { updatePrices: true });
-
-        // 1,000 × 111 = NT$111,000, plus 100 × US$110 = US$11,000 → NT$330,000.
-        expect(result.data!.totalValue).toBeCloseTo(441_000);
-        expect(result.data!.todayGainLoss).toBeCloseTo(31_000);
-        // Against the value at the previous close, both sides in TWD:
-        // 1,000 × 110 + 100 × US$100 × 30 = NT$410,000.
-        expect(result.data!.todayGainLossPercentage).toBeCloseTo((31_000 / 410_000) * 100, 4);
-
-        // The cost basis converts with it, or the gain measured against it is fiction:
-        // 1,000 × 100 = NT$100,000, plus 100 × US$100 = US$10,000 → NT$300,000.
-        expect(result.data!.totalCost).toBeCloseTo(400_000);
-        expect(result.data!.totalGainLoss).toBeCloseTo(41_000);
-        expect(result.data!.totalGainLossPercentage).toBeCloseTo(10.25, 4);
-    });
-
     it('states the percentage against the same currency as the total', async () => {
         mockApiClient.get.mockResolvedValue({ success: true, data: mixedPortfolio });
 
@@ -210,6 +131,29 @@ describe("PortfolioService — today's gain across currencies", () => {
         // 31,000 on the TWD value of the same holdings at the previous close
         // (NT$410,000): the stored total is not the base of a day's move.
         expect(result.data!.todayGainLossPercentage).toBeCloseTo((31_000 / 410_000) * 100, 4);
+    });
+
+    it('converts every total when a demo edit recomputes them', async () => {
+        // The demo add/edit/delete paths total the holdings in the browser. A raw
+        // sum would count US$11,000 as NT$11,000 and flatter every percentage.
+        mockApiClient.get.mockResolvedValue({ success: true, data: mixedPortfolio });
+        const loaded = (await portfolioService.getPortfolio()).data!;
+        const holdings = loaded.holdings.map(h => ({ ...h, id: `demo-holding-${h.id}` }));
+        localStorage.setItem('aspiro_demo_holdings', JSON.stringify(holdings));
+        localStorage.setItem('aspiro_demo_portfolio', JSON.stringify({ ...loaded, holdings }));
+        mockApiClient.put.mockRejectedValue(new Error('offline'));
+
+        await portfolioService.updateHolding({ id: 'demo-holding-tw', currentPrice: 111 } as never);
+        const saved = JSON.parse(localStorage.getItem('aspiro_demo_portfolio')!);
+
+        // 1,000 × 111 = NT$111,000, plus 100 × US$110 = US$11,000 → NT$330,000.
+        expect(saved.totalValue).toBeCloseTo(441_000);
+        // 1,000 × 100 = NT$100,000, plus 100 × US$100 = US$10,000 → NT$300,000.
+        expect(saved.totalCost).toBeCloseTo(400_000);
+        expect(saved.totalGainLossPercentage).toBeCloseTo(10.25, 4);
+        expect(saved.todayGainLoss).toBeCloseTo(31_000);
+        expect(saved.todayGainLossPercentage).toBeCloseTo((31_000 / 410_000) * 100, 4);
+        localStorage.clear();
     });
 });
 

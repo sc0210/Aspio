@@ -27,11 +27,14 @@ pytestmark = [pytest.mark.asyncio, pytest.mark.api]
 BASE = "/api/v1/portfolio"
 
 
-def _holding(portfolio, user, symbol, kind, market, sector, region, value, gain_pct, currency="TWD"):
+def _holding(
+    portfolio, user, symbol, kind, market, sector, region, value, gain_pct, currency="TWD",
+    wallet=HoldingWalletType.PORTFOLIO,
+):
     return PortfolioHolding(
         id=uuid4(), portfolio_id=portfolio.id, user_id=user.id, symbol=symbol,
         name=symbol, type=kind, exchange="X", currency=currency, market=market,
-        sector=sector, region=region, wallet_type=HoldingWalletType.PORTFOLIO,
+        sector=sector, region=region, wallet_type=wallet,
         quantity=Decimal("1"), average_cost=Decimal(value), current_price=Decimal(value),
         total_cost=Decimal(value), total_value=Decimal(value), gain_loss=Decimal("0"),
         gain_loss_percentage=Decimal(gain_pct), is_active=True,
@@ -59,12 +62,13 @@ async def holdings(async_session, test_user):
 class TestAnalytics:
     async def test_signed_out_gets_demo(self, client):
         data = client.get(f"{BASE}/analytics").json()["data"]
-        assert data["diversificationScore"] == 75
+        assert data["allocation"]["byType"]
+        assert set(data) == {"allocation"}
 
     async def test_user_without_portfolio_gets_empty_slices_not_the_demo(self, authenticated_client):
         data = authenticated_client.get(f"{BASE}/analytics").json()["data"]
         assert data["allocation"] == {"byType": [], "bySector": [], "byRegion": []}
-        assert data["topPerformers"] == [] and data["diversificationScore"] == 0
+        assert set(data) == {"allocation"}
 
     async def test_a_failure_is_an_error_not_the_demo_portfolio(
         self, authenticated_client, holdings, monkeypatch
@@ -74,25 +78,44 @@ class TestAnalytics:
         )
         response = authenticated_client.get(f"{BASE}/analytics")
         assert response.status_code == 500
-        assert "diversificationScore" not in response.text
+        assert "byType" not in response.text
 
-    async def test_allocation_and_scores_from_holdings(self, authenticated_client, holdings):
+    async def test_allocation_from_holdings(self, authenticated_client, holdings):
         data = authenticated_client.get(f"{BASE}/analytics").json()["data"]
 
         by_type = {s["type"]: s["percentage"] for s in data["allocation"]["byType"]}
         assert by_type == {"Etf": pytest.approx(75.0), "Stock": pytest.approx(25.0)}
         assert {s["sector"] for s in data["allocation"]["bySector"]} == {"Broad", "Tech"}
         assert {s["region"] for s in data["allocation"]["byRegion"]} == {"Asia", "Americas"}
+        assert set(data) == {"allocation"}
 
-        assert [h["symbol"] for h in data["topPerformers"]] == ["0050", "AAPL"]
-        assert data["worstPerformers"][-1]["symbol"] == "AAPL"
-        # 2 types × 20 + 2 sectors × 10 + 2 markets × 15
-        assert data["diversificationScore"] == 90
-        # Largest type weight + 20
-        assert data["riskScore"] == pytest.approx(95.0)
-        # Served by /portfolio/risk-metrics; kept null here for the fallback read.
-        assert data["sharpeRatio"] is None
-        assert data["beta"] is None
+    async def test_only_the_portfolio_wallet_and_every_lot(
+        self, authenticated_client, async_session, test_user
+    ):
+        # The page's holdings list shows the Portfolio wallet only, and the slices
+        # used to read just the 100 largest lots.
+        pf = Portfolio(
+            id=uuid4(), user_id=test_user.id, name="P", currency="TWD",
+            is_active=True, is_default=True,
+        )
+        async_session.add(pf)
+        await async_session.flush()
+        lots = [
+            _holding(pf, test_user, f"S{i}", "stock", "TW", "Tech", "Asia", "1000", "0")
+            for i in range(100)
+        ]
+        lots.append(_holding(pf, test_user, "BND", "bond", "US", "Bonds", "Americas", "10", "0"))
+        lots.append(_holding(
+            pf, test_user, "CASH", "etf", "TW", "Cash", "Asia", "50000", "0",
+            wallet=HoldingWalletType.EMERGENCY,
+        ))
+        async_session.add_all(lots)
+        await async_session.commit()
+
+        data = authenticated_client.get(f"{BASE}/analytics").json()["data"]
+
+        by_type = {s["type"]: s["value"] for s in data["allocation"]["byType"]}
+        assert by_type == {"Stock": pytest.approx(100_000.0), "Bond": pytest.approx(10.0)}
 
     async def test_allocation_weighs_each_holding_in_twd(
         self, authenticated_client, async_session, test_user, monkeypatch
@@ -121,7 +144,7 @@ class TestAnalytics:
 
 
 class TestRiskMetricsConcentration:
-    async def test_hhi_weighs_each_holding_in_twd(
+    async def test_hhi_weighs_each_portfolio_lot_in_twd(
         self, authenticated_client, async_session, test_user, monkeypatch
     ):
         from app.modules.portfolio.routers import performance
@@ -135,6 +158,12 @@ class TestRiskMetricsConcentration:
         async_session.add_all([
             _holding(pf, test_user, "0050", "etf", "TW", "Broad", "Asia", "1500", "0"),
             _holding(pf, test_user, "AAPL", "stock", "US", "Tech", "Americas", "50", "0", currency="USD"),
+            # Emergency wallet: not on the page's list or in the allocation, so not
+            # in the concentration either (it would make it 3,750).
+            _holding(
+                pf, test_user, "CASH", "etf", "TW", "Cash", "Asia", "3000", "0",
+                wallet=HoldingWalletType.EMERGENCY,
+            ),
         ])
         await async_session.commit()
         monkeypatch.setattr(

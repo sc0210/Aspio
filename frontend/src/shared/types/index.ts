@@ -205,71 +205,10 @@ export interface PortfolioHolding {
 
 export type MarketType = 'US' | 'TW' | 'CRYPTO' | 'HK' | 'SG' | 'JP';
 
-export interface MarketData {
-  symbol: string;
-  name: string;
-  price: number;
-  change: number;
-  changePercent: number;
-  volume: number;
-  marketCap?: number;
-  market: MarketType;
-  currency: string;
-  exchange: string;
-  lastUpdated: Date;
-  priceHistory?: PricePoint[];
-}
-
 export interface PricePoint {
   timestamp: Date;
   price: number;
   volume?: number;
-}
-
-export interface MarketDataCache {
-  symbol: string;
-  market: MarketType;
-  data: MarketData;
-  cachedAt: Date;
-  expiresAt: Date;
-}
-
-export interface MarketDataProvider {
-  name: string;
-  type: 'tradingview' | 'finlab' | 'binance' | 'custom';
-  markets: MarketType[];
-  rateLimit: {
-    requestsPerMinute: number;
-    requestsPerHour: number;
-    requestsPerDay: number;
-  };
-  lastRequestAt?: Date;
-  requestCount: {
-    minute: number;
-    hour: number;
-    day: number;
-  };
-}
-
-export interface StockQuote {
-  symbol: string;
-  name: string;
-  price: number;
-  change: number;
-  changePercent: number;
-  volume: number;
-  open: number;
-  high: number;
-  low: number;
-  close: number;
-  previousClose: number;
-  marketCap?: number;
-  pe?: number;
-  dividendYield?: number;
-  market: MarketType;
-  currency: string;
-  exchange: string;
-  lastUpdated: Date;
 }
 
 // Financial Goals types

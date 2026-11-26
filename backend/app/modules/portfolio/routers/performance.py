@@ -1,4 +1,4 @@
-"""Portfolio router: Performance, risk, and historical performance endpoints.
+"""Portfolio router: performance and risk endpoints.
 
 Split out from the original monolithic ``portfolio/router.py``.
 Behavior is preserved exactly; paths remain identical.
@@ -6,15 +6,13 @@ Behavior is preserved exactly; paths remain identical.
 
 from ._shared import *  # noqa: F401,F403  (shared imports/constants/helpers)
 from ._shared import (  # noqa: F401  explicit re-import for underscore-prefixed names
-    _lp_cache_get,
-    _lp_cache_set,
     _get_sort_key,
     _mc,
-    _price_cache,
     fetch_historical_data_background,
 )
 from app.utils.datetime_helpers import business_today
 from app.utils.fx_sql import to_twd, twd_rates_for
+from ..models import HoldingWalletType
 
 router = APIRouter()
 
@@ -117,10 +115,11 @@ async def get_risk_metrics(
             portfolio_id, current_user.id
         )
 
-        # Compute HHI from current holdings weights
+        # HHI over the same lots as the allocation: every Portfolio-wallet lot.
         holding_repo = HoldingRepository(session)
         holdings, _ = await holding_repo.get_portfolio_holdings(
-            portfolio_id, current_user.id, limit=100
+            portfolio_id, current_user.id, limit=None,
+            wallet_type=HoldingWalletType.PORTFOLIO,
         )
 
         hhi: Optional[float] = None
@@ -234,81 +233,3 @@ async def get_time_weighted_return(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail="An internal error occurred",
         )
-
-
-@router.get("/performance/historical")
-async def get_historical_performance(
-    interval: str = Query(
-        "monthly", description="Data interval: daily, weekly, monthly, yearly"
-    ),
-    current_user=Depends(get_optional_current_user),
-    session: AsyncSession = Depends(get_db),
-):
-    """
-    Get historical performance data points for charting.
-
-    Returns a time series of portfolio values and returns based on purchase dates.
-    """
-    if not current_user:
-        # Demo data: twelve monthly points off the demo value walk, against the
-        # demo cost basis. This was a NT$100,000 account growing to 112,100.
-        cost = float(DEMO_PORTFOLIO["total_cost"])
-        series = demo_value_series(366)
-        monthly = series[::-1][::21][:12][::-1]  # ~21 weekdays a month, ending today
-        demo_data = [
-            {
-                "date": p["date"].isoformat(),
-                "value": p["value"],
-                "cost": cost,
-                "gain_loss": round(p["value"] - cost, 2),
-                "gain_loss_percentage": round((p["value"] - cost) / cost * 100, 2),
-            }
-            for p in monthly
-        ]
-
-        return JSONResponse(
-            status_code=200,
-            content={
-                "success": True,
-                "data": demo_data,
-                "message": "DEMO: Sample historical performance data",
-            },
-        )
-
-    try:
-        from ..performance_tracker import PerformanceTracker
-
-        tracker = PerformanceTracker(session)
-
-        # Get user's default portfolio
-        portfolio_service = get_portfolio_service(session)
-        portfolio = await portfolio_service.get_default_portfolio(current_user.id)
-
-        if not portfolio:
-            raise HTTPException(
-                status_code=status.HTTP_404_NOT_FOUND, detail="Portfolio not found"
-            )
-
-        # Get historical data
-        historical_data = await tracker.get_historical_performance(
-            portfolio_id=portfolio.id, user_id=current_user.id, interval=interval
-        )
-
-        return ApiResponse.success_response(
-            data=historical_data,
-            message=f"Historical performance data retrieved ({interval} interval)",
-        )
-
-    except HTTPException:
-        raise
-    except Exception as e:
-        logger.error(f"Failed to get historical performance: {str(e)}", exc_info=True)
-        raise HTTPException(
-            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail="An internal error occurred",
-        )
-
-
-# Historical Price Data Endpoints
-
-

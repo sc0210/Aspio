@@ -561,7 +561,7 @@ class Dividend(Base):
     amount_per_share = Column(Numeric(12, 4), nullable=False)
     shares_owned = Column(Numeric(18, 8), nullable=False)
     total_amount = Column(Numeric(15, 2), nullable=False)
-    currency = Column(String(3), nullable=False, default="USD")
+    currency = Column(String(3), nullable=False, default="TWD")
 
     # Tax information
     tax_withheld = Column(Numeric(15, 2), default=0.00)

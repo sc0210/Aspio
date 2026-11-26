@@ -106,16 +106,6 @@ class TestReads:
     async def test_price_on_date_before_any_data_is_none(self, seeded):
         assert await seeded.get_price_on_date("AAPL", date(2026, 1, 1)) is None
 
-    async def test_latest_prices_for_symbols(self, seeded):
-        out = await seeded.get_latest_prices_for_symbols(["aapl", "MSFT", "nvda"])
-        assert out["AAPL"]["date"] == "2026-10-09"
-        assert out["AAPL"]["close"] == 104.0
-        assert out["AAPL"]["exchange"] == "NASDAQ"
-        assert out["AAPL"]["open"] is None
-        assert out["MSFT"]["close"] == 300.0
-        assert out["NVDA"] is None
-        assert await seeded.get_latest_prices_for_symbols([]) == {}
-
     async def test_missing_ranges_skip_weekends_and_group_gaps(self, seeded):
         # Mon 10-05 .. Tue 10-13; Wed 10-07 missing, then Mon-Tue 10-12/13.
         ranges = await seeded.get_missing_date_ranges(
