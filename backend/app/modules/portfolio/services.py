@@ -1370,7 +1370,8 @@ class AnalyticsService:
 
     async def get_dividend_data(self, user_id: UUID, period: str = "1y") -> dict:
         """
-        Compute dividend income metrics for the user's default portfolio.
+        Compute dividend income metrics for the user's default portfolio, over
+        its Portfolio-wallet lots (Emergency lots and their payouts left out).
 
         Returns:
         - total_dividends: actual dividends received in the requested period
@@ -1381,8 +1382,8 @@ class AnalyticsService:
         - dividend_yield: same as yield_on_value (portfolio-level %)
         - payments: list of recent individual dividend payment records
         """
-        from .models import Dividend
-        from sqlalchemy import and_
+        from .models import Dividend, HoldingWalletType, PortfolioHolding
+        from sqlalchemy import and_, or_
 
         _portfolio_orm = await self.portfolio_repo.get_default_portfolio(user_id)
         portfolio = PortfolioResponse.model_validate(_portfolio_orm) if _portfolio_orm else None
@@ -1402,6 +1403,16 @@ class AnalyticsService:
         period_start = business_today() - timedelta(days=days)
         twelve_months_ago = business_today() - timedelta(days=365)
 
+        # Portfolio wallet only, like the allocation: an Emergency lot is a
+        # cash reserve, so its payouts are not investment income.
+        emergency_lot_ids = select(PortfolioHolding.id).where(
+            PortfolioHolding.user_id == user_id,
+            PortfolioHolding.wallet_type == HoldingWalletType.EMERGENCY,
+        )
+        not_emergency = or_(
+            Dividend.holding_id.is_(None), Dividend.holding_id.not_in(emergency_lot_ids)
+        )
+
         # --- Fetch actual dividend records ---
         stmt = (
             select(Dividend)
@@ -1409,6 +1420,7 @@ class AnalyticsService:
                 and_(
                     Dividend.user_id == user_id,
                     Dividend.payment_date >= period_start,
+                    not_emergency,
                 )
             )
             .order_by(Dividend.payment_date.desc())
@@ -1423,6 +1435,7 @@ class AnalyticsService:
                 and_(
                     Dividend.user_id == user_id,
                     Dividend.payment_date >= twelve_months_ago,
+                    not_emergency,
                 )
             )
         )
@@ -1431,7 +1444,7 @@ class AnalyticsService:
 
         # --- Projected annual income from holdings ---
         holdings, _ = await self.holding_repo.get_portfolio_holdings(
-            portfolio.id, user_id, limit=None
+            portfolio.id, user_id, limit=None, wallet_type=HoldingWalletType.PORTFOLIO
         )
         active = [h for h in holdings if h.is_active]
 
@@ -1462,9 +1475,10 @@ class AnalyticsService:
             ttm_income if ttm_income > 0 else None
         )
 
-        # --- Portfolio totals for yield calculations ---
-        total_cost = float(portfolio.total_cost or 0)
-        total_value = float(portfolio.total_value or 0)
+        # --- Yields over the same lots as the income ---
+        # Not portfolio.total_*: those count the Emergency wallet's lots too.
+        total_cost = sum(to_twd(float(h.total_cost or 0), h.currency, rates) for h in active)
+        total_value = sum(to_twd(float(h.total_value or 0), h.currency, rates) for h in active)
 
         yield_on_cost: Optional[float] = None
         yield_on_value: Optional[float] = None
