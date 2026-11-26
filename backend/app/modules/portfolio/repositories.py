@@ -19,6 +19,7 @@ from sqlalchemy.orm import selectinload
 from ...core.exceptions import NotFoundException
 from ...utils.datetime_helpers import to_utc
 from .models import (
+    HoldingWalletType,
     Portfolio,
     PortfolioHolding,
     PortfolioTransaction,
@@ -428,17 +429,21 @@ class HoldingRepository:
         portfolio_id: UUID,
         user_id: UUID,
         skip: int = 0,
-        limit: int = 50,
+        limit: Optional[int] = 50,
         asset_type: Optional[str] = None,
         exchange: Optional[str] = None,
         sector: Optional[str] = None,
+        wallet_type: Optional[HoldingWalletType] = None,
     ) -> Tuple[List[PortfolioHolding], int]:
-        """Get paginated holdings for a portfolio"""
+        """Get paginated holdings for a portfolio (``limit=None`` for all of them)."""
         conditions = [
             PortfolioHolding.portfolio_id == portfolio_id,
             PortfolioHolding.user_id == user_id,
             PortfolioHolding.is_active == True,
         ]
+
+        if wallet_type:
+            conditions.append(PortfolioHolding.wallet_type == wallet_type)
 
         if asset_type:
             conditions.append(PortfolioHolding.type == asset_type)

@@ -1,6 +1,6 @@
 import { useQuery, keepPreviousData } from '@tanstack/react-query';
 import { useSession } from 'next-auth/react';
-import { useMemo, useCallback } from 'react';
+import { useMemo, useCallback, useEffect, useRef } from 'react';
 import { portfolioService } from '@/services/portfolioService';
 import { log } from '@/utils/logger';
 import { aggregateHoldingsBySymbol } from '@/utils/portfolio-aggregation';
@@ -79,10 +79,7 @@ export function usePortfolioData(filters: PortfolioFilters) {
     queryFn: async () => {
       log.debug('Fetching portfolio data with filters', filters, 'Portfolio');
 
-      // Backend handles smart price updates automatically
-      const response = await portfolioService.getPortfolio(filters, {
-        updatePrices: false,
-      });
+      const response = await portfolioService.getPortfolio(filters);
 
       if (!response.success) {
         throw new Error(response.message || 'Failed to fetch portfolio data');
@@ -112,15 +109,12 @@ export function usePortfolioData(filters: PortfolioFilters) {
     error: analyticsError,
     refetch: refetchAnalytics,
   } = useQuery({
-    queryKey: [
-      'portfolio-analytics',
-      session?.user?.email || 'demo',
-      // lastPriceUpdateAt changes on buy/sell/price-refresh — guard against Invalid Date objects
-      // which produce the truthy string "Invalid Date", blocking the holdings.length fallback
-      portfolioData?.lastPriceUpdateAt instanceof Date && !Number.isNaN(portfolioData.lastPriceUpdateAt.getTime())
-        ? portfolioData.lastPriceUpdateAt.toISOString()
-        : portfolioData?.holdings?.length,
-    ],
+    // A stable key: a failed refetch keeps the last good allocation. A key that
+    // changed with prices started an empty query, so a failure there showed the
+    // error card instead. New prices refetch it through the effect below.
+    // No placeholderData: with one key per user it could only show another
+    // account's allocation.
+    queryKey: ['portfolio-analytics', session?.user?.email || 'demo'],
     // Rejects on failure: TanStack then keeps the last good allocation and sets
     // `error`, where resolving to null wiped it and looked like "nothing to show".
     queryFn: async () => (await portfolioService.getPortfolioAnalytics()).data ?? null,
@@ -129,8 +123,20 @@ export function usePortfolioData(filters: PortfolioFilters) {
     retry: false,
     gcTime: 15 * 60 * 1000,
     refetchOnWindowFocus: true,
-    placeholderData: keepPreviousData,
   });
+
+  // The allocation follows the holdings' prices: refetch when a portfolio
+  // payload brings a new price time, but not on the first one.
+  const priceTime = portfolioData?.lastPriceUpdateAt instanceof Date
+    ? portfolioData.lastPriceUpdateAt.getTime()
+    : undefined;
+  const seenPriceTime = useRef(priceTime);
+  useEffect(() => {
+    if (priceTime === undefined || Number.isNaN(priceTime)) return;
+    const seen = seenPriceTime.current;
+    seenPriceTime.current = priceTime;
+    if (seen !== undefined && seen !== priceTime) void refetchAnalytics();
+  }, [priceTime, refetchAnalytics]);
 
   // ============================================================
   // 4. Risk Metrics (CAGR, Max Drawdown, Volatility, Sharpe, HHI)
