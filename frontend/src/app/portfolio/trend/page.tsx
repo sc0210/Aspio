@@ -919,6 +919,7 @@ export default function TrendPage() {
         const headers = [
             'Symbol',
             'Name',
+            'Wallet',
             'Type',
             'Quantity',
             // Avg Cost is in the lot's currency; the period figures, like the
@@ -934,6 +935,7 @@ export default function TrendPage() {
         const rows = holdingRows.map((r) => [
             r.symbol,
             r.name,
+            r.emergency ? 'Emergency' : '',
             r.type,
             r.quantity,
             r.avgCost.toFixed(2),
