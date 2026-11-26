@@ -14,12 +14,12 @@ public import in ``app/main.py`` continues to work unchanged::
     from app.modules.portfolio.router import router as portfolio_router
 
 Every sub-router's route paths already carry their full sub-path (e.g.
-``/holdings``, ``/performance/historical``), so they are mounted with NO extra
+``/holdings``, ``/performance/time-weighted-return``), so they are mounted with NO extra
 prefix. The application-level prefix (``/api/v1/portfolio``) is applied in
 ``app/main.py`` exactly as before, keeping every final path byte-for-byte
 identical.
 
-Shared imports, the in-process price cache, demo fixtures, and helper functions
+Shared imports, demo fixtures, and helper functions
 live in ``app.modules.portfolio.routers._shared`` and are re-exported here for
 backwards compatibility with any code importing them from this module.
 """
@@ -35,10 +35,6 @@ from .routers._shared import (  # noqa: F401
     DEMO_REBALANCING_DASHBOARD,
     _get_sort_key,
     fetch_historical_data_background,
-    _PriceCache,
-    _price_cache,
-    _lp_cache_get,
-    _lp_cache_set,
     logger,
 )
 from .routers.allocation_analytics import (  # noqa: F401

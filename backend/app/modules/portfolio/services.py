@@ -46,6 +46,7 @@ from app.utils.datetime_helpers import (
     business_today,
     utc_now,
 )
+from app.utils.fx_sql import to_twd, twd_rates_for
 
 
 logger = logging.getLogger(__name__)
@@ -942,7 +943,7 @@ class PortfolioService:
 
             portfolio_currency = portfolio.currency
             holdings, _ = await self.holding_repo.get_portfolio_holdings(
-                portfolio_id, user_id, limit=PortfolioSettings.MAX_HOLDINGS_PER_QUERY
+                portfolio_id, user_id, limit=None
             )
             logger.debug(
                 f"Processing portfolio holdings",
@@ -962,34 +963,21 @@ class PortfolioService:
 
             exchange_service = get_exchange_rate_service(self.session)
 
+            rates: dict[str, Decimal] = {}  # one lookup per currency, not per lot
             for holding in holdings:
                 # Convert holding values to portfolio currency
                 if holding.currency != portfolio_currency:
-                    # Try to get exchange rate from database first
-                    rate_record = await self.currency_repo.get_latest_rate(
-                        holding.currency, portfolio_currency
-                    )
-
-                    if rate_record:
-                        conversion_rate = rate_record.rate
-                        logger.debug(
-                            f"Converting holding currency (from DB cache)",
-                            extra={
-                                "symbol": holding.symbol,
-                                "from_currency": holding.currency,
-                                "to_currency": portfolio_currency,
-                                "rate": float(conversion_rate),
-                            },
-                        )
-                    else:
-                        # Fetch from exchange rate service (which uses API + caching)
-                        conversion_rate = await exchange_service.get_exchange_rate(
+                    conversion_rate = rates.get(holding.currency)
+                    if conversion_rate is None:
+                        # Try to get exchange rate from database first
+                        rate_record = await self.currency_repo.get_latest_rate(
                             holding.currency, portfolio_currency
                         )
 
-                        if conversion_rate:
+                        if rate_record:
+                            conversion_rate = rate_record.rate
                             logger.debug(
-                                f"Converting holding currency (from API)",
+                                f"Converting holding currency (from DB cache)",
                                 extra={
                                     "symbol": holding.symbol,
                                     "from_currency": holding.currency,
@@ -998,16 +986,33 @@ class PortfolioService:
                                 },
                             )
                         else:
-                            # Last resort fallback
-                            logger.warning(
-                                f"No exchange rate available, using 1.0",
-                                extra={
-                                    "from_currency": holding.currency,
-                                    "to_currency": portfolio_currency,
-                                    "symbol": holding.symbol,
-                                },
+                            # Fetch from exchange rate service (which uses API + caching)
+                            conversion_rate = await exchange_service.get_exchange_rate(
+                                holding.currency, portfolio_currency
                             )
-                            conversion_rate = Decimal("1.0")
+
+                            if conversion_rate:
+                                logger.debug(
+                                    f"Converting holding currency (from API)",
+                                    extra={
+                                        "symbol": holding.symbol,
+                                        "from_currency": holding.currency,
+                                        "to_currency": portfolio_currency,
+                                        "rate": float(conversion_rate),
+                                    },
+                                )
+                            else:
+                                # Last resort fallback
+                                logger.warning(
+                                    f"No exchange rate available, using 1.0",
+                                    extra={
+                                        "from_currency": holding.currency,
+                                        "to_currency": portfolio_currency,
+                                        "symbol": holding.symbol,
+                                    },
+                                )
+                                conversion_rate = Decimal("1.0")
+                        rates[holding.currency] = conversion_rate
 
                     converted_value = holding.total_value * conversion_rate
                     converted_cost = holding.total_cost * conversion_rate
@@ -1210,9 +1215,9 @@ class AnalyticsService:
         total_return = portfolio.total_gain_loss
         total_return_percentage = portfolio.total_gain_loss_percentage
 
-        # Fetch active holdings
+        # Fetch active holdings: all of them, or lots past the 100th drop out of the benchmark weights
         holdings, _ = await self.holding_repo.get_portfolio_holdings(
-            portfolio_id, user_id, limit=100
+            portfolio_id, user_id, limit=None
         )
 
         # --- Annual return: the time-weighted return since inception ---
@@ -1369,19 +1374,21 @@ class AnalyticsService:
 
     async def get_dividend_data(self, user_id: UUID, period: str = "1y") -> dict:
         """
-        Compute dividend income metrics for the user's default portfolio.
+        Compute dividend income metrics for the user's default portfolio, over
+        its Portfolio-wallet lots (Emergency lots and their payouts left out).
 
         Returns:
         - total_dividends: actual dividends received in the requested period
         - projected_annual: projected annual income (from holdings' annual_dividend field,
           or annualised from actual 12-month payments as fallback)
-        - yield_on_cost: projected_annual / total_cost
-        - yield_on_value: projected_annual / total_value
+        - yield_on_cost: projected_annual / the Portfolio-wallet lots' cost (TWD)
+        - yield_on_value: projected_annual / those lots' value (TWD); not
+          portfolio.total_*, which include Emergency lots
         - dividend_yield: same as yield_on_value (portfolio-level %)
         - payments: list of recent individual dividend payment records
         """
-        from .models import Dividend
-        from sqlalchemy import and_
+        from .models import Dividend, HoldingWalletType, PortfolioHolding
+        from sqlalchemy import and_, or_
 
         _portfolio_orm = await self.portfolio_repo.get_default_portfolio(user_id)
         portfolio = PortfolioResponse.model_validate(_portfolio_orm) if _portfolio_orm else None
@@ -1401,6 +1408,20 @@ class AnalyticsService:
         period_start = business_today() - timedelta(days=days)
         twelve_months_ago = business_today() - timedelta(days=365)
 
+        # Portfolio wallet only, like the allocation: an Emergency lot is a
+        # cash reserve, so its payouts are not investment income.
+        # shortcut: only a payment linked to its lot (holding_id) can be judged,
+        # by the lot's wallet today; an unlinked one counts. Nothing in the app
+        # writes dividend rows yet (no client calls POST /dividends), so revisit
+        # when one does: link every row and record its wallet at payment time.
+        emergency_lot_ids = select(PortfolioHolding.id).where(
+            PortfolioHolding.user_id == user_id,
+            PortfolioHolding.wallet_type == HoldingWalletType.EMERGENCY,
+        )
+        not_emergency = or_(
+            Dividend.holding_id.is_(None), Dividend.holding_id.not_in(emergency_lot_ids)
+        )
+
         # --- Fetch actual dividend records ---
         stmt = (
             select(Dividend)
@@ -1408,16 +1429,13 @@ class AnalyticsService:
                 and_(
                     Dividend.user_id == user_id,
                     Dividend.payment_date >= period_start,
+                    not_emergency,
                 )
             )
             .order_by(Dividend.payment_date.desc())
         )
         result = await self.session.execute(stmt)
         dividend_records = result.scalars().all()
-
-        total_dividends = sum(
-            float(d.net_amount or d.total_amount or 0) for d in dividend_records
-        )
 
         # For annualised fallback: sum last 12 months of actual payments
         ttm_stmt = (
@@ -1426,23 +1444,36 @@ class AnalyticsService:
                 and_(
                     Dividend.user_id == user_id,
                     Dividend.payment_date >= twelve_months_ago,
+                    not_emergency,
                 )
             )
         )
         ttm_result = await self.session.execute(ttm_stmt)
         ttm_records = ttm_result.scalars().all()
-        ttm_income = sum(float(d.net_amount or d.total_amount or 0) for d in ttm_records)
 
         # --- Projected annual income from holdings ---
         holdings, _ = await self.holding_repo.get_portfolio_holdings(
-            portfolio.id, user_id, limit=100
+            portfolio.id, user_id, limit=None, wallet_type=HoldingWalletType.PORTFOLIO
         )
         active = [h for h in holdings if h.is_active]
+
+        # Each payment and holding is in its own currency, and the yields below
+        # divide by TWD totals: a US$100 dividend added raw read as NT$100.
+        rates = await twd_rates_for(
+            self.session,
+            {d.currency for d in (*dividend_records, *ttm_records)} | {h.currency for h in active},
+        )
+
+        def paid_twd(records) -> float:
+            return sum(to_twd(float(d.net_amount or d.total_amount or 0), d.currency, rates) for d in records)
+
+        total_dividends = paid_twd(dividend_records)
+        ttm_income = paid_twd(ttm_records)
 
         projected_from_holdings: Optional[float] = None
         if active:
             income_parts = [
-                float(h.annual_dividend) * float(h.quantity)
+                to_twd(float(h.annual_dividend) * float(h.quantity), h.currency, rates)
                 for h in active
                 if h.annual_dividend is not None and float(h.annual_dividend) > 0
             ]
@@ -1453,9 +1484,10 @@ class AnalyticsService:
             ttm_income if ttm_income > 0 else None
         )
 
-        # --- Portfolio totals for yield calculations ---
-        total_cost = float(portfolio.total_cost or 0)
-        total_value = float(portfolio.total_value or 0)
+        # --- Yields over the same lots as the income ---
+        # Not portfolio.total_*: those count the Emergency wallet's lots too.
+        total_cost = sum(to_twd(float(h.total_cost or 0), h.currency, rates) for h in active)
+        total_value = sum(to_twd(float(h.total_value or 0), h.currency, rates) for h in active)
 
         yield_on_cost: Optional[float] = None
         yield_on_value: Optional[float] = None
@@ -1482,7 +1514,7 @@ class AnalyticsService:
         ]
 
         return {
-            "total_dividends": round(total_dividends, 2) if total_dividends else None,
+            "total_dividends": round(total_dividends, 2) if dividend_records else None,
             "dividend_yield": round(dividend_yield, 4) if dividend_yield is not None else None,
             "projected_annual": round(projected_annual, 2) if projected_annual is not None else None,
             "yield_on_cost": round(yield_on_cost, 4) if yield_on_cost is not None else None,
