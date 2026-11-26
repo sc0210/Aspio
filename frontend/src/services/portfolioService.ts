@@ -2,9 +2,7 @@ import { todayChange } from '@/utils/todayChange';
 import { apiClient } from '@/lib/api-client';
 import { getPublicApiUrl } from '@/lib/api-url';
 import { getSession } from 'next-auth/react';
-import { marketDataService } from './marketDataService';
-import { priceService } from './priceService';
-import { Portfolio, PortfolioHolding, MarketType, ApiResponse, StockQuote } from '@/shared/types';
+import { Portfolio, PortfolioHolding, MarketType, ApiResponse } from '@/shared/types';
 import { log } from '@/utils/logger';
 import { toTWD } from '@/utils/formatters';
 
@@ -123,7 +121,7 @@ class PortfolioService {
     }
   }
 
-  async getPortfolio(filters: PortfolioFilters = {}, options: { updatePrices?: boolean } = {}): Promise<ApiResponse<Portfolio>> {
+  async getPortfolio(filters: PortfolioFilters = {}): Promise<ApiResponse<Portfolio>> {
     try {
       const params = new URLSearchParams();
 
@@ -207,14 +205,6 @@ class PortfolioService {
           updatedAt: new Date(portfolioData.updatedAt || portfolioData.updated_at || Date.now()),
           cashWallet: cashWallet.length > 0 ? cashWallet : undefined,
         };
-
-        // ⚡ PERFORMANCE: Only update market prices when explicitly requested
-        // This prevents slow external API calls on every page load
-        if (options.updatePrices) {
-          await this.updateHoldingsPrices(normalizedPortfolio.holdings);
-          // Recalculate portfolio totals after price updates
-          this.recalculatePortfolioTotals(normalizedPortfolio);
-        }
 
         // Note: authenticated portfolio is NOT written to localStorage.
         // TanStack Query handles in-memory caching for real users.
@@ -682,20 +672,6 @@ class PortfolioService {
     }
   }
 
-  async searchStocks(query: string, market: MarketType = 'US'): Promise<ApiResponse<StockQuote[]>> {
-    try {
-      // Use market data service for stock search
-      return await marketDataService.searchStocks(query, market);
-    } catch (error) {
-      log.apiError('GET', '/market-data/search', error);
-      return {
-        success: false,
-        message: 'Failed to search stocks',
-        data: []
-      };
-    }
-  }
-
   async refreshPortfolioPrices(force: boolean = false): Promise<ApiResponse<{
     total: number;
     updated: number;
@@ -756,156 +732,6 @@ class PortfolioService {
           failed: 0
         }
       };
-    }
-  }
-
-  async getPortfolioHistoricalData(days: number = 365): Promise<ApiResponse<Array<{
-    date: string;
-    value: number;
-    holdings?: Array<{
-      symbol: string;
-      price: number;
-      value: number;
-    }>;
-  }>>> {
-    try {
-      // Determine interval based on days for optimal data density
-      let interval = 'monthly';
-      if (days <= 30) {
-        interval = 'daily';
-      } else if (days <= 90) {
-        interval = 'weekly';
-      } else if (days <= 365) {
-        interval = 'monthly';
-      } else {
-        interval = 'yearly';
-      }
-
-      log.debug('🔍 Fetching historical data', { days, interval }, 'PortfolioService');
-
-      // Use new performance/historical endpoint
-      const response = await apiClient.get(`/portfolio/performance/historical?interval=${interval}`);
-
-      // Handle various response formats
-      if (response && (response.success === true || response.data)) {
-        const histData = response.data || response;
-
-        if (Array.isArray(histData) && histData.length > 0) {
-          log.debug('✅ Historical data fetched successfully', { dataPoints: histData.length }, 'PortfolioService');
-          return {
-            success: true,
-            data: histData,
-            message: 'Historical data retrieved successfully'
-          };
-        }
-      }
-
-      console.warn('⚠️ [Historical Data] No data available:', response);
-      log.warn('No historical data available from API', undefined, 'PortfolioService');
-      return {
-        success: false,
-        message: 'No historical data available',
-        data: []
-      };
-    } catch (error) {
-      console.error('❌ [Historical Data] Fetch error:', error);
-      log.error('Portfolio historical data error', error, 'PortfolioService');
-      return {
-        success: false,
-        message: 'Failed to fetch portfolio historical data',
-        data: []
-      };
-    }
-  }
-
-  private async updateHoldingsPrices(holdings: PortfolioHolding[], forceRefresh: boolean = false): Promise<void> {
-    // Try to fetch latest prices from our backend cache/db in a single bulk call.
-    // Fallback to external marketDataService only for missing symbols or when forceRefresh is true.
-    try {
-      const uniqueSymbols = Array.from(new Set(holdings.map(h => h.symbol)));
-
-      // If no symbols, nothing to do
-      if (uniqueSymbols.length === 0) return;
-
-      // If forceRefresh is requested, skip backend cache and go directly to marketDataService
-      let backendPrices: Record<string, { close?: number; price?: number; lastUpdated?: string } | null> = {};
-      if (!forceRefresh) {
-        try {
-          backendPrices = await priceService.getLatestPricesBulk(uniqueSymbols) as unknown as Record<string, { close?: number; price?: number; lastUpdated?: string } | null>;
-        } catch (err) {
-          log.warn('Backend bulk price fetch failed, falling back to external market data', err, 'PortfolioService');
-          backendPrices = {};
-        }
-      }
-
-      // Apply backend prices where available
-      const missingSymbols: string[] = [];
-      for (const holding of holdings) {
-        const quote = backendPrices[holding.symbol];
-        const latestPrice = quote?.close ?? quote?.price;
-        if (quote && latestPrice !== undefined && latestPrice !== null) {
-          this.applyLivePrice(holding, latestPrice, quote.lastUpdated ? new Date(quote.lastUpdated) : undefined);
-        } else {
-          // mark for external fetch
-          if (!missingSymbols.includes(holding.symbol)) missingSymbols.push(holding.symbol);
-        }
-      }
-
-      // If there are missing symbols (or forceRefresh), fetch them from external market provider grouped by market
-      if (missingSymbols.length > 0) {
-        // Group holdings that match the missing symbols by market to reuse marketDataService calls
-        const holdingsByMarket = holdings
-          .filter(h => missingSymbols.includes(h.symbol))
-          .reduce((acc, holding) => {
-            const market = (holding.market ?? 'US') as MarketType;
-            if (!acc[market]) acc[market] = [];
-            acc[market].push(holding);
-            return acc;
-          }, {} as Record<MarketType, PortfolioHolding[]>);
-
-        for (const [market, marketHoldings] of Object.entries(holdingsByMarket)) {
-          try {
-            const marketDataRequests = marketHoldings.map(holding => ({ symbol: holding.symbol, market: market as MarketType }));
-            const marketDataResponse = await marketDataService.getMultipleMarketData(marketDataRequests);
-
-            if (marketDataResponse.success && marketDataResponse.data) {
-              marketDataResponse.data.forEach(marketData => {
-                const holding = marketHoldings.find(h => h.symbol === marketData.symbol);
-                if (holding) {
-                  this.applyLivePrice(holding, marketData.price, marketData.lastUpdated);
-                }
-              });
-            }
-          } catch (error) {
-            log.warn(`Failed to update prices for ${market} market (external)`, error, 'PortfolioService');
-          }
-        }
-      }
-    } catch (err) {
-      log.warn('Unexpected error updating holding prices', err, 'PortfolioService');
-    }
-  }
-
-  /**
-   * Apply a freshly fetched price to a holding and recompute every derived field.
-   *
-   * Day change has to be recomputed here against the retained previousClose —
-   * normalizeHolding() derived it from the price the backend returned, so leaving
-   * it alone makes the "% today" line disagree with the price shown right above it.
-   */
-  private applyLivePrice(holding: PortfolioHolding, price: number, lastUpdated?: Date): void {
-    const costBasis = holding.quantity * holding.averageCost;
-
-    holding.currentPrice = price;
-    holding.totalValue = holding.quantity * price;
-    holding.gainLoss = holding.totalValue - costBasis;
-    holding.gainLossPercentage = costBasis > 0 ? (holding.gainLoss / costBasis) * 100 : 0;
-    holding.lastUpdated = lastUpdated ?? new Date();
-
-    const previousClose = holding.previousClose;
-    if (previousClose != null && previousClose > 0) {
-      holding.dayChange = (price - previousClose) * holding.quantity;
-      holding.dayChangePercentage = ((price - previousClose) / previousClose) * 100;
     }
   }
 
@@ -1176,12 +1002,6 @@ class PortfolioService {
       baseCurrency?: string;
       exchangeRate?: number;
     };
-    topPerformers: PortfolioHolding[];
-    worstPerformers: PortfolioHolding[];
-    diversificationScore: number;
-    riskScore: number;
-    sharpeRatio?: number | null;
-    beta?: number | null;
   }>> {
     // Throws on failure, so the query keeps its last good data and reports the
     // error. There is no local estimate: a wrong allocation is worse than none.

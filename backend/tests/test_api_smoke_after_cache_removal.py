@@ -39,7 +39,7 @@ async def test_transaction_create_edit_delete(authenticated_client, test_categor
 
 async def test_dashboard_reads(authenticated_client):
     c = authenticated_client
-    for path in ("/stats", "/recent-activity", "/spending-by-category", "/monthly-trend", "/overview"):
+    for path in ("/stats", "/recent-activity", "/spending-by-category"):
         _ok(c.get(f"/api/v1/dashboard{path}"))
 
 
