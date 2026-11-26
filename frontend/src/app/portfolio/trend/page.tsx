@@ -916,10 +916,13 @@ export default function TrendPage() {
             'Name',
             'Type',
             'Quantity',
+            // Avg Cost is in the lot's currency; the period figures, like the
+            // trend series they come from, are TWD.
             'Avg Cost',
-            'Period Start Value',
-            'Period End Value',
-            'Period Change',
+            'Currency',
+            'Period Start Value (TWD)',
+            'Period End Value (TWD)',
+            'Period Change (TWD)',
             'Period Change %',
             'Weight %',
         ];
@@ -929,6 +932,7 @@ export default function TrendPage() {
             r.type,
             r.quantity,
             r.avgCost.toFixed(2),
+            r.currency,
             r.startValue?.toFixed(2) ?? '',
             r.endValue?.toFixed(2) ?? '',
             r.periodChange?.toFixed(2) ?? '',

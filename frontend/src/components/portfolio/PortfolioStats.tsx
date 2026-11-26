@@ -305,7 +305,9 @@ export function PortfolioStats({ portfolio, isValueVisible, apiStatus: _apiStatu
                 <div
                   className={cn(
                     "w-full relative overflow-hidden rounded-xl p-4 border shadow-sm transition-all duration-300 group min-h-[110px]",
-                    onTodayChangeClick ? "cursor-pointer hover:shadow-lg hover:scale-[1.02] active:scale-[0.98]" : "cursor-help hover:shadow-md",
+                    // Pressed only through the card's own button (its first child):
+                    // :active reaches every ancestor, so pressing Trend shrank it too.
+                    onTodayChangeClick ? "cursor-pointer hover:shadow-lg hover:scale-[1.02] [&:has(>button:first-child:active)]:scale-[0.98]" : "cursor-help hover:shadow-md",
                     tone('bg-gradient-to-br from-rise-50 via-white to-rise-50/30 dark:from-rise-900/10 dark:via-gray-800/50 dark:to-rise-900/5 border-rise-200/50 dark:border-rise-800/30', 'bg-gradient-to-br from-fall-50 via-white to-fall-50/30 dark:from-fall-900/10 dark:via-gray-800/50 dark:to-fall-900/5 border-fall-200/50 dark:border-fall-800/30', 'bg-gradient-to-br from-gray-50 via-white to-gray-50/30 dark:from-gray-800/40 dark:via-gray-800/50 dark:to-gray-800/20 border-gray-200 dark:border-gray-700')
                   )}>
                   {/* The whole card opens the daily chart. A sibling button over the

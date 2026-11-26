@@ -142,31 +142,15 @@ export function buildTrendHoldingRows(
       const combinedQty = existing.quantity + row.quantity;
       const combinedCost = existing.totalCost + row.totalCost;
       const combinedValue = existing.currentValue + row.currentValue;
-      const combinedStart =
-        existing.startValue !== null || row.startValue !== null
-          ? (existing.startValue ?? 0) + (row.startValue ?? 0)
-          : null;
-      const combinedEnd =
-        existing.endValue !== null || row.endValue !== null
-          ? (existing.endValue ?? 0) + (row.endValue ?? 0)
-          : null;
-      const pChange = combinedStart !== null && combinedEnd !== null ? combinedEnd - combinedStart : null;
-      const pChangePct =
-        combinedStart !== null && pChange !== null && combinedStart > 0
-          ? (pChange / combinedStart) * 100
-          : null;
+      // Start, end and change come off the trend series by symbol, so every
+      // piece already carries the whole symbol's figures: keep them once.
+      // Adding them counted a symbol split across wallets or goals twice.
       nameMap.set(key, {
         ...existing,
         quantity: combinedQty,
         avgCost: combinedQty > 0 ? combinedCost / combinedQty : 0,
         totalCost: combinedCost,
         currentValue: combinedValue,
-        startValue: combinedStart,
-        endValue: combinedEnd,
-        periodChange: pChange,
-        periodChangePct: pChangePct,
-        // partial if either constituent row is partial
-        isPartialPeriod: existing.isPartialPeriod || row.isPartialPeriod,
         lotCount: existing.lotCount + row.lotCount,
       });
     }
