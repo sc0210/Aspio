@@ -692,8 +692,9 @@ class TestRegionalTimezone:
         with pytest.raises(ValueError) as refused:
             UserPreferences(timezone="Mars/Olympus_Mons")
         assert "Mars" not in refused.value.errors()[0]["msg"]  # what the 422 body carries
-        with pytest.raises(ValueError):
+        with pytest.raises(ValueError) as too_long:
             UserPreferences(timezone="A" * 51)
+        assert too_long.value.errors()[0]["type"] == "string_too_long"  # the cap, before the lookup
 
     def test_the_endpoint_answers_422_not_404(self, override_get_async_session):
         # A 51-character value failed the UPDATE, update_user swallowed it, and the
