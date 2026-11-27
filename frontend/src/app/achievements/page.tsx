@@ -448,6 +448,8 @@ export default function AchievementsPage() {
   const loadFailed = !isDemo && ((statsFailed && !liveStats) || (progressFailed && !liveProgress));
   const updateStreak = useUpdateStreak();
   const checkAchievements = useCheckAchievements();
+  // Its own instance, so a background claim never spins or disables the button.
+  const autoClaim = useCheckAchievements();
 
   const stats: GamificationStats = isDemo ? DEMO_STATS : (liveStats ?? EMPTY_STATS);
   const progress: AchievementProgress[] = useMemo(
@@ -479,18 +481,23 @@ export default function AchievementsPage() {
 
   // Recording a transaction, holding or goal never checks badges, so a finished
   // one can still read "Locked". Claim them once per mount, not only on the button.
+  // Waits for the streak ping: both award badges, and award_achievement is
+  // check-then-insert, so running them side by side could award one twice.
+  const streakSettled = updateStreak.isSuccess || updateStreak.isError;
   const claimed = useRef(false);
   useEffect(() => {
-    if (!isAuthenticated || claimed.current || !liveProgress) return;
+    if (!isAuthenticated || !streakSettled || claimed.current || !liveProgress) return;
     if (!liveProgress.some((a) => !a.is_unlocked && a.current_progress >= a.required_progress)) return;
     claimed.current = true;
-    checkAchievements.mutate(undefined, {
+    autoClaim.mutate(undefined, {
       onSuccess: (earned) => {
         if (earned.length) toast.success(t('goals:achievements.newAchievements', { count: earned.length }));
       },
+      // Refetch even when nothing was earned here: another tab may have claimed it.
+      onSettled: () => void refetchProgress(),
     });
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [isAuthenticated, liveProgress]);
+  }, [isAuthenticated, streakSettled, liveProgress]);
 
   const handleCheck = () => {
     if (isDemo) {

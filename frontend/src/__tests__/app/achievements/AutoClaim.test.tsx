@@ -33,13 +33,18 @@ jest.mock('react-i18next', () => ({
 jest.mock('@/hooks/useMediaQuery', () => ({ useIsMobile: () => false }));
 
 const checkMutate = jest.fn();
+const buttonMutate = jest.fn();
 let progress: AchievementProgress[] = [];
+let streak = { isSuccess: true, isError: false };
+let hookCalls = 0;
 
 jest.mock('@/hooks/api-hooks', () => ({
   useGamificationStats: () => ({ data: undefined, isLoading: false, isError: false, refetch: jest.fn() }),
   useAchievementProgress: () => ({ data: progress, isLoading: false, isError: false, refetch: jest.fn() }),
-  useUpdateStreak: () => ({ mutate: jest.fn() }),
-  useCheckAchievements: () => ({ mutate: checkMutate, mutateAsync: jest.fn() }),
+  useUpdateStreak: () => ({ mutate: jest.fn(), ...streak }),
+  // Each render takes two instances, in order: the button's, then the background claim's.
+  useCheckAchievements: () =>
+    ({ mutate: hookCalls++ % 2 === 0 ? buttonMutate : checkMutate, mutateAsync: jest.fn(), isPending: false }),
 }));
 
 import AchievementsPage from '@/app/achievements/page';
@@ -61,15 +66,23 @@ const badge = (over: Partial<AchievementProgress>): AchievementProgress => ({
   ...over,
 });
 
-beforeEach(() => checkMutate.mockClear());
+beforeEach(() => {
+  checkMutate.mockClear();
+  buttonMutate.mockClear();
+  hookCalls = 0;
+  streak = { isSuccess: true, isError: false };
+});
+
+const finished = () => [badge({}), badge({ achievement_type: 'hundred_transactions', current_progress: 3, required_progress: 100 })];
 
 it('claims a finished badge that still reads locked, once', async () => {
-  progress = [badge({}), badge({ achievement_type: 'hundred_transactions', current_progress: 3, required_progress: 100 })];
+  progress = finished();
   const { rerender } = render(<AchievementsPage />);
   await waitFor(() => expect(checkMutate).toHaveBeenCalledTimes(1));
   progress = [...progress]; // a refetch hands the effect a new array
   rerender(<AchievementsPage />);
   expect(checkMutate).toHaveBeenCalledTimes(1);
+  expect(buttonMutate).not.toHaveBeenCalled();
 });
 
 it('does not call the server when nothing is left to claim', () => {
@@ -79,4 +92,14 @@ it('does not call the server when nothing is left to claim', () => {
   ];
   render(<AchievementsPage />);
   expect(checkMutate).not.toHaveBeenCalled();
+});
+
+it('waits for the streak ping, which awards badges too', () => {
+  progress = finished();
+  streak = { isSuccess: false, isError: false };
+  const { rerender } = render(<AchievementsPage />);
+  expect(checkMutate).not.toHaveBeenCalled();
+  streak = { isSuccess: true, isError: false };
+  rerender(<AchievementsPage />);
+  expect(checkMutate).toHaveBeenCalledTimes(1);
 });
