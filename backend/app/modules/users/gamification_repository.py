@@ -98,6 +98,9 @@ class GamificationRepository:
             
             # The check above races a concurrent award; the unique index decides.
             # A savepoint keeps the loser from rolling back the caller's work.
+            # Flush the caller's pending changes first, so only this insert can
+            # fail inside it and their errors still surface below.
+            await self.session.flush()
             try:
                 async with self.session.begin_nested():
                     self.session.add(achievement)
