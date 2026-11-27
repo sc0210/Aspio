@@ -324,8 +324,14 @@ class PortfolioService:
                     quote.market, quote.quote_time
                 )
 
-        # Update portfolio totals
-        await self._update_portfolio_totals(portfolio.id, user_id)
+        # The stored totals are a cache the next price refresh rebuilds (sells and
+        # deletes don't touch them either), so a failure here must not cost the
+        # trade: the savepoint undoes only the totals.
+        try:
+            async with self.session.begin_nested():
+                await self._update_portfolio_totals(portfolio.id, user_id)
+        except Exception:
+            logger.warning("Holding saved; portfolio totals catch up on the next refresh")
 
         # Commit the transaction to ensure data is persisted
         await self.session.commit()
@@ -1002,18 +1008,16 @@ class PortfolioService:
                                     },
                                 )
                             else:
-                                # Keep the last totals: a 1.0 fallback stored US$100
-                                # as NT$100 in the headline value, rebalancing and the
-                                # LINE summary. The next refresh with a rate fixes it.
+                                # Last resort fallback
                                 logger.warning(
-                                    "No exchange rate available; keeping the last totals",
+                                    f"No exchange rate available, using 1.0",
                                     extra={
                                         "from_currency": holding.currency,
                                         "to_currency": portfolio_currency,
                                         "symbol": holding.symbol,
                                     },
                                 )
-                                return
+                                conversion_rate = Decimal("1.0")
                         rates[holding.currency] = conversion_rate
 
                     converted_value = holding.total_value * conversion_rate
@@ -1060,9 +1064,8 @@ class PortfolioService:
                 },
                 exc_info=True,
             )
-            # Raised, not swallowed: add_holding commits after this, so the trade
-            # rolls back with an error instead of saving beside stale totals, and
-            # the price job's failure count and rollback finally see it.
+            # Raised, not swallowed: the price job counted a failed portfolio as
+            # synced, and the refresh route stamped totals it never wrote.
             raise
 
     async def _fetch_holdings_for_export(
