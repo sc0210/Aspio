@@ -318,6 +318,7 @@ class GamificationService:
             badge = await self._check_and_award_achievement(
                 user_id,
                 AchievementType.EARLY_ADOPTER,
+                {"level_reached": level},
                 progress={
                     "current_progress": level,
                     "required_progress": rising.required_progress,
@@ -329,8 +330,9 @@ class GamificationService:
             await self.gamification_repo.update_user_level(user_id)
             return [badge]
         except Exception:
-            # The awards already made stand; the level catches up on the next check.
-            logger.warning("Failed to settle level for %s", user_id, exc_info=True)
+            # The awards already made stand. Logged as an error: a coding bug here
+            # would fail every check, not just this one.
+            logger.exception("Failed to settle level for %s", user_id)
             return []
 
     async def _check_and_award_achievement(

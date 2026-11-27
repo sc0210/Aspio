@@ -542,7 +542,8 @@ class GamificationRepository:
             if new_level > user.level:
                 await self.session.execute(
                     update(User)
-                    .where(User.id == user_id)
+                    # Never lower it: a parallel check may already have written more.
+                    .where(User.id == user_id, User.level < new_level)
                     .values(level=new_level)
                 )
                 await self.session.commit()

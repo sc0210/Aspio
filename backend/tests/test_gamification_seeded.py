@@ -264,6 +264,8 @@ class TestRisingStar:
         assert [(a.achievement_type, a.points_awarded) for a in awarded] == [(A.EARLY_ADOPTER.value, 250)]
         user = await _reload(async_session, world.id)
         assert (user.experience_points, user.level) == (1850, 6)  # was left at 5
+        row = (await GamificationRepository(async_session).get_user_achievements(world.id))[0]
+        assert row.achievement_data == {"level_reached": 5}
         notes = (
             await async_session.execute(select(Notification).where(Notification.user_id == world.id))
         ).scalars().all()

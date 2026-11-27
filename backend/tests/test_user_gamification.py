@@ -230,6 +230,7 @@ class TestGamificationService:
         ))
         
         gamification_service.gamification_repo.update_user_level.return_value = None
+        gamification_service.gamification_repo.get_level.return_value = 1  # below Rising Star
         
         new_achievements = await gamification_service.trigger_achievement_check(
             sample_user.id, "transaction_created"
