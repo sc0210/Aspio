@@ -11,7 +11,6 @@
     "fallbackName": "成就",
     "filterCategory": "依分類篩選",
     "filterStatus": "依狀態篩選",
-    "financialScores": "財務評分",
     "last7Days": "最近 7 天",
     "level": "等級",
     "locked": "未解鎖",
@@ -22,12 +21,6 @@
       "monthsAgo": "{{count}} 個月前",
       "today": "今天",
       "yesterday": "昨天"
-    },
-    "scores": {
-      "communityEngagement": "社群參與度",
-      "digitalAdoption": "數位使用度",
-      "investmentKnowledge": "投資知識",
-      "savingsDiscipline": "儲蓄紀律"
     },
     "searchLabel": "搜尋成就",
     "searchPlaceholder": "搜尋成就…",

@@ -12,7 +12,6 @@
     "fallbackName": "Achievement",
     "filterCategory": "Filter by category",
     "filterStatus": "Filter by status",
-    "financialScores": "Financial Scores",
     "last7Days": "Last 7 days",
     "level": "Level",
     "locked": "Locked",
@@ -23,12 +22,6 @@
       "monthsAgo": "{{count}}mo ago",
       "today": "today",
       "yesterday": "yesterday"
-    },
-    "scores": {
-      "communityEngagement": "Community Engagement",
-      "digitalAdoption": "Digital Adoption",
-      "investmentKnowledge": "Investment Knowledge",
-      "savingsDiscipline": "Savings Discipline"
     },
     "searchLabel": "Search achievements",
     "searchPlaceholder": "Search achievements…",

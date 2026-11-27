@@ -605,38 +605,8 @@ class UserActivityRepository:
             await self.session.rollback()
             logger.error(f"Error logging user activity: {str(e)}")
             raise
-    
-    async def get_user_activities(
-        self,
-        user_id: UUID,
-        activity_types: Optional[List[str]] = None,
-        start_date: Optional[datetime] = None,
-        end_date: Optional[datetime] = None,
-        limit: int = 100,
-        offset: int = 0
-    ) -> List[UserActivityLog]:
-        """Get user activities with filtering"""
-        try:
-            query = select(UserActivityLog).where(UserActivityLog.user_id == user_id)
-            
-            if activity_types:
-                query = query.where(UserActivityLog.activity_type.in_(activity_types))
-            
-            if start_date:
-                query = query.where(UserActivityLog.created_at >= start_date)
-            
-            if end_date:
-                query = query.where(UserActivityLog.created_at <= end_date)
-            
-            query = query.order_by(desc(UserActivityLog.created_at)).limit(limit).offset(offset)
-            
-            result = await self.session.execute(query)
-            return result.scalars().all()
-            
-        except Exception as e:
-            logger.error(f"Error getting user activities: {str(e)}")
-            return []
-    
+
+
 # Repository factory functions
 def get_gamification_repository(session: AsyncSession) -> GamificationRepository:
     """Get gamification repository instance"""

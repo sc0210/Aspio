@@ -40,10 +40,6 @@ const DEMO_STATS: GamificationStats = {
     streak_bonus_earned: 70,
   },
   recent_achievements: [],
-  digital_adoption_score: 65,
-  savings_discipline_score: 80,
-  investment_knowledge_score: 45,
-  community_engagement_score: 20,
 };
 
 /**
@@ -65,10 +61,6 @@ const EMPTY_STATS: GamificationStats = {
     streak_bonus_earned: 0,
   },
   recent_achievements: [],
-  digital_adoption_score: 0,
-  savings_discipline_score: 0,
-  investment_knowledge_score: 0,
-  community_engagement_score: 0,
 };
 
 const DEMO_PROGRESS: AchievementProgress[] = [
@@ -243,38 +235,6 @@ function relativeTime(dateStr: string, t: TFunction) {
 
 function nextMilestone(streak: number): number | null {
   return STREAK_MILESTONES.find((m) => m > streak) ?? null;
-}
-
-// ---------------------------------------------------------------------------
-// Score Card
-// ---------------------------------------------------------------------------
-
-function ScoreCard({ label, score, emoji }: { label: string; score: number; emoji: string }) {
-  const pct = Math.min(100, score);
-  const color =
-    pct >= 70 ? 'bg-prosperity-500' : pct >= 40 ? 'bg-warning-500' : 'bg-error-500';
-
-  return (
-    <Card padding="sm" radius="xl" shadow="none">
-      <div className="flex items-center justify-between mb-2">
-        <span className="text-sm font-medium text-gray-700 dark:text-gray-300 flex items-center gap-1.5">
-          <span className="text-lg">{emoji}</span>
-          {label}
-        </span>
-        <span className="text-lg font-bold text-gray-900 dark:text-white">{score}</span>
-      </div>
-      <div
-        role="progressbar"
-        aria-valuenow={Math.round(pct)}
-        aria-valuemin={0}
-        aria-valuemax={100}
-        aria-label={`${label} score`}
-        className="h-2 w-full overflow-hidden rounded-full bg-gray-100 dark:bg-gray-700"
-      >
-        <div className={cn('h-2 rounded-full transition-all duration-700', color)} style={{ width: `${pct}%` }} />
-      </div>
-    </Card>
-  );
 }
 
 // ---------------------------------------------------------------------------
@@ -662,24 +622,11 @@ export default function AchievementsPage() {
                   </div>
                 )}
                 <p className="text-center px-4 pt-1 text-xs font-semibold leading-relaxed text-gray-500 dark:text-gray-400">
-                  {t('dashboard:mobile.fullAchievements', 'Every badge, scores, search & filters')}
+                  {t('dashboard:mobile.fullAchievements', 'Every badge, search & filters')}
                   <br />
                   <span className="text-primary-700 dark:text-primary-400">→ {t('dashboard:mobile.onLargerScreen', 'on tablet / desktop')}</span>
                 </p>
               </section>
-            )}
-
-            {/* Regional Scores */}
-            {!phone && (
-            <div>
-              <h2 className="text-base font-semibold text-gray-800 dark:text-gray-200 mb-3">{t('goals:achievements.financialScores')}</h2>
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                <ScoreCard label={t('goals:achievements.scores.digitalAdoption')}    score={stats.digital_adoption_score}    emoji="📱" />
-                <ScoreCard label={t('goals:achievements.scores.savingsDiscipline')}  score={stats.savings_discipline_score}  emoji="💰" />
-                <ScoreCard label={t('goals:achievements.scores.investmentKnowledge')} score={stats.investment_knowledge_score} emoji="📈" />
-                <ScoreCard label={t('goals:achievements.scores.communityEngagement')} score={stats.community_engagement_score} emoji="👥" />
-              </div>
-            </div>
             )}
 
             {/* Achievement Grid */}
