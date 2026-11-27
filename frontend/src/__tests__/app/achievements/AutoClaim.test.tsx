@@ -33,6 +33,7 @@ jest.mock('react-i18next', () => ({
 jest.mock('@/hooks/useMediaQuery', () => ({ useIsMobile: () => false }));
 
 const checkMutate = jest.fn();
+const refetchProgress = jest.fn();
 const buttonMutate = jest.fn();
 let progress: AchievementProgress[] = [];
 let streak = { isSuccess: true, isError: false };
@@ -40,13 +41,14 @@ let hookCalls = 0;
 
 jest.mock('@/hooks/api-hooks', () => ({
   useGamificationStats: () => ({ data: undefined, isLoading: false, isError: false, refetch: jest.fn() }),
-  useAchievementProgress: () => ({ data: progress, isLoading: false, isError: false, refetch: jest.fn() }),
+  useAchievementProgress: () => ({ data: progress, isLoading: false, isError: false, refetch: refetchProgress }),
   useUpdateStreak: () => ({ mutate: jest.fn(), ...streak }),
   // Each render takes two instances, in order: the button's, then the background claim's.
   useCheckAchievements: () =>
     ({ mutate: hookCalls++ % 2 === 0 ? buttonMutate : checkMutate, mutateAsync: jest.fn(), isPending: false }),
 }));
 
+import toast from 'react-hot-toast';
 import AchievementsPage from '@/app/achievements/page';
 
 const badge = (over: Partial<AchievementProgress>): AchievementProgress => ({
@@ -69,6 +71,8 @@ const badge = (over: Partial<AchievementProgress>): AchievementProgress => ({
 beforeEach(() => {
   checkMutate.mockClear();
   buttonMutate.mockClear();
+  refetchProgress.mockClear();
+  (toast.success as jest.Mock).mockClear();
   hookCalls = 0;
   streak = { isSuccess: true, isError: false };
 });
@@ -102,4 +106,26 @@ it('waits for the streak ping, which awards badges too', () => {
   streak = { isSuccess: true, isError: false };
   rerender(<AchievementsPage />);
   expect(checkMutate).toHaveBeenCalledTimes(1);
+});
+
+it('still claims when the streak ping failed', () => {
+  progress = finished();
+  streak = { isSuccess: false, isError: true };
+  render(<AchievementsPage />);
+  expect(checkMutate).toHaveBeenCalledTimes(1);
+});
+
+it('toasts what it earned and refetches progress either way', () => {
+  progress = finished();
+  render(<AchievementsPage />);
+  const [, callbacks] = checkMutate.mock.calls[0];
+
+  callbacks.onSuccess([]);
+  expect(toast.success).not.toHaveBeenCalled();
+  callbacks.onSuccess([{ achievement_type: 'first_transaction' }]);
+  expect(toast.success).toHaveBeenCalledTimes(1);
+
+  // Nothing earned here can still mean another tab claimed it: refetch anyway.
+  callbacks.onSettled();
+  expect(refetchProgress).toHaveBeenCalledTimes(1);
 });
