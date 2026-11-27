@@ -32,10 +32,6 @@ export interface GamificationStats {
     streak_bonus_earned: number;
   };
   recent_achievements: AchievementItem[];
-  digital_adoption_score: number;
-  savings_discipline_score: number;
-  investment_knowledge_score: number;
-  community_engagement_score: number;
 }
 
 export interface AchievementItem {

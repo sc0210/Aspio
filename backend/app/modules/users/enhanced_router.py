@@ -42,8 +42,7 @@ async def get_user_gamification_stats(
     """
     Get comprehensive gamification statistics for current user.
     
-    Returns level, experience points, achievements, streaks, and regional scores
-    tailored for Asian market engagement patterns.
+    Returns level, experience points, achievements and streaks.
     """
     gamification_service = get_gamification_service(session)
     stats = await gamification_service.get_user_gamification_stats(current_user.id)
