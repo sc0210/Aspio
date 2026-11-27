@@ -76,10 +76,23 @@ class TestUpdates:
     async def test_update_unknown_user(self, repo):
         assert await repo.update_user(uuid4(), {"name": "x"}) is None
 
-    async def test_a_failed_update_raises_instead_of_reading_as_unknown(self, repo):
+    async def test_a_failed_update_raises_instead_of_reading_as_unknown(self, repo, async_session):
+        # A real database error (google_id is unique): it read as None, a 404.
+        from sqlalchemy.exc import IntegrityError
+        holder = await repo.create_user(data("holder@example.com", google_id="g-1"))
         u = await repo.create_user(data("err@example.com"))
-        with pytest.raises(Exception):
-            await repo.update_user(u.id, {"no_such_column": 1})
+        with pytest.raises(IntegrityError):
+            await repo.update_user(u.id, {"google_id": "g-1"})
+
+        # Only the UPDATE was undone: loaded users stay readable (a full rollback
+        # expired them) and the session keeps working.
+        assert (u.email, holder.google_id) == ("err@example.com", "g-1")
+        assert (await repo.update_user(u.id, {"name": "Fine"})).name == "Fine"
+
+    async def test_the_returned_user_has_the_new_values(self, repo):
+        u = await repo.create_user(data("fresh@example.com"))
+        assert u.name == "fresh"  # loaded in this session
+        assert (await repo.update_user(u.id, {"name": "Renamed"})).name == "Renamed"
 
     async def test_password_change_unlocks_the_account(self, repo, async_session):
         u = await repo.create_user(data("pw@example.com", failed_login_attempts=7,

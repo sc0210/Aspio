@@ -473,6 +473,21 @@ class TestUpdateUserProfile:
 
         assert exc.value.status_code == 500
 
+    @pytest.mark.asyncio
+    async def test_a_username_taken_in_the_meantime_is_409(self):
+        # Two saves of one new username both pass the SELECT check; the unique
+        # index refuses the second.
+        from sqlalchemy.exc import IntegrityError
+        svc = make_service()
+        svc.session.execute = AsyncMock(return_value=MagicMock(first=MagicMock(return_value=None)))
+        svc.user_repo.update_user = AsyncMock(side_effect=IntegrityError(
+            "UPDATE users", {}, Exception('duplicate key value violates unique constraint "ix_users_username"')))
+
+        with pytest.raises(HTTPException) as exc:
+            await svc.update_user_profile(uuid4(), UserUpdate(username="alice"))
+
+        assert exc.value.status_code == 409
+
 
 # ─── UserService.request_password_reset ──────────────────────────────────────
 

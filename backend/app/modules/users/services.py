@@ -11,6 +11,7 @@ from typing import Optional, Dict, Any, Tuple
 from uuid import UUID
 
 from sqlalchemy import and_, func, select
+from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 from fastapi import HTTPException, status
 
@@ -387,8 +388,17 @@ class UserService:
             if update_dict.get('monthly_income') is not None:
                 update_dict['monthly_income'] = round(update_dict['monthly_income'] * 100)
 
-            # Update user
-            updated_user = await self.user_repo.update_user(user_id, update_dict)
+            # Update user. Two saves of one new username can both pass the check
+            # above; the unique index refuses the second, which is the same 409.
+            try:
+                updated_user = await self.user_repo.update_user(user_id, update_dict)
+            except IntegrityError as e:
+                if 'username' in update_dict and 'username' in str(e.orig).lower():
+                    raise HTTPException(
+                        status_code=status.HTTP_409_CONFLICT,
+                        detail="Username already taken",
+                    )
+                raise
             if not updated_user:
                 raise HTTPException(
                     status_code=status.HTTP_404_NOT_FOUND,
