@@ -228,7 +228,13 @@ class TestStats:
         assert stats.recent_achievements[0].achievement_type == A.FIRST_GOAL.value
         assert stats.experience_to_next_level == 200 - stats.experience_points
         # The four always-zero "regional scores" were removed from the payload.
-        assert "digital_adoption_score" not in stats.model_dump()
+        removed = {
+            "digital_adoption_score",
+            "savings_discipline_score",
+            "investment_knowledge_score",
+            "community_engagement_score",
+        }
+        assert removed.isdisjoint(stats.model_dump())
 
     async def test_stats_for_missing_user_is_404(self, async_session, world):
         with pytest.raises(HTTPException) as exc:
