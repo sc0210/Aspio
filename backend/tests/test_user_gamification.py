@@ -676,10 +676,21 @@ class TestRegionalTimezone:
     def test_known_zones_pass(self, tz):
         assert RegionalPreferencesUpdate(timezone=tz).timezone == tz
 
-    @pytest.mark.parametrize("tz", ["A" * 51, "Mars/Olympus_Mons", "../etc/passwd", ""])
+    @pytest.mark.parametrize("tz", ["A" * 51, "Mars/Olympus_Mons", "../etc/passwd", "Asia", "asia/taipei"])
     def test_anything_else_is_refused(self, tz):
+        # "Asia" is a folder: ZoneInfo raised IsADirectoryError, a 500, not a 422.
         with pytest.raises(ValueError):
             RegionalPreferencesUpdate(timezone=tz)
+
+    def test_an_empty_timezone_still_means_unchanged(self):
+        prefs = RegionalPreferencesUpdate(preferred_currency="TWD", timezone="")
+        assert (prefs.preferred_currency, prefs.timezone) == ("TWD", None)
+
+    def test_the_preferences_json_takes_the_same_zones(self):
+        from app.modules.users.schemas import UserPreferences
+        assert UserPreferences(timezone="Asia/Taipei").timezone == "Asia/Taipei"
+        with pytest.raises(ValueError):
+            UserPreferences(timezone="Mars/Olympus_Mons")
 
     def test_the_endpoint_answers_422_not_404(self, override_get_async_session):
         # A 51-character value failed the UPDATE, update_user swallowed it, and the

@@ -6,9 +6,28 @@ import uuid
 from datetime import datetime, date
 from typing import Optional, Dict, Any, List
 
+from functools import lru_cache
+from zoneinfo import available_timezones
+
 from pydantic import BaseModel, Field, EmailStr, ConfigDict, field_validator
 
 from ...common.schemas import BaseSchema, TimestampMixin
+
+
+@lru_cache(maxsize=1)
+def _iana_zones() -> frozenset:
+    return frozenset(available_timezones())
+
+
+def known_timezone(v: str) -> str:
+    """Accept only an IANA zone name, spelled as the zone database spells it.
+
+    Membership, not ZoneInfo(v): that raised IsADirectoryError (a 500) on a folder
+    such as "Asia", and on a case-insensitive disk took "asia/taipei" too.
+    """
+    if v not in _iana_zones():
+        raise ValueError(f"Unknown timezone: {v}")
+    return v
 
 
 class UserPreferences(BaseModel):
@@ -17,6 +36,11 @@ class UserPreferences(BaseModel):
     language: str = Field("en", description="Language preference")
     locale: str = Field("en-US", description="Locale preference")
     timezone: str = Field("UTC", description="Timezone preference")
+
+    @field_validator("timezone")
+    @classmethod
+    def _known_timezone(cls, v: str) -> str:
+        return known_timezone(v)
     date_format: str = Field("western", pattern="^(western|roc|iso)$", description="Date format preference")
     number_format: str = Field("western", pattern="^(western|asian)$", description="Number format preference")
     notifications: Dict[str, bool] = Field(
@@ -366,15 +390,8 @@ class RegionalPreferencesUpdate(BaseModel):
     @classmethod
     def _known_timezone(cls, v: Optional[str]) -> Optional[str]:
         # Anything else reached the String(50) column: a long value failed the
-        # UPDATE and came back as 404 "User not found".
-        if v is None:
-            return v
-        from zoneinfo import ZoneInfo, ZoneInfoNotFoundError
-        try:
-            ZoneInfo(v)
-        except (ZoneInfoNotFoundError, ValueError):
-            raise ValueError(f"Unknown timezone: {v}")
-        return v
+        # UPDATE and came back as 404 "User not found". "" still means "unchanged".
+        return known_timezone(v) if v else None
 
 
 # ===== Enhanced Security Schemas =====
