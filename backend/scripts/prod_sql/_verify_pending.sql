@@ -285,3 +285,9 @@ SELECT 'duplicate badge rows' AS what, count(*)::text AS value
 FROM (SELECT row_number() OVER (PARTITION BY user_id, achievement_type ORDER BY unlocked_at, id) AS rn
       FROM user_gamification_achievements) r
 WHERE r.rn > 1;
+-- 2026_11_28_drop_user_activity_logs: expect 'gone' after the apply. Before it, the
+-- count is how many write-only event rows the drop removes.
+SELECT 'user_activity_logs' AS what,
+       CASE WHEN to_regclass('user_activity_logs') IS NULL THEN 'gone'
+            ELSE (xpath('/row/c/text()', query_to_xml('SELECT count(*) AS c FROM user_activity_logs', false, true, '')))[1]::text
+       END AS value;

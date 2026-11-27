@@ -15,7 +15,7 @@ from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from .models import (
-    User, UserGamificationAchievement, UserActivityLog, AchievementType,
+    User, UserGamificationAchievement, AchievementType,
     AchievementRarity
 )
 from .achievement_catalogue import (
@@ -575,51 +575,7 @@ class GamificationRepository:
         return (next_level * next_level) * 50
 
 
-class UserActivityRepository:
-    """Repository for user activity tracking and analytics"""
-    
-    def __init__(self, session: AsyncSession):
-        self.session = session
-    
-    async def log_activity(
-        self,
-        user_id: UUID,
-        activity_type: str,
-        activity_data: Optional[Dict[str, Any]] = None,
-        session_id: Optional[str] = None,
-        ip_address: Optional[str] = None,
-        user_agent: Optional[str] = None
-    ) -> UserActivityLog:
-        """Log user activity for analytics and engagement tracking"""
-        try:
-            activity_log = UserActivityLog(
-                user_id=user_id,
-                activity_type=activity_type,
-                activity_data=activity_data or {},
-                session_id=session_id,
-                ip_address=ip_address,
-                user_agent=user_agent
-            )
-            
-            self.session.add(activity_log)
-            await self.session.commit()
-            await self.session.refresh(activity_log)
-            
-            logger.debug(f"Logged activity {activity_type} for user {user_id}")
-            return activity_log
-            
-        except Exception as e:
-            await self.session.rollback()
-            logger.error(f"Error logging user activity: {str(e)}")
-            raise
-
-
 # Repository factory functions
 def get_gamification_repository(session: AsyncSession) -> GamificationRepository:
     """Get gamification repository instance"""
     return GamificationRepository(session)
-
-
-def get_user_activity_repository(session: AsyncSession) -> UserActivityRepository:
-    """Get user activity repository instance"""
-    return UserActivityRepository(session)

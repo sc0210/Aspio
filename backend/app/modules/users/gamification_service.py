@@ -18,13 +18,8 @@ from .schemas import (
     UserGamificationStats,
     AchievementResponse,
     AchievementProgressResponse,
-    UserActivityRequest,
-    UserActivityResponse,
 )
-from .gamification_repository import (
-    get_gamification_repository,
-    get_user_activity_repository,
-)
+from .gamification_repository import get_gamification_repository
 from .repositories import get_user_repository
 from .achievement_catalogue import get_definition
 from ...core.config import get_settings
@@ -449,53 +444,7 @@ class UserAnalyticsService:
 
     def __init__(self, session: AsyncSession):
         self.session = session
-        self.activity_repo = get_user_activity_repository(session)
         self.user_repo = get_user_repository(session)
-
-    async def log_user_activity(
-        self,
-        user_id: UUID,
-        activity_request: UserActivityRequest,
-        ip_address: Optional[str] = None,
-        user_agent: Optional[str] = None,
-    ) -> UserActivityResponse:
-        """
-        Log user activity for analytics and engagement tracking.
-
-        Args:
-            user_id: User's UUID
-            activity_request: Activity data to log
-            ip_address: Optional IP address
-            user_agent: Optional user agent string
-
-        Returns:
-            UserActivityResponse with logged activity data
-        """
-        try:
-            activity_log = await self.activity_repo.log_activity(
-                user_id=user_id,
-                activity_type=activity_request.activity_type,
-                activity_data=activity_request.activity_data,
-                session_id=activity_request.session_id,
-                ip_address=ip_address,
-                user_agent=user_agent,
-            )
-
-            return UserActivityResponse(
-                id=activity_log.id,
-                user_id=activity_log.user_id,
-                activity_type=activity_log.activity_type,
-                activity_data=activity_log.activity_data,
-                session_id=activity_log.session_id,
-                created_at=activity_log.created_at,
-            )
-
-        except Exception as e:
-            logger.error(f"Error logging user activity: {str(e)}")
-            raise HTTPException(
-                status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-                detail="Failed to log user activity",
-            )
 
     async def update_login_streak(self, user_id: UUID) -> Dict[str, Any]:
         """

@@ -963,7 +963,6 @@ class UserManagementService:
         _optional_tables = (
             "user_gamification_achievements",
             "user_gamification_profiles",
-            "user_activity_logs",
             "notifications",
             "notification_preferences",
             # Dropped by 2026_11_23_drop_unused_tables. Cleared while a database that
@@ -972,6 +971,8 @@ class UserManagementService:
             "user_data_exports",
             "user_security_logs",
             "user_preference_history",
+            # Dropped by 2026_11_28_drop_user_activity_logs.
+            "user_activity_logs",
         )
         for tbl in _optional_tables:
             sp = await self.session.begin_nested()

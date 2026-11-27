@@ -35,10 +35,8 @@ from app.modules.users.gamification_service import (
 from app.modules.users.models import (
     AchievementType,
     User,
-    UserActivityLog,
     UserGamificationAchievement,
 )
-from app.modules.users.schemas import UserActivityRequest
 
 pytestmark = [pytest.mark.asyncio, pytest.mark.database]
 
@@ -370,21 +368,6 @@ class TestStats:
 
 
 class TestAnalytics:
-    async def test_log_activity_round_trips(self, async_session, world):
-        out = await UserAnalyticsService(async_session).log_user_activity(
-            world.id,
-            UserActivityRequest(activity_type="portfolio_view", activity_data={"tab": "x"}, session_id="s1"),
-            ip_address="10.0.0.1",
-        )
-        assert out.activity_type == "portfolio_view"
-        assert out.session_id == "s1"
-        rows = (
-            await async_session.execute(
-                select(UserActivityLog).where(UserActivityLog.user_id == world.id)
-            )
-        ).scalars().all()
-        assert [(r.activity_type, r.ip_address) for r in rows] == [("portfolio_view", "10.0.0.1")]
-
     async def test_login_streak_first_visit_and_repeat(self, async_session, world):
         service = UserAnalyticsService(async_session)
         first = await service.update_login_streak(world.id)

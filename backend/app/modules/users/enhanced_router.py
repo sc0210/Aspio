@@ -19,7 +19,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from .schemas import (
     UserResponse, UserGamificationStats, AchievementResponse,
-    AchievementProgressResponse, UserActivityRequest,
+    AchievementProgressResponse,
     RegionalPreferencesUpdate
 )
 from .services import get_user_service
@@ -173,16 +173,6 @@ async def update_regional_preferences(
     
     # Use existing update method
     updated_user = await user_service.update_user_data(current_user.id, update_data)
-    
-    # Log regional preference update activity
-    analytics_service = get_user_analytics_service(session)
-    await analytics_service.log_user_activity(
-        current_user.id,
-        UserActivityRequest(
-            activity_type="regional_preferences_updated",
-            activity_data=preferences_update.model_dump(exclude_none=True)
-        )
-    )
     
     return ApiResponse.success_response(
         data=UserResponse.model_validate(updated_user),

@@ -303,27 +303,6 @@ class AchievementProgressResponse(BaseModel):
     tips: List[str] = Field(default_factory=list, description="Tips to achieve this")
 
 
-# ===== User Activity and Analytics Schemas =====
-
-class UserActivityRequest(BaseModel):
-    """Request schema for logging user activities"""
-    activity_type: str = Field(..., description="Type of activity")
-    activity_data: Optional[Dict[str, Any]] = Field(None, description="Additional activity data")
-    session_id: Optional[str] = Field(None, description="Session identifier")
-
-
-class UserActivityResponse(BaseModel):
-    """User activity response schema"""
-    model_config = ConfigDict(from_attributes=True)
-    
-    id: uuid.UUID
-    user_id: uuid.UUID
-    activity_type: str
-    activity_data: Optional[Dict[str, Any]] = None
-    session_id: Optional[str] = None
-    created_at: datetime
-
-
 # ===== Regional and Localization Schemas =====
 
 class RegionalPreferencesUpdate(BaseModel):
