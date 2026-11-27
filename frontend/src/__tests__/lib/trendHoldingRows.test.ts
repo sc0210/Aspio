@@ -52,6 +52,51 @@ describe('buildTrendHoldingRows', () => {
     expect(cash.avgCost).toBe(1);
   });
 
+  it('counts a symbol split across wallets or goals once', () => {
+    // The trend series is by symbol: each piece already carries 0050's figures.
+    const series = [
+      { topHoldings: [{ symbol: '0050', change: 0, value: 100_000 }] },
+      { topHoldings: [{ symbol: '0050', change: 4_000, value: 104_000 }] },
+      { topHoldings: [{ symbol: '0050', change: 6_000, value: 110_000 }] },
+    ];
+    const rows = buildTrendHoldingRows(
+      portfolio([
+        lot({ symbol: '0050', name: 'Yuanta 50', quantity: 600, totalValue: 66_000, totalCost: 60_000 }),
+        lot({ symbol: '0050', name: 'Yuanta 50', quantity: 400, totalValue: 44_000, totalCost: 40_000, goalId: 'g1' }),
+      ]),
+      series,
+    );
+    expect(rows).toHaveLength(1);
+    const [row] = rows;
+    expect([row.startValue, row.endValue, row.periodChange]).toEqual([100_000, 110_000, 10_000]);
+    expect(row.periodChangePct).toBeCloseTo(10);
+    expect([row.quantity, row.currentValue, row.lotCount]).toEqual([1_000, 110_000, 2]);
+  });
+
+  it('merges a security by symbol whatever each piece is called, and keeps Emergency apart', () => {
+    const series = [
+      { topHoldings: [{ symbol: '0050', change: 0, value: 100_000 }] },
+      { topHoldings: [{ symbol: '0050', change: 10_000, value: 110_000 }] },
+    ];
+    const rows = buildTrendHoldingRows(
+      portfolio([
+        lot({ symbol: '0050', name: 'Yuanta 50', quantity: 600, totalValue: 66_000 }),
+        lot({ symbol: '0050', name: '元大台灣50', quantity: 400, totalValue: 44_000, goalId: 'g1' }),
+        lot({ symbol: '0050', name: 'Yuanta 50', quantity: 100, totalValue: 11_000, walletType: 'emergency' }),
+      ]),
+      series,
+    );
+    expect(rows).toHaveLength(2);
+    const [held, reserve] = rows;
+    // The Portfolio pieces, goal included, are the series' 0050.
+    expect([held.quantity, held.startValue, held.endValue, held.periodChange]).toEqual([1_000, 100_000, 110_000, 10_000]);
+    // The series leaves the Emergency wallet out: no figures to borrow.
+    expect([reserve.quantity, reserve.startValue, reserve.endValue, reserve.periodChange]).toEqual([100, null, null, null]);
+    expect(reserve.isPartialPeriod).toBe(false);
+    expect([held.emergency, reserve.emergency]).toEqual([false, true]);
+    expect(held.id).not.toBe(reserve.id);
+  });
+
   it('weighs overdrawn cash as 0 instead of shrinking the total', () => {
     const rows = buildTrendHoldingRows(
       portfolio([
