@@ -744,6 +744,8 @@ async def update_holding(
                             holding.id, previous_purchase_day, new_day, len(legs),
                         )
 
+        # Quantity, cost or price may have changed: the stored totals follow.
+        await get_portfolio_service(session).refresh_totals(holding.portfolio_id, current_user.id)
         await session.commit()
         await session.refresh(holding)
 
@@ -1071,6 +1073,8 @@ async def remove_holding(
                 status_code=status.HTTP_404_NOT_FOUND, detail="Failed to delete holding"
             )
 
+        # The deleted lot leaves the stored totals now, not at the next price refresh.
+        await get_portfolio_service(session).refresh_totals(portfolio_id, current_user.id)
         # Explicitly commit the transaction
         await session.commit()
 
@@ -1270,6 +1274,9 @@ async def sell_holding(
                     f"Sold {quantity} {holding.symbol}",
                 )
 
+        # The sold part leaves the stored totals now: they counted it beside the
+        # Life Wallet proceeds until the next price refresh.
+        await get_portfolio_service(session).refresh_totals(holding.portfolio_id, current_user.id)
         # Commit all changes
         await session.commit()
         await session.refresh(transaction)

@@ -324,14 +324,7 @@ class PortfolioService:
                     quote.market, quote.quote_time
                 )
 
-        # The stored totals are a cache the next price refresh rebuilds (sells and
-        # deletes don't touch them either), so a failure here must not cost the
-        # trade: the savepoint undoes only the totals.
-        try:
-            async with self.session.begin_nested():
-                await self._update_portfolio_totals(portfolio.id, user_id)
-        except Exception:
-            logger.warning("Holding saved; portfolio totals catch up on the next refresh")
+        await self.refresh_totals(portfolio.id, user_id)
 
         # Commit the transaction to ensure data is persisted
         await self.session.commit()
@@ -926,6 +919,21 @@ class PortfolioService:
             # exception. A caller *outside* a FastAPI request (a script, a
             # background job) gets neither and must own the rollback itself.
             raise
+
+    async def refresh_totals(self, portfolio_id: UUID, user_id: UUID) -> None:
+        """Recompute the stored totals after a buy, edit, sale or delete, best effort.
+
+        The totals are a cache the next price refresh rebuilds, so a failure here
+        must not cost the trade: the savepoint undoes only the totals. The flush
+        comes first (app sessions don't autoflush) and outside it, since a failure
+        there is the trade's own.
+        """
+        await self.session.flush()
+        try:
+            async with self.session.begin_nested():
+                await self._update_portfolio_totals(portfolio_id, user_id)
+        except Exception:
+            logger.warning("Portfolio totals catch up on the next refresh", exc_info=True)
 
     async def _update_portfolio_totals(
         self, portfolio_id: UUID, user_id: UUID = None

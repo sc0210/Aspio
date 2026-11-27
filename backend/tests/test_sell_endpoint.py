@@ -426,3 +426,44 @@ class TestAtomicity:
             )
         ).scalar_one()
         assert income == 0
+
+
+class TestStoredTotalsFollowTheTrade:
+    """Portfolio.total_value/total_cost feed the headline, rebalancing, admin stats
+    and the LINE summary. Sell and delete left them counting the gone lots until
+    the next price refresh, beside the Life Wallet proceeds of the sale."""
+
+    async def test_a_sale_takes_the_sold_part_out(self, async_session, test_user):
+        portfolio, (lot,) = await _seed(async_session, test_user.id, [("10", "100", 1)])
+
+        await _sell(async_session, test_user, lot.id, quantity=Decimal("4"), price=Decimal("150"))
+
+        await async_session.refresh(portfolio)
+        assert (portfolio.total_value, portfolio.total_cost) == (Decimal("900"), Decimal("600"))
+
+    async def test_a_deleted_lot_leaves_the_totals(self, async_session, test_user):
+        from app.modules.portfolio.routers.holdings import remove_holding
+
+        portfolio, (old, new) = await _seed(async_session, test_user.id, [("10", "100", 1), ("5", "120", 2)])
+
+        # A stub user: in a request the user comes from its own session, so the
+        # handler's expire_all() after the commit doesn't reach it.
+        from types import SimpleNamespace
+        await remove_holding(holding_id=new.id, current_user=SimpleNamespace(id=test_user.id),
+                             session=async_session)
+
+        await async_session.refresh(portfolio)
+        assert (portfolio.total_value, portfolio.total_cost) == (Decimal("1500"), Decimal("1000"))
+
+    async def test_an_edited_quantity_moves_the_totals(self, async_session, test_user):
+        from types import SimpleNamespace
+        from app.modules.portfolio.routers.holdings import update_holding
+        from app.modules.portfolio.schemas import HoldingUpdate
+
+        portfolio, (lot,) = await _seed(async_session, test_user.id, [("10", "100", 1)])
+
+        await update_holding(holding_id=lot.id, holding_updates=HoldingUpdate(quantity=Decimal("12")),
+                             current_user=SimpleNamespace(id=test_user.id), session=async_session)
+
+        await async_session.refresh(portfolio)
+        assert (portfolio.total_value, portfolio.total_cost) == (Decimal("1800"), Decimal("1200"))
