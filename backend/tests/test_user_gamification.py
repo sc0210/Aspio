@@ -14,11 +14,11 @@ from fastapi.testclient import TestClient
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.modules.users.models import (
-    User, UserGamificationAchievement, UserActivityLog, AchievementType, 
+    User, UserGamificationAchievement, AchievementType, 
     AchievementRarity, UserStatus, UserRole
 )
 from app.modules.users.schemas import (
-    UserGamificationStats, AchievementResponse, UserActivityRequest,
+    UserGamificationStats, AchievementResponse,
     RegionalPreferencesUpdate
 )
 from app.modules.users.gamification_service import (
@@ -276,7 +276,6 @@ class TestUserAnalyticsService:
     def analytics_service(self, mock_session):
         """Create analytics service with mock session"""
         service = UserAnalyticsService(mock_session)
-        service.activity_repo = AsyncMock()
         # spec= matters: an unspecced AsyncMock happily accepts calls to methods
         # the real repository doesn't have, which is how a call to a
         # non-existent `update_user_data` shipped while these tests stayed green.
@@ -296,34 +295,6 @@ class TestUserAnalyticsService:
             status=UserStatus.ACTIVE,
             role=UserRole.USER
         )
-    
-    @pytest.mark.asyncio
-    async def test_log_user_activity(self, analytics_service, sample_user):
-        """Test logging user activity"""
-        mock_activity_log = UserActivityLog(
-            id=uuid4(),
-            user_id=sample_user.id,
-            activity_type="transaction_created",
-            activity_data={"amount": 100},
-            session_id="session123",
-            created_at=datetime.now(timezone.utc)
-        )
-        
-        analytics_service.activity_repo.log_activity.return_value = mock_activity_log
-        
-        activity_request = UserActivityRequest(
-            activity_type="transaction_created",
-            activity_data={"amount": 100},
-            session_id="session123"
-        )
-        
-        response = await analytics_service.log_user_activity(
-            sample_user.id, activity_request, "127.0.0.1", "test-agent"
-        )
-        
-        assert response.activity_type == "transaction_created"
-        assert response.user_id == sample_user.id
-        analytics_service.activity_repo.log_activity.assert_called_once()
     
     @pytest.mark.asyncio
     async def test_update_login_streak_consecutive(self, analytics_service, sample_user):
@@ -488,23 +459,18 @@ class TestEnhancedUserAPI:
         mock_user_response = MagicMock(spec=_UserResponse)
 
         with patch('app.modules.users.enhanced_router.get_user_service') as mock_user_service_factory:
-            with patch('app.modules.users.enhanced_router.get_user_analytics_service') as mock_analytics_factory:
-                with patch('app.modules.users.enhanced_router.UserResponse') as mock_ur_cls:
-                    mock_svc = MagicMock()
-                    mock_svc.update_user_data = AsyncMock(return_value=mock_current_user)
-                    mock_user_service_factory.return_value = mock_svc
-                    mock_ur_cls.model_validate.return_value = mock_user_response
+            with patch('app.modules.users.enhanced_router.UserResponse') as mock_ur_cls:
+                mock_svc = MagicMock()
+                mock_svc.update_user_data = AsyncMock(return_value=mock_current_user)
+                mock_user_service_factory.return_value = mock_svc
+                mock_ur_cls.model_validate.return_value = mock_user_response
 
-                    mock_analytics_svc = MagicMock()
-                    mock_analytics_svc.log_user_activity = AsyncMock()
-                    mock_analytics_factory.return_value = mock_analytics_svc
+                response = client.put(
+                    "/api/v1/users/me/regional-preferences",
+                    json=preferences_update,
+                )
 
-                    response = client.put(
-                        "/api/v1/users/me/regional-preferences",
-                        json=preferences_update,
-                    )
-
-                    assert response.status_code == 200
+                assert response.status_code == 200
 
 class TestRegionalFeatures:
     """Test regional features for Asian markets"""

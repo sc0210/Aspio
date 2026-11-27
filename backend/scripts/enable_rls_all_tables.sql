@@ -26,7 +26,6 @@ ALTER TABLE public.dividends                   ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.notifications               ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.notification_preferences    ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.user_gamification_achievements ENABLE ROW LEVEL SECURITY;
-ALTER TABLE public.user_activity_logs          ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.debt_accounts               ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.peer_connections            ENABLE ROW LEVEL SECURITY;
 
