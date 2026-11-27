@@ -994,6 +994,22 @@ class TestFanOutWritesOnlyWhatIsMissing:
         assert totals.await_count == 1 and stats["portfolios_synced"] == 1
 
     @pytest.mark.asyncio
+    async def test_a_failed_totals_sync_is_counted_as_failed(self, async_session):
+        from app.modules.portfolio.repositories import PortfolioRepository
+        await _seed_lots(async_session, [dict(symbol="0050", price="100")])
+        service = PriceUpdateService(async_session)
+        await service.store_quote("0050", Decimal("123"), None, datetime.now(ZoneInfo("UTC")),
+                                  market="TW", currency="TWD")
+        await async_session.commit()
+
+        with patch.object(service.market_hours_manager, "should_update_price", return_value=False), \
+             patch.object(PortfolioRepository, "update", AsyncMock(side_effect=RuntimeError("db down"))):
+            stats = await service.update_all_symbols_prices()
+
+        # It read "synced" while the error was swallowed inside the update.
+        assert (stats["portfolios_synced"], stats["portfolios_failed"]) == (0, 1)
+
+    @pytest.mark.asyncio
     async def test_a_run_where_every_lot_has_the_quote_writes_and_syncs_nothing(self, async_session):
         now = datetime.now(ZoneInfo("UTC"))
         from app.modules.portfolio.services import PortfolioService

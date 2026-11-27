@@ -324,11 +324,9 @@ class PortfolioService:
                     quote.market, quote.quote_time
                 )
 
-        # Update portfolio totals
-        await self._update_portfolio_totals(portfolio.id, user_id)
-
         # Commit the transaction to ensure data is persisted
         await self.session.commit()
+        await self.refresh_totals(portfolio.id, user_id)
         logger.info(
             f"Committed holding {holding_data.symbol} to database",
             extra={"user_id": str(user_id), "symbol": holding_data.symbol},
@@ -921,6 +919,20 @@ class PortfolioService:
             # background job) gets neither and must own the rollback itself.
             raise
 
+    async def refresh_totals(self, portfolio_id: UUID, user_id: UUID) -> None:
+        """Recompute and commit the stored totals once a buy, edit, sale or delete
+        has committed. Best effort: they are a cache the next price refresh
+        rebuilds, so a failure costs only the totals (the savepoint keeps the
+        session usable). Running after the trade's commit means a slow rate
+        lookup never holds the trade's position locks.
+        """
+        try:
+            async with self.session.begin_nested():
+                await self._update_portfolio_totals(portfolio_id, user_id)
+            await self.session.commit()
+        except Exception:
+            logger.warning("Portfolio totals catch up on the next refresh", exc_info=True)
+
     async def _update_portfolio_totals(
         self, portfolio_id: UUID, user_id: UUID = None
     ) -> None:
@@ -929,6 +941,18 @@ class PortfolioService:
             logger.info(
                 "Updating portfolio totals with currency conversion",
                 extra={"portfolio_id": str(portfolio_id), "operation": "update_totals"},
+            )
+            # Lock the portfolio row before reading its holdings: two refreshes
+            # (two sales, or a sale and the price job) then run one after the
+            # other, and the later one reads what the earlier one committed
+            # instead of writing totals from an older snapshot.
+            from sqlalchemy import select as _select
+            from .models import Portfolio as _Portfolio
+            # NO KEY UPDATE: refreshes still wait for each other, but a buy or
+            # sale inserting a row that references this portfolio does not wait.
+            await self.session.execute(
+                _select(_Portfolio.id).where(_Portfolio.id == portfolio_id)
+                .with_for_update(key_share=True)
             )
             # Get portfolio using repository directly (not the service method)
             portfolio = await self.portfolio_repo.get_by_id(portfolio_id, user_id)
@@ -943,7 +967,7 @@ class PortfolioService:
 
             portfolio_currency = portfolio.currency
             holdings, _ = await self.holding_repo.get_portfolio_holdings(
-                portfolio_id, user_id, limit=None
+                portfolio_id, user_id, limit=None, fresh=True
             )
             logger.debug(
                 f"Processing portfolio holdings",
@@ -1058,6 +1082,9 @@ class PortfolioService:
                 },
                 exc_info=True,
             )
+            # Raised, not swallowed: the price job counted a failed portfolio as
+            # synced, and the refresh route stamped totals it never wrote.
+            raise
 
     async def _fetch_holdings_for_export(
         self,

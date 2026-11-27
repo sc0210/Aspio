@@ -745,6 +745,9 @@ async def update_holding(
                         )
 
         await session.commit()
+        # Only a value change moves the stored totals; a note or name edit doesn't.
+        if quantity_changed or cost_changed or holding_updates.current_price is not None:
+            await get_portfolio_service(session).refresh_totals(holding.portfolio_id, current_user.id)
         await session.refresh(holding)
 
         return holding
@@ -1073,6 +1076,8 @@ async def remove_holding(
 
         # Explicitly commit the transaction
         await session.commit()
+        # The deleted lot leaves the stored totals now, not at the next price refresh.
+        await get_portfolio_service(session).refresh_totals(portfolio_id, current_user.id)
 
         # Expire all cached objects to ensure fresh data on next fetch
         session.expire_all()
@@ -1272,6 +1277,9 @@ async def sell_holding(
 
         # Commit all changes
         await session.commit()
+        # The sold part leaves the stored totals now: they counted it beside the
+        # Life Wallet proceeds until the next price refresh.
+        await get_portfolio_service(session).refresh_totals(holding.portfolio_id, current_user.id)
         await session.refresh(transaction)
         await session.refresh(holding)
 

@@ -88,7 +88,7 @@ class TestUpdateTotals:
         assert pf.total_value == D("9600")
         fx.get_exchange_rate.assert_awaited_once()
 
-    @pytest.mark.xfail(strict=True, raises=AssertionError, reason="no rate anywhere falls back to 1.0, so 100 USD is stored as NT$100")
+    @pytest.mark.xfail(strict=True, raises=AssertionError, reason="no rate anywhere falls back to 1.0, so 100 USD is stored as NT$100 (as the rest of the app treats a missing rate)")
     async def test_no_rate_at_all_does_not_treat_usd_as_twd(self, async_session, test_user, pf):
         async_session.add(make_holding(pf, test_user, "VT", value="100", cost="80", currency="USD"))
         await async_session.commit()
@@ -96,6 +96,51 @@ class TestUpdateTotals:
             await get_portfolio_service(async_session)._update_portfolio_totals(pf.id, test_user.id)
         await async_session.refresh(pf)
         assert pf.total_value != D("100")
+
+    async def test_a_failed_update_is_raised_not_swallowed(self, async_session, test_user, pf):
+        # Swallowed, the price job counted the portfolio as synced.
+        async_session.add(make_holding(pf, test_user, "0050", value="1500", cost="1000"))
+        await async_session.commit()
+        svc = get_portfolio_service(async_session)
+        with patch.object(svc.portfolio_repo, "update", AsyncMock(side_effect=RuntimeError("db down"))):
+            with pytest.raises(RuntimeError, match="db down"):
+                await svc._update_portfolio_totals(pf.id, test_user.id)
+
+    async def test_a_buy_is_saved_when_the_totals_update_fails(self, async_session, test_user, pf, monkeypatch):
+        # The totals are a cache the next refresh rebuilds; a database error while
+        # writing them must cost only the totals, not the trade.
+        from sqlalchemy import select, text
+        from app.modules.portfolio.schemas import HoldingCreate
+        from app.modules.portfolio.services import PortfolioService
+
+        async def broken(self, portfolio_id, user_id=None):
+            await self.session.execute(text("SELECT * FROM no_such_table"))
+
+        monkeypatch.setattr(PortfolioService, "_update_portfolio_totals", broken)
+        uid = test_user.id  # the rollback below expires test_user
+        await get_portfolio_service(async_session).add_holding(uid, HoldingCreate(
+            symbol="0050", name="0050", type="etf", exchange="TWSE", currency="TWD",
+            quantity=D("10"), average_cost=D("100"), purchase_date=datetime.now(timezone.utc)))
+
+        await async_session.rollback()  # only what add_holding committed is left
+        saved = (await async_session.execute(
+            select(PortfolioHolding.symbol).where(PortfolioHolding.user_id == uid))).scalars().all()
+        assert saved == ["0050"]
+
+    async def test_totals_read_lots_another_request_changed(self, async_session, test_user, pf):
+        # Sessions don't expire on commit: a lot loaded here kept its old value, so
+        # a refresh after another request's sale stored totals for the unsold lot.
+        from sqlalchemy import text
+        lot = make_holding(pf, test_user, "0050", value="1000", cost="800")
+        async_session.add(lot)
+        await async_session.commit()
+        assert lot.total_value == D("1000")  # loaded in this session
+        await async_session.execute(text("UPDATE portfolio_holdings SET total_value = 400, total_cost = 320"))
+        await async_session.commit()  # as another request's sale would leave it
+
+        await get_portfolio_service(async_session)._update_portfolio_totals(pf.id, test_user.id)
+        await async_session.refresh(pf)
+        assert (pf.total_value, pf.total_cost) == (D("400"), D("320"))
 
     async def test_totals_count_every_lot(self, async_session, test_user, pf):
         # The read stopped at 1,000 lots: monthly buys into 5 ETFs pass that in
