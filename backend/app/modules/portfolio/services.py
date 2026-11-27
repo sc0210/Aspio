@@ -1002,16 +1002,18 @@ class PortfolioService:
                                     },
                                 )
                             else:
-                                # Last resort fallback
+                                # Keep the last totals: a 1.0 fallback stored US$100
+                                # as NT$100 in the headline value, rebalancing and the
+                                # LINE summary. The next refresh with a rate fixes it.
                                 logger.warning(
-                                    f"No exchange rate available, using 1.0",
+                                    "No exchange rate available; keeping the last totals",
                                     extra={
                                         "from_currency": holding.currency,
                                         "to_currency": portfolio_currency,
                                         "symbol": holding.symbol,
                                     },
                                 )
-                                conversion_rate = Decimal("1.0")
+                                return
                         rates[holding.currency] = conversion_rate
 
                     converted_value = holding.total_value * conversion_rate
@@ -1058,6 +1060,10 @@ class PortfolioService:
                 },
                 exc_info=True,
             )
+            # Raised, not swallowed: add_holding commits after this, so the trade
+            # rolls back with an error instead of saving beside stale totals, and
+            # the price job's failure count and rollback finally see it.
+            raise
 
     async def _fetch_holdings_for_export(
         self,

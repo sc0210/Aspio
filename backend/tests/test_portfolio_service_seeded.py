@@ -88,14 +88,25 @@ class TestUpdateTotals:
         assert pf.total_value == D("9600")
         fx.get_exchange_rate.assert_awaited_once()
 
-    @pytest.mark.xfail(strict=True, raises=AssertionError, reason="no rate anywhere falls back to 1.0, so 100 USD is stored as NT$100")
-    async def test_no_rate_at_all_does_not_treat_usd_as_twd(self, async_session, test_user, pf):
+    async def test_no_rate_at_all_keeps_the_last_totals(self, async_session, test_user, pf):
+        # A 1.0 fallback stored US$100 as NT$100: keep what the last rate gave instead.
+        pf.total_value, pf.total_cost = D("3150"), D("2520")
         async_session.add(make_holding(pf, test_user, "VT", value="100", cost="80", currency="USD"))
         await async_session.commit()
         with patch("app.utils.exchange_rate_service.get_exchange_rate_service", return_value=fake_fx(None)):
             await get_portfolio_service(async_session)._update_portfolio_totals(pf.id, test_user.id)
         await async_session.refresh(pf)
-        assert pf.total_value != D("100")
+        assert (pf.total_value, pf.total_cost) == (D("3150"), D("2520"))
+
+    async def test_a_failed_update_is_raised_not_swallowed(self, async_session, test_user, pf):
+        # Swallowed, add_holding committed the trade beside stale totals and the
+        # price job counted the portfolio as synced.
+        async_session.add(make_holding(pf, test_user, "0050", value="1500", cost="1000"))
+        await async_session.commit()
+        svc = get_portfolio_service(async_session)
+        with patch.object(svc.portfolio_repo, "update", AsyncMock(side_effect=RuntimeError("db down"))):
+            with pytest.raises(RuntimeError, match="db down"):
+                await svc._update_portfolio_totals(pf.id, test_user.id)
 
     async def test_totals_count_every_lot(self, async_session, test_user, pf):
         # The read stopped at 1,000 lots: monthly buys into 5 ETFs pass that in
