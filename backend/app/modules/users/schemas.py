@@ -284,12 +284,6 @@ class UserGamificationStats(BaseModel):
     achievements_by_rarity: Dict[str, int] = Field(default_factory=dict)
     streak_info: UserStreakInfo
     recent_achievements: List[AchievementResponse] = Field(default_factory=list)
-    
-    # Regional gamification metrics
-    digital_adoption_score: int = Field(0, description="Score for digital payment adoption")
-    savings_discipline_score: int = Field(0, description="Score for consistent savings")
-    investment_knowledge_score: int = Field(0, description="Score for investment education")
-    community_engagement_score: int = Field(0, description="Score for community features")
 
 
 class AchievementProgressResponse(BaseModel):

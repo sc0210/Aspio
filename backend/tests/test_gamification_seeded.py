@@ -24,10 +24,7 @@ from app.modules.transactions.models import (
     TransactionType,
     TransactionWalletType,
 )
-from app.modules.users.gamification_repository import (
-    GamificationRepository,
-    UserActivityRepository,
-)
+from app.modules.users.gamification_repository import GamificationRepository
 from app.modules.users.gamification_service import (
     GamificationService,
     UserAnalyticsService,
@@ -36,6 +33,7 @@ from app.modules.users.models import (
     AchievementRarity,
     AchievementType,
     User,
+    UserActivityLog,
     UserGamificationAchievement,
 )
 from app.modules.users.schemas import UserActivityRequest
@@ -254,12 +252,9 @@ class TestAwarding:
 
 
 class TestStats:
-    async def test_stats_summarise_awards_and_regional_scores(self, async_session, world):
+    async def test_stats_summarise_awards(self, async_session, world):
         service = GamificationService(async_session)
         await service.trigger_achievement_check(world.id, "goal_created")
-        activity = UserActivityRepository(async_session)
-        for kind in ["qr_payment", "qr_payment", "savings_deposit", "portfolio_view", "referral_sent", "other"]:
-            await activity.log_activity(world.id, kind)
 
         stats = await service.get_user_gamification_stats(world.id)
 
@@ -267,10 +262,14 @@ class TestStats:
         assert stats.achievements_by_rarity == {"common": 1}
         assert stats.recent_achievements[0].achievement_type == A.FIRST_GOAL.value
         assert stats.experience_to_next_level == 200 - stats.experience_points
-        assert stats.digital_adoption_score == 10
-        assert stats.savings_discipline_score == 3
-        assert stats.investment_knowledge_score == 2
-        assert stats.community_engagement_score == 4
+        # The four always-zero "regional scores" were removed from the payload.
+        removed = {
+            "digital_adoption_score",
+            "savings_discipline_score",
+            "investment_knowledge_score",
+            "community_engagement_score",
+        }
+        assert removed.isdisjoint(stats.model_dump())
 
     async def test_stats_for_missing_user_is_404(self, async_session, world):
         with pytest.raises(HTTPException) as exc:
@@ -286,16 +285,6 @@ class TestStats:
         locked = [p.progress_percentage for p in progress if not p.is_unlocked]
         assert locked == sorted(locked, reverse=True)
 
-    async def test_regional_scores_fall_back_to_zero_on_error(self, async_session, world, monkeypatch):
-        service = GamificationService(async_session)
-
-        async def boom(*_a, **_kw):
-            raise RuntimeError("db down")
-
-        monkeypatch.setattr(service.activity_repo, "get_user_activities", boom)
-        scores = await service._calculate_regional_scores(world.id)
-        assert set(scores.values()) == {0}
-
 
 class TestAnalytics:
     async def test_log_activity_round_trips(self, async_session, world):
@@ -306,10 +295,12 @@ class TestAnalytics:
         )
         assert out.activity_type == "portfolio_view"
         assert out.session_id == "s1"
-        rows = await UserActivityRepository(async_session).get_user_activities(
-            world.id, activity_types=["portfolio_view"]
-        )
-        assert [r.ip_address for r in rows] == ["10.0.0.1"]
+        rows = (
+            await async_session.execute(
+                select(UserActivityLog).where(UserActivityLog.user_id == world.id)
+            )
+        ).scalars().all()
+        assert [(r.activity_type, r.ip_address) for r in rows] == [("portfolio_view", "10.0.0.1")]
 
     async def test_login_streak_first_visit_and_repeat(self, async_session, world):
         service = UserAnalyticsService(async_session)

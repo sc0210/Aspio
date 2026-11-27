@@ -165,7 +165,6 @@ class TestGamificationService:
         service = GamificationService(mock_session)
         service.gamification_repo = AsyncMock(spec=GamificationRepository)
         service.user_repo = AsyncMock(spec=UserRepository)
-        service.activity_repo = AsyncMock()
         service.security_repo = AsyncMock()
         return service
     
@@ -191,12 +190,6 @@ class TestGamificationService:
         # Mock repository responses
         gamification_service.user_repo.get_user_by_id.return_value = sample_user
         gamification_service.gamification_repo.get_user_achievements.return_value = []
-        gamification_service._calculate_regional_scores = AsyncMock(return_value={
-            "digital_adoption": 75,
-            "savings_discipline": 60,
-            "investment_knowledge": 40,
-            "community_engagement": 30
-        })
         
         stats = await gamification_service.get_user_gamification_stats(sample_user.id)
         
@@ -204,7 +197,6 @@ class TestGamificationService:
         assert stats.user_id == sample_user.id
         assert stats.level == 2
         assert stats.experience_points == 250
-        assert stats.digital_adoption_score == 75
         # streak_info may be a dict or UserStreakInfo object depending on implementation
         streak_info = stats.streak_info
         if hasattr(streak_info, 'current_login_streak'):
@@ -469,10 +461,6 @@ class TestEnhancedUserAPI:
                     "streak_bonus_earned": 70,
                 },
                 recent_achievements=[],
-                digital_adoption_score=80,
-                savings_discipline_score=65,
-                investment_knowledge_score=45,
-                community_engagement_score=35,
             ))
             mock_service_factory.return_value = mock_svc
 
@@ -483,7 +471,6 @@ class TestEnhancedUserAPI:
             assert data["success"] is True
             assert data["data"]["level"] == 3
             assert data["data"]["experience_points"] == 500
-            assert data["data"]["digital_adoption_score"] == 80
 
     def test_update_regional_preferences_endpoint(self, client, mock_current_user):
         """Test regional preferences update API endpoint"""

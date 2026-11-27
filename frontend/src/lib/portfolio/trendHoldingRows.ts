@@ -9,6 +9,8 @@ import { aggregateHoldingsBySymbol } from '@/utils/portfolio-aggregation';
 import { toTWD } from '@/utils/formatters';
 
 export interface HoldingRow {
+  /** Unique per row (its merge key): one security can have two rows. */
+  id: string;
   symbol: string;
   name: string;
   type: string;
@@ -26,6 +28,8 @@ export interface HoldingRow {
   totalCost: number;
   lotCount: number;
   sparkline: number[];
+  /** A security's Emergency-wallet piece (outside the series); never set on cash. */
+  emergency: boolean;
 }
 
 /** The part of a trend point this table reads. */
@@ -74,11 +78,23 @@ export function buildTrendHoldingRows(
   // First pass: aggregate by symbol+walletType (groups individual lots)
   const aggregated = aggregateHoldingsBySymbol(portfolio.holdings);
 
+  // The series covers the Portfolio wallet (goal lots included) and no cash, so
+  // a symbol's figures belong to its Portfolio piece only.
+  const isCash = (h: { type?: string }) => (h.type || '').toLowerCase() === 'cash';
+  const inSeries = (h: { type?: string; walletType?: string }) =>
+    !isCash(h) && h.walletType !== 'emergency';
+  // Cash accounts merge by name across wallets; a security's pieces (lots,
+  // goals, whatever each was named) merge by symbol within its wallet, so one
+  // symbol never shows its series figures twice.
+  const mergeKey = (h: { symbol: string; name: string; type?: string; walletType?: string }) =>
+    isCash(h) ? `${h.symbol}__${h.name}` : `${h.symbol}__${h.walletType === 'emergency' ? 'emergency' : 'portfolio'}`;
+
   // First pass → HoldingRow
-  const firstPassRows: HoldingRow[] = aggregated.map((h) => {
-    const sv = startHoldings[h.symbol];
-    const ev = endHoldings[h.symbol];
-    const cumChange = cumulativeChange[h.symbol]; // sum of daily P&L — undefined if no daily data at all
+  const firstPassRows: Array<{ key: string; row: HoldingRow }> = aggregated.map((h) => {
+    const seriesOf = <T,>(m: Record<string, T>) => (inSeries(h) ? m[h.symbol] : undefined);
+    const sv = seriesOf(startHoldings);
+    const ev = seriesOf(endHoldings);
+    const cumChange = seriesOf(cumulativeChange); // sum of daily P&L — undefined if no daily data at all
 
     const startValue = sv !== undefined ? sv : null;
     const endValue = ev !== undefined ? ev : null;
@@ -107,7 +123,9 @@ export function buildTrendHoldingRows(
       periodChangePct = (periodChange / startValue) * 100;
     }
 
-    return {
+    const key = mergeKey(h);
+    const row: HoldingRow = {
+      id: key,
       symbol: h.symbol,
       name: h.name,
       type: h.type,
@@ -127,14 +145,14 @@ export function buildTrendHoldingRows(
       totalCost: h.totalCost ?? h.quantity * h.averageCost,
       lotCount: (h.metadata?.lotCount as number) ?? 1,
       sparkline: h.sparklineData ?? [],
+      emergency: !isCash(h) && h.walletType === 'emergency',
     };
+    return { key, row };
   });
 
-  // Second pass: merge rows that share the same symbol+name
-  // (handles same-named cash accounts spread across multiple wallet types)
+  // Second pass: merge the pieces that share a key (see mergeKey).
   const nameMap = new Map<string, HoldingRow>();
-  for (const row of firstPassRows) {
-    const key = `${row.symbol}__${row.name}`;
+  for (const { key, row } of firstPassRows) {
     const existing = nameMap.get(key);
     if (!existing) {
       nameMap.set(key, { ...row });
@@ -142,31 +160,15 @@ export function buildTrendHoldingRows(
       const combinedQty = existing.quantity + row.quantity;
       const combinedCost = existing.totalCost + row.totalCost;
       const combinedValue = existing.currentValue + row.currentValue;
-      const combinedStart =
-        existing.startValue !== null || row.startValue !== null
-          ? (existing.startValue ?? 0) + (row.startValue ?? 0)
-          : null;
-      const combinedEnd =
-        existing.endValue !== null || row.endValue !== null
-          ? (existing.endValue ?? 0) + (row.endValue ?? 0)
-          : null;
-      const pChange = combinedStart !== null && combinedEnd !== null ? combinedEnd - combinedStart : null;
-      const pChangePct =
-        combinedStart !== null && pChange !== null && combinedStart > 0
-          ? (pChange / combinedStart) * 100
-          : null;
+      // Start, end and change come off the trend series by symbol, so every
+      // piece of a key already carries the same figures: keep them once.
+      // Adding them counted a symbol split across lots or goals twice.
       nameMap.set(key, {
         ...existing,
         quantity: combinedQty,
         avgCost: combinedQty > 0 ? combinedCost / combinedQty : 0,
         totalCost: combinedCost,
         currentValue: combinedValue,
-        startValue: combinedStart,
-        endValue: combinedEnd,
-        periodChange: pChange,
-        periodChangePct: pChangePct,
-        // partial if either constituent row is partial
-        isPartialPeriod: existing.isPartialPeriod || row.isPartialPeriod,
         lotCount: existing.lotCount + row.lotCount,
       });
     }

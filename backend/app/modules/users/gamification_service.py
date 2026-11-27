@@ -6,7 +6,7 @@ analytics, and engagement features with comprehensive Asian market support.
 """
 
 import logging
-from datetime import datetime, timedelta, timezone
+from datetime import datetime, timezone
 from typing import Optional, Dict, Any, List, Tuple
 from uuid import UUID
 
@@ -84,7 +84,6 @@ class GamificationService:
         self.session = session
         self.gamification_repo = get_gamification_repository(session)
         self.user_repo = get_user_repository(session)
-        self.activity_repo = get_user_activity_repository(session)
 
     async def get_user_gamification_stats(self, user_id: UUID) -> UserGamificationStats:
         """
@@ -142,9 +141,6 @@ class GamificationService:
             current_level_xp = self._calculate_xp_for_level(current_level)
             xp_to_next = max(0, next_level_xp - user.experience_points)
 
-            # Calculate regional scores (placeholder implementation)
-            regional_scores = await self._calculate_regional_scores(user_id)
-
             return UserGamificationStats(
                 user_id=user_id,
                 level=user.level,
@@ -160,10 +156,6 @@ class GamificationService:
                     * 10,  # 10 points per day
                 },
                 recent_achievements=achievement_responses,
-                digital_adoption_score=regional_scores["digital_adoption"],
-                savings_discipline_score=regional_scores["savings_discipline"],
-                investment_knowledge_score=regional_scores["investment_knowledge"],
-                community_engagement_score=regional_scores["community_engagement"],
             )
 
         except HTTPException:
@@ -407,67 +399,6 @@ class GamificationService:
             "icon": definition.icon,
             "category": definition.category,
         }
-
-    async def _calculate_regional_scores(self, user_id: UUID) -> Dict[str, int]:
-        """Calculate regional gamification scores for Asian markets"""
-        try:
-            # Get user activities to calculate scores
-            activities = await self.activity_repo.get_user_activities(
-                user_id,
-                start_date=datetime.now(timezone.utc) - timedelta(days=30),
-                limit=1000,
-            )
-
-            # Digital adoption score (based on QR payments, digital wallet usage)
-            digital_activities = [
-                act
-                for act in activities
-                if act.activity_type
-                in ["qr_payment", "digital_wallet_transaction", "mobile_banking"]
-            ]
-            digital_adoption = min(100, len(digital_activities) * 5)
-
-            # Savings discipline score (based on consistent savings deposits)
-            savings_activities = [
-                act
-                for act in activities
-                if act.activity_type in ["savings_deposit", "investment_contribution"]
-            ]
-            savings_discipline = min(100, len(savings_activities) * 3)
-
-            # Investment knowledge score (based on portfolio activities, educational content)
-            investment_activities = [
-                act
-                for act in activities
-                if act.activity_type
-                in ["portfolio_view", "investment_research", "market_analysis"]
-            ]
-            investment_knowledge = min(100, len(investment_activities) * 2)
-
-            # Community engagement score (based on referrals, social features)
-            community_activities = [
-                act
-                for act in activities
-                if act.activity_type
-                in ["referral_sent", "achievement_shared", "community_interaction"]
-            ]
-            community_engagement = min(100, len(community_activities) * 4)
-
-            return {
-                "digital_adoption": digital_adoption,
-                "savings_discipline": savings_discipline,
-                "investment_knowledge": investment_knowledge,
-                "community_engagement": community_engagement,
-            }
-
-        except Exception as e:
-            logger.error(f"Error calculating regional scores: {str(e)}")
-            return {
-                "digital_adoption": 0,
-                "savings_discipline": 0,
-                "investment_knowledge": 0,
-                "community_engagement": 0,
-            }
 
     def _calculate_xp_for_level(self, level: int) -> int:
         """Calculate total XP required for a given level"""
