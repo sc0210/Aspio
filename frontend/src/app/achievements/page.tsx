@@ -477,6 +477,21 @@ export default function AchievementsPage() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [isAuthenticated]);
 
+  // Recording a transaction, holding or goal never checks badges, so a finished
+  // one can still read "Locked". Claim them once per mount, not only on the button.
+  const claimed = useRef(false);
+  useEffect(() => {
+    if (!isAuthenticated || claimed.current || !liveProgress) return;
+    if (!liveProgress.some((a) => !a.is_unlocked && a.current_progress >= a.required_progress)) return;
+    claimed.current = true;
+    checkAchievements.mutate(undefined, {
+      onSuccess: (earned) => {
+        if (earned.length) toast.success(t('goals:achievements.newAchievements', { count: earned.length }));
+      },
+    });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [isAuthenticated, liveProgress]);
+
   const handleCheck = () => {
     if (isDemo) {
       toast('Sign in to sync real achievements ✨', { icon: 'ℹ️' });

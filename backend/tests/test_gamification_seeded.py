@@ -179,6 +179,24 @@ class TestAwarding:
 
         assert await service.sweep_achievements(world.id) == []
 
+    async def test_daily_visit_awards_every_completed_type(self, async_session, world):
+        # Writes never check badges, so the first visit of a day must catch up
+        # on all of them, not only the login-streak ones.
+        from app.modules.users.services import UserService
+
+        user = await _reload(async_session, world.id)
+        user.last_streak_update = datetime.now(timezone.utc) - timedelta(days=1)
+        await async_session.commit()
+
+        await UserService(async_session)._record_daily_visit(
+            await _reload(async_session, world.id), touch_last_login=True
+        )
+
+        progress = await GamificationRepository(async_session).get_achievement_progress(world.id)
+        for kind in (A.FIRST_TRANSACTION, A.FIRST_GOAL, A.GOAL_COMPLETED, A.INVESTMENT_STARTER):
+            assert progress[kind.value]["is_unlocked"], kind
+        assert not progress[A.HUNDRED_TRANSACTIONS.value]["is_unlocked"]
+
     async def test_trigger_checks_only_mapped_types(self, async_session, world):
         awarded = await GamificationService(async_session).trigger_achievement_check(
             world.id, "transaction_created"

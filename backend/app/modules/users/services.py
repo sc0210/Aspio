@@ -866,9 +866,10 @@ class UserService:
             await self.user_repo.update_user(user.id, updates)
 
             if streak_advanced:
-                # Award any streak badge the new count just unlocked.
-                await GamificationService(self.session).trigger_achievement_check(
-                    user.id, "login", {"new_streak": new_streak}
+                # Once a day, award every badge whose progress is complete: no
+                # transaction, holding or goal write checks badges itself.
+                await GamificationService(self.session).sweep_achievements(
+                    user.id, {"new_streak": new_streak}
                 )
 
         except Exception as e:
