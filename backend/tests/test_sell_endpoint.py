@@ -467,3 +467,24 @@ class TestStoredTotalsFollowTheTrade:
 
         await async_session.refresh(portfolio)
         assert (portfolio.total_value, portfolio.total_cost) == (Decimal("1800"), Decimal("1200"))
+
+    async def test_a_failed_totals_update_keeps_the_sale(self, async_session, test_user, monkeypatch):
+        from sqlalchemy import text
+        from app.modules.portfolio.services import PortfolioService
+
+        async def broken(self, portfolio_id, user_id=None):
+            await self.session.execute(text("SELECT * FROM no_such_table"))
+
+        monkeypatch.setattr(PortfolioService, "_update_portfolio_totals", broken)
+        uid = test_user.id  # the rollback below expires test_user
+        _, (lot,) = await _seed(async_session, uid, [("10", "100", 1)])
+
+        await _sell(async_session, test_user, lot.id, quantity=Decimal("4"), price=Decimal("150"))
+
+        await async_session.rollback()  # only what the request committed is left
+        await async_session.refresh(lot)
+        assert lot.quantity == Decimal("6")
+        sales = (await async_session.execute(
+            select(func.count(PortfolioTransaction.id)).where(PortfolioTransaction.user_id == uid)
+        )).scalar_one()
+        assert sales == 1

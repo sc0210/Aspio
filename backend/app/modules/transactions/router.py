@@ -127,6 +127,8 @@ async def _sync_portfolio_on_delete(transaction_obj) -> None:
                     holding.is_active = False
                     holding.updated_at = datetime.now(timezone.utc)
                     await db.commit()
+                    from app.modules.portfolio.services import get_portfolio_service
+                    await get_portfolio_service(db).refresh_totals(holding.portfolio_id, holding.user_id)
                     import logging as _logging
                     _logging.getLogger(__name__).info(
                         f"Portfolio sync: deactivated holding {holding.id} ({symbol}) on transaction delete"
@@ -208,6 +210,8 @@ async def _sync_portfolio_on_update(old_transaction_obj, new_transaction_obj) ->
                         holding.purchase_date = new_date_dt
                     holding.updated_at = datetime.now(timezone.utc)
                     await db.commit()
+                    from app.modules.portfolio.services import get_portfolio_service
+                    await get_portfolio_service(db).refresh_totals(holding.portfolio_id, holding.user_id)
                     import logging as _logging
                     _logging.getLogger(__name__).info(
                         f"Portfolio sync: updated holding {holding.id} ({new_symbol}) "

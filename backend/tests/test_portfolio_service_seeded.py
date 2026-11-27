@@ -117,13 +117,14 @@ class TestUpdateTotals:
             await self.session.execute(text("SELECT * FROM no_such_table"))
 
         monkeypatch.setattr(PortfolioService, "_update_portfolio_totals", broken)
-        await get_portfolio_service(async_session).add_holding(test_user.id, HoldingCreate(
+        uid = test_user.id  # the rollback below expires test_user
+        await get_portfolio_service(async_session).add_holding(uid, HoldingCreate(
             symbol="0050", name="0050", type="etf", exchange="TWSE", currency="TWD",
             quantity=D("10"), average_cost=D("100"), purchase_date=datetime.now(timezone.utc)))
 
         await async_session.rollback()  # only what add_holding committed is left
         saved = (await async_session.execute(
-            select(PortfolioHolding.symbol).where(PortfolioHolding.user_id == test_user.id))).scalars().all()
+            select(PortfolioHolding.symbol).where(PortfolioHolding.user_id == uid))).scalars().all()
         assert saved == ["0050"]
 
     async def test_totals_count_every_lot(self, async_session, test_user, pf):

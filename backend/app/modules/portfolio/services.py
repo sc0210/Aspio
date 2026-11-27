@@ -324,10 +324,9 @@ class PortfolioService:
                     quote.market, quote.quote_time
                 )
 
-        await self.refresh_totals(portfolio.id, user_id)
-
         # Commit the transaction to ensure data is persisted
         await self.session.commit()
+        await self.refresh_totals(portfolio.id, user_id)
         logger.info(
             f"Committed holding {holding_data.symbol} to database",
             extra={"user_id": str(user_id), "symbol": holding_data.symbol},
@@ -921,17 +920,16 @@ class PortfolioService:
             raise
 
     async def refresh_totals(self, portfolio_id: UUID, user_id: UUID) -> None:
-        """Recompute the stored totals after a buy, edit, sale or delete, best effort.
-
-        The totals are a cache the next price refresh rebuilds, so a failure here
-        must not cost the trade: the savepoint undoes only the totals. The flush
-        comes first (app sessions don't autoflush) and outside it, since a failure
-        there is the trade's own.
+        """Recompute and commit the stored totals once a buy, edit, sale or delete
+        has committed. Best effort: they are a cache the next price refresh
+        rebuilds, so a failure costs only the totals (the savepoint keeps the
+        session usable). Running after the trade's commit means a slow rate
+        lookup never holds the trade's position locks.
         """
-        await self.session.flush()
         try:
             async with self.session.begin_nested():
                 await self._update_portfolio_totals(portfolio_id, user_id)
+            await self.session.commit()
         except Exception:
             logger.warning("Portfolio totals catch up on the next refresh", exc_info=True)
 
@@ -943,6 +941,15 @@ class PortfolioService:
             logger.info(
                 "Updating portfolio totals with currency conversion",
                 extra={"portfolio_id": str(portfolio_id), "operation": "update_totals"},
+            )
+            # Lock the portfolio row before reading its holdings: two refreshes
+            # (two sales, or a sale and the price job) then run one after the
+            # other, and the later one reads what the earlier one committed
+            # instead of writing totals from an older snapshot.
+            from sqlalchemy import select as _select
+            from .models import Portfolio as _Portfolio
+            await self.session.execute(
+                _select(_Portfolio.id).where(_Portfolio.id == portfolio_id).with_for_update()
             )
             # Get portfolio using repository directly (not the service method)
             portfolio = await self.portfolio_repo.get_by_id(portfolio_id, user_id)
