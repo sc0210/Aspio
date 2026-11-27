@@ -1,8 +1,5 @@
 """
-Gamification and user analytics repository for enhanced user engagement.
-
-This module provides async database operations for gamification features,
-achievements, user activity tracking, and analytics.
+Gamification repository: achievements, their progress, XP and levels.
 """
 
 from datetime import datetime, timezone

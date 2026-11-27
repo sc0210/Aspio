@@ -1,12 +1,6 @@
 """
-Enhanced users router with comprehensive gamification, analytics, and regional features.
-
-This router extends the basic user functionality with:
-- Gamification system with achievements and levels
-- User analytics and engagement tracking
-- Regional preferences for Asian markets
-- Enhanced security and privacy features
-- Data export and GDPR compliance
+Users router for gamification and regional preferences: stats, achievements and
+their progress, the login streak, the check-all sweep, and regional preferences.
 """
 
 import logging

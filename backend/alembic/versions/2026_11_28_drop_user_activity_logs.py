@@ -21,6 +21,10 @@ depends_on = None
 
 
 def upgrade() -> None:
+    conn = op.get_bind()
+    if conn.execute(sa.text("SELECT to_regclass('user_activity_logs')")).scalar():
+        rows = conn.execute(sa.text("SELECT count(*) FROM user_activity_logs")).scalar()
+        print(f"2026_11_28_drop_user_activity_logs: dropping {rows} event row(s)")
     op.execute("DROP TABLE IF EXISTS user_activity_logs")
 
 
@@ -43,3 +47,4 @@ def downgrade() -> None:
     op.create_index("ix_user_activity_logs_user_id", "user_activity_logs", ["user_id"])
     op.create_index("ix_user_activity_logs_activity_type", "user_activity_logs", ["activity_type"])
     op.create_index("ix_user_activity_logs_session_id", "user_activity_logs", ["session_id"])
+    op.execute("ALTER TABLE user_activity_logs ENABLE ROW LEVEL SECURITY")
