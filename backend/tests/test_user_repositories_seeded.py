@@ -76,6 +76,11 @@ class TestUpdates:
     async def test_update_unknown_user(self, repo):
         assert await repo.update_user(uuid4(), {"name": "x"}) is None
 
+    async def test_a_failed_update_raises_instead_of_reading_as_unknown(self, repo):
+        u = await repo.create_user(data("err@example.com"))
+        with pytest.raises(Exception):
+            await repo.update_user(u.id, {"no_such_column": 1})
+
     async def test_password_change_unlocks_the_account(self, repo, async_session):
         u = await repo.create_user(data("pw@example.com", failed_login_attempts=7,
                                         account_locked_until=NOW() + timedelta(hours=1)))

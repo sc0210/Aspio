@@ -630,7 +630,12 @@ class UserService:
 
             # Update existing user's Google ID if not set
             if not user.google_id:
-                await self.user_repo.update_user(user.id, {"google_id": callback_data.id})
+                # Best effort, as before update_user raised: signing in with the
+                # matched account must not fail on linking its Google id.
+                try:
+                    await self.user_repo.update_user(user.id, {"google_id": callback_data.id})
+                except Exception:
+                    logger.warning("Could not link Google id for user %s", user.id, exc_info=True)
 
             # Update login info
             await self.user_repo.update_login_info(user.id, ip_address or "", success=True)

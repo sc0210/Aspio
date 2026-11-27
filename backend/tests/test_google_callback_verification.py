@@ -77,6 +77,18 @@ class TestCallbackService:
         assert result.access_token
         svc.refresh_token_repo.create_refresh_token.assert_awaited_once()
 
+    @pytest.mark.asyncio
+    async def test_a_failed_google_id_link_still_signs_in(self):
+        # update_user raises now instead of returning None; linking stays best effort.
+        svc = _issuing_service(make_mock_user(email=VICTIM))
+        svc.user_repo.update_user = AsyncMock(side_effect=RuntimeError("db down"))
+        identity = {"sub": "google-sub-1", "email": VICTIM}
+        with patch("app.modules.users.services.google_oauth.verify_token_identity", AsyncMock(return_value=identity)):
+            result = await svc.google_oauth_callback(_callback())
+
+        assert result.access_token
+        svc.user_repo.update_user.assert_awaited_once()
+
 
 def _tokeninfo(status_code=200, **payload):
     """Patch httpx so tokeninfo answers with `payload`; returns the GET mock."""

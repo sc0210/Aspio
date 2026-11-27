@@ -151,7 +151,11 @@ class UserRepository:
             user_data: Dictionary containing fields to update
             
         Returns:
-            Updated user instance or None if not found
+            Updated user instance, or None if no such (undeleted) user exists.
+
+        Raises:
+            Whatever the UPDATE raised, after a rollback. It returned None, so
+            callers answered 404 "User not found" for a user who exists.
         """
         try:
             # Remove sensitive fields that shouldn't be updated directly
@@ -181,7 +185,7 @@ class UserRepository:
         except Exception as e:
             await self.session.rollback()
             logger.error(f"Error updating user {user_id}: {str(e)}")
-            return None
+            raise
     
     async def update_user_password(self, user_id: UUID, new_password: str) -> bool:
         """

@@ -461,6 +461,18 @@ class TestUpdateUserProfile:
 
         assert exc.value.status_code == 404
 
+    @pytest.mark.asyncio
+    async def test_a_failed_update_is_not_reported_as_user_not_found(self):
+        # update_user returned None for any database error, so a user who exists
+        # was told "User not found".
+        svc = make_service()
+        svc.user_repo.update_user = AsyncMock(side_effect=RuntimeError("db down"))
+
+        with pytest.raises(HTTPException) as exc:
+            await svc.update_user_profile(uuid4(), UserUpdate(name="Name"))
+
+        assert exc.value.status_code == 500
+
 
 # ─── UserService.request_password_reset ──────────────────────────────────────
 
