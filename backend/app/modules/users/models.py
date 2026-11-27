@@ -16,6 +16,7 @@ from sqlalchemy import (
     Enum as SQLEnum,
     DateTime,
     ForeignKey,
+    Index,
 )
 from sqlalchemy.dialects.postgresql import UUID
 from sqlalchemy.orm import Mapped, mapped_column, relationship
@@ -485,6 +486,16 @@ class UserGamificationAchievement(BaseModel):
     """User gamification achievement model for engagement system"""
 
     __tablename__ = "user_gamification_achievements"
+    # One row per badge per user: award_achievement checks, then inserts, so two
+    # requests at once would both insert (and pay the XP twice) without this.
+    __table_args__ = (
+        Index(
+            "uq_user_gamification_achievement",
+            "user_id",
+            "achievement_type",
+            unique=True,
+        ),
+    )
 
     id: Mapped[uuid.UUID] = mapped_column(
         UUID(as_uuid=True), primary_key=True, default=uuid.uuid4

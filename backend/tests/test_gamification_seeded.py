@@ -36,6 +36,7 @@ from app.modules.users.models import (
     AchievementRarity,
     AchievementType,
     User,
+    UserGamificationAchievement,
 )
 from app.modules.users.schemas import UserActivityRequest
 
@@ -196,6 +197,40 @@ class TestAwarding:
         assert first is not None
         assert await repo.award_achievement(world.id, A.FIRST_GOAL, points=50) is None
         assert (await _reload(async_session, world.id)).experience_points == 50
+
+    async def test_award_that_loses_a_race_pays_nothing(self, async_session, world, monkeypatch):
+        """Another request inserted the badge between this one's check and its
+        insert: the unique index refuses the row, no XP is paid twice, and the
+        caller's own pending changes survive (only a savepoint is rolled back)."""
+        repo = GamificationRepository(async_session)
+        assert await repo.award_achievement(world.id, A.FIRST_GOAL, points=50) is not None
+
+        real_execute = async_session.execute
+        calls = 0
+
+        async def check_sees_nothing(statement, *args, **kwargs):
+            nonlocal calls
+            calls += 1
+            if calls == 1:  # the "already has it?" read, as the racing request saw it
+                return await real_execute(select(User).where(User.id.is_(None)))
+            return await real_execute(statement, *args, **kwargs)
+
+        user = await _reload(async_session, world.id)
+        user.name = "kept"  # the caller's own pending change
+        monkeypatch.setattr(async_session, "execute", check_sees_nothing)
+        assert await repo.award_achievement(world.id, A.FIRST_GOAL, points=50) is None
+        monkeypatch.undo()
+        await async_session.commit()
+
+        user = await _reload(async_session, world.id)
+        assert user.experience_points == 50
+        assert user.name == "kept"
+        rows = (
+            await async_session.execute(
+                select(UserGamificationAchievement).where(UserGamificationAchievement.user_id == world.id)
+            )
+        ).scalars().all()
+        assert [r.achievement_type for r in rows] == [A.FIRST_GOAL]
 
     async def test_level_up_at_milestone_awards_bonus(self, async_session, world):
         world.experience_points = 5 * 5 * 50  # exactly level 5

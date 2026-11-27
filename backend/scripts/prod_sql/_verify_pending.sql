@@ -277,3 +277,11 @@ SELECT 'demo annual dividends still yearly totals' AS what, count(*)::text AS va
 FROM portfolio_holdings h JOIN users u ON u.id = h.user_id
 WHERE u.email = 'demo@aspiro.dev'
   AND (h.symbol, h.annual_dividend) IN (('AAPL', 10.42), ('VOO', 26.78), ('2330', 1656.00));
+-- 2026_11_27_unique_user_achievement: expect 'present' (the unique index) and 0
+-- duplicate badge rows. Before the apply, the duplicate count is what it will remove.
+SELECT 'uq_user_gamification_achievement index' AS what,
+       CASE WHEN to_regclass('uq_user_gamification_achievement') IS NULL THEN 'missing' ELSE 'present' END AS value;
+SELECT 'duplicate badge rows' AS what, count(*)::text AS value
+FROM (SELECT row_number() OVER (PARTITION BY user_id, achievement_type ORDER BY unlocked_at, id) AS rn
+      FROM user_gamification_achievements) r
+WHERE r.rn > 1;

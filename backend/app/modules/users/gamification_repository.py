@@ -11,6 +11,7 @@ from uuid import UUID
 import logging
 
 from sqlalchemy import select, update, func, and_, desc
+from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from .models import (
@@ -95,15 +96,21 @@ class GamificationRepository:
                 unlocked_at=datetime.now(timezone.utc)
             )
             
-            self.session.add(achievement)
-            
-            # Update user's experience points
-            await self.session.execute(
-                update(User)
-                .where(User.id == user_id)
-                .values(experience_points=User.experience_points + points)
-            )
-            
+            # The check above races a concurrent award; the unique index decides.
+            # A savepoint keeps the loser from rolling back the caller's work.
+            try:
+                async with self.session.begin_nested():
+                    self.session.add(achievement)
+                    await self.session.flush()
+                    await self.session.execute(
+                        update(User)
+                        .where(User.id == user_id)
+                        .values(experience_points=User.experience_points + points)
+                    )
+            except IntegrityError:
+                logger.debug(f"User {user_id} already has achievement {achievement_type}")
+                return None
+
             await self.session.commit()
             await self.session.refresh(achievement)
             
