@@ -281,6 +281,17 @@ class TestRisingStar:
         assert (user.experience_points, user.level) == (5000, 10)
 
 
+    async def test_a_failed_settle_keeps_the_awards_already_made(self, async_session, world, monkeypatch):
+        async def broken(self, user_id):
+            raise RuntimeError("db down")
+
+        monkeypatch.setattr(GamificationRepository, "get_level", broken)
+        awarded = await GamificationService(async_session).trigger_achievement_check(
+            world.id, "transaction_created"
+        )
+        assert [a.achievement_type for a in awarded] == [A.FIRST_TRANSACTION.value]
+
+
 class TestStats:
     async def test_stats_summarise_awards(self, async_session, world):
         service = GamificationService(async_session)
