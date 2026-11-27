@@ -6,9 +6,28 @@ import uuid
 from datetime import datetime, date
 from typing import Optional, Dict, Any, List
 
+from functools import lru_cache
+from zoneinfo import available_timezones
+
 from pydantic import BaseModel, Field, EmailStr, ConfigDict, field_validator
 
 from ...common.schemas import BaseSchema, TimestampMixin
+
+
+@lru_cache(maxsize=1)
+def _iana_zones() -> frozenset:
+    return frozenset(available_timezones())
+
+
+def known_timezone(v: str) -> str:
+    """Accept only an IANA zone name, spelled as the zone database spells it.
+
+    Membership, not ZoneInfo(v): that raised IsADirectoryError (a 500) on a folder
+    such as "Asia", and on a case-insensitive disk took "asia/taipei" too.
+    """
+    if v not in _iana_zones():
+        raise ValueError("Unknown timezone")  # not echoed: the 422 copies msg three times
+    return v
 
 
 class UserPreferences(BaseModel):
@@ -16,7 +35,12 @@ class UserPreferences(BaseModel):
     currency: str = Field("USD", description="Default currency")
     language: str = Field("en", description="Language preference")
     locale: str = Field("en-US", description="Locale preference")
-    timezone: str = Field("UTC", description="Timezone preference")
+    timezone: str = Field("UTC", max_length=50, description="Timezone preference")
+
+    @field_validator("timezone")
+    @classmethod
+    def _known_timezone(cls, v: str) -> str:
+        return known_timezone(v)
     date_format: str = Field("western", pattern="^(western|roc|iso)$", description="Date format preference")
     number_format: str = Field("western", pattern="^(western|asian)$", description="Number format preference")
     notifications: Dict[str, bool] = Field(
@@ -341,7 +365,7 @@ class RegionalPreferencesUpdate(BaseModel):
         pattern="^(USD|TWD)$",
         description="Preferred currency code"
     )
-    timezone: Optional[str] = Field(None, description="Preferred timezone")
+    timezone: Optional[str] = Field(None, max_length=50, description="Preferred IANA timezone")
     date_format: Optional[str] = Field(
         None,
         pattern="^(western|roc|iso|lunar)$",
@@ -361,6 +385,13 @@ class RegionalPreferencesUpdate(BaseModel):
         None,
         description="Preferred payment methods (e.g., 'wechat_pay', 'alipay', 'grab_pay')"
     )
+
+    @field_validator("timezone")
+    @classmethod
+    def _known_timezone(cls, v: Optional[str]) -> Optional[str]:
+        # Anything else reached the String(50) column: a long value failed the
+        # UPDATE and came back as 404 "User not found". "" still means "unchanged".
+        return known_timezone(v) if v else None
 
 
 # ===== Enhanced Security Schemas =====
