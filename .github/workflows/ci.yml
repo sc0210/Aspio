@@ -293,11 +293,13 @@ jobs:
       # see two requests racing. These run two sessions against this real Postgres
       # (each test creates and drops its own database) and fail if a writer stops
       # taking the lock: a loan balance moved twice, sold shares resurrected by a
-      # concurrent buy, a delete refunding a lot a sale just closed.
+      # concurrent buy, a delete refunding a lot a sale just closed, a badge (and
+      # its XP) awarded twice.
       - name: Concurrency tests on real Postgres
         run: >-
           python -m pytest -m integration -o "addopts=" -p no:cacheprovider -q
           tests/test_loan_row_lock_postgres.py tests/test_portfolio_position_lock_postgres.py
+          tests/test_achievement_unique_postgres.py
         env:
           ASPIRO_PG_LOCK_TEST_URL: postgresql+asyncpg://aspiro:aspiro@localhost:5432/postgres
           RATE_LIMIT_ENABLED: "false"
