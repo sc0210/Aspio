@@ -192,6 +192,9 @@ export function useAchievementProgress(options?: { enabled?: boolean }) {
     // Errors propagate: [] read as "no achievements earned" (see above).
     queryFn: () => apiClient.getAchievementProgress(),
     staleTime: 10 * 60 * 1000,
+    // Saves don't invalidate this (see USER_DATA), so a badge finished since the
+    // last visit would read cached 0/1 and never be auto-claimed.
+    refetchOnMount: 'always',
     retry: false,
     enabled: options?.enabled ?? true,
   });
@@ -212,6 +215,7 @@ export function useUpdateStreak() {
         queryClient.invalidateQueries({ queryKey: [QUERY_KEYS.GAMIFICATION] });
         if (result.new_achievements?.length) {
           queryClient.invalidateQueries({ queryKey: [QUERY_KEYS.ACHIEVEMENTS] });
+          queryClient.invalidateQueries({ queryKey: [QUERY_KEYS.NOTIFICATIONS] }); // each unlock notifies
         }
       }
     },
@@ -231,6 +235,7 @@ export function useCheckAchievements() {
       queryClient.invalidateQueries({ queryKey: [QUERY_KEYS.GAMIFICATION] });
       if (newAchievements?.length) {
         queryClient.invalidateQueries({ queryKey: [QUERY_KEYS.ACHIEVEMENTS] });
+        queryClient.invalidateQueries({ queryKey: [QUERY_KEYS.NOTIFICATIONS] }); // each unlock notifies
       }
     },
   });
