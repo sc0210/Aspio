@@ -127,6 +127,21 @@ class TestUpdateTotals:
             select(PortfolioHolding.symbol).where(PortfolioHolding.user_id == uid))).scalars().all()
         assert saved == ["0050"]
 
+    async def test_totals_read_lots_another_request_changed(self, async_session, test_user, pf):
+        # Sessions don't expire on commit: a lot loaded here kept its old value, so
+        # a refresh after another request's sale stored totals for the unsold lot.
+        from sqlalchemy import text
+        lot = make_holding(pf, test_user, "0050", value="1000", cost="800")
+        async_session.add(lot)
+        await async_session.commit()
+        assert lot.total_value == D("1000")  # loaded in this session
+        await async_session.execute(text("UPDATE portfolio_holdings SET total_value = 400, total_cost = 320"))
+        await async_session.commit()  # as another request's sale would leave it
+
+        await get_portfolio_service(async_session)._update_portfolio_totals(pf.id, test_user.id)
+        await async_session.refresh(pf)
+        assert (pf.total_value, pf.total_cost) == (D("400"), D("320"))
+
     async def test_totals_count_every_lot(self, async_session, test_user, pf):
         # The read stopped at 1,000 lots: monthly buys into 5 ETFs pass that in
         # about 17 years, and the newest lots dropped out of the headline value.

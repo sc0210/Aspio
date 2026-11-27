@@ -948,8 +948,11 @@ class PortfolioService:
             # instead of writing totals from an older snapshot.
             from sqlalchemy import select as _select
             from .models import Portfolio as _Portfolio
+            # NO KEY UPDATE: refreshes still wait for each other, but a buy or
+            # sale inserting a row that references this portfolio does not wait.
             await self.session.execute(
-                _select(_Portfolio.id).where(_Portfolio.id == portfolio_id).with_for_update()
+                _select(_Portfolio.id).where(_Portfolio.id == portfolio_id)
+                .with_for_update(key_share=True)
             )
             # Get portfolio using repository directly (not the service method)
             portfolio = await self.portfolio_repo.get_by_id(portfolio_id, user_id)
@@ -964,7 +967,7 @@ class PortfolioService:
 
             portfolio_currency = portfolio.currency
             holdings, _ = await self.holding_repo.get_portfolio_holdings(
-                portfolio_id, user_id, limit=None
+                portfolio_id, user_id, limit=None, fresh=True
             )
             logger.debug(
                 f"Processing portfolio holdings",

@@ -434,8 +434,14 @@ class HoldingRepository:
         exchange: Optional[str] = None,
         sector: Optional[str] = None,
         wallet_type: Optional[HoldingWalletType] = None,
+        fresh: bool = False,
     ) -> Tuple[List[PortfolioHolding], int]:
-        """Get paginated holdings for a portfolio (``limit=None`` for all of them)."""
+        """Get paginated holdings for a portfolio (``limit=None`` for all of them).
+
+        ``fresh`` re-reads lots already loaded in this session: sessions don't
+        expire on commit, so otherwise a lot another request changed since keeps
+        its old values here.
+        """
         conditions = [
             PortfolioHolding.portfolio_id == portfolio_id,
             PortfolioHolding.user_id == user_id,
@@ -466,6 +472,8 @@ class HoldingRepository:
             .offset(skip)
             .limit(limit)
         )
+        if fresh:
+            stmt = stmt.execution_options(populate_existing=True)
 
         result = await self.session.execute(stmt)
         holdings = result.scalars().all()
