@@ -351,6 +351,23 @@ class TestUserAnalyticsService:
         assert payload["last_streak_update"] is not None
 
     @pytest.mark.asyncio
+    async def test_a_failed_streak_write_is_an_error_not_a_new_streak(self, analytics_service, sample_user):
+        # update_user returned None on a database error, and this went on to report
+        # streak_updated and run the badge check for a streak that wasn't saved.
+        from fastapi import HTTPException
+        sample_user.last_streak_update = datetime.now(timezone.utc) - timedelta(days=1)
+        analytics_service.user_repo.get_user_by_id.return_value = sample_user
+        analytics_service.user_repo.update_user.side_effect = RuntimeError("db down")
+
+        with patch('app.modules.users.gamification_service.GamificationService') as MockGamificationService:
+            MockGamificationService.return_value.trigger_achievement_check = AsyncMock(return_value=[])
+            with pytest.raises(HTTPException) as exc:
+                await analytics_service.update_login_streak(sample_user.id)
+
+        assert exc.value.status_code == 500
+        MockGamificationService.return_value.trigger_achievement_check.assert_not_called()
+
+    @pytest.mark.asyncio
     async def test_update_login_streak_broken(self, analytics_service, sample_user):
         """Test updating login streak when broken"""
         # Set last update to 3 days ago (streak broken)

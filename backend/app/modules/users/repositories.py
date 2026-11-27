@@ -151,37 +151,47 @@ class UserRepository:
             user_data: Dictionary containing fields to update
             
         Returns:
-            Updated user instance or None if not found
+            Updated user instance, or None if no such (undeleted) user exists.
+
+        Raises:
+            Whatever the UPDATE raised. It returned None, so callers answered
+            404 "User not found" for a user who exists. The UPDATE runs in a
+            savepoint: a failure undoes only it and leaves the caller's loaded
+            objects readable (a full rollback expired them, so a caller that
+            caught the error crashed on its next attribute read).
         """
-        try:
-            # Remove sensitive fields that shouldn't be updated directly
-            sensitive_fields = {'id', 'hashed_password', 'created_at', 'email'}
-            user_data = {k: v for k, v in user_data.items() if k not in sensitive_fields}
-            
-            if not user_data:
-                return await self.get_user_by_id(user_id)
+        # Remove sensitive fields that shouldn't be updated directly
+        sensitive_fields = {'id', 'hashed_password', 'created_at', 'email'}
+        user_data = {k: v for k, v in user_data.items() if k not in sensitive_fields}
 
-            query = (
-                update(User)
-                .where(and_(User.id == user_id, User.deleted_at.is_(None)))
-                .values(**user_data, updated_at=datetime.now(timezone.utc))
-            )
-
-            result = await self.session.execute(query)
-            await self.session.commit()
-
-            if result.rowcount == 0:
-                return None
-
-            logger.info(f"Updated user: {user_id}")
-            # Re-fetch via identity map so the returned object is fully tracked
-            # and has up-to-date column values (avoids stale data from .returning()).
+        if not user_data:
             return await self.get_user_by_id(user_id)
-            
+
+        query = (
+            update(User)
+            .where(and_(User.id == user_id, User.deleted_at.is_(None)))
+            .values(**user_data, updated_at=datetime.now(timezone.utc))
+        )
+        try:
+            async with self.session.begin_nested():
+                result = await self.session.execute(query)
         except Exception as e:
-            await self.session.rollback()
             logger.error(f"Error updating user {user_id}: {str(e)}")
+            raise
+        await self.session.commit()
+
+        if result.rowcount == 0:
             return None
+
+        logger.info(f"Updated user: {user_id}")
+        # Re-read the row, refreshing a User this session already holds
+        # (populate_existing; a plain select kept its old values). Not
+        # get_user_by_id: it turns an error into None, a 404 for a saved change.
+        return (
+            await self.session.execute(
+                select(User).where(User.id == user_id).execution_options(populate_existing=True)
+            )
+        ).scalar_one_or_none()
     
     async def update_user_password(self, user_id: UUID, new_password: str) -> bool:
         """

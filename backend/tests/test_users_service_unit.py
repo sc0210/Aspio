@@ -461,6 +461,33 @@ class TestUpdateUserProfile:
 
         assert exc.value.status_code == 404
 
+    @pytest.mark.asyncio
+    async def test_a_failed_update_is_not_reported_as_user_not_found(self):
+        # update_user returned None for any database error, so a user who exists
+        # was told "User not found".
+        svc = make_service()
+        svc.user_repo.update_user = AsyncMock(side_effect=RuntimeError("db down"))
+
+        with pytest.raises(HTTPException) as exc:
+            await svc.update_user_profile(uuid4(), UserUpdate(name="Name"))
+
+        assert exc.value.status_code == 500
+
+    @pytest.mark.asyncio
+    async def test_a_username_taken_in_the_meantime_is_409(self):
+        # Two saves of one new username both pass the SELECT check; the unique
+        # index refuses the second.
+        from sqlalchemy.exc import IntegrityError
+        svc = make_service()
+        svc.session.execute = AsyncMock(return_value=MagicMock(first=MagicMock(return_value=None)))
+        svc.user_repo.update_user = AsyncMock(side_effect=IntegrityError(
+            "UPDATE users", {}, Exception('duplicate key value violates unique constraint "ix_users_username"')))
+
+        with pytest.raises(HTTPException) as exc:
+            await svc.update_user_profile(uuid4(), UserUpdate(username="alice"))
+
+        assert exc.value.status_code == 409
+
 
 # ─── UserService.request_password_reset ──────────────────────────────────────
 
@@ -564,3 +591,23 @@ class TestResetPassword:
             )
 
         assert exc.value.status_code == 400
+
+
+class TestDailyVisitWriteFailure:
+    @pytest.mark.asyncio
+    async def test_a_failed_visit_write_neither_breaks_login_nor_checks_badges(self):
+        # update_user raises now; the daily visit is still best effort, and no streak
+        # badge is checked for a streak that wasn't saved.
+        from datetime import timedelta
+        svc = make_service()
+        user = make_mock_user()
+        user.last_streak_update = datetime.now(timezone.utc) - timedelta(days=1)
+        user.current_login_streak, user.longest_login_streak, user.experience_points = 3, 3, 0
+        svc.user_repo.update_user = AsyncMock(side_effect=RuntimeError("db down"))
+
+        with patch("app.modules.users.services.GamificationService") as gamification:
+            gamification.return_value.trigger_achievement_check = AsyncMock()
+            await svc._record_daily_visit(user, touch_last_login=True)
+
+        svc.user_repo.update_user.assert_awaited_once()
+        gamification.return_value.trigger_achievement_check.assert_not_called()
