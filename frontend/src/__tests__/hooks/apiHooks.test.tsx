@@ -240,10 +240,25 @@ describe('gamification', () => {
     expect(result.current.data).toBeUndefined();
   });
 
+  it('useAchievementProgress refetches on every visit, even over fresh cached progress', async () => {
+    // A save doesn't invalidate progress, so the cached 0/1 from before recording
+    // a first transaction must not stand in for the server's 1/1.
+    const client = createQueryClient();
+    api.getAchievementProgress.mockResolvedValueOnce([{ current_progress: 0 }]);
+    const first = renderHook(() => useAchievementProgress(), { wrapper: createQueryWrapper(client) });
+    await waitFor(() => expect(first.result.current.data).toEqual([{ current_progress: 0 }]));
+    first.unmount();
+
+    api.getAchievementProgress.mockResolvedValueOnce([{ current_progress: 1 }]);
+    const again = renderHook(() => useAchievementProgress(), { wrapper: createQueryWrapper(client) });
+    await waitFor(() => expect(again.result.current.data).toEqual([{ current_progress: 1 }]));
+    expect(api.getAchievementProgress).toHaveBeenCalledTimes(2);
+  });
+
   it.each([
     [{ streak_updated: false }, []],
     [{ streak_updated: true, new_achievements: [] }, [['gamification']]],
-    [{ streak_updated: true, new_achievements: [{ id: 'x' }] }, [['gamification'], ['achievements']]],
+    [{ streak_updated: true, new_achievements: [{ id: 'x' }] }, [['gamification'], ['achievements'], ['notifications']]],
   ])('useUpdateStreak refreshes only what changed (%#)', async (reply, keys) => {
     const client = createQueryClient();
     const invalidate = jest.spyOn(client, 'invalidateQueries');
@@ -257,8 +272,8 @@ describe('gamification', () => {
 
   it.each([
     [[], [['gamification']]],
-    [[{ id: 'x' }], [['gamification'], ['achievements']]],
-  ])('useCheckAchievements refreshes achievements only when one unlocked (%#)', async (unlocked, keys) => {
+    [[{ id: 'x' }], [['gamification'], ['achievements'], ['notifications']]],
+  ])('useCheckAchievements refreshes achievements and the bell only when one unlocked (%#)', async (unlocked, keys) => {
     const client = createQueryClient();
     const invalidate = jest.spyOn(client, 'invalidateQueries');
     api.checkAllAchievements.mockResolvedValue(unlocked);

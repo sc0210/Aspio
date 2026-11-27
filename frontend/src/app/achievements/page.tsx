@@ -441,8 +441,8 @@ export default function AchievementsPage() {
 
   // Recording a transaction, holding or goal never checks badges, so a finished
   // one can still read "Locked". Claim them once per mount, not only on the button.
-  // Waits for the streak ping: both award badges, and award_achievement is
-  // check-then-insert, so running them side by side could award one twice.
+  // Waits for the streak ping, which awards login badges itself, so the two never
+  // race for one badge (the unique index would refuse the second insert anyway).
   const streakSettled = updateStreak.isSuccess || updateStreak.isError;
   const claimed = useRef(false);
   useEffect(() => {
@@ -511,7 +511,7 @@ export default function AchievementsPage() {
   }, [progress, tab, category, search, sortKey]);
 
   // Phones (#344): the streak first, then the badges closest to unlocking. The
-  // scores and the searchable grid are for browsing — they stay on bigger screens.
+  // searchable grid is for browsing — it stays on bigger screens.
   const isMobile = useIsMobile();
   const phone = isMobile === true;
   const almostThere = useMemo(
