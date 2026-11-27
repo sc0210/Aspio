@@ -161,8 +161,9 @@ const LEDGER_DERIVED: readonly QueryKeyValue[] = [
  * A user's own data that a ledger write does NOT touch.
  *
  * Badge progress does count transactions, holdings and goals, but only the
- * achievements page reads it and that page refetches it on every visit, so these
- * are refreshed by the manual Refresh button and on an auth change, not by a save.
+ * achievements page reads it and refetches it each time it opens, so these are
+ * refreshed by the manual Refresh button and on an auth change, not by a save.
+ * A save made elsewhere while that page stays open shows on the next visit.
  * (The goals list itself is ledger-derived: see LEDGER_DERIVED.)
  */
 const USER_DATA: readonly QueryKeyValue[] = [

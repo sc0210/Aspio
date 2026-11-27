@@ -353,16 +353,22 @@ class GamificationService:
                 try:
                     from app.modules.notifications.services import create_notification
                     from app.modules.notifications.models import NotificationType as _NType
-                    await create_notification(
-                        self.session,
-                        user_id=user_id,
-                        type=_NType.ACHIEVEMENT_UNLOCKED,
-                        title=f"{metadata.get('icon', '🏆')} Achievement unlocked!",
-                        message=f"You earned “{metadata.get('title', achievement_type.value)}” (+{points} XP)",
-                        related_entity_type="achievement",
-                        related_entity_id=achievement.id,
-                        data={"achievement_type": achievement_type.value, "points": points},
-                    )
+                    # A savepoint: a failure undoes only the notification, and leaves
+                    # the award (already committed) and the caller's objects loaded.
+                    async with self.session.begin_nested():
+                        await create_notification(
+                            self.session,
+                            user_id=user_id,
+                            type=_NType.ACHIEVEMENT_UNLOCKED,
+                            title=f"{metadata.get('icon', '🏆')} Achievement unlocked!",
+                            message=f"You earned “{metadata.get('title', achievement_type.value)}” (+{points} XP)",
+                            related_entity_type="achievement",
+                            related_entity_id=achievement.id,
+                            data={"achievement_type": achievement_type.value, "points": points},
+                        )
+                    # Commit now: get_db's own commit lands after the response, so the
+                    # bell, refetching as soon as the award answers, would miss it.
+                    await self.session.commit()
                 except Exception:
                     import logging
                     logging.getLogger(__name__).warning(

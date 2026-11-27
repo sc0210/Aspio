@@ -442,7 +442,8 @@ export default function AchievementsPage() {
   // Recording a transaction, holding or goal never checks badges, so a finished
   // one can still read "Locked". Claim them once per mount, not only on the button.
   // Waits for the streak ping, which awards login badges itself, so the two never
-  // race for one badge (the unique index would refuse the second insert anyway).
+  // race for one badge. Keep the wait: the unique index that refuses a second
+  // insert only exists once migration 2026_11_27_unique_user_achievement is applied.
   const streakSettled = updateStreak.isSuccess || updateStreak.isError;
   const claimed = useRef(false);
   useEffect(() => {

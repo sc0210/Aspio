@@ -178,6 +178,48 @@ class TestAwarding:
 
         assert await service.sweep_achievements(world.id) == []
 
+    async def test_unlock_notifications_are_committed_with_the_response(self, async_session, world):
+        # get_db commits only after the response is sent, so the bell, refetching as
+        # soon as check-all answers, could read before the last unlock's notification.
+        # One badge and no level-up: update_user_level's commit, which used to carry
+        # the notification along, does not run.
+        user_id, level = world.id, world.level  # rollback expires world
+        awarded = await GamificationService(async_session).trigger_achievement_check(
+            user_id, "transaction_created"
+        )
+        await async_session.rollback()  # what a request that ends here would lose
+
+        assert [a.achievement_type for a in awarded] == [A.FIRST_TRANSACTION.value]
+        assert (await _reload(async_session, user_id)).level == level
+        notes = (
+            await async_session.execute(select(Notification).where(Notification.user_id == user_id))
+        ).scalars().all()
+        assert len(notes) == 1
+
+    async def test_a_failed_notification_keeps_the_award(self, async_session, world, monkeypatch):
+        from app.modules.notifications import services as notifications
+
+        async def broken(session, **kwargs):
+            session.add(Notification(id=uuid4(), user_id=kwargs["user_id"]))  # NOT NULL title missing
+            await session.flush()
+
+        monkeypatch.setattr(notifications, "create_notification", broken)
+        user_id = world.id
+        awarded = await GamificationService(async_session).trigger_achievement_check(
+            user_id, "transaction_created"
+        )
+        assert [a.achievement_type for a in awarded] == [A.FIRST_TRANSACTION.value]
+        assert world.name  # the caller's objects are still loaded
+
+        await async_session.rollback()
+        badges = (await async_session.execute(
+            select(UserGamificationAchievement).where(UserGamificationAchievement.user_id == user_id)
+        )).scalars().all()
+        notes = (await async_session.execute(
+            select(Notification).where(Notification.user_id == user_id)
+        )).scalars().all()
+        assert [b.achievement_type for b in badges] == [A.FIRST_TRANSACTION] and notes == []
+
     async def test_trigger_checks_only_mapped_types(self, async_session, world):
         awarded = await GamificationService(async_session).trigger_achievement_check(
             world.id, "transaction_created"
