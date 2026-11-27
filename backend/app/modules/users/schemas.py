@@ -26,7 +26,7 @@ def known_timezone(v: str) -> str:
     such as "Asia", and on a case-insensitive disk took "asia/taipei" too.
     """
     if v not in _iana_zones():
-        raise ValueError(f"Unknown timezone: {v}")
+        raise ValueError("Unknown timezone")  # not echoed: the 422 copies msg three times
     return v
 
 
@@ -35,7 +35,7 @@ class UserPreferences(BaseModel):
     currency: str = Field("USD", description="Default currency")
     language: str = Field("en", description="Language preference")
     locale: str = Field("en-US", description="Locale preference")
-    timezone: str = Field("UTC", description="Timezone preference")
+    timezone: str = Field("UTC", max_length=50, description="Timezone preference")
 
     @field_validator("timezone")
     @classmethod

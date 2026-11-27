@@ -689,8 +689,11 @@ class TestRegionalTimezone:
     def test_the_preferences_json_takes_the_same_zones(self):
         from app.modules.users.schemas import UserPreferences
         assert UserPreferences(timezone="Asia/Taipei").timezone == "Asia/Taipei"
-        with pytest.raises(ValueError):
+        with pytest.raises(ValueError) as refused:
             UserPreferences(timezone="Mars/Olympus_Mons")
+        assert "Mars" not in refused.value.errors()[0]["msg"]  # what the 422 body carries
+        with pytest.raises(ValueError):
+            UserPreferences(timezone="A" * 51)
 
     def test_the_endpoint_answers_422_not_404(self, override_get_async_session):
         # A 51-character value failed the UPDATE, update_user swallowed it, and the
@@ -707,6 +710,7 @@ class TestRegionalTimezone:
                 factory.return_value.update_user_data = AsyncMock()
                 response = c.put("/api/v1/users/me/regional-preferences", json={"timezone": "A" * 51})
             assert response.status_code == 422
+            assert "A" * 51 not in response.text  # the rejected value isn't echoed back
             factory.return_value.update_user_data.assert_not_called()
         finally:
             app.dependency_overrides.clear()
