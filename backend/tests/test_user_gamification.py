@@ -668,3 +668,34 @@ class TestLoginStreakCalculation:
 
 
 # Integration test markers (intentionally omitted — async tests carry explicit @pytest.mark.asyncio)
+
+class TestRegionalTimezone:
+    """Only real IANA zones reach users.timezone (String(50))."""
+
+    @pytest.mark.parametrize("tz", ["Asia/Taipei", "UTC", "America/Argentina/ComodRivadavia"])
+    def test_known_zones_pass(self, tz):
+        assert RegionalPreferencesUpdate(timezone=tz).timezone == tz
+
+    @pytest.mark.parametrize("tz", ["A" * 51, "Mars/Olympus_Mons", "../etc/passwd", ""])
+    def test_anything_else_is_refused(self, tz):
+        with pytest.raises(ValueError):
+            RegionalPreferencesUpdate(timezone=tz)
+
+    def test_the_endpoint_answers_422_not_404(self, override_get_async_session):
+        # A 51-character value failed the UPDATE, update_user swallowed it, and the
+        # endpoint said "User not found" to a user who exists.
+        from app.core.database import get_async_session, get_db
+        from app.main import app
+        from app.modules.users.dependencies import get_current_active_user
+
+        app.dependency_overrides[get_current_active_user] = lambda: MagicMock(id=uuid4(), preferences={})
+        app.dependency_overrides[get_async_session] = override_get_async_session
+        app.dependency_overrides[get_db] = override_get_async_session
+        try:
+            with patch('app.modules.users.enhanced_router.get_user_service') as factory, TestClient(app) as c:
+                factory.return_value.update_user_data = AsyncMock()
+                response = c.put("/api/v1/users/me/regional-preferences", json={"timezone": "A" * 51})
+            assert response.status_code == 422
+            factory.return_value.update_user_data.assert_not_called()
+        finally:
+            app.dependency_overrides.clear()

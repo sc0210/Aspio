@@ -341,7 +341,7 @@ class RegionalPreferencesUpdate(BaseModel):
         pattern="^(USD|TWD)$",
         description="Preferred currency code"
     )
-    timezone: Optional[str] = Field(None, description="Preferred timezone")
+    timezone: Optional[str] = Field(None, max_length=50, description="Preferred IANA timezone")
     date_format: Optional[str] = Field(
         None,
         pattern="^(western|roc|iso|lunar)$",
@@ -361,6 +361,20 @@ class RegionalPreferencesUpdate(BaseModel):
         None,
         description="Preferred payment methods (e.g., 'wechat_pay', 'alipay', 'grab_pay')"
     )
+
+    @field_validator("timezone")
+    @classmethod
+    def _known_timezone(cls, v: Optional[str]) -> Optional[str]:
+        # Anything else reached the String(50) column: a long value failed the
+        # UPDATE and came back as 404 "User not found".
+        if v is None:
+            return v
+        from zoneinfo import ZoneInfo, ZoneInfoNotFoundError
+        try:
+            ZoneInfo(v)
+        except (ZoneInfoNotFoundError, ValueError):
+            raise ValueError(f"Unknown timezone: {v}")
+        return v
 
 
 # ===== Enhanced Security Schemas =====
