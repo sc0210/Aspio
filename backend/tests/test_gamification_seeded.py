@@ -24,13 +24,15 @@ from app.modules.transactions.models import (
     TransactionType,
     TransactionWalletType,
 )
-from app.modules.users.gamification_repository import GamificationRepository
+from app.modules.users.gamification_repository import (
+    GamificationRepository,
+    level_for_experience,
+)
 from app.modules.users.gamification_service import (
     GamificationService,
     UserAnalyticsService,
 )
 from app.modules.users.models import (
-    AchievementRarity,
     AchievementType,
     User,
     UserActivityLog,
@@ -163,14 +165,15 @@ class TestAwarding:
         } <= types
         assert A.HUNDRED_TRANSACTIONS.value not in types
 
-        # The sweep's XP lifts the user to level 5, and update_user_level adds a
-        # level-milestone bonus that is not part of the returned list.
+        # The sweep's XP lifts the user past level 5, so Rising Star is awarded
+        # and returned like any badge, and the level counts its XP too.
+        assert A.EARLY_ADOPTER.value in types
         earned = sum(a.points_awarded for a in awarded)
         user = await _reload(async_session, world.id)
-        assert user.level == 5
-        assert user.experience_points == earned + 5 * 50
+        assert user.experience_points == earned
+        assert user.level == level_for_experience(earned)
 
-        # One unlock notification per returned award; the level bonus has none.
+        # One unlock notification per returned award, Rising Star included.
         notes = (
             await async_session.execute(select(Notification).where(Notification.user_id == world.id))
         ).scalars().all()
@@ -272,25 +275,63 @@ class TestAwarding:
         ).scalars().all()
         assert [r.achievement_type for r in rows] == [A.FIRST_GOAL]
 
-    async def test_level_up_at_milestone_awards_bonus(self, async_session, world):
+    async def test_update_level_only_sets_the_level(self, async_session, world):
         world.experience_points = 5 * 5 * 50  # exactly level 5
         await async_session.commit()
 
         repo = GamificationRepository(async_session)
         assert await repo.update_user_level(world.id) == 5
         user = await _reload(async_session, world.id)
-        assert user.level == 5
-        assert user.experience_points == 1250 + 5 * 50
-
-        bonus = await repo.get_user_achievements(world.id)
-        assert [(b.achievement_type, b.rarity) for b in bonus] == [
-            (A.EARLY_ADOPTER, AchievementRarity.RARE)
-        ]
-        # Already at the level its XP buys: nothing more to do.
+        assert (user.level, user.experience_points) == (5, 1250)
+        # Rising Star is the service's job (see TestRisingStar).
+        assert await repo.get_user_achievements(world.id) == []
         assert await repo.update_user_level(world.id) is None
 
     async def test_update_level_for_unknown_user(self, async_session, world):
         assert await GamificationRepository(async_session).update_user_level(uuid4()) is None
+
+
+class TestRisingStar:
+    """Reach level 5: 250 XP from the catalogue, notified, and counted in the level."""
+
+    async def _check(self, session, user, xp):
+        user.experience_points, user.level = xp, 4
+        await session.commit()
+        # A trigger that awards nothing itself, so only the level is in play.
+        return await GamificationService(session).trigger_achievement_check(user.id, "qr_payment")
+
+    async def test_its_xp_moves_the_level(self, async_session, world):
+        awarded = await self._check(async_session, world, 1600)  # level 5; 1800 buys 6
+
+        assert [(a.achievement_type, a.points_awarded) for a in awarded] == [(A.EARLY_ADOPTER.value, 250)]
+        user = await _reload(async_session, world.id)
+        assert (user.experience_points, user.level) == (1850, 6)  # was left at 5
+        row = (await GamificationRepository(async_session).get_user_achievements(world.id))[0]
+        assert row.achievement_data == {"level_reached": 5}
+        notes = (
+            await async_session.execute(select(Notification).where(Notification.user_id == world.id))
+        ).scalars().all()
+        assert len(notes) == 1
+
+    async def test_a_level_that_skips_five_still_earns_it_once(self, async_session, world):
+        awarded = await self._check(async_session, world, 1850)  # 4 → 6: no "level % 5"
+        assert [(a.achievement_type, a.points_awarded) for a in awarded] == [(A.EARLY_ADOPTER.value, 250)]
+
+        # Level 10 later pays nothing more (it paid level × 50 = 500 when 5 was skipped).
+        assert await self._check(async_session, world, 5000) == []
+        user = await _reload(async_session, world.id)
+        assert (user.experience_points, user.level) == (5000, 10)
+
+
+    async def test_a_failed_settle_keeps_the_awards_already_made(self, async_session, world, monkeypatch):
+        async def broken(self, user_id):
+            raise RuntimeError("db down")
+
+        monkeypatch.setattr(GamificationRepository, "get_level", broken)
+        awarded = await GamificationService(async_session).trigger_achievement_check(
+            world.id, "transaction_created"
+        )
+        assert [a.achievement_type for a in awarded] == [A.FIRST_TRANSACTION.value]
 
 
 class TestStats:

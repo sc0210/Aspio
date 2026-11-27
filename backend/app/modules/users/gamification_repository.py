@@ -542,21 +542,13 @@ class GamificationRepository:
             if new_level > user.level:
                 await self.session.execute(
                     update(User)
-                    .where(User.id == user_id)
+                    # Never lower it: a parallel check may already have written more.
+                    .where(User.id == user_id, User.level < new_level)
                     .values(level=new_level)
                 )
                 await self.session.commit()
-                
-                # Award level up achievement if significant milestone
-                if new_level % 5 == 0:  # Every 5 levels
-                    await self.award_achievement(
-                        user_id,
-                        AchievementType.EARLY_ADOPTER,  # Reuse for level milestones
-                        points=new_level * 50,
-                        rarity=AchievementRarity.RARE,
-                        achievement_data={"level_reached": new_level}
-                    )
-                
+                # Rising Star (reach level 5) is awarded by the service, which
+                # notifies and settles the level again once its XP lands.
                 logger.info(f"User {user_id} leveled up to level {new_level}")
                 return new_level
             
@@ -567,6 +559,11 @@ class GamificationRepository:
             logger.error(f"Error updating user level: {str(e)}")
             return None
     
+    async def get_level(self, user_id: UUID) -> Optional[int]:
+        return (
+            await self.session.execute(select(User.level).where(User.id == user_id))
+        ).scalar_one_or_none()
+
     def _calculate_level_from_xp(self, experience_points: int) -> int:
         """Calculate user level from experience points"""
         return level_for_experience(experience_points)

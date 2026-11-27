@@ -252,11 +252,7 @@ class GamificationService:
                 if achievement:
                     newly_awarded.append(achievement)
 
-            # Update user level if needed
-            new_level = await self.gamification_repo.update_user_level(user_id)
-            if new_level:
-                logger.info(f"User {user_id} leveled up to level {new_level}")
-
+            newly_awarded.extend(await self._settle_level(user_id))
             return newly_awarded
 
         except Exception as e:
@@ -296,14 +292,47 @@ class GamificationService:
                 if achievement:
                     awarded.append(achievement)
 
-            new_level = await self.gamification_repo.update_user_level(user_id)
-            if new_level:
-                logger.info(f"User {user_id} leveled up to level {new_level}")
-
+            awarded.extend(await self._settle_level(user_id))
             return awarded
 
         except Exception as e:
             logger.error(f"Error sweeping achievements: {str(e)}")
+            return []
+
+    async def _settle_level(self, user_id: UUID) -> List[AchievementResponse]:
+        """Raise the level to what the XP buys, and award Rising Star from level 5.
+
+        Rising Star used to be paid inside update_user_level only on a level that
+        was exactly a multiple of 5: a jump from 4 to 6 skipped it, the level it
+        did reach later paid level × 50 XP instead of the catalogue's 250, no
+        notification went out, and its XP never moved the level.
+        """
+        try:
+            await self.gamification_repo.update_user_level(user_id)
+            level = await self.gamification_repo.get_level(user_id)
+            rising = get_definition(AchievementType.EARLY_ADOPTER)
+            if level is None or level < rising.required_progress:
+                return []
+            # Progress is the level, so the full progress map isn't needed;
+            # award_achievement refuses the badge if it is already held.
+            badge = await self._check_and_award_achievement(
+                user_id,
+                AchievementType.EARLY_ADOPTER,
+                {"level_reached": level},
+                progress={
+                    "current_progress": level,
+                    "required_progress": rising.required_progress,
+                    "is_unlocked": False,
+                },
+            )
+            if not badge:
+                return []
+            await self.gamification_repo.update_user_level(user_id)
+            return [badge]
+        except Exception:
+            # The awards already made stand. Logged as an error: a coding bug here
+            # would fail every check, not just this one.
+            logger.exception("Failed to settle level for %s", user_id)
             return []
 
     async def _check_and_award_achievement(
