@@ -574,20 +574,22 @@ class GamificationRepository:
         ``seen`` is the last_streak_update the caller read; if it has changed, a
         parallel request got there first and this one writes nothing.
         """
-        result = await self.session.execute(
-            update(User)
-            .where(User.id == user_id, User.last_streak_update.is_not_distinct_from(seen))
-            .values(
-                experience_points=User.experience_points + xp,
-                current_login_streak=streak,
-                longest_login_streak=case(
-                    (User.longest_login_streak < streak, streak),
-                    else_=User.longest_login_streak,
-                ),
-                last_streak_update=now,
-                updated_at=now,
+        # A savepoint: a failed write must not abort the login that called it.
+        async with self.session.begin_nested():
+            result = await self.session.execute(
+                update(User)
+                .where(User.id == user_id, User.last_streak_update.is_not_distinct_from(seen))
+                .values(
+                    experience_points=User.experience_points + xp,
+                    current_login_streak=streak,
+                    longest_login_streak=case(
+                        (User.longest_login_streak < streak, streak),
+                        else_=User.longest_login_streak,
+                    ),
+                    last_streak_update=now,
+                    updated_at=now,
+                )
             )
-        )
         await self.session.commit()
         return result.rowcount == 1
 
