@@ -378,6 +378,18 @@ class TestRisingStar:
         assert (user.experience_points, user.level) == (1503, 5)  # 1253 + Rising Star
         assert world.experience_points == 1503  # the caller's object is fresh too
 
+    async def test_the_streak_ping_pays_the_day_and_a_later_login_does_not(self, async_session, world):
+        world.experience_points, world.last_streak_update = 0, None
+        await async_session.commit()
+
+        result = await UserAnalyticsService(async_session).update_login_streak(world.id)
+        assert result["streak_updated"] is True
+        user = await _reload(async_session, world.id)
+        await UserService(async_session)._record_daily_visit(user, touch_last_login=True)
+
+        user = await _reload(async_session, world.id)
+        assert (user.experience_points, user.current_login_streak) == (5, 1)
+
     async def test_a_failed_settle_keeps_the_awards_already_made(self, async_session, world, monkeypatch):
         async def broken(self, user_id):
             raise RuntimeError("db down")

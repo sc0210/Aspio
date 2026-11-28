@@ -90,6 +90,7 @@ class TestUpdates:
         assert await repo.verify_user_email(u.id) is True
         await async_session.refresh(u)
         assert u.is_verified and u.status == UserStatus.ACTIVE and u.email_verified_at
+        assert await repo.verify_user_email(u.id) is False  # only the first write verifies
         assert await repo.verify_user_email(uuid4()) is False
 
     async def test_successful_login_resets_counters(self, repo, async_session):

@@ -33,6 +33,9 @@ from app.utils.datetime_helpers import business_timezone
 settings = get_settings()
 logger = logging.getLogger(__name__)
 
+#: XP for the first visit of a calendar day, by login or by the streak ping.
+DAILY_VISIT_XP = 5
+
 
 def compute_login_streak(
     last_streak_update: Optional[datetime],
@@ -299,6 +302,25 @@ class GamificationService:
             logger.error(f"Error sweeping achievements: {str(e)}")
             return []
 
+    async def record_daily_visit(
+        self, user_id: UUID, seen: Optional[datetime], streak: int, now: datetime
+    ) -> List[AchievementResponse]:
+        """Advance the streak and pay the day's 5 XP, once per day across every path.
+
+        ``seen`` is the last_streak_update the caller read; a parallel request that
+        already counted the day makes this a no-op.
+        """
+        if not await self.gamification_repo.advance_daily_streak(
+            user_id, seen, streak, now, xp=DAILY_VISIT_XP
+        ):
+            return []
+        # Settle first: a failing badge check must not leave the level behind.
+        awarded = await self.settle_level(user_id)
+        awarded.extend(
+            await self.trigger_achievement_check(user_id, "login", {"new_streak": streak})
+        )
+        return awarded
+
     async def settle_level(self, user_id: UUID) -> List[AchievementResponse]:
         """Raise the level to what the XP buys, and award Rising Star from level 5.
 
@@ -535,20 +557,25 @@ class UserAnalyticsService:
                         "new_achievements": [],
                     }
 
-            await self.user_repo.update_user(
-                user_id,
-                {
-                    "current_login_streak": new_streak,
-                    "longest_login_streak": longest_streak,
-                    "last_streak_update": now,
-                },
-            )
-
-            # Check for streak achievements
             gamification_service = GamificationService(self.session)
-            new_achievements = await gamification_service.trigger_achievement_check(
-                user_id, "login", {"new_streak": new_streak}
-            )
+            if advanced:
+                # The same write as a login's first visit, so the day pays its XP
+                # once whichever comes first.
+                new_achievements = await gamification_service.record_daily_visit(
+                    user_id, user.last_streak_update, new_streak, now
+                )
+            else:
+                await self.user_repo.update_user(
+                    user_id,
+                    {
+                        "current_login_streak": new_streak,
+                        "longest_login_streak": longest_streak,
+                        "last_streak_update": now,
+                    },
+                )
+                new_achievements = await gamification_service.trigger_achievement_check(
+                    user_id, "login", {"new_streak": new_streak}
+                )
 
             logger.info(f"Updated login streak for user {user_id}: {new_streak} days")
 

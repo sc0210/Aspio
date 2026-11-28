@@ -230,12 +230,12 @@ class UserRepository:
             user_id: User's UUID
             
         Returns:
-            True if email was verified successfully
+            True only for the request that turned it from unverified to verified
         """
         try:
             query = (
                 update(User)
-                .where(and_(User.id == user_id, User.deleted_at.is_(None)))
+                .where(and_(User.id == user_id, User.deleted_at.is_(None), User.is_verified.is_(False)))
                 .values(
                     is_verified=True,
                     email_verified_at=datetime.now(timezone.utc),

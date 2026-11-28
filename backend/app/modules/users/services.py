@@ -693,24 +693,22 @@ class UserService:
                     detail="Invalid or expired verification token"
                 )
             
-            # Claim the token first, so a second click racing this one pays nothing.
-            if not await self.email_verification_repo.use_verification_token(verification_token.id):
-                raise HTTPException(
-                    status_code=status.HTTP_400_BAD_REQUEST,
-                    detail="Invalid or expired verification token"
-                )
+            user_id = verification_token.user_id
+            # Only the unverified -> verified write pays, so a second click or a
+            # second emailed token can't pay the bonus again.
+            newly_verified = await self.user_repo.verify_user_email(user_id)
+            if not newly_verified:
+                user = await self.user_repo.get_user_by_id(user_id)
+                if not (user and user.is_verified):
+                    return False  # failed write: the token stays usable for a retry
 
-            success = await self.user_repo.verify_user_email(verification_token.user_id)
+            await self.email_verification_repo.use_verification_token(verification_token.id)
 
-            if success:
-                # Award email verification bonus
-                await self._award_experience_points(
-                    verification_token.user_id, 50, "email_verification"
-                )
-                
-                logger.info(f"Email verified for user: {verification_token.user_id}")
-            
-            return success
+            if newly_verified:
+                await self._award_experience_points(user_id, 50, "email_verification")
+                logger.info(f"Email verified for user: {user_id}")
+
+            return True
             
         except HTTPException:
             raise
@@ -837,33 +835,32 @@ class UserService:
         Best-effort: gamification must never break authentication, so failures
         are logged and swallowed.
         """
+        # Read up front: a failed step below can roll back and expire ``user``.
+        user_id, seen = user.id, user.last_streak_update
         try:
             now = datetime.now(timezone.utc)
             new_streak, streak_advanced = compute_login_streak(
-                user.last_streak_update, user.current_login_streak, now
+                seen, user.current_login_streak, now
             )
 
             if touch_last_login:
-                await self.user_repo.update_user(user.id, {'last_login_at': now})
+                await self.user_repo.update_user(user_id, {'last_login_at': now})
 
             if streak_advanced:
-                gamification = GamificationService(self.session)
-                # Only the request that still sees the streak it read pays today's XP.
-                if await gamification.gamification_repo.advance_daily_streak(
-                    user.id, user.last_streak_update, new_streak, now, xp=5
-                ):
-                    await gamification.settle_level(user.id)
-                    # Award any streak badge the new count just unlocked.
-                    await gamification.trigger_achievement_check(
-                        user.id, "login", {"new_streak": new_streak}
-                    )
-
-            if touch_last_login or streak_advanced:
-                await self.session.refresh(user)  # callers answer with it
+                await GamificationService(self.session).record_daily_visit(
+                    user_id, seen, new_streak, now
+                )
 
         except Exception as e:
             logger.error(f"Error recording daily visit: {str(e)}")
-    
+
+        try:
+            await self.session.refresh(user)  # callers answer with it
+
+        except Exception as e:
+            logger.error(f"Error refreshing user after daily visit: {str(e)}")
+
+
 # Service factory function
 def get_user_service(session: AsyncSession) -> UserService:
     """Get user service instance"""

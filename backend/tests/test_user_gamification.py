@@ -335,7 +335,7 @@ class TestUserAnalyticsService:
         with patch.object(analytics_service, 'session') as mock_session:
             with patch('app.modules.users.gamification_service.GamificationService') as MockGamificationService:
                 mock_gamification = MockGamificationService.return_value
-                mock_gamification.trigger_achievement_check = AsyncMock(return_value=[])
+                mock_gamification.record_daily_visit = AsyncMock(return_value=[])
 
                 result = await analytics_service.update_login_streak(sample_user.id)
 
@@ -343,12 +343,10 @@ class TestUserAnalyticsService:
         assert result["longest_streak"] == 10  # No change
         assert result["streak_updated"] == True
 
-        # The new count must actually be persisted, not just returned.
-        analytics_service.user_repo.update_user.assert_awaited_once()
-        _, payload = analytics_service.user_repo.update_user.await_args.args
-        assert payload["current_login_streak"] == 6
-        assert payload["longest_login_streak"] == 10
-        assert payload["last_streak_update"] is not None
+        # The new count must actually be persisted, not just returned: through the
+        # same once-a-day write as a login, against the streak this request read.
+        user_id, seen, streak, _now = mock_gamification.record_daily_visit.await_args.args
+        assert (user_id, seen, streak) == (sample_user.id, sample_user.last_streak_update, 6)
 
     @pytest.mark.asyncio
     async def test_update_login_streak_broken(self, analytics_service, sample_user):
@@ -361,17 +359,14 @@ class TestUserAnalyticsService:
         with patch.object(analytics_service, 'session') as mock_session:
             with patch('app.modules.users.gamification_service.GamificationService') as MockGamificationService:
                 mock_gamification = MockGamificationService.return_value
-                mock_gamification.trigger_achievement_check = AsyncMock(return_value=[])
+                mock_gamification.record_daily_visit = AsyncMock(return_value=[])
 
                 result = await analytics_service.update_login_streak(sample_user.id)
 
         assert result["current_streak"] == 1  # Reset to 1
         assert result["longest_streak"] == 10  # No change
         assert result["streak_updated"] == True
-
-        analytics_service.user_repo.update_user.assert_awaited_once()
-        _, payload = analytics_service.user_repo.update_user.await_args.args
-        assert payload["current_login_streak"] == 1
+        assert mock_gamification.record_daily_visit.await_args.args[2] == 1
 
     @pytest.mark.asyncio
     async def test_update_login_streak_is_idempotent_within_a_day(
@@ -398,9 +393,7 @@ class TestUserAnalyticsService:
         analytics_service.user_repo.get_user_by_id.return_value = sample_user
 
         with patch('app.modules.users.gamification_service.GamificationService') as MockGamificationService:
-            MockGamificationService.return_value.trigger_achievement_check = AsyncMock(
-                return_value=[]
-            )
+            MockGamificationService.return_value.record_daily_visit = AsyncMock(return_value=[])
             result = await analytics_service.update_login_streak(sample_user.id)
 
         assert result["current_streak"] == 1

@@ -587,7 +587,6 @@ class GamificationRepository:
                 last_streak_update=now,
                 updated_at=now,
             )
-            .execution_options(synchronize_session=False)
         )
         await self.session.commit()
         return result.rowcount == 1
