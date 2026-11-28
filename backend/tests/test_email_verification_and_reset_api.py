@@ -8,12 +8,16 @@ expired token does nothing, and a successful reset ends every existing session.
 
 import uuid
 from datetime import datetime, timedelta, timezone
+from types import SimpleNamespace
+from unittest.mock import AsyncMock
 
 import pytest
 import pytest_asyncio
+from fastapi import HTTPException
 
 from app.modules.users.models import User, UserRole, UserStatus
 from app.modules.users.repositories import EmailVerificationRepository
+from app.modules.users.services import UserService
 
 pytestmark = pytest.mark.asyncio
 AUTH = "/api/v1/auth"
@@ -55,6 +59,21 @@ class TestVerifyEmail:
 
         assert client.post(f"{AUTH}/verify-email", json={"token": token}).status_code == 400
         assert (await _reload(async_session, unverified_user)).experience_points == xp
+
+    async def test_a_click_racing_another_pays_nothing(self, async_session, unverified_user, monkeypatch):
+        token = await _token(async_session, unverified_user, "email_verification")
+        svc = UserService(async_session)
+        row = await svc.email_verification_repo.get_verification_token(token, "email_verification")
+        # What this request read before the other click claimed the token.
+        stale = SimpleNamespace(id=row.id, user_id=row.user_id, is_used=False, is_expired=False)
+        assert await svc.email_verification_repo.use_verification_token(row.id)  # the other click
+        monkeypatch.setattr(svc.email_verification_repo, "get_verification_token", AsyncMock(return_value=stale))
+
+        with pytest.raises(HTTPException) as exc:
+            await svc.verify_email(token)
+        assert exc.value.status_code == 400
+        user = await _reload(async_session, unverified_user)
+        assert (user.is_verified, user.experience_points) == (False, 0)
 
     async def test_an_expired_token_does_nothing(self, client, async_session, unverified_user):
         token = await _token(async_session, unverified_user, "email_verification", timedelta(minutes=-1))

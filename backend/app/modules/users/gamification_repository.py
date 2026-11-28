@@ -10,7 +10,7 @@ from typing import Optional, List, Dict, Any
 from uuid import UUID
 import logging
 
-from sqlalchemy import select, update, func, and_, desc
+from sqlalchemy import select, update, func, and_, desc, case
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -561,6 +561,37 @@ class GamificationRepository:
             logger.error(f"Error updating user level: {str(e)}")
             return None
     
+    async def advance_daily_streak(
+        self,
+        user_id: UUID,
+        seen: Optional[datetime],
+        streak: int,
+        now: datetime,
+        xp: int,
+    ) -> bool:
+        """Record today's visit and pay its XP, unless another request already did.
+
+        ``seen`` is the last_streak_update the caller read; if it has changed, a
+        parallel request got there first and this one writes nothing.
+        """
+        result = await self.session.execute(
+            update(User)
+            .where(User.id == user_id, User.last_streak_update.is_not_distinct_from(seen))
+            .values(
+                experience_points=User.experience_points + xp,
+                current_login_streak=streak,
+                longest_login_streak=case(
+                    (User.longest_login_streak < streak, streak),
+                    else_=User.longest_login_streak,
+                ),
+                last_streak_update=now,
+                updated_at=now,
+            )
+            .execution_options(synchronize_session=False)
+        )
+        await self.session.commit()
+        return result.rowcount == 1
+
     async def get_level(self, user_id: UUID) -> Optional[int]:
         return (
             await self.session.execute(select(User.level).where(User.id == user_id))

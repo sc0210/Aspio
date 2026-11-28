@@ -180,6 +180,7 @@ class TestEmailTokens:
         # A token only matches the flow it was issued for.
         assert await emails.get_verification_token("abc", "password_reset") is None
         assert await emails.use_verification_token(row.id) is True
+        assert await emails.use_verification_token(row.id) is False  # a racing second use
         assert await emails.use_verification_token(uuid4()) is False
 
     async def test_cleanup_drops_used_and_expired(self, repo, async_session):

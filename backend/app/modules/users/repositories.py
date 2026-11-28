@@ -566,7 +566,8 @@ class EmailVerificationRepository:
         try:
             query = (
                 update(EmailVerificationToken)
-                .where(EmailVerificationToken.id == token_id)
+                # Only an unused token: of two requests racing on one token, one wins.
+                .where(EmailVerificationToken.id == token_id, EmailVerificationToken.is_used.is_(False))
                 .values(is_used=True)
             )
             

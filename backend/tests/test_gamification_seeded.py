@@ -13,7 +13,7 @@ from uuid import uuid4
 import pytest
 import pytest_asyncio
 from fastapi import HTTPException
-from sqlalchemy import select, text
+from sqlalchemy import select, update
 
 from app.modules.goals.models import Goal, GoalCategory, GoalMilestone, GoalStatus
 from app.modules.notifications.models import Notification
@@ -337,7 +337,10 @@ class TestRisingStar:
     async def test_a_daily_visit_adds_to_xp_paid_since_the_user_was_read(self, async_session, world):
         # Another request pays 1250 XP after this one loaded the user; the visit used to
         # write back its stale 0 + 5 and a level of 1.
-        await async_session.execute(text("UPDATE users SET experience_points = 1250 WHERE id = :u"), {"u": world.id.hex})
+        await async_session.execute(
+            update(User).where(User.id == world.id).values(experience_points=1250)
+            .execution_options(synchronize_session=False)
+        )
         await async_session.commit()
 
         await UserService(async_session)._record_daily_visit(world, touch_last_login=False)
@@ -345,6 +348,35 @@ class TestRisingStar:
         user = await _reload(async_session, world.id)
         assert (user.experience_points, user.level) == (1505, 5)
         assert user.current_login_streak == 1
+
+    async def test_two_visits_racing_pay_the_day_once(self, async_session, world):
+        world.experience_points, world.last_streak_update = 1248, None
+        await async_session.commit()
+        repo = GamificationRepository(async_session)
+        now = datetime.now(timezone.utc)
+
+        # Both requests read last_streak_update = None; only the first writes.
+        assert await repo.advance_daily_streak(world.id, None, 1, now, xp=5) is True
+        assert await repo.advance_daily_streak(world.id, None, 1, now, xp=5) is False
+
+        user = await _reload(async_session, world.id)
+        assert (user.experience_points, user.current_login_streak, user.longest_login_streak) == (1253, 1, 1)
+        # The same visit seen once more, from the time it wrote, is a new day's write.
+        assert await repo.advance_daily_streak(world.id, user.last_streak_update, 2, now, xp=5) is True
+
+    async def test_a_daily_visit_settles_the_level_when_the_badge_check_fails(self, async_session, world, monkeypatch):
+        world.experience_points, world.level, world.last_streak_update = 1248, 4, None
+        await async_session.commit()
+
+        async def broken(self, *a, **kw):
+            raise RuntimeError("counter bug")
+
+        monkeypatch.setattr(GamificationRepository, "get_achievement_progress", broken)
+        await UserService(async_session)._record_daily_visit(world, touch_last_login=True)
+
+        user = await _reload(async_session, world.id)
+        assert (user.experience_points, user.level) == (1503, 5)  # 1253 + Rising Star
+        assert world.experience_points == 1503  # the caller's object is fresh too
 
     async def test_a_failed_settle_keeps_the_awards_already_made(self, async_session, world, monkeypatch):
         async def broken(self, user_id):

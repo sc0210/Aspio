@@ -693,13 +693,16 @@ class UserService:
                     detail="Invalid or expired verification token"
                 )
             
-            # Verify user email
+            # Claim the token first, so a second click racing this one pays nothing.
+            if not await self.email_verification_repo.use_verification_token(verification_token.id):
+                raise HTTPException(
+                    status_code=status.HTTP_400_BAD_REQUEST,
+                    detail="Invalid or expired verification token"
+                )
+
             success = await self.user_repo.verify_user_email(verification_token.user_id)
-            
+
             if success:
-                # Mark token as used
-                await self.email_verification_repo.use_verification_token(verification_token.id)
-                
                 # Award email verification bonus
                 await self._award_experience_points(
                     verification_token.user_id, 50, "email_verification"
@@ -840,29 +843,23 @@ class UserService:
                 user.last_streak_update, user.current_login_streak, now
             )
 
-            updates: Dict[str, Any] = {}
             if touch_last_login:
-                updates['last_login_at'] = now
+                await self.user_repo.update_user(user.id, {'last_login_at': now})
 
             if streak_advanced:
-                # Added in SQL; the level follows in trigger_achievement_check below.
-                updates['experience_points'] = User.experience_points + 5
-                updates['current_login_streak'] = new_streak
-                updates['longest_login_streak'] = max(
-                    user.longest_login_streak, new_streak
-                )
-                updates['last_streak_update'] = now
+                gamification = GamificationService(self.session)
+                # Only the request that still sees the streak it read pays today's XP.
+                if await gamification.gamification_repo.advance_daily_streak(
+                    user.id, user.last_streak_update, new_streak, now, xp=5
+                ):
+                    await gamification.settle_level(user.id)
+                    # Award any streak badge the new count just unlocked.
+                    await gamification.trigger_achievement_check(
+                        user.id, "login", {"new_streak": new_streak}
+                    )
 
-            if not updates:
-                return
-
-            await self.user_repo.update_user(user.id, updates)
-
-            if streak_advanced:
-                # Award any streak badge the new count just unlocked.
-                await GamificationService(self.session).trigger_achievement_check(
-                    user.id, "login", {"new_streak": new_streak}
-                )
+            if touch_last_login or streak_advanced:
+                await self.session.refresh(user)  # callers answer with it
 
         except Exception as e:
             logger.error(f"Error recording daily visit: {str(e)}")

@@ -117,6 +117,31 @@ async def test_two_requests_award_a_badge_once(world):
     assert xp == 50
 
 
+async def test_two_visits_on_one_day_pay_its_xp_once(world):
+    from app.modules.users.gamification_repository import GamificationRepository
+    from app.modules.users.models import User
+
+    maker, _, user_id = world
+    yesterday = datetime.now(UTC) - timedelta(days=1)
+    async with maker() as s:
+        await s.execute(text("UPDATE users SET last_streak_update = :t WHERE id = :u"),
+                        {"t": yesterday, "u": user_id})
+        await s.commit()
+        seen = (await s.execute(select(User.last_streak_update).where(User.id == user_id))).scalar_one()
+
+    async def visit():
+        async with maker() as s:
+            return await GamificationRepository(s).advance_daily_streak(
+                user_id, seen, 2, datetime.now(UTC), xp=5)
+
+    results = await asyncio.wait_for(asyncio.gather(visit(), visit()), timeout=30)
+
+    assert sorted(results) == [False, True]
+    async with maker() as s:
+        xp = (await s.execute(select(User.experience_points).where(User.id == user_id))).scalar_one()
+    assert xp == 5
+
+
 async def test_prod_sql_removes_duplicates_and_their_xp(world):
     _, engine, user_id = world
     sql = PROD_SQL.read_text()
