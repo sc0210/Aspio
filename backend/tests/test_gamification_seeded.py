@@ -24,6 +24,7 @@ from app.modules.transactions.models import (
     TransactionType,
     TransactionWalletType,
 )
+from app.modules.users.services import UserService
 from app.modules.users.gamification_repository import (
     GamificationRepository,
     level_for_experience,
@@ -39,7 +40,6 @@ from app.modules.users.models import (
     UserGamificationAchievement,
 )
 from app.modules.users.schemas import UserActivityRequest
-from app.modules.users.services import UserService
 
 pytestmark = [pytest.mark.asyncio, pytest.mark.database]
 
