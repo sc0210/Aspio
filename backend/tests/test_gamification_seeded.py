@@ -13,7 +13,7 @@ from uuid import uuid4
 import pytest
 import pytest_asyncio
 from fastapi import HTTPException
-from sqlalchemy import select
+from sqlalchemy import select, text
 
 from app.modules.goals.models import Goal, GoalCategory, GoalMilestone, GoalStatus
 from app.modules.notifications.models import Notification
@@ -39,6 +39,7 @@ from app.modules.users.models import (
     UserGamificationAchievement,
 )
 from app.modules.users.schemas import UserActivityRequest
+from app.modules.users.services import UserService
 
 pytestmark = [pytest.mark.asyncio, pytest.mark.database]
 
@@ -322,6 +323,28 @@ class TestRisingStar:
         user = await _reload(async_session, world.id)
         assert (user.experience_points, user.level) == (5000, 10)
 
+
+    async def test_email_verification_xp_can_earn_it(self, async_session, world):
+        world.experience_points, world.level = 1200, 4
+        await async_session.commit()
+
+        await UserService(async_session)._award_experience_points(world.id, 50, "email_verification")
+
+        user = await _reload(async_session, world.id)
+        assert (user.experience_points, user.level) == (1500, 5)  # 1250 + Rising Star's 250
+        assert [a.achievement_type for a in await GamificationRepository(async_session).get_user_achievements(world.id)] == [A.EARLY_ADOPTER]
+
+    async def test_a_daily_visit_adds_to_xp_paid_since_the_user_was_read(self, async_session, world):
+        # Another request pays 1250 XP after this one loaded the user; the visit used to
+        # write back its stale 0 + 5 and a level of 1.
+        await async_session.execute(text("UPDATE users SET experience_points = 1250 WHERE id = :u"), {"u": world.id.hex})
+        await async_session.commit()
+
+        await UserService(async_session)._record_daily_visit(world, touch_last_login=False)
+
+        user = await _reload(async_session, world.id)
+        assert (user.experience_points, user.level) == (1505, 5)
+        assert user.current_login_streak == 1
 
     async def test_a_failed_settle_keeps_the_awards_already_made(self, async_session, world, monkeypatch):
         async def broken(self, user_id):

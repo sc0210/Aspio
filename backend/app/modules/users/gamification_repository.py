@@ -529,16 +529,18 @@ class GamificationRepository:
             New level if changed, None if no change
         """
         try:
-            user_query = select(User).where(User.id == user_id)
-            result = await self.session.execute(user_query)
-            user = result.scalar_one_or_none()
-            
+            # Columns, not the entity: a User already in the session may be stale.
+            user = (
+                await self.session.execute(
+                    select(User.experience_points, User.level).where(User.id == user_id)
+                )
+            ).one_or_none()
+
             if not user:
                 return None
-            
-            # Calculate new level (100 XP per level, increasing by 50 each level)
+
             new_level = self._calculate_level_from_xp(user.experience_points)
-            
+
             if new_level > user.level:
                 await self.session.execute(
                     update(User)

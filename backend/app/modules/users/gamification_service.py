@@ -252,7 +252,7 @@ class GamificationService:
                 if achievement:
                     newly_awarded.append(achievement)
 
-            newly_awarded.extend(await self._settle_level(user_id))
+            newly_awarded.extend(await self.settle_level(user_id))
             return newly_awarded
 
         except Exception as e:
@@ -292,14 +292,14 @@ class GamificationService:
                 if achievement:
                     awarded.append(achievement)
 
-            awarded.extend(await self._settle_level(user_id))
+            awarded.extend(await self.settle_level(user_id))
             return awarded
 
         except Exception as e:
             logger.error(f"Error sweeping achievements: {str(e)}")
             return []
 
-    async def _settle_level(self, user_id: UUID) -> List[AchievementResponse]:
+    async def settle_level(self, user_id: UUID) -> List[AchievementResponse]:
         """Raise the level to what the XP buys, and award Rising Star from level 5.
 
         Rising Star used to be paid inside update_user_level only on a level that

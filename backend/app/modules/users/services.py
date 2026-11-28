@@ -28,7 +28,6 @@ from .security import (
     security_utils, jwt_manager, google_oauth, password_validator
 )
 from .gamification_service import GamificationService, compute_login_streak
-from .gamification_repository import level_for_experience
 from ...core.config import get_settings
 from ...core.email_service import get_email_service
 
@@ -797,20 +796,15 @@ class UserService:
         points: int, 
         reason: str
     ) -> None:
-        """Award experience points to user"""
+        """Award experience points, then raise the level (and Rising Star) to match."""
         try:
-            user = await self.user_repo.get_user_by_id(user_id)
-            if user:
-                new_points = user.experience_points + points
-                new_level = level_for_experience(new_points)
-
-                await self.user_repo.update_user(user_id, {
-                    'experience_points': new_points,
-                    'level': new_level
-                })
-                
+            # Added in SQL: a total read earlier would overwrite XP a badge paid meanwhile.
+            if await self.user_repo.update_user(
+                user_id, {'experience_points': User.experience_points + points}
+            ):
                 logger.info(f"Awarded {points} XP to user {user_id} for {reason}")
-                
+                await GamificationService(self.session).settle_level(user_id)
+
         except Exception as e:
             logger.error(f"Error awarding experience points: {str(e)}")
     
@@ -851,9 +845,8 @@ class UserService:
                 updates['last_login_at'] = now
 
             if streak_advanced:
-                new_points = user.experience_points + 5
-                updates['experience_points'] = new_points
-                updates['level'] = level_for_experience(new_points)
+                # Added in SQL; the level follows in trigger_achievement_check below.
+                updates['experience_points'] = User.experience_points + 5
                 updates['current_login_streak'] = new_streak
                 updates['longest_login_streak'] = max(
                     user.longest_login_streak, new_streak
