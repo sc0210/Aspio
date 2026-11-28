@@ -711,7 +711,11 @@ class UserService:
                 if not (user and user.is_verified):
                     return False  # failed write: the token stays usable for a retry
 
-            await self.email_verification_repo.use_verification_token(verification_token.id)
+            try:
+                await self.email_verification_repo.use_verification_token(verification_token.id)
+            except Exception:
+                # The flip above is the once-only gate; a token left unmarked pays nothing more.
+                logger.exception("Verification token not marked used for %s", user_id)
 
             if newly_verified:
                 await self._award_experience_points(user_id, 50, "email_verification")

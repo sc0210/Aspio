@@ -453,6 +453,19 @@ class TestRisingStar:
         assert await GamificationService(async_session).sweep_achievements(world.id) == []
         assert (await _reload(async_session, world.id)).level == 5
 
+    async def test_a_check_that_fails_partway_still_returns_its_awards(self, async_session, world, monkeypatch):
+        paid = object()  # stands in for the first badge's response
+        calls = []
+
+        async def first_pays_then_fails(self, user_id, achievement_type, *a, **kw):
+            calls.append(achievement_type)
+            if len(calls) == 1:
+                return paid
+            raise RuntimeError("counter bug")
+
+        monkeypatch.setattr(GamificationService, "_check_and_award_achievement", first_pays_then_fails)
+        assert await GamificationService(async_session).trigger_achievement_check(world.id, "goal_completed") == [paid]
+
     async def test_a_failed_settle_keeps_the_awards_already_made(self, async_session, world, monkeypatch):
         async def broken(self, user_id):
             raise RuntimeError("db down")

@@ -88,6 +88,15 @@ class TestVerifyEmail:
         assert await svc.verify_email(second) is True
         assert (await _reload(async_session, unverified_user)).experience_points == 50
 
+    async def test_a_token_left_unmarked_still_pays_the_flip(self, async_session, unverified_user, monkeypatch):
+        token = await _token(async_session, unverified_user, "email_verification")
+        svc = UserService(async_session)
+        monkeypatch.setattr(svc.email_verification_repo, "use_verification_token", AsyncMock(side_effect=RuntimeError("db down")))
+
+        assert await svc.verify_email(token) is True
+        user = await _reload(async_session, unverified_user)
+        assert (user.is_verified, user.experience_points) == (True, 50)
+
     async def test_a_failed_verify_keeps_the_token_for_a_retry(self, async_session, unverified_user, monkeypatch):
         token = await _token(async_session, unverified_user, "email_verification")
         svc = UserService(async_session)

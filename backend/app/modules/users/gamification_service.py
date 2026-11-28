@@ -222,9 +222,8 @@ class GamificationService:
         Returns:
             List of newly awarded achievements
         """
+        newly_awarded: List[AchievementResponse] = []
         try:
-            newly_awarded = []
-
             # Map trigger types to potential achievements
             achievement_checks = {
                 "transaction_created": [
@@ -260,8 +259,8 @@ class GamificationService:
 
         except Exception as e:
             logger.error(f"Error checking achievements: {str(e)}")
-            # Awards made before the failure have already paid their XP.
-            return await self.settle_level(user_id)
+            # Awards made before the failure stand and have paid their XP.
+            return newly_awarded + await self.settle_level(user_id)
 
     async def sweep_achievements(
         self,
@@ -280,12 +279,12 @@ class GamificationService:
         per-type path recomputes the full map on each call, which is O(n²) in
         the number of achievement types.
         """
+        awarded: List[AchievementResponse] = []
         try:
             progress_data = await self.gamification_repo.get_achievement_progress(
                 user_id
             )
 
-            awarded: List[AchievementResponse] = []
             for achievement_type in AchievementType:
                 progress = progress_data.get(achievement_type.value)
                 if not progress:
@@ -301,8 +300,8 @@ class GamificationService:
 
         except Exception as e:
             logger.error(f"Error sweeping achievements: {str(e)}")
-            # Awards made before the failure have already paid their XP.
-            return await self.settle_level(user_id)
+            # Awards made before the failure stand and have paid their XP.
+            return awarded + await self.settle_level(user_id)
 
     async def record_daily_visit(
         self, user_id: UUID, seen: Optional[datetime], streak: int, now: datetime
