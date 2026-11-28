@@ -10,7 +10,7 @@ from typing import Optional, List, Dict, Any
 from uuid import UUID
 import logging
 
-from sqlalchemy import select, update, func, and_, desc
+from sqlalchemy import select, update, func, and_, desc, case
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -522,43 +522,80 @@ class GamificationRepository:
             return 0
     
     async def update_user_level(self, user_id: UUID) -> Optional[int]:
-        """
-        Update user level based on experience points.
-        
+        """Set the level to what the XP buys, up or down.
+
         Returns:
             New level if changed, None if no change
         """
         try:
-            user_query = select(User).where(User.id == user_id)
-            result = await self.session.execute(user_query)
-            user = result.scalar_one_or_none()
-            
-            if not user:
-                return None
-            
-            # Calculate new level (100 XP per level, increasing by 50 each level)
-            new_level = self._calculate_level_from_xp(user.experience_points)
-            
-            if new_level > user.level:
-                await self.session.execute(
+            # A few tries: each miss means another request moved the XP in between.
+            for _ in range(3):
+                # Columns, not the entity: a User already in the session may be stale.
+                user = (
+                    await self.session.execute(
+                        select(User.experience_points, User.level).where(User.id == user_id)
+                    )
+                ).one_or_none()
+
+                if not user:
+                    return None
+
+                new_level = self._calculate_level_from_xp(user.experience_points)
+                if new_level == user.level:
+                    return None
+
+                result = await self.session.execute(
                     update(User)
-                    # Never lower it: a parallel check may already have written more.
-                    .where(User.id == user_id, User.level < new_level)
+                    # Only against the XP just read, so a stale read can't write an old
+                    # level. Down too, for rows an old formula set high.
+                    .where(User.id == user_id, User.experience_points == user.experience_points)
                     .values(level=new_level)
                 )
                 await self.session.commit()
-                # Rising Star (reach level 5) is awarded by the service, which
-                # notifies and settles the level again once its XP lands.
-                logger.info(f"User {user_id} leveled up to level {new_level}")
-                return new_level
-            
+                if result.rowcount == 1:
+                    # Rising Star (reach level 5) is awarded by the service, which
+                    # notifies and settles the level again once its XP lands.
+                    logger.info(f"User {user_id} level {user.level} -> {new_level}")
+                    return new_level
             return None
-            
+
         except Exception as e:
             await self.session.rollback()
             logger.error(f"Error updating user level: {str(e)}")
             return None
-    
+
+    async def advance_daily_streak(
+        self,
+        user_id: UUID,
+        seen: Optional[datetime],
+        streak: int,
+        now: datetime,
+        xp: int,
+    ) -> bool:
+        """Record today's visit and pay its XP, unless another request already did.
+
+        ``seen`` is the last_streak_update the caller read; if it has changed, a
+        parallel request got there first and this one writes nothing.
+        """
+        # A savepoint: a failed write must not abort the login that called it.
+        async with self.session.begin_nested():
+            result = await self.session.execute(
+                update(User)
+                .where(User.id == user_id, User.last_streak_update.is_not_distinct_from(seen))
+                .values(
+                    experience_points=User.experience_points + xp,
+                    current_login_streak=streak,
+                    longest_login_streak=case(
+                        (User.longest_login_streak < streak, streak),
+                        else_=User.longest_login_streak,
+                    ),
+                    last_streak_update=now,
+                    updated_at=now,
+                )
+            )
+        await self.session.commit()
+        return result.rowcount == 1
+
     async def get_level(self, user_id: UUID) -> Optional[int]:
         return (
             await self.session.execute(select(User.level).where(User.id == user_id))

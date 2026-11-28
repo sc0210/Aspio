@@ -211,12 +211,12 @@ export function useUpdateStreak() {
   return useMutation<StreakUpdateResult, Error, void>({
     mutationFn: () => apiClient.updateLoginStreak(),
     onSuccess: (result) => {
-      if (result?.streak_updated) {
-        queryClient.invalidateQueries({ queryKey: [QUERY_KEYS.GAMIFICATION] });
-        if (result.new_achievements?.length) {
-          queryClient.invalidateQueries({ queryKey: [QUERY_KEYS.ACHIEVEMENTS] });
-          queryClient.invalidateQueries({ queryKey: [QUERY_KEYS.NOTIFICATIONS] }); // each unlock notifies
-        }
+      // Always: when a login counted today first, this reports no update, but the
+      // XP and streak on screen may predate that login.
+      queryClient.invalidateQueries({ queryKey: [QUERY_KEYS.GAMIFICATION] });
+      if (result?.streak_updated && result.new_achievements?.length) {
+        queryClient.invalidateQueries({ queryKey: [QUERY_KEYS.ACHIEVEMENTS] });
+        queryClient.invalidateQueries({ queryKey: [QUERY_KEYS.NOTIFICATIONS] }); // each unlock notifies
       }
     },
   });

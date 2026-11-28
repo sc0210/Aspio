@@ -33,6 +33,9 @@ from app.utils.datetime_helpers import business_timezone
 settings = get_settings()
 logger = logging.getLogger(__name__)
 
+#: XP for the first visit of a calendar day, by login or by the streak ping.
+DAILY_VISIT_XP = 5
+
 
 def compute_login_streak(
     last_streak_update: Optional[datetime],
@@ -219,9 +222,8 @@ class GamificationService:
         Returns:
             List of newly awarded achievements
         """
+        newly_awarded: List[AchievementResponse] = []
         try:
-            newly_awarded = []
-
             # Map trigger types to potential achievements
             achievement_checks = {
                 "transaction_created": [
@@ -252,12 +254,13 @@ class GamificationService:
                 if achievement:
                     newly_awarded.append(achievement)
 
-            newly_awarded.extend(await self._settle_level(user_id))
+            newly_awarded.extend(await self.settle_level(user_id))
             return newly_awarded
 
         except Exception as e:
             logger.error(f"Error checking achievements: {str(e)}")
-            return []
+            # Awards made before the failure stand and have paid their XP.
+            return newly_awarded + await self.settle_level(user_id)
 
     async def sweep_achievements(
         self,
@@ -276,12 +279,12 @@ class GamificationService:
         per-type path recomputes the full map on each call, which is O(n²) in
         the number of achievement types.
         """
+        awarded: List[AchievementResponse] = []
         try:
             progress_data = await self.gamification_repo.get_achievement_progress(
                 user_id
             )
 
-            awarded: List[AchievementResponse] = []
             for achievement_type in AchievementType:
                 progress = progress_data.get(achievement_type.value)
                 if not progress:
@@ -292,15 +295,35 @@ class GamificationService:
                 if achievement:
                     awarded.append(achievement)
 
-            awarded.extend(await self._settle_level(user_id))
+            awarded.extend(await self.settle_level(user_id))
             return awarded
 
         except Exception as e:
             logger.error(f"Error sweeping achievements: {str(e)}")
-            return []
+            # Awards made before the failure stand and have paid their XP.
+            return awarded + await self.settle_level(user_id)
 
-    async def _settle_level(self, user_id: UUID) -> List[AchievementResponse]:
-        """Raise the level to what the XP buys, and award Rising Star from level 5.
+    async def record_daily_visit(
+        self, user_id: UUID, seen: Optional[datetime], streak: int, now: datetime
+    ) -> Optional[List[AchievementResponse]]:
+        """Advance the streak and pay the day's 5 XP, once per day across every path.
+
+        ``seen`` is the last_streak_update the caller read. Returns None when a
+        parallel request already counted the day, else the badges this awarded.
+        """
+        if not await self.gamification_repo.advance_daily_streak(
+            user_id, seen, streak, now, xp=DAILY_VISIT_XP
+        ):
+            return None
+        # Settle first: a failing badge check must not leave the level behind.
+        awarded = await self.settle_level(user_id)
+        awarded.extend(
+            await self.trigger_achievement_check(user_id, "login", {"new_streak": streak})
+        )
+        return awarded
+
+    async def settle_level(self, user_id: UUID) -> List[AchievementResponse]:
+        """Set the level to what the XP buys, and award Rising Star from level 5.
 
         Rising Star used to be paid inside update_user_level only on a level that
         was exactly a multiple of 5: a jump from 4 to 6 skipped it, the level it
@@ -535,20 +558,34 @@ class UserAnalyticsService:
                         "new_achievements": [],
                     }
 
-            await self.user_repo.update_user(
-                user_id,
-                {
-                    "current_login_streak": new_streak,
-                    "longest_login_streak": longest_streak,
-                    "last_streak_update": now,
-                },
-            )
-
-            # Check for streak achievements
             gamification_service = GamificationService(self.session)
-            new_achievements = await gamification_service.trigger_achievement_check(
-                user_id, "login", {"new_streak": new_streak}
-            )
+            if advanced:
+                # The same write as a login's first visit, so the day pays its XP
+                # once whichever comes first.
+                new_achievements = await gamification_service.record_daily_visit(
+                    user_id, user.last_streak_update, new_streak, now
+                )
+                if new_achievements is None:
+                    # Another request counted today first; report what it wrote.
+                    await self.session.refresh(user)
+                    return {
+                        "current_streak": user.current_login_streak,
+                        "longest_streak": user.longest_login_streak,
+                        "streak_updated": False,
+                        "new_achievements": [],
+                    }
+            else:
+                await self.user_repo.update_user(
+                    user_id,
+                    {
+                        "current_login_streak": new_streak,
+                        "longest_login_streak": longest_streak,
+                        "last_streak_update": now,
+                    },
+                )
+                new_achievements = await gamification_service.trigger_achievement_check(
+                    user_id, "login", {"new_streak": new_streak}
+                )
 
             logger.info(f"Updated login streak for user {user_id}: {new_streak} days")
 

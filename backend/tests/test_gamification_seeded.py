@@ -13,7 +13,7 @@ from uuid import uuid4
 import pytest
 import pytest_asyncio
 from fastapi import HTTPException
-from sqlalchemy import select
+from sqlalchemy import select, update
 
 from app.modules.goals.models import Goal, GoalCategory, GoalMilestone, GoalStatus
 from app.modules.notifications.models import Notification
@@ -24,6 +24,7 @@ from app.modules.transactions.models import (
     TransactionType,
     TransactionWalletType,
 )
+from app.modules.users.services import UserService
 from app.modules.users.gamification_repository import (
     GamificationRepository,
     level_for_experience,
@@ -287,6 +288,40 @@ class TestAwarding:
         assert await repo.get_user_achievements(world.id) == []
         assert await repo.update_user_level(world.id) is None
 
+    async def test_update_level_corrects_a_level_set_too_high(self, async_session, world):
+        world.experience_points, world.level = 400, 6  # an old formula's level
+        await async_session.commit()
+
+        assert await GamificationRepository(async_session).update_user_level(world.id) == 2
+        assert (await _reload(async_session, world.id)).level == 2
+
+    async def test_update_level_rereads_xp_that_moved(self, async_session, world):
+        world.experience_points, world.level = 1250, 2  # level 5 by this XP
+        await async_session.commit()
+        repo = GamificationRepository(async_session)
+        real_execute = async_session.execute
+        calls = 0
+
+        async def execute(statement, *a, **kw):
+            nonlocal calls
+            result = await real_execute(statement, *a, **kw)
+            calls += 1
+            if calls == 1:  # after the read: another request pays 1100 XP
+                await real_execute(
+                    update(User).where(User.id == world.id).values(experience_points=1500)
+                    .execution_options(synchronize_session=False)
+                )
+            return result
+
+        async_session.execute = execute
+        try:
+            # Read 1250; XP moved to 1500, so the first write misses and it reads again.
+            assert await repo.update_user_level(world.id) == 5
+        finally:
+            del async_session.execute
+        user = await _reload(async_session, world.id)
+        assert (user.experience_points, user.level) == (1500, 5)
+
     async def test_update_level_for_unknown_user(self, async_session, world):
         assert await GamificationRepository(async_session).update_user_level(uuid4()) is None
 
@@ -322,6 +357,114 @@ class TestRisingStar:
         user = await _reload(async_session, world.id)
         assert (user.experience_points, user.level) == (5000, 10)
 
+
+    async def test_email_verification_xp_can_earn_it(self, async_session, world):
+        world.experience_points, world.level = 1200, 4
+        await async_session.commit()
+
+        await UserService(async_session)._award_experience_points(world.id, 50, "email_verification")
+
+        user = await _reload(async_session, world.id)
+        assert (user.experience_points, user.level) == (1500, 5)  # 1250 + Rising Star's 250
+        assert [a.achievement_type for a in await GamificationRepository(async_session).get_user_achievements(world.id)] == [A.EARLY_ADOPTER]
+
+    async def test_a_daily_visit_adds_to_xp_paid_since_the_user_was_read(self, async_session, world):
+        # Another request pays 1250 XP after this one loaded the user; the visit used to
+        # write back its stale 0 + 5 and a level of 1.
+        await async_session.execute(
+            update(User).where(User.id == world.id).values(experience_points=1250)
+            .execution_options(synchronize_session=False)
+        )
+        await async_session.commit()
+
+        await UserService(async_session)._record_daily_visit(world, touch_last_login=False)
+
+        user = await _reload(async_session, world.id)
+        assert (user.experience_points, user.level) == (1505, 5)
+        assert user.current_login_streak == 1
+
+    async def test_two_visits_racing_pay_the_day_once(self, async_session, world):
+        world.experience_points, world.last_streak_update = 1248, None
+        await async_session.commit()
+        repo = GamificationRepository(async_session)
+        now = datetime.now(timezone.utc)
+
+        # Both requests read last_streak_update = None; only the first writes.
+        assert await repo.advance_daily_streak(world.id, None, 1, now, xp=5) is True
+        assert await repo.advance_daily_streak(world.id, None, 1, now, xp=5) is False
+
+        user = await _reload(async_session, world.id)
+        assert (user.experience_points, user.current_login_streak, user.longest_login_streak) == (1253, 1, 1)
+        # The same visit seen once more, from the time it wrote, is a new day's write.
+        assert await repo.advance_daily_streak(world.id, user.last_streak_update, 2, now, xp=5) is True
+
+    async def test_a_daily_visit_settles_the_level_when_the_badge_check_fails(self, async_session, world, monkeypatch):
+        world.experience_points, world.level, world.last_streak_update = 1248, 4, None
+        await async_session.commit()
+
+        async def broken(self, *a, **kw):
+            raise RuntimeError("counter bug")
+
+        monkeypatch.setattr(GamificationRepository, "get_achievement_progress", broken)
+        await UserService(async_session)._record_daily_visit(world, touch_last_login=True)
+
+        user = await _reload(async_session, world.id)
+        assert (user.experience_points, user.level) == (1503, 5)  # 1253 + Rising Star
+        assert world.experience_points == 1503  # the caller's object is fresh too
+
+    async def test_the_streak_ping_pays_the_day_and_a_later_login_does_not(self, async_session, world):
+        world.experience_points, world.last_streak_update = 0, None
+        await async_session.commit()
+
+        result = await UserAnalyticsService(async_session).update_login_streak(world.id)
+        assert result["streak_updated"] is True
+        user = await _reload(async_session, world.id)
+        await UserService(async_session)._record_daily_visit(user, touch_last_login=True)
+
+        user = await _reload(async_session, world.id)
+        assert (user.experience_points, user.current_login_streak) == (5, 1)
+
+    async def test_a_streak_ping_that_loses_the_race_reports_no_update(self, async_session, world):
+        world.experience_points, world.last_streak_update = 0, None
+        await async_session.commit()
+        # A login counts today without this session seeing it.
+        await async_session.execute(
+            update(User).where(User.id == world.id)
+            .values(experience_points=5, current_login_streak=1, longest_login_streak=4,
+                    last_streak_update=datetime.now(timezone.utc))
+            .execution_options(synchronize_session=False)
+        )
+        await async_session.commit()
+
+        result = await UserAnalyticsService(async_session).update_login_streak(world.id)
+
+        assert result == {"current_streak": 1, "longest_streak": 4, "streak_updated": False, "new_achievements": []}
+        assert (await _reload(async_session, world.id)).experience_points == 5
+
+    async def test_a_failing_badge_check_still_settles_the_level(self, async_session, world, monkeypatch):
+        world.experience_points, world.level = 1250, 4  # XP paid by an award before the failure
+        await async_session.commit()
+
+        async def broken(self, *a, **kw):
+            raise RuntimeError("counter bug")
+
+        monkeypatch.setattr(GamificationService, "_check_and_award_achievement", broken)
+        assert await GamificationService(async_session).trigger_achievement_check(world.id, "goal_completed") == []
+        assert await GamificationService(async_session).sweep_achievements(world.id) == []
+        assert (await _reload(async_session, world.id)).level == 5
+
+    async def test_a_check_that_fails_partway_still_returns_its_awards(self, async_session, world, monkeypatch):
+        paid = object()  # stands in for the first badge's response
+        calls = []
+
+        async def first_pays_then_fails(self, user_id, achievement_type, *a, **kw):
+            calls.append(achievement_type)
+            if len(calls) == 1:
+                return paid
+            raise RuntimeError("counter bug")
+
+        monkeypatch.setattr(GamificationService, "_check_and_award_achievement", first_pays_then_fails)
+        assert await GamificationService(async_session).trigger_achievement_check(world.id, "goal_completed") == [paid]
 
     async def test_a_failed_settle_keeps_the_awards_already_made(self, async_session, world, monkeypatch):
         async def broken(self, user_id):

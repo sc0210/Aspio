@@ -230,12 +230,12 @@ class UserRepository:
             user_id: User's UUID
             
         Returns:
-            True if email was verified successfully
+            True only for the request that turned it from unverified to verified
         """
         try:
             query = (
                 update(User)
-                .where(and_(User.id == user_id, User.deleted_at.is_(None)))
+                .where(and_(User.id == user_id, User.deleted_at.is_(None), User.is_verified.is_(False)))
                 .values(
                     is_verified=True,
                     email_verified_at=datetime.now(timezone.utc),
@@ -566,7 +566,8 @@ class EmailVerificationRepository:
         try:
             query = (
                 update(EmailVerificationToken)
-                .where(EmailVerificationToken.id == token_id)
+                # Only an unused token: of two requests racing on one token, one wins.
+                .where(EmailVerificationToken.id == token_id, EmailVerificationToken.is_used.is_(False))
                 .values(is_used=True)
             )
             
@@ -578,7 +579,7 @@ class EmailVerificationRepository:
         except Exception as e:
             await self.session.rollback()
             logger.error(f"Error marking token as used: {str(e)}")
-            return False
+            raise  # a failed write is not a used link
 
     async def delete_expired_by_user(self, user_id: UUID, token_type: str) -> int:
         """

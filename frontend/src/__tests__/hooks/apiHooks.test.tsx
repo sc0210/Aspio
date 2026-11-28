@@ -256,7 +256,7 @@ describe('gamification', () => {
   });
 
   it.each([
-    [{ streak_updated: false }, []],
+    [{ streak_updated: false }, [['gamification']]], // a login may have counted today first
     [{ streak_updated: true, new_achievements: [] }, [['gamification']]],
     [{ streak_updated: true, new_achievements: [{ id: 'x' }] }, [['gamification'], ['achievements'], ['notifications']]],
   ])('useUpdateStreak refreshes only what changed (%#)', async (reply, keys) => {

@@ -28,7 +28,6 @@ from .security import (
     security_utils, jwt_manager, google_oauth, password_validator
 )
 from .gamification_service import GamificationService, compute_login_streak
-from .gamification_repository import level_for_experience
 from ...core.config import get_settings
 from ...core.email_service import get_email_service
 
@@ -526,15 +525,24 @@ class UserService:
                     detail=f"Password requirements not met: {', '.join(password_validation['feedback'])}"
                 )
             
-            # Update password
+            # Claim the link before using it: of two requests racing on it, one wins.
+            if not await self.email_verification_repo.use_verification_token(verification_token.id):
+                raise HTTPException(
+                    status_code=status.HTTP_400_BAD_REQUEST,
+                    detail="Invalid or expired reset token"
+                )
+
             success = await self.user_repo.update_user_password(
                 verification_token.user_id, reset_data.new_password
             )
-            
+            if not success:
+                # The link is spent by now, so say what to do next.
+                raise HTTPException(
+                    status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+                    detail="Failed to reset password. Please request a new reset link.",
+                )
+
             if success:
-                # Mark token as used
-                await self.email_verification_repo.use_verification_token(verification_token.id)
-                
                 # Revoke all refresh tokens
                 await self.refresh_token_repo.revoke_user_tokens(verification_token.user_id)
                 
@@ -694,21 +702,26 @@ class UserService:
                     detail="Invalid or expired verification token"
                 )
             
-            # Verify user email
-            success = await self.user_repo.verify_user_email(verification_token.user_id)
-            
-            if success:
-                # Mark token as used
+            user_id = verification_token.user_id
+            # Only the unverified -> verified write pays, so a second click or a
+            # second emailed token can't pay the bonus again.
+            newly_verified = await self.user_repo.verify_user_email(user_id)
+            if not newly_verified:
+                user = await self.user_repo.get_user_by_id(user_id)
+                if not (user and user.is_verified):
+                    return False  # failed write: the token stays usable for a retry
+
+            try:
                 await self.email_verification_repo.use_verification_token(verification_token.id)
-                
-                # Award email verification bonus
-                await self._award_experience_points(
-                    verification_token.user_id, 50, "email_verification"
-                )
-                
-                logger.info(f"Email verified for user: {verification_token.user_id}")
-            
-            return success
+            except Exception:
+                # The flip above is the once-only gate; a token left unmarked pays nothing more.
+                logger.exception("Verification token not marked used for %s", user_id)
+
+            if newly_verified:
+                await self._award_experience_points(user_id, 50, "email_verification")
+                logger.info(f"Email verified for user: {user_id}")
+
+            return True
             
         except HTTPException:
             raise
@@ -797,20 +810,15 @@ class UserService:
         points: int, 
         reason: str
     ) -> None:
-        """Award experience points to user"""
+        """Award experience points, then raise the level (and Rising Star) to match."""
         try:
-            user = await self.user_repo.get_user_by_id(user_id)
-            if user:
-                new_points = user.experience_points + points
-                new_level = level_for_experience(new_points)
-
-                await self.user_repo.update_user(user_id, {
-                    'experience_points': new_points,
-                    'level': new_level
-                })
-                
+            # Added in SQL: a total read earlier would overwrite XP a badge paid meanwhile.
+            if await self.user_repo.update_user(
+                user_id, {'experience_points': User.experience_points + points}
+            ):
                 logger.info(f"Awarded {points} XP to user {user_id} for {reason}")
-                
+                await GamificationService(self.session).settle_level(user_id)
+
         except Exception as e:
             logger.error(f"Error awarding experience points: {str(e)}")
     
@@ -840,40 +848,32 @@ class UserService:
         Best-effort: gamification must never break authentication, so failures
         are logged and swallowed.
         """
+        # Read up front: a failed step below can roll back and expire ``user``.
+        user_id, seen = user.id, user.last_streak_update
         try:
             now = datetime.now(timezone.utc)
             new_streak, streak_advanced = compute_login_streak(
-                user.last_streak_update, user.current_login_streak, now
+                seen, user.current_login_streak, now
             )
 
-            updates: Dict[str, Any] = {}
             if touch_last_login:
-                updates['last_login_at'] = now
+                await self.user_repo.update_user(user_id, {'last_login_at': now})
 
             if streak_advanced:
-                new_points = user.experience_points + 5
-                updates['experience_points'] = new_points
-                updates['level'] = level_for_experience(new_points)
-                updates['current_login_streak'] = new_streak
-                updates['longest_login_streak'] = max(
-                    user.longest_login_streak, new_streak
-                )
-                updates['last_streak_update'] = now
-
-            if not updates:
-                return
-
-            await self.user_repo.update_user(user.id, updates)
-
-            if streak_advanced:
-                # Award any streak badge the new count just unlocked.
-                await GamificationService(self.session).trigger_achievement_check(
-                    user.id, "login", {"new_streak": new_streak}
+                await GamificationService(self.session).record_daily_visit(
+                    user_id, seen, new_streak, now
                 )
 
         except Exception as e:
             logger.error(f"Error recording daily visit: {str(e)}")
-    
+
+        try:
+            await self.session.refresh(user)  # callers answer with it
+
+        except Exception as e:
+            logger.error(f"Error refreshing user after daily visit: {str(e)}")
+
+
 # Service factory function
 def get_user_service(session: AsyncSession) -> UserService:
     """Get user service instance"""

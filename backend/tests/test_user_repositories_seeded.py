@@ -90,6 +90,7 @@ class TestUpdates:
         assert await repo.verify_user_email(u.id) is True
         await async_session.refresh(u)
         assert u.is_verified and u.status == UserStatus.ACTIVE and u.email_verified_at
+        assert await repo.verify_user_email(u.id) is False  # only the first write verifies
         assert await repo.verify_user_email(uuid4()) is False
 
     async def test_successful_login_resets_counters(self, repo, async_session):
@@ -180,6 +181,7 @@ class TestEmailTokens:
         # A token only matches the flow it was issued for.
         assert await emails.get_verification_token("abc", "password_reset") is None
         assert await emails.use_verification_token(row.id) is True
+        assert await emails.use_verification_token(row.id) is False  # a racing second use
         assert await emails.use_verification_token(uuid4()) is False
 
     async def test_cleanup_drops_used_and_expired(self, repo, async_session):
