@@ -528,34 +528,36 @@ class GamificationRepository:
             New level if changed, None if no change
         """
         try:
-            # Columns, not the entity: a User already in the session may be stale.
-            user = (
-                await self.session.execute(
-                    select(User.experience_points, User.level).where(User.id == user_id)
+            # A few tries: each miss means another request moved the XP in between.
+            for _ in range(3):
+                # Columns, not the entity: a User already in the session may be stale.
+                user = (
+                    await self.session.execute(
+                        select(User.experience_points, User.level).where(User.id == user_id)
+                    )
+                ).one_or_none()
+
+                if not user:
+                    return None
+
+                new_level = self._calculate_level_from_xp(user.experience_points)
+                if new_level == user.level:
+                    return None
+
+                result = await self.session.execute(
+                    update(User)
+                    # Only against the XP just read, so a stale read can't write an old
+                    # level. Down too, for rows an old formula set high.
+                    .where(User.id == user_id, User.experience_points == user.experience_points)
+                    .values(level=new_level)
                 )
-            ).one_or_none()
-
-            if not user:
-                return None
-
-            new_level = self._calculate_level_from_xp(user.experience_points)
-            if new_level == user.level:
-                return None
-
-            result = await self.session.execute(
-                update(User)
-                # Only against the XP just read: if a parallel request moved it, that
-                # request settles the level. Down too, for rows an old formula set high.
-                .where(User.id == user_id, User.experience_points == user.experience_points)
-                .values(level=new_level)
-            )
-            await self.session.commit()
-            if result.rowcount == 0:
-                return None
-            # Rising Star (reach level 5) is awarded by the service, which
-            # notifies and settles the level again once its XP lands.
-            logger.info(f"User {user_id} level {user.level} -> {new_level}")
-            return new_level
+                await self.session.commit()
+                if result.rowcount == 1:
+                    # Rising Star (reach level 5) is awarded by the service, which
+                    # notifies and settles the level again once its XP lands.
+                    logger.info(f"User {user_id} level {user.level} -> {new_level}")
+                    return new_level
+            return None
 
         except Exception as e:
             await self.session.rollback()

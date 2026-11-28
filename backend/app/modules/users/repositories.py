@@ -579,7 +579,7 @@ class EmailVerificationRepository:
         except Exception as e:
             await self.session.rollback()
             logger.error(f"Error marking token as used: {str(e)}")
-            return False
+            raise  # a failed write is not a used link
 
     async def delete_expired_by_user(self, user_id: UUID, token_type: str) -> int:
         """

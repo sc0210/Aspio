@@ -526,8 +526,6 @@ class UserService:
                 )
             
             # Claim the link before using it: of two requests racing on it, one wins.
-            # shortcut: a failed password write below spends the link; the user asks
-            # for a new one, as for an expired link.
             if not await self.email_verification_repo.use_verification_token(verification_token.id):
                 raise HTTPException(
                     status_code=status.HTTP_400_BAD_REQUEST,
@@ -537,6 +535,12 @@ class UserService:
             success = await self.user_repo.update_user_password(
                 verification_token.user_id, reset_data.new_password
             )
+            if not success:
+                # The link is spent by now, so say what to do next.
+                raise HTTPException(
+                    status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+                    detail="Failed to reset password. Please request a new reset link.",
+                )
 
             if success:
                 # Revoke all refresh tokens

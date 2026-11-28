@@ -295,7 +295,7 @@ class TestAwarding:
         assert await GamificationRepository(async_session).update_user_level(world.id) == 2
         assert (await _reload(async_session, world.id)).level == 2
 
-    async def test_update_level_leaves_xp_that_moved_to_its_writer(self, async_session, world):
+    async def test_update_level_rereads_xp_that_moved(self, async_session, world):
         world.experience_points, world.level = 1250, 2  # level 5 by this XP
         await async_session.commit()
         repo = GamificationRepository(async_session)
@@ -315,11 +315,12 @@ class TestAwarding:
 
         async_session.execute = execute
         try:
-            # Read 1250 (level 5); XP moved to 1500, so the write is left to that request.
-            assert await repo.update_user_level(world.id) is None
+            # Read 1250; XP moved to 1500, so the first write misses and it reads again.
+            assert await repo.update_user_level(world.id) == 5
         finally:
             del async_session.execute
-        assert (await _reload(async_session, world.id)).level == 2
+        user = await _reload(async_session, world.id)
+        assert (user.experience_points, user.level) == (1500, 5)
 
     async def test_update_level_for_unknown_user(self, async_session, world):
         assert await GamificationRepository(async_session).update_user_level(uuid4()) is None
@@ -439,6 +440,18 @@ class TestRisingStar:
 
         assert result == {"current_streak": 1, "longest_streak": 4, "streak_updated": False, "new_achievements": []}
         assert (await _reload(async_session, world.id)).experience_points == 5
+
+    async def test_a_failing_badge_check_still_settles_the_level(self, async_session, world, monkeypatch):
+        world.experience_points, world.level = 1250, 4  # XP paid by an award before the failure
+        await async_session.commit()
+
+        async def broken(self, *a, **kw):
+            raise RuntimeError("counter bug")
+
+        monkeypatch.setattr(GamificationService, "_check_and_award_achievement", broken)
+        assert await GamificationService(async_session).trigger_achievement_check(world.id, "goal_completed") == []
+        assert await GamificationService(async_session).sweep_achievements(world.id) == []
+        assert (await _reload(async_session, world.id)).level == 5
 
     async def test_a_failed_settle_keeps_the_awards_already_made(self, async_session, world, monkeypatch):
         async def broken(self, user_id):

@@ -260,7 +260,8 @@ class GamificationService:
 
         except Exception as e:
             logger.error(f"Error checking achievements: {str(e)}")
-            return []
+            # Awards made before the failure have already paid their XP.
+            return await self.settle_level(user_id)
 
     async def sweep_achievements(
         self,
@@ -300,7 +301,8 @@ class GamificationService:
 
         except Exception as e:
             logger.error(f"Error sweeping achievements: {str(e)}")
-            return []
+            # Awards made before the failure have already paid their XP.
+            return await self.settle_level(user_id)
 
     async def record_daily_visit(
         self, user_id: UUID, seen: Optional[datetime], streak: int, now: datetime
@@ -322,7 +324,7 @@ class GamificationService:
         return awarded
 
     async def settle_level(self, user_id: UUID) -> List[AchievementResponse]:
-        """Raise the level to what the XP buys, and award Rising Star from level 5.
+        """Set the level to what the XP buys, and award Rising Star from level 5.
 
         Rising Star used to be paid inside update_user_level only on a level that
         was exactly a multiple of 5: a jump from 4 to 6 skipped it, the level it

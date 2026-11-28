@@ -160,6 +160,25 @@ class TestResetConfirm:
         assert exc.value.status_code == 400
         assert self._login(client, NEW_PASSWORD).status_code == 200
 
+    async def test_a_failed_password_write_says_to_request_a_new_link(self, async_session, test_user, monkeypatch):
+        token = await _token(async_session, test_user, "password_reset")
+        svc = UserService(async_session)
+        monkeypatch.setattr(svc.user_repo, "update_user_password", AsyncMock(return_value=False))
+
+        with pytest.raises(HTTPException) as exc:
+            await svc.reset_password(_reset_request(token))
+        assert exc.value.status_code == 500
+        assert "request a new reset link" in exc.value.detail
+
+    async def test_a_failed_claim_is_a_server_error_not_a_used_link(self, async_session, test_user, monkeypatch):
+        token = await _token(async_session, test_user, "password_reset")
+        svc = UserService(async_session)
+        monkeypatch.setattr(svc.email_verification_repo.session, "commit", AsyncMock(side_effect=RuntimeError("db down")))
+
+        with pytest.raises(HTTPException) as exc:
+            await svc.reset_password(_reset_request(token))
+        assert exc.value.status_code == 500
+
     async def test_expired_and_mistyped_tokens_change_nothing(self, client, async_session, test_user):
         expired = await _token(async_session, test_user, "password_reset", timedelta(minutes=-1))
         verification = await _token(async_session, test_user, "email_verification")
