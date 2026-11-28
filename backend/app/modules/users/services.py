@@ -525,15 +525,20 @@ class UserService:
                     detail=f"Password requirements not met: {', '.join(password_validation['feedback'])}"
                 )
             
-            # Update password
+            # Claim the link before using it: of two requests racing on it, one wins.
+            # shortcut: a failed password write below spends the link; the user asks
+            # for a new one, as for an expired link.
+            if not await self.email_verification_repo.use_verification_token(verification_token.id):
+                raise HTTPException(
+                    status_code=status.HTTP_400_BAD_REQUEST,
+                    detail="Invalid or expired reset token"
+                )
+
             success = await self.user_repo.update_user_password(
                 verification_token.user_id, reset_data.new_password
             )
-            
+
             if success:
-                # Mark token as used
-                await self.email_verification_repo.use_verification_token(verification_token.id)
-                
                 # Revoke all refresh tokens
                 await self.refresh_token_repo.revoke_user_tokens(verification_token.user_id)
                 

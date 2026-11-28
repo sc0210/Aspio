@@ -13,9 +13,11 @@ from unittest.mock import AsyncMock
 
 import pytest
 import pytest_asyncio
+from fastapi import HTTPException
 
 from app.modules.users.models import User, UserRole, UserStatus
 from app.modules.users.repositories import EmailVerificationRepository
+from app.modules.users.schemas import ResetPasswordRequest
 from app.modules.users.services import UserService
 
 pytestmark = pytest.mark.asyncio
@@ -43,6 +45,10 @@ async def _token(async_session, user, token_type, expires_in=timedelta(hours=1))
 async def _reload(async_session, user):
     await async_session.refresh(user)
     return user
+
+
+def _reset_request(token, password=NEW_PASSWORD):
+    return ResetPasswordRequest(token=token, new_password=password, confirm_password=password)
 
 
 class TestVerifyEmail:
@@ -138,6 +144,20 @@ class TestResetConfirm:
         token = await _token(async_session, test_user, "password_reset")
         assert self._reset(client, token).status_code == 200
         assert self._reset(client, token, "An0ther-Sturdy-Pass!").status_code == 400
+        assert self._login(client, NEW_PASSWORD).status_code == 200
+
+    async def test_a_reset_racing_another_on_one_link_is_refused(self, client, async_session, test_user, monkeypatch):
+        token = await _token(async_session, test_user, "password_reset")
+        svc = UserService(async_session)
+        row = await svc.email_verification_repo.get_verification_token(token, "password_reset")
+        # What the second request read before the first one landed.
+        stale = SimpleNamespace(id=row.id, user_id=row.user_id, is_used=False, is_expired=False)
+
+        assert await svc.reset_password(_reset_request(token)) is True  # the first request
+        monkeypatch.setattr(svc.email_verification_repo, "get_verification_token", AsyncMock(return_value=stale))
+        with pytest.raises(HTTPException) as exc:
+            await svc.reset_password(_reset_request(token, "An0ther-Sturdy-Pass!"))
+        assert exc.value.status_code == 400
         assert self._login(client, NEW_PASSWORD).status_code == 200
 
     async def test_expired_and_mistyped_tokens_change_nothing(self, client, async_session, test_user):

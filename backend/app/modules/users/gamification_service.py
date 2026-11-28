@@ -304,16 +304,16 @@ class GamificationService:
 
     async def record_daily_visit(
         self, user_id: UUID, seen: Optional[datetime], streak: int, now: datetime
-    ) -> List[AchievementResponse]:
+    ) -> Optional[List[AchievementResponse]]:
         """Advance the streak and pay the day's 5 XP, once per day across every path.
 
-        ``seen`` is the last_streak_update the caller read; a parallel request that
-        already counted the day makes this a no-op.
+        ``seen`` is the last_streak_update the caller read. Returns None when a
+        parallel request already counted the day, else the badges this awarded.
         """
         if not await self.gamification_repo.advance_daily_streak(
             user_id, seen, streak, now, xp=DAILY_VISIT_XP
         ):
-            return []
+            return None
         # Settle first: a failing badge check must not leave the level behind.
         awarded = await self.settle_level(user_id)
         awarded.extend(
@@ -564,6 +564,15 @@ class UserAnalyticsService:
                 new_achievements = await gamification_service.record_daily_visit(
                     user_id, user.last_streak_update, new_streak, now
                 )
+                if new_achievements is None:
+                    # Another request counted today first; report what it wrote.
+                    await self.session.refresh(user)
+                    return {
+                        "current_streak": user.current_login_streak,
+                        "longest_streak": user.longest_login_streak,
+                        "streak_updated": False,
+                        "new_achievements": [],
+                    }
             else:
                 await self.user_repo.update_user(
                     user_id,

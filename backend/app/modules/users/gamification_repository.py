@@ -522,9 +522,8 @@ class GamificationRepository:
             return 0
     
     async def update_user_level(self, user_id: UUID) -> Optional[int]:
-        """
-        Update user level based on experience points.
-        
+        """Set the level to what the XP buys, up or down.
+
         Returns:
             New level if changed, None if no change
         """
@@ -540,27 +539,29 @@ class GamificationRepository:
                 return None
 
             new_level = self._calculate_level_from_xp(user.experience_points)
+            if new_level == user.level:
+                return None
 
-            if new_level > user.level:
-                await self.session.execute(
-                    update(User)
-                    # Never lower it: a parallel check may already have written more.
-                    .where(User.id == user_id, User.level < new_level)
-                    .values(level=new_level)
-                )
-                await self.session.commit()
-                # Rising Star (reach level 5) is awarded by the service, which
-                # notifies and settles the level again once its XP lands.
-                logger.info(f"User {user_id} leveled up to level {new_level}")
-                return new_level
-            
-            return None
-            
+            result = await self.session.execute(
+                update(User)
+                # Only against the XP just read: if a parallel request moved it, that
+                # request settles the level. Down too, for rows an old formula set high.
+                .where(User.id == user_id, User.experience_points == user.experience_points)
+                .values(level=new_level)
+            )
+            await self.session.commit()
+            if result.rowcount == 0:
+                return None
+            # Rising Star (reach level 5) is awarded by the service, which
+            # notifies and settles the level again once its XP lands.
+            logger.info(f"User {user_id} level {user.level} -> {new_level}")
+            return new_level
+
         except Exception as e:
             await self.session.rollback()
             logger.error(f"Error updating user level: {str(e)}")
             return None
-    
+
     async def advance_daily_streak(
         self,
         user_id: UUID,

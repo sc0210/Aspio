@@ -288,6 +288,39 @@ class TestAwarding:
         assert await repo.get_user_achievements(world.id) == []
         assert await repo.update_user_level(world.id) is None
 
+    async def test_update_level_corrects_a_level_set_too_high(self, async_session, world):
+        world.experience_points, world.level = 400, 6  # an old formula's level
+        await async_session.commit()
+
+        assert await GamificationRepository(async_session).update_user_level(world.id) == 2
+        assert (await _reload(async_session, world.id)).level == 2
+
+    async def test_update_level_leaves_xp_that_moved_to_its_writer(self, async_session, world):
+        world.experience_points, world.level = 1250, 2  # level 5 by this XP
+        await async_session.commit()
+        repo = GamificationRepository(async_session)
+        real_execute = async_session.execute
+        calls = 0
+
+        async def execute(statement, *a, **kw):
+            nonlocal calls
+            result = await real_execute(statement, *a, **kw)
+            calls += 1
+            if calls == 1:  # after the read: another request pays 1100 XP
+                await real_execute(
+                    update(User).where(User.id == world.id).values(experience_points=1500)
+                    .execution_options(synchronize_session=False)
+                )
+            return result
+
+        async_session.execute = execute
+        try:
+            # Read 1250 (level 5); XP moved to 1500, so the write is left to that request.
+            assert await repo.update_user_level(world.id) is None
+        finally:
+            del async_session.execute
+        assert (await _reload(async_session, world.id)).level == 2
+
     async def test_update_level_for_unknown_user(self, async_session, world):
         assert await GamificationRepository(async_session).update_user_level(uuid4()) is None
 
@@ -389,6 +422,23 @@ class TestRisingStar:
 
         user = await _reload(async_session, world.id)
         assert (user.experience_points, user.current_login_streak) == (5, 1)
+
+    async def test_a_streak_ping_that_loses_the_race_reports_no_update(self, async_session, world):
+        world.experience_points, world.last_streak_update = 0, None
+        await async_session.commit()
+        # A login counts today without this session seeing it.
+        await async_session.execute(
+            update(User).where(User.id == world.id)
+            .values(experience_points=5, current_login_streak=1, longest_login_streak=4,
+                    last_streak_update=datetime.now(timezone.utc))
+            .execution_options(synchronize_session=False)
+        )
+        await async_session.commit()
+
+        result = await UserAnalyticsService(async_session).update_login_streak(world.id)
+
+        assert result == {"current_streak": 1, "longest_streak": 4, "streak_updated": False, "new_achievements": []}
+        assert (await _reload(async_session, world.id)).experience_points == 5
 
     async def test_a_failed_settle_keeps_the_awards_already_made(self, async_session, world, monkeypatch):
         async def broken(self, user_id):
